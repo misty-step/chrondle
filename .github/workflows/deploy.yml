@@ -87,7 +87,7 @@ jobs:
 
       # Step 3: Setup Node.js and pnpm
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
