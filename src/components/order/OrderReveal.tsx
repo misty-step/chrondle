@@ -48,16 +48,34 @@ export function OrderReveal({
 
   return (
     <motion.section
-      className="border-border bg-card space-y-6 rounded-2xl border p-6 shadow-sm"
+      className="border-border bg-card shadow-warm-lg relative overflow-hidden rounded-xl border p-6 sm:p-8"
       initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
       animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
       transition={{
         duration: ANIMATION_DURATIONS.HINT_TRANSITION / 1000,
       }}
     >
-      {/* Puzzle Number */}
+      {/* Decorative Corner Ornaments */}
+      <div
+        className="absolute top-0 left-0 h-16 w-16 border-t-2 border-l-2 opacity-20"
+        style={{ borderColor: "var(--timeline-spine)" }}
+      />
+      <div
+        className="absolute top-0 right-0 h-16 w-16 border-t-2 border-r-2 opacity-20"
+        style={{ borderColor: "var(--timeline-spine)" }}
+      />
+      <div
+        className="absolute bottom-0 left-0 h-16 w-16 border-b-2 border-l-2 opacity-20"
+        style={{ borderColor: "var(--timeline-spine)" }}
+      />
+      <div
+        className="absolute right-0 bottom-0 h-16 w-16 border-r-2 border-b-2 opacity-20"
+        style={{ borderColor: "var(--timeline-spine)" }}
+      />
+
+      {/* Header */}
       <motion.div
-        className="text-center"
+        className="space-y-2 text-center"
         initial={prefersReducedMotion ? undefined : { opacity: 0, y: -10 }}
         animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
         transition={
@@ -68,8 +86,21 @@ export function OrderReveal({
               }
         }
       >
-        <p className="text-muted-foreground text-sm font-medium">Order #{puzzleNumber}</p>
+        <p className="text-muted-foreground font-sans text-[10px] font-semibold tracking-widest uppercase">
+          Chronological Sorting Exercise
+        </p>
+        <p className="text-foreground font-serif text-base font-medium">
+          Certificate of Completion
+        </p>
+        <p className="text-muted-foreground text-sm">Order #{puzzleNumber}</p>
       </motion.div>
+
+      {/* Ornamental Divider */}
+      <div className="my-6 flex items-center justify-center gap-2">
+        <div className="via-timeline-spine/30 h-px flex-1 bg-gradient-to-r from-transparent to-transparent" />
+        <span className="text-timeline-marker text-xl">⚜</span>
+        <div className="via-timeline-spine/30 h-px flex-1 bg-gradient-to-r from-transparent to-transparent" />
+      </div>
 
       {/* Emotional Headline */}
       <PerformanceTier accuracyPercent={accuracyPercent} />
@@ -91,6 +122,11 @@ export function OrderReveal({
         <ScoreTooltip score={score} />
       </motion.div>
 
+      {/* Ornamental Divider */}
+      <div className="my-6 flex items-center justify-center gap-2">
+        <div className="via-timeline-spine/20 h-px flex-1 bg-gradient-to-r from-transparent to-transparent" />
+      </div>
+
       {/* Share Button */}
       {onShare && (
         <motion.div
@@ -111,7 +147,11 @@ export function OrderReveal({
             type="button"
             onClick={handleShareClick}
             disabled={isShared}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold shadow-md transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80"
+            className="flex items-center gap-2 rounded-full px-8 py-3.5 text-base font-semibold shadow-lg transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80"
+            style={{
+              backgroundColor: "var(--locked-badge)",
+              color: "white",
+            }}
             whileTap={
               prefersReducedMotion || isShared
                 ? undefined
@@ -135,11 +175,16 @@ export function OrderReveal({
                   }
             }
           >
-            {isShared && <Check className="h-4 w-4" />}
+            {isShared && <Check className="h-5 w-5" />}
             {isShared ? "Copied!" : "Share Result"}
           </motion.button>
         </motion.div>
       )}
+
+      {/* Ornamental Divider */}
+      <div className="my-8 flex items-center justify-center gap-2">
+        <div className="via-timeline-spine/20 h-px flex-1 bg-gradient-to-r from-transparent to-transparent" />
+      </div>
 
       {/* Comparison Grid */}
       <motion.div

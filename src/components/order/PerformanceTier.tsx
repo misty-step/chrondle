@@ -15,7 +15,7 @@ export function PerformanceTier({ accuracyPercent }: PerformanceTierProps) {
 
   return (
     <motion.div
-      className="space-y-2 text-center"
+      className="space-y-3 text-center"
       initial={prefersReducedMotion ? false : { opacity: 0, y: -20, scale: 0.95 }}
       animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
       transition={{
@@ -25,7 +25,7 @@ export function PerformanceTier({ accuracyPercent }: PerformanceTierProps) {
     >
       {/* Title */}
       <motion.h2
-        className={`text-3xl font-bold ${colorClass}`}
+        className={`text-4xl font-bold sm:text-5xl ${colorClass}`}
         initial={prefersReducedMotion ? undefined : { opacity: 0, y: 10 }}
         animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
         transition={
@@ -43,7 +43,7 @@ export function PerformanceTier({ accuracyPercent }: PerformanceTierProps) {
 
       {/* Message */}
       <motion.p
-        className="text-muted-foreground text-sm"
+        className="text-muted-foreground text-base"
         initial={prefersReducedMotion ? undefined : { opacity: 0 }}
         animate={prefersReducedMotion ? undefined : { opacity: 1 }}
         transition={

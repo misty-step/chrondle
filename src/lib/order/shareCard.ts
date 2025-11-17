@@ -10,6 +10,30 @@ export interface OrderSharePayload {
   url?: string;
 }
 
+/**
+ * Generates text-based share content in Wordle style
+ * @param payload - Share payload with results and score
+ * @returns Formatted text ready for clipboard
+ */
+export function generateOrderShareText(payload: OrderSharePayload): string {
+  const { dateLabel, puzzleNumber, results, score, url } = payload;
+
+  // Convert results to emoji line
+  const emojiLine = results.map((r) => (r === "correct" ? "✓" : "✗")).join(" ");
+
+  // Calculate accuracy
+  const accuracyPercent = Math.round((score.correctPairs / score.totalPairs) * 100);
+
+  // Build share text with semantic emojis
+  let shareText = `CHRONDLE ORDER #${puzzleNumber} · ${dateLabel}\n`;
+  shareText += `${emojiLine}\n\n`;
+  shareText += `🎯 ${accuracyPercent}% Accuracy\n`;
+  shareText += `🔗 ${score.correctPairs}/${score.totalPairs} pairs · 💡 ${score.hintsUsed}/3 hints\n\n`;
+  shareText += url || "https://www.chrondle.app";
+
+  return shareText;
+}
+
 const WIDTH = 720;
 const HEIGHT = 400;
 const CARD_RADIUS = 32;
@@ -40,6 +64,20 @@ export async function generateOrderShareCard(
   drawFooter(ctx, payload.url ?? "https://www.chrondle.app");
 
   return canvas;
+}
+
+/**
+ * Copies text-based share content to clipboard
+ * @param payload - Share payload with results and score
+ */
+export async function copyOrderShareTextToClipboard(payload: OrderSharePayload) {
+  const shareText = generateOrderShareText(payload);
+
+  if (!navigator.clipboard || !navigator.clipboard.writeText) {
+    throw new Error("Clipboard API unsupported");
+  }
+
+  await navigator.clipboard.writeText(shareText);
 }
 
 export async function copyOrderShareCardToClipboard(payload: OrderSharePayload) {

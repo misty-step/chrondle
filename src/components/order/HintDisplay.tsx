@@ -138,7 +138,7 @@ function InlineHintPanel(props: HintPanelProps) {
   return (
     <section
       aria-labelledby="order-hints-heading"
-      className="bg-card/90 hidden rounded-2xl border p-4 shadow-sm md:block"
+      className="bg-card/90 shadow-warm hidden rounded-xl border p-4 md:block"
     >
       <Accordion.Root type="single" defaultValue="order-hints" collapsible>
         <Accordion.Item value="order-hints">
@@ -167,7 +167,7 @@ function CompactHintPanel(props: HintPanelProps) {
   return (
     <section
       aria-labelledby="compact-hints-heading"
-      className="bg-card/90 rounded-2xl border p-3 shadow-sm"
+      className="bg-card/90 shadow-warm rounded-xl border p-3"
     >
       {/* Hints Header */}
       <div className="mb-3 flex items-center justify-between">
@@ -182,7 +182,7 @@ function CompactHintPanel(props: HintPanelProps) {
         </div>
       </div>
 
-      {/* Hint Buttons - Compact grid */}
+      {/* Hint Buttons - Compact grid with editorial layout */}
       <div className="mb-3 grid grid-cols-3 gap-2">
         {(Object.keys(HINT_COPY) as HintType[]).map((type) => {
           const isUsed = props.disabledTypes?.[type];
@@ -191,22 +191,26 @@ function CompactHintPanel(props: HintPanelProps) {
               key={type}
               type="button"
               className={cn(
-                "border-border bg-background flex flex-col items-center rounded-xl border p-2 text-center text-xs transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                "border-border bg-background flex flex-col items-start rounded-xl border p-2 text-left text-xs transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                 isUsed && "cursor-not-allowed opacity-40",
               )}
               onClick={() => props.onRequestHint(type)}
               disabled={isUsed || props.pendingType === type}
               aria-label={`Take ${HINT_COPY[type].label}`}
             >
-              <div className="text-primary mb-1">{getHintIcon(type, "h-5 w-5")}</div>
-              <span className="text-foreground mb-1 font-medium">
-                {isUsed ? "✓ " : ""}
-                {HINT_COPY[type].label.split(" ")[0]}
-              </span>
-              <span className="text-muted-foreground text-[10px] leading-tight">
+              {/* Icon + Title on same row */}
+              <div className="mb-1 flex w-full items-center gap-1.5">
+                <div className="text-primary flex-shrink-0">{getHintIcon(type, "h-4 w-4")}</div>
+                <span className="text-foreground text-xs leading-tight font-semibold">
+                  {isUsed ? "✓ " : ""}
+                  {HINT_COPY[type].label.split(" ")[0]}
+                </span>
+              </div>
+              {/* Description indented below */}
+              <span className="text-muted-foreground pl-5 text-[10px] leading-tight">
                 {isUsed ? "Used" : HINT_COPY[type].availableDescription}
               </span>
-              {props.pendingType === type && <LoadingSpinner className="mt-1 size-3" />}
+              {props.pendingType === type && <LoadingSpinner className="mt-1 ml-5 size-3" />}
             </button>
           );
         })}
@@ -303,17 +307,22 @@ function AvailableHintButton({ type, pending, onSelect }: AvailableHintButtonPro
       type="button"
       variant="outline"
       className={cn(
-        "flex h-auto w-full items-start gap-3 rounded-2xl px-4 py-3 text-left",
-        !pending && "hover:border-primary/30 hover:bg-muted/50",
+        "shadow-warm flex h-auto w-full flex-col items-start gap-2 rounded-lg px-4 py-3 text-left",
+        !pending && "hover:border-timeline-spine/30 hover:shadow-warm-lg transition-shadow",
       )}
       onClick={() => onSelect(type)}
       disabled={pending}
       aria-label={`Take ${copy.label}`}
     >
-      <div className="text-primary flex-shrink-0">{getHintIcon(type, "h-5 w-5")}</div>
-      <div className="min-w-0 flex-1">
+      {/* Icon + Title on same row */}
+      <div className="flex w-full items-center gap-3">
+        <div className="text-primary flex-shrink-0">{getHintIcon(type, "h-5 w-5")}</div>
         <p className="text-foreground text-sm font-semibold">{copy.label}</p>
-        <p className="text-muted-foreground text-xs">{copy.availableDescription}</p>
+      </div>
+
+      {/* Description below with indent */}
+      <div className="pl-8">
+        <p className="text-muted-foreground text-xs leading-relaxed">{copy.availableDescription}</p>
         {pending && (
           <span className="text-primary mt-2 flex items-center gap-2 text-xs font-medium">
             <LoadingSpinner className="size-3" />
@@ -357,9 +366,9 @@ function UsedHintsList({ events, hints }: UsedHintsListProps) {
                     duration: shouldReduceMotion ? 0 : ANIMATION_DURATIONS.HINT_TRANSITION / 1000,
                   },
                 }}
-                className="border-border bg-muted/30 flex items-start gap-3 rounded-2xl border px-3 py-2.5"
+                className="border-border bg-muted/30 flex items-start gap-3 rounded-lg border px-3 py-2.5 shadow-sm"
               >
-                <div className="text-primary flex-shrink-0 pt-0.5">
+                <div className="flex-shrink-0 pt-0.5" style={{ color: "var(--timeline-marker)" }}>
                   {getHintIcon(hint.type, "h-4 w-4")}
                 </div>
                 <div className="min-w-0 flex-1">

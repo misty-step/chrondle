@@ -132,7 +132,7 @@ export function OrderEventList({
         modifiers={[restrictToVerticalAxis, restrictToParentElement]}
       >
         <SortableContext items={localOrder} strategy={verticalListSortingStrategy}>
-          <ol className="space-y-3">
+          <ol className="space-y-4">
             {localOrder.map((eventId, index) => {
               const event = eventMap.get(eventId);
               if (!event) return null;

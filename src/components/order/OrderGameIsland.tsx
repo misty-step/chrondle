@@ -8,12 +8,12 @@ import type { OrderEvent, OrderHint, OrderPuzzle, OrderScore } from "@/types/ord
 import { HintDisplay } from "@/components/order/HintDisplay";
 import { OrderReveal } from "@/components/order/OrderReveal";
 import { OrderEventList } from "@/components/order/OrderEventList";
-import { TimelineContextBar } from "@/components/order/TimelineContextBar";
+import { DocumentHeader } from "@/components/order/DocumentHeader";
 import { OrderInstructions } from "@/components/order/OrderInstructions";
 import { AppHeader } from "@/components/AppHeader";
 import { generateAnchorHint, generateBracketHint, generateRelativeHint } from "@/lib/order/hints";
 import { deriveLockedPositions } from "@/lib/order/engine";
-import { copyOrderShareCardToClipboard, type OrderShareResult } from "@/lib/order/shareCard";
+import { copyOrderShareTextToClipboard, type OrderShareResult } from "@/lib/order/shareCard";
 import { logger } from "@/lib/logger";
 
 interface OrderGameIslandProps {
@@ -46,36 +46,39 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
           gameState.finalOrder[idx] === id ? "correct" : "incorrect",
         );
 
-        await copyOrderShareCardToClipboard({
+        await copyOrderShareTextToClipboard({
           dateLabel: gameState.puzzle.date,
           puzzleNumber: gameState.puzzle.puzzleNumber,
           results,
           score: gameState.score,
         });
 
-        setShareFeedback("Image copied to clipboard!");
+        setShareFeedback("Copied to clipboard!");
       } catch (error) {
-        logger.error("Failed to generate Order share card", error);
+        logger.error("Failed to copy Order share text", error);
         setShareFeedback("Share failed. Try again.");
       }
     };
 
     return (
-      <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 px-6 py-16">
-        <OrderReveal
-          events={gameState.puzzle.events}
-          finalOrder={gameState.finalOrder}
-          correctOrder={gameState.correctOrder}
-          score={gameState.score}
-          puzzleNumber={gameState.puzzle.puzzleNumber}
-          onShare={handleShare}
-        />
-        {shareFeedback && (
-          <p className="text-muted-foreground text-center text-sm" role="status">
-            {shareFeedback}
-          </p>
-        )}
-      </main>
+      <div className="flex min-h-screen flex-col">
+        <AppHeader puzzleNumber={gameState.puzzle.puzzleNumber} isArchive={false} />
+        <main className="mx-auto flex max-w-3xl flex-1 flex-col gap-6 px-6 py-16 sm:px-0">
+          <OrderReveal
+            events={gameState.puzzle.events}
+            finalOrder={gameState.finalOrder}
+            correctOrder={gameState.correctOrder}
+            score={gameState.score}
+            puzzleNumber={gameState.puzzle.puzzleNumber}
+            onShare={handleShare}
+          />
+          {shareFeedback && (
+            <p className="text-muted-foreground text-center text-sm" role="status">
+              {shareFeedback}
+            </p>
+          )}
+        </main>
+      </div>
     );
   }
 
@@ -224,18 +227,22 @@ function ReadyOrderGame({
   }, [currentOrder, puzzle.events, hints.length, onCommit]);
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="paper-texture flex min-h-screen flex-col">
       {/* App Header - Consistent with Classic Mode */}
       <AppHeader puzzleNumber={puzzle.puzzleNumber} isArchive={false} />
 
       {/* Main Content Area */}
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-6">
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-6 sm:px-0">
         <div className="space-y-4">
           {/* Instructions Banner */}
           <OrderInstructions />
 
-          {/* Timeline Context Bar */}
-          <TimelineContextBar events={puzzle.events} />
+          {/* Document Header - Archival catalog style */}
+          <DocumentHeader
+            puzzleNumber={puzzle.puzzleNumber}
+            date={puzzle.date}
+            events={puzzle.events}
+          />
         </div>
 
         {/* Desktop: Side-by-side layout */}
@@ -267,7 +274,7 @@ function ReadyOrderGame({
             </div>
 
             {/* Event Cards */}
-            <section className="border-border bg-card rounded-2xl border p-4 shadow-sm md:p-6">
+            <section className="border-border bg-card shadow-warm rounded-xl border p-4 md:p-6">
               <OrderEventList
                 events={puzzle.events}
                 ordering={currentOrder}
@@ -281,7 +288,7 @@ function ReadyOrderGame({
       </main>
 
       {/* Sticky Submit Button - Bottom */}
-      <footer className="border-border bg-background/95 sticky bottom-0 z-30 border-t px-6 py-4 backdrop-blur-sm">
+      <footer className="border-border bg-background/95 sticky bottom-0 z-30 border-t px-6 py-4 backdrop-blur-sm sm:px-0">
         <div className="mx-auto max-w-4xl">
           <button
             type="button"

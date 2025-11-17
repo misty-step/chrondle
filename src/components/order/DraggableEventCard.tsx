@@ -6,7 +6,7 @@ import type { DraggableSyntheticListeners } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { motion, useReducedMotion } from "motion/react";
-import { GripVertical, Lock, Anchor, ArrowRight, CalendarRange } from "lucide-react";
+import { Lock, Anchor, ArrowRight, CalendarRange } from "lucide-react";
 import { formatYear } from "@/lib/displayFormatting";
 import type { OrderEvent, OrderHint } from "@/types/orderGameState";
 
@@ -130,39 +130,51 @@ function EventCardContent({
     <>
       <div
         className={[
-          "flex items-center justify-center border-b py-2",
+          "flex items-center justify-center border-b py-3",
           isLocked ? "border-transparent" : "border-border/50",
         ].join(" ")}
         {...handleProps}
       >
         <div
           className={[
-            "text-muted-foreground flex items-center gap-1 text-sm transition",
-            isLocked || mutedHandle ? "opacity-40" : "hover:text-foreground",
+            "flex flex-col gap-[3px] transition-opacity",
+            isLocked || mutedHandle ? "opacity-30" : "opacity-50 hover:opacity-100",
           ].join(" ")}
+          style={{ color: "var(--timeline-marker)" }}
         >
-          <GripVertical className="h-4 w-4" />
-          <GripVertical className="-ml-3 h-4 w-4" />
+          <div className="h-[2px] w-6 rounded-full bg-current" />
+          <div className="h-[2px] w-6 rounded-full bg-current" />
+          <div className="h-[2px] w-6 rounded-full bg-current" />
         </div>
       </div>
 
-      <div className="flex flex-1 items-start gap-3 px-4 py-3">
-        <div className="bg-primary/10 text-primary flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold">
-          {index + 1}
+      <div className="flex flex-1 items-start gap-4 px-5 py-4">
+        {/* Year Tab - Only shown in results view */}
+        {showYear && (
+          <div className="absolute top-3 -left-3 flex items-center">
+            <div className="bg-timeline-spine rounded px-2 py-1 text-white shadow-sm">
+              <span className="font-year text-xs whitespace-nowrap">{formatYear(event.year)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Position Indicator - Larger and bolder */}
+        <div className="flex min-w-[32px] flex-shrink-0 items-center justify-center">
+          <div className="font-year text-timeline-marker text-lg font-bold">{index + 1}</div>
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-foreground line-clamp-3 text-base leading-snug font-semibold">
+          {/* Event Text - Larger, more readable serif typography */}
+          <p className="font-event text-foreground line-clamp-3 text-xl leading-relaxed">
             {event.text}
           </p>
-          {showYear && <p className="text-muted-foreground mt-1 text-sm">{event.year}</p>}
 
           {hints.length > 0 && (
-            <ul className="mt-2 flex flex-wrap gap-1.5">
+            <ul className="mt-3 flex flex-wrap gap-2">
               {hints.map((hint, idx) => (
                 <li
                   key={idx}
-                  className="bg-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
+                  className="bg-muted inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs"
                 >
                   <span>{hint.icon}</span>
                   <span className="text-muted-foreground">{hint.label}</span>
@@ -180,9 +192,18 @@ function EventCardContent({
 
 function LockedBadge() {
   return (
-    <div className="absolute top-2 right-2 flex items-center gap-1.5 rounded-full border border-green-500/50 bg-green-100 px-2 py-1 shadow-sm dark:bg-green-900/50">
-      <Lock className="h-3.5 w-3.5 text-green-700 dark:text-green-400" aria-hidden="true" />
-      <span className="text-[10px] font-semibold tracking-wide text-green-700 uppercase dark:text-green-400">
+    <div
+      className="absolute top-2 right-2 flex items-center gap-1.5 rounded-full border px-2 py-1 shadow-sm"
+      style={{
+        backgroundColor: "var(--locked-badge-bg)",
+        borderColor: "var(--locked-badge)",
+      }}
+    >
+      <Lock className="h-3.5 w-3.5" style={{ color: "var(--locked-badge)" }} aria-hidden="true" />
+      <span
+        className="text-[10px] font-semibold tracking-wide uppercase"
+        style={{ color: "var(--locked-badge)" }}
+      >
         Locked
       </span>
     </div>
@@ -191,11 +212,9 @@ function LockedBadge() {
 
 function cardClasses({ isDragging, isLocked }: { isDragging: boolean; isLocked: boolean }) {
   return [
-    "border-border bg-card relative flex min-h-[100px] flex-col rounded-2xl border text-left shadow-sm will-change-transform",
-    isDragging ? "border-primary z-20 scale-105 shadow-2xl" : "hover:shadow-md",
-    isLocked
-      ? "cursor-not-allowed border-green-500/50 bg-green-50/30 dark:bg-green-950/20"
-      : "cursor-grab active:cursor-grabbing",
+    "border-border bg-card relative flex min-h-[100px] flex-col rounded-xl border text-left shadow-warm will-change-transform",
+    isDragging ? "border-timeline-spine z-20 scale-105 shadow-warm-lg" : "hover:shadow-md",
+    isLocked ? "cursor-not-allowed bg-locked-badge-bg/30" : "cursor-grab active:cursor-grabbing",
   ].join(" ");
 }
 

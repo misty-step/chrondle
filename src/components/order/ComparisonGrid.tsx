@@ -49,12 +49,12 @@ export function ComparisonGrid({ events, finalOrder, correctOrder }: ComparisonG
       <div className="space-y-6 md:hidden">
         {/* Your Ordering Section */}
         <motion.div
-          className="bg-muted/30 border-border space-y-3 rounded-2xl border-2 p-4"
+          className="bg-muted/30 border-border shadow-warm space-y-3 rounded-xl border-2 p-4"
           initial={prefersReducedMotion ? undefined : "hidden"}
           animate={prefersReducedMotion ? undefined : "reveal"}
           variants={listVariants}
         >
-          <h3 className="text-foreground text-center text-sm font-bold tracking-wide uppercase">
+          <h3 className="text-foreground text-center font-sans text-sm font-bold tracking-wide uppercase">
             Your Ordering
           </h3>
           <ol className="space-y-2">
@@ -70,7 +70,7 @@ export function ComparisonGrid({ events, finalOrder, correctOrder }: ComparisonG
                   key={`player-${eventId}`}
                   variants={itemVariants}
                   className={[
-                    "border-border rounded-xl border p-3 shadow-sm",
+                    "border-border shadow-warm rounded-lg border p-3",
                     isCorrect
                       ? "bg-feedback-success/10 border-feedback-success/30"
                       : "bg-destructive/10 border-destructive/30",
@@ -78,13 +78,15 @@ export function ComparisonGrid({ events, finalOrder, correctOrder }: ComparisonG
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="text-muted-foreground mb-1 text-xs font-medium">
+                      <div className="text-muted-foreground font-year mb-1 text-xs font-medium">
                         #{index + 1}
                       </div>
-                      <div className="text-foreground mb-1 text-sm leading-snug font-semibold">
+                      <div className="text-foreground font-event mb-1 text-sm leading-snug">
                         {event.text}
                       </div>
-                      <div className="text-muted-foreground text-xs">{formatYear(event.year)}</div>
+                      <div className="text-muted-foreground font-year text-xs">
+                        {formatYear(event.year)}
+                      </div>
                     </div>
                     <div className="flex-shrink-0">
                       {isCorrect ? (
@@ -112,12 +114,12 @@ export function ComparisonGrid({ events, finalOrder, correctOrder }: ComparisonG
 
         {/* Correct Timeline Section */}
         <motion.div
-          className="bg-feedback-success/5 border-feedback-success/20 space-y-3 rounded-2xl border-2 p-4"
+          className="bg-feedback-success/5 border-feedback-success/20 shadow-warm space-y-3 rounded-xl border-2 p-4"
           initial={prefersReducedMotion ? undefined : "hidden"}
           animate={prefersReducedMotion ? undefined : "reveal"}
           variants={listVariants}
         >
-          <h3 className="text-foreground text-center text-sm font-bold tracking-wide uppercase">
+          <h3 className="text-foreground text-center font-sans text-sm font-bold tracking-wide uppercase">
             Correct Timeline
           </h3>
           <ol className="space-y-2">
@@ -129,17 +131,19 @@ export function ComparisonGrid({ events, finalOrder, correctOrder }: ComparisonG
                 <motion.li
                   key={`correct-${eventId}`}
                   variants={itemVariants}
-                  className="bg-background border-border rounded-xl border p-3 shadow-sm"
+                  className="bg-background border-border shadow-warm rounded-lg border p-3"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="text-muted-foreground mb-1 text-xs font-medium">
+                      <div className="text-muted-foreground font-year mb-1 text-xs font-medium">
                         #{index + 1}
                       </div>
-                      <div className="text-foreground mb-1 text-sm leading-snug font-semibold">
+                      <div className="text-foreground font-event mb-1 text-sm leading-snug">
                         {event.text}
                       </div>
-                      <div className="text-muted-foreground text-xs">{formatYear(event.year)}</div>
+                      <div className="text-muted-foreground font-year text-xs">
+                        {formatYear(event.year)}
+                      </div>
                     </div>
                     <div className="flex-shrink-0">
                       <Check
@@ -188,7 +192,7 @@ export function ComparisonGrid({ events, finalOrder, correctOrder }: ComparisonG
                   key={`player-${eventId}`}
                   variants={itemVariants}
                   className={[
-                    "border-border rounded-xl border p-3 shadow-sm",
+                    "border-border shadow-warm rounded-lg border p-3",
                     isCorrect
                       ? "bg-feedback-success/10 border-feedback-success/30"
                       : "bg-destructive/10 border-destructive/30",
@@ -196,13 +200,15 @@ export function ComparisonGrid({ events, finalOrder, correctOrder }: ComparisonG
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="text-muted-foreground mb-1 text-xs font-medium">
+                      <div className="text-muted-foreground font-year mb-1 text-xs font-medium">
                         #{index + 1}
                       </div>
-                      <div className="text-foreground mb-1 text-sm leading-snug font-semibold">
+                      <div className="text-foreground font-event mb-1 text-sm leading-snug">
                         {event.text}
                       </div>
-                      <div className="text-muted-foreground text-xs">{formatYear(event.year)}</div>
+                      <div className="text-muted-foreground font-year text-xs">
+                        {formatYear(event.year)}
+                      </div>
                     </div>
                     <div className="flex-shrink-0">
                       {isCorrect ? (
@@ -227,17 +233,19 @@ export function ComparisonGrid({ events, finalOrder, correctOrder }: ComparisonG
                 <motion.li
                   key={`correct-${eventId}`}
                   variants={itemVariants}
-                  className="bg-background border-border rounded-xl border p-3 shadow-sm"
+                  className="bg-background border-border shadow-warm rounded-lg border p-3"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="text-muted-foreground mb-1 text-xs font-medium">
+                      <div className="text-muted-foreground font-year mb-1 text-xs font-medium">
                         #{index + 1}
                       </div>
-                      <div className="text-foreground mb-1 text-sm leading-snug font-semibold">
+                      <div className="text-foreground font-event mb-1 text-sm leading-snug">
                         {event.text}
                       </div>
-                      <div className="text-muted-foreground text-xs">{formatYear(event.year)}</div>
+                      <div className="text-muted-foreground font-year text-xs">
+                        {formatYear(event.year)}
+                      </div>
                     </div>
                     <div className="flex-shrink-0">
                       <Check
