@@ -4,7 +4,7 @@
 
 import { Command } from "commander";
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../convex/_generated/api.js";
+import { api, internal } from "../convex/_generated/api.js";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -100,7 +100,8 @@ program
 
       // Import the events
       console.log(`Adding ${events.length} events for year ${year}...`);
-      const result = await client.mutation(api.events.importYearEvents, {
+      // @ts-expect-error - ConvexHttpClient doesn't support internal mutations (needs wrapper action)
+      const result = await client.mutation(internal.events.importYearEvents, {
         year,
         events,
       });
@@ -164,7 +165,8 @@ program
       // Delete existing events
       if (existingEvents.length > 0) {
         try {
-          const deleteResult = await client.mutation(api.events.deleteYearEvents, { year });
+          // @ts-expect-error - ConvexHttpClient doesn't support internal mutations (needs wrapper action)
+          const deleteResult = await client.mutation(internal.events.deleteYearEvents, { year });
           console.log(`🗑️  Deleted ${deleteResult.deletedCount} old events`);
         } catch {
           // Fallback: show what would happen
@@ -176,7 +178,8 @@ program
       }
 
       // Add new events
-      const addResult = await client.mutation(api.events.importYearEvents, {
+      // @ts-expect-error - ConvexHttpClient doesn't support internal mutations (needs wrapper action)
+      const addResult = await client.mutation(internal.events.importYearEvents, {
         year,
         events,
       });
@@ -203,7 +206,8 @@ program
   .action(async ({ year, event }) => {
     try {
       const client = await getConvexClient();
-      const result = await client.mutation(api.events.importEvent, {
+      // @ts-expect-error - ConvexHttpClient doesn't support internal mutations (needs wrapper action)
+      const result = await client.mutation(internal.events.importEvent, {
         year,
         event,
       });
@@ -238,7 +242,8 @@ program
         process.exit(1);
       }
       const eventToUpdate = events[number - 1];
-      await client.mutation(api.events.updateEvent, {
+      // @ts-expect-error - ConvexHttpClient doesn't support internal mutations (needs wrapper action)
+      await client.mutation(internal.events.updateEvent, {
         eventId: eventToUpdate._id,
         newEvent: text,
       });
@@ -281,7 +286,8 @@ program
         process.exit(1);
       }
       const eventToDelete = events[number - 1];
-      await client.mutation(api.events.deleteEvent, {
+      // @ts-expect-error - ConvexHttpClient doesn't support internal mutations (needs wrapper action)
+      await client.mutation(internal.events.deleteEvent, {
         eventId: eventToDelete._id,
       });
       console.log(`✅ Successfully deleted event #${number} for year ${year}.`);

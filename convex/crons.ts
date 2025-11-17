@@ -9,7 +9,14 @@ crons.daily(
   "generate daily puzzle at UTC midnight",
   { hourUTC: 0, minuteUTC: 0 },
   internal.puzzles.generateDailyPuzzle,
-  {}, // No args needed - will use today's date
+  {},
+);
+
+crons.daily(
+  "autonomous event pool replenishment",
+  { hourUTC: 2, minuteUTC: 0 },
+  internal.actions.eventGeneration.orchestrator.generateDailyBatch,
+  { targetCount: 3 },
 );
 
 export default crons;
