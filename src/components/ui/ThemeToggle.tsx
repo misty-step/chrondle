@@ -55,6 +55,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = "", size =
         "flex items-center justify-center",
         "group relative overflow-hidden",
         "hover:bg-accent/50",
+        "cursor-pointer",
         className,
       )}
       transition={{ duration: 0.2, ease: "easeInOut" }}

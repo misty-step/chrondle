@@ -17,11 +17,11 @@ export function ScoreTooltip({ score }: ScoreTooltipProps) {
   const chronologicalPairsTooltip = `Counts all pairwise relationships. With ${totalEvents} events, there are ${score.totalPairs} possible pairs. Each correctly ordered pair earns a point.`;
 
   return (
-    <div className="bg-muted/50 border-border space-y-2 rounded-xl border p-4">
+    <div className="space-y-3">
       {/* Perfect Positions - Primary Metric */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground text-sm font-medium">Perfect Positions</span>
+          <span className="text-foreground text-sm font-medium">Perfect Positions</span>
           <SmartTooltip content={perfectPositionsTooltip} side="bottom">
             <button
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -39,7 +39,7 @@ export function ScoreTooltip({ score }: ScoreTooltipProps) {
       {/* Accuracy - Secondary */}
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">Accuracy</span>
+          <span className="text-foreground/80">Accuracy</span>
           <SmartTooltip content={accuracyTooltip} side="bottom">
             <button
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -55,7 +55,7 @@ export function ScoreTooltip({ score }: ScoreTooltipProps) {
       {/* Pairs Detail - Secondary */}
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">Chronological Pairs</span>
+          <span className="text-foreground/80">Chronological Pairs</span>
           <SmartTooltip content={chronologicalPairsTooltip} side="bottom">
             <button
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -72,7 +72,7 @@ export function ScoreTooltip({ score }: ScoreTooltipProps) {
 
       {/* Hints Used */}
       <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Hints Used</span>
+        <span className="text-foreground/80">Hints Used</span>
         <span className="text-foreground font-medium">{score.hintsUsed}/3</span>
       </div>
     </div>

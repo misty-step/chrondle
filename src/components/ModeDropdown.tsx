@@ -93,6 +93,8 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
           "px-3 py-1.5",
           // Custom styling for chevron icon color
           "[&_svg]:!text-timeline-marker [&_svg]:!opacity-60",
+          // Cursor pointer for better affordance
+          "cursor-pointer",
           className,
         )}
         style={{

@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { Check } from "lucide-react";
-import { ANIMATION_DURATIONS, ANIMATION_SPRINGS, msToSeconds } from "@/lib/animationConstants";
-import { PerformanceTier } from "./PerformanceTier";
+import { Check, Share2 } from "lucide-react";
+import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
+import { getPerformanceTier } from "@/lib/order/performanceTier";
 import { ScoreTooltip } from "./ScoreTooltip";
 import { ComparisonGrid } from "./ComparisonGrid";
 import type { OrderEvent, OrderScore } from "../../types/orderGameState";
@@ -16,6 +16,43 @@ interface OrderRevealProps {
   score: OrderScore;
   puzzleNumber: number;
   onShare?: () => void;
+}
+
+/**
+ * Get gradient classes for performance tier banner (matches Classic mode pattern)
+ */
+function getTierGradientClasses(tier: "perfect" | "excellent" | "good" | "fair" | "challenging") {
+  switch (tier) {
+    case "perfect":
+      return {
+        background: "bg-gradient-to-br from-green-500/5 to-green-600/10",
+        border: "border-green-500/20",
+        textColor: "text-green-700 dark:text-green-300",
+        labelColor: "text-green-600 dark:text-green-400",
+      };
+    case "excellent":
+      return {
+        background: "bg-gradient-to-br from-amber-500/5 to-amber-600/10",
+        border: "border-amber-500/20",
+        textColor: "text-amber-700 dark:text-amber-300",
+        labelColor: "text-amber-600 dark:text-amber-400",
+      };
+    case "good":
+      return {
+        background: "bg-gradient-to-br from-blue-500/5 to-blue-600/10",
+        border: "border-blue-500/20",
+        textColor: "text-blue-700 dark:text-blue-300",
+        labelColor: "text-blue-600 dark:text-blue-400",
+      };
+    case "fair":
+    case "challenging":
+      return {
+        background: "bg-gradient-to-br from-red-500/5 to-red-600/10",
+        border: "border-red-500/20",
+        textColor: "text-red-700 dark:text-red-300",
+        labelColor: "text-red-600 dark:text-red-400",
+      };
+  }
 }
 
 export function OrderReveal({
@@ -34,6 +71,9 @@ export function OrderReveal({
     [score.correctPairs, score.totalPairs],
   );
 
+  const performanceTier = useMemo(() => getPerformanceTier(accuracyPercent), [accuracyPercent]);
+  const tierStyles = getTierGradientClasses(performanceTier.tier);
+
   const handleShareClick = async () => {
     if (isShared || !onShare) return;
 
@@ -47,160 +87,94 @@ export function OrderReveal({
   };
 
   return (
-    <motion.section
-      className="border-border bg-card shadow-warm-lg relative overflow-hidden rounded-xl border p-6 sm:p-8"
-      initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
-      animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-      transition={{
-        duration: ANIMATION_DURATIONS.HINT_TRANSITION / 1000,
-      }}
-    >
-      {/* Decorative Corner Ornaments */}
-      <div
-        className="absolute top-0 left-0 h-16 w-16 border-t-2 border-l-2 opacity-20"
-        style={{ borderColor: "var(--timeline-spine)" }}
-      />
-      <div
-        className="absolute top-0 right-0 h-16 w-16 border-t-2 border-r-2 opacity-20"
-        style={{ borderColor: "var(--timeline-spine)" }}
-      />
-      <div
-        className="absolute bottom-0 left-0 h-16 w-16 border-b-2 border-l-2 opacity-20"
-        style={{ borderColor: "var(--timeline-spine)" }}
-      />
-      <div
-        className="absolute right-0 bottom-0 h-16 w-16 border-r-2 border-b-2 opacity-20"
-        style={{ borderColor: "var(--timeline-spine)" }}
-      />
-
-      {/* Header */}
+    <div className="space-y-6">
+      {/* Performance Banner Card - Matches Classic win/loss banner pattern */}
       <motion.div
-        className="space-y-2 text-center"
-        initial={prefersReducedMotion ? undefined : { opacity: 0, y: -10 }}
-        animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-        transition={
-          prefersReducedMotion
-            ? undefined
-            : {
-                duration: msToSeconds(ANIMATION_DURATIONS.HINT_TRANSITION),
-              }
-        }
+        className={`flex w-full items-center gap-4 rounded-xl border ${tierStyles.border} ${tierStyles.background} p-6`}
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
+        animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+        transition={{
+          duration: msToSeconds(ANIMATION_DURATIONS.HINT_TRANSITION),
+        }}
       >
-        <p className="text-muted-foreground font-sans text-[10px] font-semibold tracking-widest uppercase">
-          Chronological Sorting Exercise
-        </p>
-        <p className="text-foreground font-serif text-base font-medium">
-          Certificate of Completion
-        </p>
-        <p className="text-muted-foreground text-sm">Order #{puzzleNumber}</p>
-      </motion.div>
-
-      {/* Ornamental Divider */}
-      <div className="my-6 flex items-center justify-center gap-2">
-        <div className="via-timeline-spine/30 h-px flex-1 bg-gradient-to-r from-transparent to-transparent" />
-        <span className="text-timeline-marker text-xl">⚜</span>
-        <div className="via-timeline-spine/30 h-px flex-1 bg-gradient-to-r from-transparent to-transparent" />
-      </div>
-
-      {/* Emotional Headline */}
-      <PerformanceTier accuracyPercent={accuracyPercent} />
-
-      {/* Score Breakdown */}
-      <motion.div
-        initial={prefersReducedMotion ? undefined : { opacity: 0, y: 12 }}
-        animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-        transition={
-          prefersReducedMotion
-            ? undefined
-            : {
-                type: "spring",
-                ...ANIMATION_SPRINGS.GENTLE,
-                delay: msToSeconds(ANIMATION_DURATIONS.PROXIMITY_DELAY),
-              }
-        }
-      >
-        <ScoreTooltip score={score} />
-      </motion.div>
-
-      {/* Ornamental Divider */}
-      <div className="my-6 flex items-center justify-center gap-2">
-        <div className="via-timeline-spine/20 h-px flex-1 bg-gradient-to-r from-transparent to-transparent" />
-      </div>
-
-      {/* Share Button */}
-      {onShare && (
-        <motion.div
-          className="flex justify-center"
-          initial={prefersReducedMotion ? undefined : { opacity: 0, scale: 0.95 }}
-          animate={prefersReducedMotion ? undefined : { opacity: 1, scale: 1 }}
-          transition={
-            prefersReducedMotion
-              ? undefined
-              : {
-                  type: "spring",
-                  ...ANIMATION_SPRINGS.SMOOTH,
-                  delay: msToSeconds(ANIMATION_DURATIONS.PROXIMITY_DELAY) * 1.5,
-                }
-          }
-        >
-          <motion.button
-            type="button"
-            onClick={handleShareClick}
-            disabled={isShared}
-            className="flex items-center gap-2 rounded-full px-8 py-3.5 text-base font-semibold shadow-lg transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80"
-            style={{
-              backgroundColor: "var(--locked-badge)",
-              color: "white",
-            }}
-            whileTap={
-              prefersReducedMotion || isShared
-                ? undefined
-                : {
-                    scale: 0.95,
-                  }
-            }
-            animate={
-              prefersReducedMotion || !isShared
-                ? undefined
-                : {
-                    scale: [1, 1.05, 1],
-                  }
-            }
-            transition={
-              prefersReducedMotion || !isShared
-                ? undefined
-                : {
-                    duration: 0.3,
-                    ease: "easeOut",
-                  }
-            }
+        {/* Left side: Performance message */}
+        <div className="flex flex-1 flex-col items-start">
+          <div
+            className={`mb-1 text-xs font-medium tracking-wide uppercase ${tierStyles.labelColor}`}
           >
-            {isShared && <Check className="h-5 w-5" />}
-            {isShared ? "Copied!" : "Share Result"}
-          </motion.button>
-        </motion.div>
-      )}
+            Performance
+          </div>
+          <div className={`text-2xl font-bold sm:text-3xl ${tierStyles.textColor}`}>
+            {performanceTier.title}
+          </div>
+          <div className={`mt-1 text-sm ${tierStyles.labelColor}/80`}>
+            {performanceTier.message}
+          </div>
+        </div>
 
-      {/* Ornamental Divider */}
-      <div className="my-8 flex items-center justify-center gap-2">
-        <div className="via-timeline-spine/20 h-px flex-1 bg-gradient-to-r from-transparent to-transparent" />
-      </div>
+        {/* Right side: Puzzle number badge */}
+        <div className={`text-sm font-medium ${tierStyles.labelColor}`}>#{puzzleNumber}</div>
+      </motion.div>
 
-      {/* Comparison Grid */}
+      {/* Stats + Share Card - Matches Classic countdown/share card pattern */}
       <motion.div
-        initial={prefersReducedMotion ? undefined : { opacity: 0 }}
-        animate={prefersReducedMotion ? undefined : { opacity: 1 }}
-        transition={
-          prefersReducedMotion
-            ? undefined
-            : {
-                duration: msToSeconds(ANIMATION_DURATIONS.HINT_TRANSITION),
-                delay: msToSeconds(ANIMATION_DURATIONS.PROXIMITY_DELAY) * 2,
+        className="border-primary/20 from-primary/5 to-primary/10 flex w-full flex-col gap-6 rounded-xl border bg-gradient-to-br p-6"
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
+        animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+        transition={{
+          duration: msToSeconds(ANIMATION_DURATIONS.HINT_TRANSITION),
+          delay: msToSeconds(ANIMATION_DURATIONS.PROXIMITY_DELAY),
+        }}
+      >
+        {/* Stats - Full width on top */}
+        <div>
+          <ScoreTooltip score={score} />
+        </div>
+
+        {/* Share button - Left-aligned below stats */}
+        {onShare && (
+          <div className="flex justify-start">
+            <motion.button
+              type="button"
+              onClick={handleShareClick}
+              disabled={isShared}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-8 py-3 text-base font-semibold shadow-lg transition-all hover:scale-105 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto"
+              whileTap={
+                prefersReducedMotion || isShared
+                  ? undefined
+                  : {
+                      scale: 0.95,
+                    }
               }
-        }
+            >
+              {isShared ? (
+                <>
+                  <Check className="h-5 w-5" />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="h-5 w-5" />
+                  <span>Share</span>
+                </>
+              )}
+            </motion.button>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Event Comparison Card */}
+      <motion.div
+        className="border-border bg-card rounded-xl border p-6"
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
+        animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+        transition={{
+          duration: msToSeconds(ANIMATION_DURATIONS.HINT_TRANSITION),
+          delay: msToSeconds(ANIMATION_DURATIONS.PROXIMITY_DELAY) * 1.5,
+        }}
       >
         <ComparisonGrid events={events} finalOrder={finalOrder} correctOrder={correctOrder} />
       </motion.div>
-    </motion.section>
+    </div>
   );
 }

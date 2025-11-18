@@ -192,7 +192,7 @@ function CompactHintPanel(props: HintPanelProps) {
               type="button"
               className={cn(
                 "border-border bg-background flex flex-col items-start rounded-xl border p-2 text-left text-xs transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-                isUsed && "cursor-not-allowed opacity-40",
+                isUsed ? "cursor-not-allowed opacity-40" : "cursor-pointer",
               )}
               onClick={() => props.onRequestHint(type)}
               disabled={isUsed || props.pendingType === type}
