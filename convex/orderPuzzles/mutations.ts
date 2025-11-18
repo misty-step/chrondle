@@ -9,13 +9,30 @@ import {
   selectEventsWithSpread,
 } from "./generation";
 
-const ORDER_SELECTION_CONFIG: SelectionConfig = {
-  count: 6,
-  minSpan: 100,
-  maxSpan: 5000, // Increased to accommodate full historical range (-2000 to 2008)
-  excludeYears: [],
-  maxAttempts: 20,
-};
+/**
+ * Returns selection config with span constraints based on date hash.
+ * Creates puzzle variety: some days tight ranges, some wide.
+ *
+ * Distribution:
+ * - 15% focused (50-500 years) - Requires precise historical knowledge
+ * - 30% moderate (200-1500 years) - Balanced challenge
+ * - 55% wide (500-5000 years) - Current feel, maximum variety
+ */
+function getSelectionConfigForDate(date: string, excludeYears: number[]): SelectionConfig {
+  const hash = hashDateSeed(date);
+  const roll = hash % 100;
+
+  if (roll < 15) {
+    // Focused: tight range, needs more retries
+    return { count: 6, minSpan: 50, maxSpan: 500, excludeYears, maxAttempts: 30 };
+  }
+  if (roll < 45) {
+    // Moderate: balanced range
+    return { count: 6, minSpan: 200, maxSpan: 1500, excludeYears, maxAttempts: 25 };
+  }
+  // Wide: original feel
+  return { count: 6, minSpan: 500, maxSpan: 5000, excludeYears, maxAttempts: 20 };
+}
 
 const ORDER_SEED_SALT = process.env.ORDER_PUZZLE_SALT ?? "chrondle-order";
 
@@ -143,11 +160,9 @@ async function generateOrderPuzzleForDate(
 
   const seed = hashDateSeed(targetDate);
   const allEvents = await loadEventCandidates(ctx);
+  const config = getSelectionConfigForDate(targetDate, excludeYears);
 
-  const { selection, attempts } = selectEventsWithAttempts(allEvents, seed, {
-    ...ORDER_SELECTION_CONFIG,
-    excludeYears,
-  });
+  const { selection, attempts } = selectEventsWithAttempts(allEvents, seed, config);
 
   const shuffledEvents = shuffleEvents(selection, seed);
   const storedEvents: StoredOrderEvent[] = shuffledEvents.map((event) => ({
@@ -219,7 +234,7 @@ function selectEventsWithAttempts(
   seed: number,
   config: SelectionConfig,
 ): SelectionOutcome {
-  const maxAttempts = config.maxAttempts ?? ORDER_SELECTION_CONFIG.maxAttempts ?? 10;
+  const maxAttempts = config.maxAttempts ?? 10;
   let lastError: unknown;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {

@@ -92,17 +92,21 @@ function stratifiedSample(
   const prng = createPrng(seed);
   const buckets = buildBuckets(events, count);
   const usedIds = new Set<string>();
+  const usedYears = new Set<number>();
   const selection: OrderEventCandidate[] = [];
 
   for (const bucket of buckets) {
-    const candidate = pickRandomFromBucket(bucket, prng, usedIds);
+    const candidate = pickRandomFromBucket(bucket, prng, usedIds, usedYears);
     if (candidate) {
       selection.push(candidate);
+      usedYears.add(candidate.year);
     }
   }
 
   if (selection.length < count) {
-    const leftovers = events.filter((event) => !usedIds.has(event._id));
+    const leftovers = events.filter(
+      (event) => !usedIds.has(event._id) && !usedYears.has(event.year),
+    );
     const shuffledLeftovers = shuffleWithPrng(leftovers, prng);
 
     for (const event of shuffledLeftovers) {
@@ -110,6 +114,7 @@ function stratifiedSample(
         break;
       }
       usedIds.add(event._id);
+      usedYears.add(event.year);
       selection.push(event);
     }
   }
@@ -145,12 +150,13 @@ function pickRandomFromBucket(
   bucket: OrderEventCandidate[],
   prng: () => number,
   usedIds: Set<string>,
+  usedYears: Set<number>,
 ): OrderEventCandidate | null {
   if (!bucket.length) {
     return null;
   }
 
-  const available = bucket.filter((event) => !usedIds.has(event._id));
+  const available = bucket.filter((event) => !usedIds.has(event._id) && !usedYears.has(event.year));
   if (!available.length) {
     return null;
   }
