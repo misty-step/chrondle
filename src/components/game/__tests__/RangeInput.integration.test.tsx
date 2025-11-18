@@ -4,6 +4,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import { RangeInput } from "../RangeInput";
 import { GAME_CONFIG } from "@/lib/constants";
+import { pluralize } from "@/lib/displayFormatting";
 
 // Mock EraToggle to simplify testing
 vi.mock("@/components/ui/EraToggle", () => ({
@@ -61,9 +62,11 @@ describe("RangeInput", () => {
 
     it("shows width error when range exceeds maximum", () => {
       renderRangeInput();
-      // Default range (5026 years) exceeds max, so error should be visible
+      // Default range spans full timeline which exceeds max, so error should be visible
+      const defaultWidth = GAME_CONFIG.MAX_YEAR - GAME_CONFIG.MIN_YEAR + 1;
+      const expectedLabel = pluralize(defaultWidth, "year");
       expect(screen.getByText(/max:/i)).toBeInTheDocument();
-      expect(screen.getByText(/5026 years/i)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(expectedLabel))).toBeInTheDocument();
     });
   });
 

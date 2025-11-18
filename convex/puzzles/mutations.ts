@@ -192,12 +192,19 @@ export const submitRange = mutation({
 
     const hintLevel = ensureHintLevel(args.hintsUsed);
     const timestamp = Date.now();
-    const score = scoreRange(args.start, args.end, puzzle.targetYear, 0, hintLevel);
-    const contained = score > 0;
+
+    // Normalize range bounds (handle inverted ranges)
+    const normalizedStart = Math.min(args.start, args.end);
+    const normalizedEnd = Math.max(args.start, args.end);
+
+    // Derive containment from bounds check - independent of score
+    // This prevents edge case where max-width correct ranges score 0
+    const contained = normalizedStart <= puzzle.targetYear && puzzle.targetYear <= normalizedEnd;
+    const score = scoreRange(normalizedStart, normalizedEnd, puzzle.targetYear, 0, hintLevel);
 
     const rangeEntry: RangeRecord = {
-      start: args.start,
-      end: args.end,
+      start: normalizedStart,
+      end: normalizedEnd,
       hintsUsed: hintLevel,
       score,
       timestamp,
