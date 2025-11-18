@@ -13,6 +13,10 @@ describe("scoreRange", () => {
     expect(scoreRange(1969, 1969, 1969, 0, 2)).toBe(70);
   });
 
+  it("supports the sixth hint without breaking the cap", () => {
+    expect(scoreRange(1776, 1776, 1776, 0, 6)).toBe(25);
+  });
+
   it("returns zero when the answer falls outside the range", () => {
     expect(scoreRange(1900, 1950, 1969)).toBe(0);
   });
@@ -52,6 +56,10 @@ describe("scoreRange", () => {
     for (let i = 1; i < scores.length; i += 1) {
       expect(scores[i - 1]).toBeGreaterThanOrEqual(scores[i]);
     }
+  });
+
+  it("rejects hint levels above six", () => {
+    expect(() => scoreRange(1950, 1950, 1950, 0, 7 as never)).toThrow(/between 0 and 6 inclusive/i);
   });
 });
 

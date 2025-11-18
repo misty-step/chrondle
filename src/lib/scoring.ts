@@ -43,7 +43,7 @@ function validateInputs(
   }
 
   if (!HINT_LEVELS.has(hintsUsed)) {
-    throw new Error("hintsUsed must be between 0 and 3 inclusive");
+    throw new Error("hintsUsed must be between 0 and 6 inclusive");
   }
 }
 

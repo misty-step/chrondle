@@ -58,10 +58,10 @@ This project uses pnpm with specific dependency overrides to address security vu
 - Maintenance guidelines
 - Removal criteria and testing procedures
 
-1.  **Guess the Year:** Enter your best guess for the year of the historical event.
-2.  **Receive Feedback:** Get immediate feedback on whether your guess was too high, too low, or just right.
-3.  **Unlock Hints:** Each incorrect guess reveals a new hint, guiding you closer to the correct year.
-4.  **Win or Learn:** Successfully guess the year to win, or learn from the revealed answer and hints.
+1.  **Dial in a Range:** Drag or type a historical range (e.g., 1910–1930) that you believe captures the event.
+2.  **Check Containment:** Submit the range to learn whether the true year sits inside; containment is required to win.
+3.  **Reveal up to Six Hints:** Each miss unlocks another clue (era buckets through precise deltas). Every hint slightly lowers the max score.
+4.  **Chase 100 Points:** Narrower ranges earn more of the 100-point cap. Win by containing the year before you run out of attempts—or learn from the revealed answer and hint trail.
 
 ## User Accounts & Anonymous Play
 

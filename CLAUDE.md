@@ -19,8 +19,8 @@
 
 **Range-Based Game:**
 
-- Players submit year ranges (e.g., 1960-1980 AD), not single guesses
-- Scoring: `BASE_POTENTIAL (100) - hint_penalty × range_width_factor × containment_multiplier`
+- Players submit normalized year ranges (e.g., 1960–1980 AD) instead of single guesses.
+- Scoring: `score = MAX_SCORES_BY_HINTS[hintsUsed] × ((W_MAX - width + 1) / W_MAX)` with `MAX_SCORES_BY_HINTS = [100, 85, 70, 55, 45, 35, 25]`. Containment is binary—no containment, no score.
 - Core hook: `useRangeGame` (NOT `useChrondle` - that's dead code)
 - Game state derivation: Pure functional via `deriveGameState` in `src/lib/gameState.ts`
 
@@ -43,7 +43,7 @@
 
 ## Stack
 
-**Hard requirements:** pnpm (npm blocked), Vitest+Chai (NOT Jest-DOM), motion (NOT framer-motion)
+**Hard requirements:** pnpm (npm blocked), Vitest + React Testing Library + jest-dom matchers, motion (NOT framer-motion)
 
 **Core:** Next.js 15, React 19, TypeScript 5 (strict), Convex, Clerk, Tailwind 4, Radix UI
 
@@ -70,10 +70,11 @@ rg "formatYear" --type ts  # Find existing patterns
 ast-grep --lang typescript -p 'function $_($$$)' # Semantic search
 ```
 
-**Vitest + Chai (NOT Jest-DOM):**
+**Vitest + RTL stack:**
 
-- ✅ `expect(element).toBeTruthy()` + `element.getAttribute("aria-label").toBe("value")`
-- ❌ `expect(element).toBeInTheDocument()` (Jest-DOM matchers don't exist)
+- ✅ `expect(element).toBeInTheDocument()` / `toHaveTextContent()` via `@testing-library/jest-dom/vitest`
+- ✅ Screen queries from `@testing-library/react`
+- ⚠️ Keep assertions behavioral—favor user-visible effects over implementation details
 
 **Motion mocks (required):**
 
