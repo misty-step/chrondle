@@ -32,7 +32,19 @@ export default defineSchema({
   plays: defineTable({
     userId: v.id("users"),
     puzzleId: v.id("puzzles"),
-    guesses: v.array(v.number()), // [1945, 1939, 1941] - just years
+    guesses: v.optional(v.array(v.number())), // Legacy single-year guesses
+    ranges: v.optional(
+      v.array(
+        v.object({
+          start: v.number(),
+          end: v.number(),
+          hintsUsed: v.number(),
+          score: v.number(),
+          timestamp: v.number(),
+        }),
+      ),
+    ),
+    totalScore: v.optional(v.number()),
     completedAt: v.optional(v.number()), // null = in progress, timestamp = done
     updatedAt: v.number(), // Last guess timestamp
   })

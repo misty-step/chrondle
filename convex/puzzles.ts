@@ -21,7 +21,7 @@ export {
 } from "./puzzles/queries";
 
 // Re-export mutation functions for backward compatibility
-export { submitGuess } from "./puzzles/mutations";
+export { submitGuess, submitRange } from "./puzzles/mutations";
 
 // Re-export generation functions for backward compatibility
 export {

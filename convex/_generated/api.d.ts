@@ -24,6 +24,7 @@ import type * as lib_errorSanitization from "../lib/errorSanitization.js";
 import type * as lib_eventValidation from "../lib/eventValidation.js";
 import type * as lib_llmClient from "../lib/llmClient.js";
 import type * as lib_logging from "../lib/logging.js";
+import type * as lib_migrationHelpers from "../lib/migrationHelpers.js";
 import type * as lib_puzzleHelpers from "../lib/puzzleHelpers.js";
 import type * as lib_puzzleType from "../lib/puzzleType.js";
 import type * as lib_responsesClient from "../lib/responsesClient.js";
@@ -70,6 +71,7 @@ declare const fullApi: ApiFromModules<{
   "lib/eventValidation": typeof lib_eventValidation;
   "lib/llmClient": typeof lib_llmClient;
   "lib/logging": typeof lib_logging;
+  "lib/migrationHelpers": typeof lib_migrationHelpers;
   "lib/puzzleHelpers": typeof lib_puzzleHelpers;
   "lib/puzzleType": typeof lib_puzzleType;
   "lib/responsesClient": typeof lib_responsesClient;

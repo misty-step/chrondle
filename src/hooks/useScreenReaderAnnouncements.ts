@@ -1,57 +1,40 @@
 import { useState, useEffect } from "react";
-import { getGuessDirectionInfo } from "@/lib/game/proximity";
 import { formatYear } from "@/lib/displayFormatting";
-import { getEnhancedProximityFeedback } from "@/lib/enhancedFeedback";
+import type { RangeGuess } from "@/types/range";
 
 interface UseScreenReaderAnnouncementsProps {
-  guesses: number[];
-  puzzle: { targetYear: number; events: string[] } | null;
-  lastGuessCount: number;
-  setLastGuessCount: (count: number) => void;
+  ranges: RangeGuess[];
+  lastRangeCount: number;
+  setLastRangeCount: (count: number) => void;
 }
 
 /**
- * Custom hook to handle screen reader announcements for guess feedback
- * Moves the announcement effect logic out of the main component to reduce effect depth
+ * Announces range submissions for assistive technologies.
+ * Focuses on the latest committed range and whether it contained the target.
  */
 export function useScreenReaderAnnouncements({
-  guesses,
-  puzzle,
-  lastGuessCount,
-  setLastGuessCount,
+  ranges,
+  lastRangeCount,
+  setLastRangeCount,
 }: UseScreenReaderAnnouncementsProps) {
   const [announcement, setAnnouncement] = useState("");
 
   useEffect(() => {
-    const currentGuessCount = guesses.length;
+    const currentCount = ranges.length;
 
-    // Only announce when a new guess has been made
-    if (currentGuessCount > lastGuessCount && currentGuessCount > 0 && puzzle) {
-      const latestGuess = guesses[currentGuessCount - 1];
-      const targetYear = puzzle.targetYear;
+    if (currentCount > lastRangeCount && currentCount > 0) {
+      const latestRange = ranges[currentCount - 1];
+      const width = latestRange.end - latestRange.start + 1;
+      const baseMessage = `Range ${formatYear(latestRange.start)} to ${formatYear(latestRange.end)} submitted.`;
+      const scoreMessage =
+        typeof latestRange.score === "number" && latestRange.score > 0
+          ? `Contained the target for ${latestRange.score} points.`
+          : `Missed the target. Width ${width} year${width === 1 ? "" : "s"}.`;
 
-      if (latestGuess === targetYear) {
-        setAnnouncement(`Correct! The year was ${formatYear(targetYear)}. Congratulations!`);
-      } else {
-        const directionInfo = getGuessDirectionInfo(latestGuess, targetYear);
-        const enhancedFeedback = getEnhancedProximityFeedback(latestGuess, targetYear, {
-          previousGuesses: guesses.slice(0, -1),
-          includeHistoricalContext: true,
-          includeProgressiveTracking: true,
-        });
-        const cleanDirection = directionInfo.direction
-          .toLowerCase()
-          .replace("▲", "")
-          .replace("▼", "")
-          .trim();
-        setAnnouncement(
-          `${formatYear(latestGuess)} is ${cleanDirection}. ${enhancedFeedback.encouragement}${enhancedFeedback.historicalHint ? ` ${enhancedFeedback.historicalHint}` : ""}${enhancedFeedback.progressMessage ? ` ${enhancedFeedback.progressMessage}` : ""}`,
-        );
-      }
-
-      setLastGuessCount(currentGuessCount);
+      setAnnouncement(`${baseMessage} ${scoreMessage}`.trim());
+      setLastRangeCount(currentCount);
     }
-  }, [guesses, puzzle, lastGuessCount, setLastGuessCount]);
+  }, [ranges, lastRangeCount, setLastRangeCount]);
 
   return announcement;
 }

@@ -4,6 +4,7 @@
  */
 
 import type { Puzzle } from "./puzzle";
+import type { RangeGuess } from "./range";
 
 // Re-export for convenience
 export type { Puzzle } from "./puzzle";
@@ -40,9 +41,13 @@ export interface ReadyState {
   status: "ready";
   puzzle: Puzzle;
   guesses: number[];
+  ranges: RangeGuess[];
+  totalScore: number;
   isComplete: boolean;
   hasWon: boolean;
   remainingGuesses: number;
+  remainingAttempts: number;
+  hintsRevealed: number; // 0-6: number of historical event hints revealed
 }
 
 /**

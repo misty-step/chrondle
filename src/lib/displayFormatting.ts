@@ -25,10 +25,7 @@ export interface FormatOptions {
  * @param options - Formatting options
  * @returns Formatted year string
  */
-export function formatYearWithOptions(
-  year: number,
-  options: FormatOptions = {},
-): string {
+export function formatYearWithOptions(year: number, options: FormatOptions = {}): string {
   const { style = "standard", includeEra = true, lowercase = false } = options;
 
   const absYear = Math.abs(year);
@@ -72,11 +69,7 @@ export function formatYearWithOptions(
  * @param options - Formatting options
  * @returns Formatted year string
  */
-export function formatYearWithEra(
-  year: number,
-  era: Era,
-  options: FormatOptions = {},
-): string {
+export function formatYearWithEra(year: number, era: Era, options: FormatOptions = {}): string {
   const internalYear = era === "BC" ? -Math.abs(year) : Math.abs(year);
   return formatYearWithOptions(internalYear, options);
 }
@@ -115,9 +108,7 @@ export function formatYearRange(
       ...options,
       includeEra: true,
     });
-    const eraIndex =
-      formattedWithEra.indexOf(startNum.toString()) +
-      startNum.toString().length;
+    const eraIndex = formattedWithEra.indexOf(startNum.toString()) + startNum.toString().length;
     const era = formattedWithEra.substring(eraIndex);
 
     if (era) {
@@ -237,6 +228,38 @@ export function isSameEra(year1: number, year2: number): boolean {
  */
 export function getEraDescription(era: Era): string {
   return era === "BC" ? "Before Christ" : "Anno Domini";
+}
+
+/**
+ * Pluralizes a word based on count
+ * @param count - Number determining pluralization
+ * @param singular - Singular form of the word
+ * @param plural - Optional custom plural form (defaults to singular + 's')
+ * @returns Properly pluralized string with count
+ * @example
+ * pluralize(1, 'year') => '1 year'
+ * pluralize(2, 'year') => '2 years'
+ * pluralize(1, 'clue') => '1 clue'
+ * pluralize(3, 'clue') => '3 clues'
+ */
+export function pluralize(count: number, singular: string, plural?: string): string {
+  const pluralForm = plural || `${singular}s`;
+  return count === 1 ? `${count} ${singular}` : `${count} ${pluralForm}`;
+}
+
+/**
+ * Pluralizes a word without the count prefix
+ * @param count - Number determining pluralization
+ * @param singular - Singular form of the word
+ * @param plural - Optional custom plural form (defaults to singular + 's')
+ * @returns Just the pluralized word (no count)
+ * @example
+ * pluralizeWord(1, 'year') => 'year'
+ * pluralizeWord(2, 'year') => 'years'
+ */
+export function pluralizeWord(count: number, singular: string, plural?: string): string {
+  const pluralForm = plural || `${singular}s`;
+  return count === 1 ? singular : pluralForm;
 }
 
 /**

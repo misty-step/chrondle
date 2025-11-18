@@ -65,7 +65,12 @@ export async function updatePuzzleStats(
   if (playCount === 0) return;
 
   // Calculate average guesses
-  const totalGuesses = completedPlays.reduce((sum: number, play) => sum + play.guesses.length, 0);
+  const totalGuesses = completedPlays.reduce((sum: number, play) => {
+    if (play.ranges && play.ranges.length > 0) {
+      return sum + play.ranges.length;
+    }
+    return sum + (play.guesses?.length ?? 0);
+  }, 0);
   const avgGuesses = totalGuesses / playCount;
 
   // Update puzzle with calculated statistics

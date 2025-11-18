@@ -45,7 +45,7 @@ export function createInitialGameState(): GameState {
 
 // Local Storage Management
 // Note: getDailyYear() and initializePuzzle() were deprecated and removed in favor of Convex-based puzzle loading
-// Migration: Use useChrondle hook which calls Convex getDailyPuzzle query
+// Migration: Use useRangeGame hook which calls Convex getDailyPuzzle query
 export function getStorageKey(): string {
   const today = new Date();
   const dateString = today.toISOString().slice(0, 10); // YYYY-MM-DD

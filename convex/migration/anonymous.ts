@@ -220,7 +220,8 @@ export const mergeAnonymousState = mutation({
 
       if (existingPlay) {
         // User already played this puzzle - merge guesses if anonymous had more progress
-        if (guesses.length > existingPlay.guesses.length) {
+        const existingGuessCount = existingPlay.guesses?.length ?? 0;
+        if (guesses.length > existingGuessCount) {
           // Anonymous user made more progress, update with their guesses
           await ctx.db.patch(existingPlay._id, {
             guesses: guesses,

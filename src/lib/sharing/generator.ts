@@ -3,144 +3,122 @@
  * Generates formatted text for sharing game results on social media
  */
 
-import { generateWordleBoxes } from "@/lib/game/proximity";
-import { calculateClosestGuess } from "@/lib/game/statistics";
+import type { RangeGuess } from "@/types/range";
+import { pluralize } from "@/lib/displayFormatting";
 import { logger } from "@/lib/logger";
 
-/**
- * Formats the closest guess message with achievement indicators
- * Internal helper for share text generation
- *
- * @param closestData - Closest guess data (guess and distance)
- * @param hasWon - Whether the player won
- * @returns Formatted message string with achievement emoji
- */
-function formatClosestGuessMessage(
-  closestData: { guess: number; distance: number } | null,
-  hasWon: boolean,
-): string {
-  // Don't show closest guess if user won
-  if (hasWon || !closestData) {
-    return "";
-  }
+interface ShareTextOptions {
+  targetYear?: number;
+}
 
-  const { distance } = closestData;
-
-  if (typeof distance !== "number" || !isFinite(distance) || distance < 0) {
-    logger.warn("Invalid distance in formatClosestGuessMessage:", distance);
-    return "";
+function getPrimaryRange(ranges: RangeGuess[]): RangeGuess | undefined {
+  if (!Array.isArray(ranges) || ranges.length === 0) {
+    return undefined;
   }
+  return ranges[ranges.length - 1];
+}
 
-  try {
-    // Add achievement indicators for exceptional accuracy
-    if (distance === 1) {
-      return ` (Closest: 1 year off! 🎯)`;
-    } else if (distance <= 5) {
-      return ` (Closest: ${distance} years off 🏆)`;
-    } else if (distance <= 25) {
-      return ` (Closest: ${distance} years off 🎖️)`;
-    } else {
-      return ` (Closest: ${distance} years off)`;
-    }
-  } catch (error) {
-    logger.error("Error formatting closest guess message:", error);
-    return "";
+function getMissDistance(range: RangeGuess, targetYear: number): number {
+  if (targetYear < range.start) {
+    return range.start - targetYear;
   }
+  if (targetYear > range.end) {
+    return targetYear - range.end;
+  }
+  return 0;
 }
 
 /**
- * Generates a visual emoji timeline representing guess progression
- * Each emoji indicates proximity to the target year
- *
- * @param guesses - Array of year guesses
- * @param targetYear - The target year to compare against
- * @returns Space-separated emoji sequence (e.g., "🧊 ❄️ 🔥 🎯")
- *
- * @example
- * generateEmojiTimeline([1900, 1950, 1969], 1969);
- * // "🧊 ❄️ 🎯"
+ * Generate hint usage visualization
+ * @param hintsUsed Number of hints used (0-6)
+ * @returns String like "💡💡⬜⬜⬜⬜ (2/6 hints)"
  */
-export function generateEmojiTimeline(guesses: number[], targetYear: number): string {
-  return guesses
-    .map((guess) => {
-      return generateWordleBoxes(guess, targetYear);
-    })
-    .join(" ");
+function generateHintBar(hintsUsed: number): string {
+  const maxHints = 6;
+  const filled = "💡";
+  const empty = "⬜";
+
+  const cappedHints = Math.min(Math.max(0, hintsUsed), maxHints);
+  const bar = filled.repeat(cappedHints) + empty.repeat(maxHints - cappedHints);
+  return `${bar} (${cappedHints}/${maxHints} hints)`;
 }
 
 /**
- * Generates formatted share text for social media
- * Includes date, score, first hint, emoji timeline, and closest guess stats
- *
- * @param guesses - Array of year guesses made
- * @param targetYear - The target year
- * @param hasWon - Whether the player won
- * @param puzzleEvents - Optional array of hint events (first one shown in share)
- * @param puzzleNumber - Optional puzzle number for display
- * @returns Formatted share text ready for clipboard
- *
- * @example
- * generateShareText([1960, 1965, 1969], 1969, true, ["Event 1"], 42);
- * // "Chrondle #42: November 16, 2024 - 3/6
- * //  Event 1
- * //
- * //  🌡️ ♨️ 🎯
- * //
- * //  https://www.chrondle.app"
+ * Generate score visualization bar
+ * @param score Score value (0-100)
+ * @returns String like "████░░░░░░ (20/100 pts)"
  */
+function generateScoreBar(score: number): string {
+  const maxBlocks = 10;
+  const filledBlock = "█";
+  const emptyBlock = "░";
+
+  const cappedScore = Math.min(Math.max(0, score), 100);
+  const filledCount = Math.round((cappedScore / 100) * maxBlocks);
+  const bar = filledBlock.repeat(filledCount) + emptyBlock.repeat(maxBlocks - filledCount);
+
+  return `${bar} (${cappedScore}/100 pts)`;
+}
+
+/**
+ * Format date as abbreviated string
+ * @param date Date object
+ * @returns String like "Nov 13"
+ */
+function formatDateAbbreviated(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function generateShareText(
-  guesses: number[],
-  targetYear: number,
+  ranges: RangeGuess[],
+  totalScore: number,
   hasWon: boolean,
-  puzzleEvents?: string[],
   puzzleNumber?: number,
+  options: ShareTextOptions = {},
 ): string {
   try {
-    // Validate inputs
-    if (
-      !Array.isArray(guesses) ||
-      typeof targetYear !== "number" ||
-      typeof hasWon !== "boolean" ||
-      (puzzleNumber !== undefined && typeof puzzleNumber !== "number")
-    ) {
-      logger.error("Invalid inputs to generateShareText");
+    if (!Array.isArray(ranges) || ranges.some((range) => typeof range.start !== "number")) {
+      logger.error("Invalid ranges passed to generateShareText");
       return "Chrondle share text generation failed";
     }
 
+    const primaryRange = getPrimaryRange(ranges);
+    const hintsUsed = primaryRange?.hintsUsed ?? 0;
+    const widthYears = primaryRange ? primaryRange.end - primaryRange.start + 1 : null;
+    const missDistance =
+      !hasWon && primaryRange && typeof options.targetYear === "number"
+        ? getMissDistance(primaryRange, options.targetYear)
+        : null;
+
     const today = new Date();
-    const dateString = today.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const dateAbbrev = formatDateAbbreviated(today);
 
-    const emojiTimeline = generateEmojiTimeline(guesses, targetYear);
-    const score = hasWon ? `${guesses.length}/6` : "X/6";
+    // Header with abbreviated date
+    const header = `Chrondle${puzzleNumber ? ` #${puzzleNumber}` : ""} • ${dateAbbrev}`;
 
-    // Calculate closest guess for enhanced sharing with error handling
-    let closestMessage = "";
-    try {
-      const closestData = calculateClosestGuess(guesses, targetYear);
-      closestMessage = formatClosestGuessMessage(closestData, hasWon);
-    } catch (error) {
-      logger.warn("Failed to calculate closest guess for sharing:", error);
-      // Continue without closest guess message
-    }
+    // Result line (win/loss with visual indicators)
+    const resultLine = hasWon
+      ? widthYears === 1
+        ? "🎯 Contained in 1 year · Perfect!"
+        : `🎯 Contained in ${widthYears} ${pluralize(widthYears ?? 1, "year")}`
+      : missDistance !== null && missDistance > 0
+        ? `❌ Missed by ${pluralize(missDistance, "year")} (${widthYears}-year window)`
+        : widthYears
+          ? `❌ Didn't contain it (${widthYears}-year window)`
+          : "❌ Didn't contain it";
 
-    let result = `Chrondle ${puzzleNumber ? `#${puzzleNumber}` : ""}: ${dateString} - ${score}${closestMessage}\n`;
+    // Hint bar visualization
+    const hintBar = `💡 ${generateHintBar(hintsUsed)}`;
 
-    // Add first hint if available (directly below the top line)
-    if (puzzleEvents && Array.isArray(puzzleEvents) && puzzleEvents.length > 0 && puzzleEvents[0]) {
-      result += `${puzzleEvents[0]}\n`;
-    }
+    // Score bar visualization
+    const scoreBar = `📊 ${generateScoreBar(totalScore)}`;
 
-    result += `\n${emojiTimeline}`;
-    result += "\n\nhttps://www.chrondle.app";
-
-    return result;
+    return `${header}\n\n${resultLine}\n${hintBar}\n${scoreBar}\n\nchrondle.app`;
   } catch (error) {
     logger.error("Failed to generate share text:", error);
-    // Fallback to basic share text
-    return `Chrondle: ${hasWon ? "Won" : "Lost"} in ${guesses.length}/6 guesses\nhttps://www.chrondle.app`;
+    return `Chrondle: ${hasWon ? "Victory" : "Learned something new"}\nhttps://www.chrondle.app`;
   }
 }

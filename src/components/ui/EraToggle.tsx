@@ -13,7 +13,7 @@ const toggleContainerVariants = cva(
       size: {
         sm: "h-7 text-xs",
         default: "h-8 text-sm",
-        lg: "h-10 text-base",
+        lg: "h-12 text-base",
       },
       width: {
         auto: "w-auto",
@@ -28,7 +28,7 @@ const toggleContainerVariants = cva(
 );
 
 const toggleButtonVariants = cva(
-  "inline-flex items-center justify-center rounded-md px-3 py-1 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 flex-1 sm:flex-initial relative z-10",
+  "inline-flex items-center justify-center rounded-md px-3 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 flex-1 sm:flex-initial relative z-10",
   {
     variants: {
       variant: {
@@ -51,7 +51,7 @@ const toggleButtonVariants = cva(
       size: {
         sm: "h-5 min-w-[2.5rem] text-xs",
         default: "h-6 min-w-[3rem] text-sm",
-        lg: "h-8 min-w-[3.5rem] text-base",
+        lg: "h-10 min-w-[3.5rem] text-base",
       },
     },
     defaultVariants: {

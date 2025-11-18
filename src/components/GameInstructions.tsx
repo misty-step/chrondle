@@ -1,8 +1,6 @@
 "use client";
 
 import React from "react";
-import { RippleButton } from "@/components/magicui/ripple-button";
-import { useShareGame } from "@/hooks/useShareGame";
 import { formatYear } from "@/lib/displayFormatting";
 import { HistoricalContextCard } from "@/components/HistoricalContextCard";
 import type { ClosestGuessData } from "@/types/game";
@@ -12,14 +10,11 @@ interface GameInstructionsProps {
   isGameComplete?: boolean;
   hasWon?: boolean;
   targetYear?: number;
-  guesses?: number[];
   timeString?: string;
   currentStreak?: number;
-  puzzleEvents?: string[];
   closestGuess?: ClosestGuessData | null;
   isArchive?: boolean;
   historicalContext?: string;
-  puzzleNumber?: number;
 }
 
 export const GameInstructions: React.FC<GameInstructionsProps> = ({
@@ -27,97 +22,24 @@ export const GameInstructions: React.FC<GameInstructionsProps> = ({
   isGameComplete = false,
   hasWon = false,
   targetYear,
-  guesses = [],
   timeString,
-  puzzleEvents = [],
   historicalContext,
   closestGuess,
   isArchive = false,
-  puzzleNumber,
 }) => {
-  // Share functionality - always initialize hook (React hooks rule)
-  const { shareGame, shareStatus, shareMethod, isSharing } = useShareGame(
-    guesses,
-    targetYear || 0,
-    hasWon,
-    puzzleEvents,
-    puzzleNumber,
-  );
-
   // Active game state - show normal instructions
   if (!isGameComplete) {
     return (
-      <div className={`mb-6 text-left ${className}`}>
-        <h2 className="text-foreground mb-2 text-xl font-bold sm:text-2xl">Guess the Year</h2>
-        <p className="text-muted-foreground text-lg leading-7">
-          Each hint is an event from the same year.
+      <div className={`text-left ${className}`}>
+        <h2 className="text-foreground mb-2 text-2xl font-bold sm:text-3xl lg:text-4xl">
+          Date This Event
+        </h2>
+        <p className="text-muted-foreground text-base leading-relaxed font-medium sm:text-lg lg:text-xl">
+          Narrow your range to score more.
         </p>
       </div>
     );
   }
-
-  // Game completed - show results with answer reveal
-
-  const getShareButtonContent = () => {
-    switch (shareStatus) {
-      case "success":
-        return (
-          <div className="flex items-center justify-center gap-2">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            <span>{shareMethod === "webshare" ? "Shared!" : "Copied!"}</span>
-          </div>
-        );
-      case "error":
-        return (
-          <div className="flex items-center justify-center gap-2">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-            <span>Try again</span>
-          </div>
-        );
-      default:
-        return (
-          <div className="flex items-center justify-center gap-2">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
-              />
-            </svg>
-            <span>Share</span>
-          </div>
-        );
-    }
-  };
-
-  const getShareButtonStyles = () => {
-    const baseStyles =
-      "flex-1 py-3 px-4 font-semibold text-sm transition-all duration-300 rounded-lg";
-
-    switch (shareStatus) {
-      case "success":
-        return `${baseStyles} bg-green-500 text-white hover:bg-green-600`;
-      case "error":
-        return `${baseStyles} bg-red-500 text-white hover:bg-red-600`;
-      default:
-        return `${baseStyles} bg-primary text-primary-foreground hover:bg-primary/90`;
-    }
-  };
 
   return (
     <div className={`mb-1 ${className}`}>
@@ -173,10 +95,8 @@ export const GameInstructions: React.FC<GameInstructionsProps> = ({
       )}
 
       {/* Conditional Layout: Show countdown for daily puzzles, compact share for archive */}
-      {!isArchive ? (
-        // Daily puzzle layout with countdown
+      {!isArchive && (
         <div className="from-primary/5 to-primary/10 border-primary/20 mb-4 flex w-full items-center gap-4 rounded-xl border bg-gradient-to-br p-6">
-          {/* Countdown Section */}
           <div className="flex flex-1 flex-col items-start">
             <div className="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase">
               Next puzzle in
@@ -185,33 +105,6 @@ export const GameInstructions: React.FC<GameInstructionsProps> = ({
               {timeString || "00:00:00"}
             </div>
           </div>
-
-          {/* Share Button Section */}
-          <div className="flex gap-3">
-            {/* Share Button */}
-            <RippleButton
-              onClick={() => shareGame()}
-              disabled={isSharing}
-              className={getShareButtonStyles()}
-              rippleColor="rgba(255, 255, 255, 0.3)"
-              aria-label="Share your results"
-            >
-              {getShareButtonContent()}
-            </RippleButton>
-          </div>
-        </div>
-      ) : (
-        // Archive puzzle layout - just share button in a more compact form
-        <div className="mb-4 flex w-full justify-center">
-          <RippleButton
-            onClick={() => shareGame()}
-            disabled={isSharing}
-            className={getShareButtonStyles() + " px-8 py-3"}
-            rippleColor="rgba(255, 255, 255, 0.3)"
-            aria-label="Share your results"
-          >
-            {getShareButtonContent()}
-          </RippleButton>
         </div>
       )}
 
