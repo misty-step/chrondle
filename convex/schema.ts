@@ -79,4 +79,24 @@ export default defineSchema({
     perfectGames: v.number(), // Guessed in 1 try
     updatedAt: v.number(), // For streak updates
   }).index("by_clerk", ["clerkId"]),
+
+  // Event generation logs (for autonomous event pipeline monitoring)
+  generation_logs: defineTable({
+    year: v.number(),
+    era: v.string(), // 'BCE' | 'CE'
+    status: v.string(), // 'success' | 'failed' | 'skipped'
+    attempt_count: v.number(),
+    events_generated: v.number(),
+    token_usage: v.object({
+      input: v.number(),
+      output: v.number(),
+      total: v.number(),
+    }),
+    cost_usd: v.number(),
+    error_message: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_status", ["status", "timestamp"])
+    .index("by_year", ["year"]),
 });

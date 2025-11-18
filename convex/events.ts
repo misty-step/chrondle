@@ -1,8 +1,8 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 
 // Import events into the pool (one event per row)
-export const importEvent = mutation({
+export const importEvent = internalMutation({
   args: {
     year: v.number(),
     event: v.string(),
@@ -33,7 +33,7 @@ export const importEvent = mutation({
 });
 
 // Batch import events for a year
-export const importYearEvents = mutation({
+export const importYearEvents = internalMutation({
   args: {
     year: v.number(),
     events: v.array(v.string()),
@@ -75,7 +75,7 @@ export const importYearEvents = mutation({
   },
 });
 
-// Get events for a specific year
+// Get events for a specific year (public for admin scripts)
 export const getYearEvents = query({
   args: { year: v.number() },
   handler: async (ctx, { year }) => {
@@ -89,7 +89,7 @@ export const getYearEvents = query({
 });
 
 // Get available years (years with 6+ unused events)
-export const getAvailableYears = query({
+export const getAvailableYears = internalQuery({
   handler: async (ctx) => {
     // Get all events that aren't assigned to a puzzle
     const unusedEvents = await ctx.db
@@ -115,7 +115,7 @@ export const getAvailableYears = query({
 });
 
 // Mark events as used by a puzzle
-export const assignEventsToPuzzle = mutation({
+export const assignEventsToPuzzle = internalMutation({
   args: {
     eventIds: v.array(v.id("events")),
     puzzleId: v.id("puzzles"),
@@ -133,7 +133,7 @@ export const assignEventsToPuzzle = mutation({
 });
 
 // Delete all events for a year (only if none are used in puzzles)
-export const deleteYearEvents = mutation({
+export const deleteYearEvents = internalMutation({
   args: {
     year: v.number(),
   },
@@ -166,7 +166,7 @@ export const deleteYearEvents = mutation({
   },
 });
 
-// Get all years with event counts
+// Get all years with event counts (public for admin scripts)
 export const getAllYearsWithStats = query({
   handler: async (ctx) => {
     const allEvents = await ctx.db.query("events").collect();
@@ -197,7 +197,7 @@ export const getAllYearsWithStats = query({
   },
 });
 
-// Get pool statistics
+// Get pool statistics (public for admin scripts)
 export const getEventPoolStats = query({
   handler: async (ctx) => {
     const allEvents = await ctx.db.query("events").collect();
@@ -229,7 +229,7 @@ export const getEventPoolStats = query({
 });
 
 // Delete a single event (if not used in a puzzle)
-export const deleteEvent = mutation({
+export const deleteEvent = internalMutation({
   args: {
     eventId: v.id("events"),
   },
@@ -251,7 +251,7 @@ export const deleteEvent = mutation({
 });
 
 // Update a single event (if not used in a puzzle)
-export const updateEvent = mutation({
+export const updateEvent = internalMutation({
   args: {
     eventId: v.id("events"),
     newEvent: v.string(),

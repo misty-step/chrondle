@@ -8,69 +8,11 @@ import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { ActionCtx } from "../_generated/server";
-
-// Error type for HTTP errors with status codes
-interface ErrorWithStatus extends Error {
-  status?: number;
-}
-
-/**
- * Sanitizes error messages and objects to prevent API key leakage
- * Removes OpenRouter API keys (sk-or-v1-...) from error text and stack traces
- *
- * @param error - Error object or string to sanitize
- * @returns Sanitized error string safe for logging
- */
-function sanitizeErrorForLogging(error: unknown): string {
-  const apiKeyPattern = /sk-or-v1-[a-zA-Z0-9]{32,}/g;
-  const bearerPattern = /Bearer\s+sk-or-v1-[a-zA-Z0-9]{32,}/gi;
-
-  let errorText = "";
-  if (error instanceof Error) {
-    errorText = `${error.message}\n${error.stack || ""}`;
-  } else if (typeof error === "string") {
-    errorText = error;
-  } else {
-    errorText = JSON.stringify(error);
-  }
-
-  // Replace API keys with redacted placeholder
-  return errorText
-    .replace(apiKeyPattern, "sk-or-v1-***REDACTED***")
-    .replace(bearerPattern, "Bearer sk-or-v1-***REDACTED***");
-}
-
-/**
- * Creates a new Error object with sanitized message
- * Prevents API key leakage when errors are rethrown and logged by Convex
- *
- * SECURITY: This function is critical for preventing API key exposure.
- * When errors are rethrown, Convex logs them and may send them to monitoring
- * services or clients. Sanitizing before rethrowing ensures secrets never leak.
- *
- * @param error - Original error object to sanitize
- * @returns New Error with sanitized message and preserved status code
- *
- * @example
- * try {
- *   await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
- * } catch (error) {
- *   // ❌ BAD: throw error; // API key in error.message
- *   // ✅ GOOD:
- *   throw createSanitizedError(error); // API key redacted
- * }
- */
-function createSanitizedError(error: unknown): Error {
-  const sanitizedMessage = sanitizeErrorForLogging(error);
-  const newError = new Error(sanitizedMessage);
-
-  // Preserve HTTP status code if present (needed for retry logic)
-  if (error && typeof error === "object" && "status" in error) {
-    (newError as ErrorWithStatus).status = (error as ErrorWithStatus).status;
-  }
-
-  return newError;
-}
+import {
+  ErrorWithStatus,
+  createSanitizedError,
+  sanitizeErrorForLogging,
+} from "../lib/errorSanitization";
 
 // Response type for OpenRouter Responses API
 interface APIResponse {

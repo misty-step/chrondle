@@ -1,8 +1,7 @@
 "use node";
-/* eslint-disable no-console */
 
 import { internalAction } from "../_generated/server";
-import { api } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 
 // Define the puzzle data structure
 interface PuzzleData {
@@ -60,7 +59,7 @@ export const migrateEvents = internalAction({
 
       try {
         // Import all events for this year
-        const result = await ctx.runMutation(api.events.importYearEvents, {
+        const result = await ctx.runMutation(internal.events.importYearEvents, {
           year,
           events,
         });
@@ -71,9 +70,7 @@ export const migrateEvents = internalAction({
 
         // Log progress every 10 years
         if (years.indexOf(year) % 10 === 0) {
-          console.log(
-            `Progress: Processed ${years.indexOf(year) + 1}/${years.length} years`,
-          );
+          console.log(`Progress: Processed ${years.indexOf(year) + 1}/${years.length} years`);
         }
 
         // Add a small delay to avoid overwhelming the database
@@ -112,9 +109,7 @@ export const migrateEvents = internalAction({
     console.log("\nEvent pool statistics:");
     console.log(`  - Total events in database: ${poolStats.totalEvents}`);
     console.log(`  - Unique years: ${poolStats.uniqueYears}`);
-    console.log(
-      `  - Years available for puzzles: ${poolStats.availableYearsForPuzzles}`,
-    );
+    console.log(`  - Years available for puzzles: ${poolStats.availableYearsForPuzzles}`);
 
     return summary;
   },
@@ -129,9 +124,7 @@ export const migrateFromJSON = internalAction({
     // with the puzzle data from puzzles.json
 
     console.log("This action needs to be called with puzzle data.");
-    console.log(
-      "Use the migration script in scripts/migrate-events-to-convex.mjs",
-    );
+    console.log("Use the migration script in scripts/migrate-events-to-convex.mjs");
 
     return {
       message: "Please use the migration script to import puzzle data",
