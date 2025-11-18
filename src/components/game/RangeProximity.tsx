@@ -8,8 +8,9 @@ interface RangeProximityProps {
   rangeStart: number;
   rangeEnd: number;
   targetYear?: number;
-  summary: string;
-  subtext?: string;
+  missDistance?: number | null;
+  missDirection?: "earlier" | "later" | "inside" | null;
+  windowYears: number;
   children?: React.ReactNode;
 }
 
@@ -17,44 +18,44 @@ export function RangeProximity({
   rangeStart,
   rangeEnd,
   targetYear,
-  summary,
-  subtext,
+  missDistance,
+  missDirection,
+  windowYears,
   children,
 }: RangeProximityProps) {
   const scale = computeProximityScale({ rangeStart, rangeEnd, targetYear });
   const hasTarget = typeof targetYear === "number";
 
+  // Determine hero text based on miss distance
+  const heroText =
+    missDistance === null || missDistance === undefined || missDirection === null
+      ? null
+      : missDistance === 0
+        ? "CONTAINED!"
+        : missDirection === "earlier"
+          ? `${missDistance.toLocaleString()} ${missDistance === 1 ? "YEAR" : "YEARS"} TOO LATE`
+          : `${missDistance.toLocaleString()} ${missDistance === 1 ? "YEAR" : "YEARS"} TOO EARLY`;
+
+  // Determine subtitle based on direction
+  const subtitle =
+    missDistance === null || missDistance === undefined || missDirection === null
+      ? `${formatYear(rangeStart)} – ${formatYear(rangeEnd)}`
+      : `${windowYears}-year window`;
+
   return (
-    <div className="border-border/40 bg-background/70 rounded-xl border p-4 shadow-inner">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            Proximity
-          </p>
-          <p className="text-foreground text-sm font-semibold">{summary}</p>
-          {subtext && <p className="text-muted-foreground text-xs">{subtext}</p>}
+    <div className="border-border bg-background rounded-xl border-2 px-6 py-5 shadow-lg">
+      {/* Hero text with subtitle - left-aligned, subtle hierarchy */}
+      {heroText && (
+        <div className="mb-4 space-y-1">
+          <div className="text-foreground text-2xl leading-tight font-bold tracking-tight">
+            {heroText}
+          </div>
+          <div className="text-muted-foreground text-sm">{subtitle}</div>
         </div>
-        {hasTarget && (
-          <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            Target {formatYear(targetYear as number)}
-          </span>
-        )}
-      </div>
+      )}
 
-      <div className="mt-4 space-y-2">
-        <div className="text-muted-foreground flex flex-wrap items-center gap-4 text-[0.65rem] font-semibold tracking-wide uppercase">
-          <span className="flex items-center gap-1">
-            <span className="bg-primary h-2 w-2 rounded-full" aria-hidden="true" />
-            Your range
-          </span>
-          {hasTarget && (
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-rose-500" aria-hidden="true" />
-              Target
-            </span>
-          )}
-        </div>
-
+      {/* Timeline visualization - generous spacing */}
+      <div className="space-y-2">
         <div className="bg-muted/70 relative h-3 rounded-full">
           <div
             className="bg-primary/35 absolute inset-y-0 rounded-full"
@@ -81,7 +82,8 @@ export function RangeProximity({
         </div>
       </div>
 
-      {children ? <div className="mt-4">{children}</div> : null}
+      {/* Hints bar - left-aligned below timeline */}
+      {children && <div className="mt-3">{children}</div>}
     </div>
   );
 }

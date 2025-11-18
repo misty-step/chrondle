@@ -177,7 +177,7 @@ export function GameComplete({
     if (isSharing) return "Sharing…";
     if (shareStatus === "success") return "Copied!";
     if (shareStatus === "error") return "Try again";
-    return "Share challenge";
+    return "Share";
   })();
 
   const shareButtonTone = (() => {
@@ -185,13 +185,6 @@ export function GameComplete({
     if (shareStatus === "error") return "bg-rose-500 hover:bg-rose-600";
     return "bg-primary hover:bg-primary/90";
   })();
-
-  const hintsCopy =
-    hintsUsed === 0
-      ? "You kept every hint hidden."
-      : ladderFilled === ladderSlots
-        ? "All hints revealed."
-        : `${pluralize(hintsUsed, "hint")} revealed.`;
 
   const showTargetMarker = Boolean(
     primaryRange && typeof targetYear === "number" && Number.isFinite(targetYear),
@@ -208,22 +201,13 @@ export function GameComplete({
   const missDirection =
     showTargetMarker && primaryRange && typeof targetYear === "number"
       ? targetYear < primaryRange.start
-        ? "earlier"
+        ? ("earlier" as const)
         : targetYear > primaryRange.end
-          ? "later"
-          : "inside"
+          ? ("later" as const)
+          : ("inside" as const)
       : null;
 
-  const proximityCopy = (() => {
-    if (!primaryRange) return "";
-    if (missDistance === null || missDirection === null) {
-      return `Range ${formatYear(primaryRange.start)} – ${formatYear(primaryRange.end)}`;
-    }
-    if (missDistance === 0) {
-      return `Answer sat inside your ${pluralize(primaryRange.end - primaryRange.start + 1, "year")} window.`;
-    }
-    return `Missed by ${pluralize(missDistance, "year")} (${missDirection}).`;
-  })();
+  const windowYears = primaryRange ? primaryRange.end - primaryRange.start + 1 : 0;
 
   return (
     <section
@@ -239,11 +223,6 @@ export function GameComplete({
               Game Summary
             </p>
             <h3 className="text-foreground text-2xl font-bold">{outcomeCopy.title}</h3>
-            {outcomeCopy.detail && (
-              <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-                {outcomeCopy.detail}
-              </p>
-            )}
           </div>
 
           <div className="border-border/40 bg-primary/5 rounded-xl border p-4 text-right shadow-sm">
@@ -276,26 +255,28 @@ export function GameComplete({
           rangeStart={primaryRange.start}
           rangeEnd={primaryRange.end}
           targetYear={typeof targetYear === "number" ? targetYear : undefined}
-          summary={proximityCopy}
-          subtext={widthStats.width ? `${pluralize(widthStats.width, "year")} window` : undefined}
+          missDistance={missDistance}
+          missDirection={missDirection}
+          windowYears={windowYears}
         >
           {ladderSlots > 0 && (
-            <div>
-              <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
-                <span>{hintsCopy}</span>
-                <span>{hintPenalty ? `-${hintPenalty} pts` : "0 pt penalty"}</span>
-              </div>
-              <div className="flex gap-1.5">
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-muted-foreground text-xs">Hints taken</span>
+              <div className="flex items-center gap-2">
                 {Array.from({ length: ladderSlots }).map((_, index) => (
-                  <span
+                  <Lightbulb
                     key={index}
                     className={cn(
-                      "h-1.5 flex-1 rounded-full",
-                      index < ladderFilled ? "bg-primary" : "bg-muted-foreground/20",
+                      "size-4",
+                      index < ladderFilled
+                        ? "fill-yellow-500 text-yellow-600"
+                        : "text-muted-foreground/30 fill-none",
                     )}
+                    aria-label={index < ladderFilled ? "Hint used" : "Hint unused"}
                   />
                 ))}
               </div>
+              <span className="text-foreground font-medium">-{hintPenalty} pts</span>
             </div>
           )}
         </RangeProximity>
