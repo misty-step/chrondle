@@ -248,6 +248,38 @@ export function formatDate(dateString: string): string {
 }
 
 /**
+ * Pluralizes a word based on count
+ * @param count - Number determining pluralization
+ * @param singular - Singular form of the word
+ * @param plural - Optional custom plural form (defaults to singular + 's')
+ * @returns Properly pluralized string with count
+ * @example
+ * pluralize(1, 'year') => '1 year'
+ * pluralize(2, 'year') => '2 years'
+ * pluralize(1, 'clue') => '1 clue'
+ * pluralize(3, 'clue') => '3 clues'
+ */
+export function pluralize(count: number, singular: string, plural?: string): string {
+  const pluralForm = plural || `${singular}s`;
+  return count === 1 ? `${count} ${singular}` : `${count} ${pluralForm}`;
+}
+
+/**
+ * Pluralizes a word without the count prefix
+ * @param count - Number determining pluralization
+ * @param singular - Singular form of the word
+ * @param plural - Optional custom plural form (defaults to singular + 's')
+ * @returns Just the pluralized word (no count)
+ * @example
+ * pluralizeWord(1, 'year') => 'year'
+ * pluralizeWord(2, 'year') => 'years'
+ */
+export function pluralizeWord(count: number, singular: string, plural?: string): string {
+  const pluralForm = plural || `${singular}s`;
+  return count === 1 ? singular : pluralForm;
+}
+
+/**
  * Export a compatibility wrapper for existing formatYear function
  * This ensures backward compatibility while transitioning to new utilities
  */

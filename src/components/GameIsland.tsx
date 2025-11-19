@@ -15,13 +15,14 @@ import {
 } from "react";
 import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useChrondle } from "@/hooks/useChrondle";
+import { useRangeGame } from "@/hooks/useRangeGame";
 import { isReady } from "@/types/gameState";
 import { useStreak } from "@/hooks/useStreak";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useVictoryConfetti } from "@/hooks/useVictoryConfetti";
 import { useScreenReaderAnnouncements } from "@/hooks/useScreenReaderAnnouncements";
 import { logger } from "@/lib/logger";
+import { GAME_CONFIG } from "@/lib/constants";
 import { AchievementModal, LazyModalWrapper } from "@/components/LazyModals";
 import {
   GameLayout,
@@ -59,7 +60,7 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
 
   // Use the Chrondle hook with preloaded puzzle data
   // This eliminates the loading state for puzzle data
-  const chrondle = useChrondle(undefined, puzzle);
+  const chrondle = useRangeGame(undefined, puzzle);
 
   // Defer non-critical state values for better performance
   const deferredGameState = useDeferredValue(chrondle.gameState);
@@ -82,6 +83,7 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
 
     // Extract guesses and completion status when ready
     const guesses = isReady(chrondle.gameState) ? chrondle.gameState.guesses : [];
+    const ranges = isReady(chrondle.gameState) ? chrondle.gameState.ranges : [];
     const isGameOver = isReady(chrondle.gameState) ? chrondle.gameState.isComplete : false;
 
     // More granular loading states
@@ -92,12 +94,18 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
     // Only consider it "loading" for UI purposes if puzzle is actually loading
     // Auth and progress can load in the background without disabling the game
     const isLoading = isPuzzleLoading;
+    const totalScore = isReady(chrondle.gameState) ? chrondle.gameState.totalScore : 0;
+    const remainingAttempts = isReady(deferredGameState)
+      ? deferredGameState.remainingAttempts
+      : GAME_CONFIG.MAX_GUESSES;
 
     return {
       gameState: {
         puzzle: puzzleData,
         guesses,
+        ranges,
         isGameOver,
+        totalScore,
       },
       isLoading,
       isPuzzleLoading,
@@ -107,11 +115,14 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
       // Use deferred values for non-critical display properties
       isGameComplete: isReady(deferredGameState) ? deferredGameState.isComplete : false,
       hasWon: isReady(deferredGameState) ? deferredGameState.hasWon : false,
-      remainingGuesses: isReady(deferredGameState) ? deferredGameState.remainingGuesses : 6,
-      makeGuess: chrondle.submitGuess,
+      remainingGuesses: isReady(deferredGameState)
+        ? deferredGameState.remainingGuesses
+        : GAME_CONFIG.MAX_GUESSES,
+      remainingAttempts,
+      submitRange: chrondle.submitRange,
       resetGame: chrondle.resetGame,
     };
-  }, [puzzle, chrondle.gameState, deferredGameState, chrondle.submitGuess, chrondle.resetGame]);
+  }, [puzzle, chrondle.gameState, deferredGameState, chrondle.submitRange, chrondle.resetGame]);
 
   // Store puzzle number once loaded to prevent flashing during state transitions
   const [stablePuzzleNumber, setStablePuzzleNumber] = useState<number | undefined>(undefined);
@@ -136,17 +147,15 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
 
   // UI state
   const [, setValidationError] = useState("");
-  const [, setLastGuessCount] = useState(0);
 
   // Guard to prevent multiple game over handling
   const hasHandledGameOverRef = useRef(false);
 
   // Handle game over with streak updates
   const handleGameOver = useCallback(
-    (won: boolean, guessCount: number) => {
+    (won: boolean, attemptCount: number) => {
       // logger.gameComplete is not available, use logger.info instead
-      logger.info(`Game complete: ${won ? "Won" : "Lost"} in ${guessCount} guesses`);
-      setLastGuessCount(guessCount);
+      logger.info(`Game complete: ${won ? "Won" : "Lost"} in ${attemptCount} range attempts`);
 
       // Update streak (dual-mode):
       // - Authenticated: no-op (backend submitGuess mutation already updated)
@@ -161,8 +170,8 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
     // Only handle game over once per completion
     if (gameLogic.isGameComplete && !gameLogic.isLoading && !hasHandledGameOverRef.current) {
       hasHandledGameOverRef.current = true;
-      const guessCount = gameLogic.gameState.guesses.length;
-      handleGameOver(gameLogic.hasWon, guessCount);
+      const attemptCount = gameLogic.gameState.ranges.length;
+      handleGameOver(gameLogic.hasWon, attemptCount);
     }
 
     // Reset guard when game resets (for debug mode or archive navigation)
@@ -173,7 +182,7 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
     gameLogic.isGameComplete,
     gameLogic.hasWon,
     gameLogic.isLoading,
-    gameLogic.gameState.guesses.length,
+    gameLogic.gameState.ranges.length,
     handleGameOver,
   ]);
 
@@ -182,18 +191,17 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
     hasWon: gameLogic.hasWon,
     isGameComplete: gameLogic.isGameComplete,
     isMounted: hydrated,
-    guessCount: gameLogic.gameState.guesses.length,
+    guessCount: gameLogic.gameState.ranges.length,
   });
 
-  // Track last guess count for screen reader announcements
-  const [screenReaderLastGuessCount, setScreenReaderLastGuessCount] = useState(0);
+  // Track last range count for screen reader announcements
+  const [screenReaderLastRangeCount, setScreenReaderLastRangeCount] = useState(0);
 
   // Screen reader announcements
   const announcement = useScreenReaderAnnouncements({
-    guesses: gameLogic.gameState.guesses,
-    puzzle: gameLogic.gameState.puzzle,
-    lastGuessCount: screenReaderLastGuessCount,
-    setLastGuessCount: setScreenReaderLastGuessCount,
+    ranges: gameLogic.gameState.ranges,
+    lastRangeCount: screenReaderLastRangeCount,
+    setLastRangeCount: setScreenReaderLastRangeCount,
   });
 
   // Swipe navigation would need proper props - disabling for now
@@ -260,7 +268,8 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
               hasWon={gameLogic.hasWon}
               isLoading={gameLogic.isLoading}
               error={gameLogic.error}
-              onGuess={gameLogic.makeGuess}
+              onRangeCommit={gameLogic.submitRange}
+              remainingAttempts={gameLogic.remainingAttempts}
               countdown={countdown}
               confettiRef={confettiRef}
               onValidationError={setValidationError}

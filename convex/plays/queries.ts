@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import { normalizePlayData } from "../lib/migrationHelpers";
 
 /**
  * Play Progress Queries
@@ -58,17 +59,23 @@ export const getUserPlay = query({
         .withIndex("by_user_puzzle", (q) => q.eq("userId", userId).eq("puzzleId", puzzleId))
         .first();
 
+      const normalizedPlay = normalizePlayData(play);
+
+      if (!normalizedPlay) {
+        return null;
+      }
+
       // Log successful query in development for debugging
-      if (process.env.NODE_ENV === "development" && play) {
+      if (process.env.NODE_ENV === "development") {
         console.error("[getUserPlay] Successfully retrieved play record:", {
           userId: userId.slice(0, 8) + "...", // Log partial ID for privacy
           puzzleId: puzzleId.slice(0, 8) + "...",
-          hasGuesses: play.guesses?.length > 0,
-          isCompleted: !!play.completedAt,
+          attempts: normalizedPlay.ranges.length,
+          isCompleted: !!normalizedPlay.completedAt,
         });
       }
 
-      return play;
+      return normalizedPlay;
     } catch (error) {
       // Log the error with context for debugging
       console.error("[getUserPlay] Error fetching user play record:", {

@@ -1,6 +1,7 @@
 import { GameState, Puzzle } from "@/types/gameState";
 import { GAME_CONFIG } from "@/lib/constants";
 import { logger } from "@/lib/logger";
+import type { RangeGuess } from "@/types/range";
 
 /**
  * Data sources from the orthogonal hooks
@@ -19,15 +20,33 @@ export interface DataSources {
   progress: {
     progress: {
       guesses: number[];
+      ranges?: RangeGuess[];
+      totalScore?: number;
       completedAt: number | null;
     } | null;
     isLoading: boolean;
   };
   session: {
     sessionGuesses: number[];
+    sessionRanges?: RangeGuess[];
     addGuess: (n: number) => void;
     clearGuesses: () => void;
+    addRange?: (range: RangeGuess) => void;
+    replaceLastRange?: (range: RangeGuess) => void;
+    removeLastRange?: () => void;
+    clearRanges?: () => void;
+    markComplete?: (hasWon: boolean) => void;
   };
+}
+
+function guessesToLegacyRanges(guesses: number[]): RangeGuess[] {
+  return guesses.map((guess, index) => ({
+    start: guess,
+    end: guess,
+    hintsUsed: 0,
+    score: 0,
+    timestamp: index,
+  }));
 }
 
 /**
@@ -148,6 +167,28 @@ export function deriveGameState(sources: DataSources): GameState {
     // Merge guesses (server first, then session without duplicates)
     const allGuesses = reconcileGuessesWithPriority(serverGuesses, sessionGuesses);
 
+    const serverRanges =
+      auth.isAuthenticated && progress.progress?.ranges ? progress.progress.ranges : [];
+    const sessionRanges = session.sessionRanges ?? [];
+
+    let mergedRanges: RangeGuess[];
+    if ((serverRanges?.length || 0) > 0 || sessionRanges.length > 0) {
+      mergedRanges = [...(serverRanges ?? []), ...sessionRanges];
+    } else {
+      mergedRanges = guessesToLegacyRanges(allGuesses);
+    }
+
+    const truncatedRanges = mergedRanges.slice(0, GAME_CONFIG.MAX_GUESSES);
+
+    const totalScoreFromRanges = truncatedRanges.reduce(
+      (sum, range) => sum + (range.score || 0),
+      0,
+    );
+    const totalScore =
+      typeof progress.progress?.totalScore === "number"
+        ? progress.progress.totalScore
+        : totalScoreFromRanges;
+
     // Calculate completion status
     // Complete if:
     // 1. Server has completedAt timestamp OR
@@ -160,25 +201,39 @@ export function deriveGameState(sources: DataSources): GameState {
 
     const lastGuess = allGuesses[allGuesses.length - 1];
     const guessedCorrectly = lastGuess === puzzle.puzzle.targetYear;
-    const usedAllGuesses = allGuesses.length >= GAME_CONFIG.MAX_GUESSES;
-
-    const isComplete = hasServerCompletion || guessedCorrectly || usedAllGuesses;
-
-    // Calculate win status
-    // Won if: completed AND last guess matches target year
-    const hasWon = isComplete && guessedCorrectly;
-
-    // Calculate remaining guesses
     const remainingGuesses = Math.max(0, GAME_CONFIG.MAX_GUESSES - allGuesses.length);
+    const remainingAttempts = Math.max(0, GAME_CONFIG.MAX_GUESSES - truncatedRanges.length);
+
+    const hasWinningRange = truncatedRanges.some((range) => range.score > 0);
+    const usedAllAttempts = remainingAttempts === 0;
+
+    // ONE GUESS MODE: Game ends after first range submission (win or loss)
+    const hasSubmittedRange = truncatedRanges.length > 0 && truncatedRanges[0].score !== undefined;
+
+    const isComplete =
+      hasServerCompletion || guessedCorrectly || hasSubmittedRange || usedAllAttempts;
+
+    const hasWon = hasWinningRange || (isComplete && guessedCorrectly);
+
+    // Calculate hintsRevealed: maximum hintsUsed from all ranges (0-6)
+    // Hints stay revealed once shown, so we track the highest level reached
+    const hintsRevealed = truncatedRanges.reduce(
+      (max, range) => Math.max(max, range.hintsUsed ?? 0),
+      0,
+    );
 
     // Return ready state with all derived values
     return {
       status: "ready",
       puzzle: puzzle.puzzle,
       guesses: allGuesses,
+      ranges: truncatedRanges,
+      totalScore,
       isComplete,
       hasWon,
       remainingGuesses,
+      remainingAttempts,
+      hintsRevealed,
     };
   } catch (error) {
     // Log the error for debugging

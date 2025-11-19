@@ -14,9 +14,9 @@ import { useDebouncedValues } from "@/hooks/useDebouncedValue";
 import { logger } from "@/lib/logger";
 
 /**
- * Return type for the useChrondle hook
+ * Return type for the useRangeGame hook
  */
-export interface UseChronldeReturn extends UseGameActionsReturn {
+export interface UseRangeGameReturn extends UseGameActionsReturn {
   gameState: GameState;
 }
 
@@ -34,7 +34,7 @@ export interface UseChronldeReturn extends UseGameActionsReturn {
  *
  * @example
  * // For daily puzzle
- * const { gameState, submitGuess, resetGame, isSubmitting } = useChrondle();
+ * const { gameState, submitGuess, resetGame, isSubmitting } = useRangeGame();
  *
  * if (isReady(gameState)) {
  *   logger.debug(`Playing puzzle #${gameState.puzzle.puzzleNumber}`);
@@ -43,13 +43,13 @@ export interface UseChronldeReturn extends UseGameActionsReturn {
  *
  * @example
  * // For archive puzzle
- * const { gameState, submitGuess } = useChrondle(42);
+ * const { gameState, submitGuess } = useRangeGame(42);
  *
  * @example
  * // With preloaded puzzle data from server
- * const { gameState, submitGuess } = useChrondle(undefined, serverPuzzle);
+ * const { gameState, submitGuess } = useRangeGame(undefined, serverPuzzle);
  */
-export function useChrondle(puzzleNumber?: number, initialPuzzle?: unknown): UseChronldeReturn {
+export function useRangeGame(puzzleNumber?: number, initialPuzzle?: unknown): UseRangeGameReturn {
   // Compose all orthogonal data sources
   // Hooks must be called unconditionally due to React rules
   const puzzle = usePuzzleData(puzzleNumber, initialPuzzle);
@@ -65,7 +65,7 @@ export function useChrondle(puzzleNumber?: number, initialPuzzle?: unknown): Use
     // Validate the ID format before passing it to useUserProgress
     if (!isValidConvexId(auth.userId)) {
       if (process.env.NODE_ENV === "development") {
-        logger.error("[useChrondle] Invalid user ID format detected - skipping progress query:", {
+        logger.error("[useRangeGame] Invalid user ID format detected - skipping progress query:", {
           userId: auth.userId,
           isAuthenticated: auth.isAuthenticated,
           isLoading: auth.isLoading,

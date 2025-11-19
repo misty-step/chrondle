@@ -350,6 +350,200 @@ Analyzed by: 7 specialized perspectives (complexity-archaeologist, architecture-
   **Retention**: Reduce churn 20-30% at streak milestones
   **Revenue**: $1.99 × 1000 users/month = $24K/year impulse purchases
 
+### [DESIGN] Analog Archival Aesthetic Overhaul - DISTINCTIVE BRAND IDENTITY
+
+**Current State**: Generic blue-on-white UI with Inter/system fonts - forgettable, could be any SaaS app
+**Perspectives**: user-experience-advocate, product-visionary, aesthetic-philosophy
+**Problem**: Competent but completely unmemorable design. Nothing evokes historical investigation, time travel, or scholarly discovery. Players hunt through millennia of history but interface feels like a form builder.
+
+**Cardinal Sin**: Generic AI aesthetics - predictable layouts, safe colors, no contextual character, zero emotional resonance with "historical year-guessing game" premise.
+
+**Design Direction**: **Analog Archival** - library card catalog, vintage research tools, scholarly investigation aesthetic
+
+#### Visual System Foundation
+
+**Typography** (distinctive, contextual):
+
+- Display: Libre Baskerville (classical serif for headers/wordmark)
+- Body: Courier Prime (typewriter monospace for hints/events)
+- Data: IBM Plex Mono (technical precision for years/scores)
+- **Replace**: Inter/system fonts → Characterful font families with historical resonance
+
+**Color Palette** (archival paper):
+
+- Paper backgrounds: Cream (#F5F1E8), white (#FEFDFB), tan (#E8E0D5)
+- Ink: Black (#2B2520), blue (#1E3A5F), faded (#6B5F54)
+- Accents: Oxidized brass (#8B6914), stamp red (#C84B3D)
+- **Replace**: Generic blue (#3B82F6) → Contextual ink/brass/stamp colors
+
+**Spatial Composition**:
+
+- All content on layered "index cards" and "file folders"
+- Asymmetric placement within generous margins (48px+ desktop)
+- Cards slightly rotated (-0.5° to 1°) for organic desk surface feel
+- **Replace**: Centered boxes → Card catalog spatial metaphor
+
+#### Component Redesigns (5 Major)
+
+**1. Range Input → File Drawer Timeline Selector**
+
+- **Current**: Boring text inputs with BC/AD buttons
+- **New**: Dual-handle brass slider on embossed wood grain track
+- **Details**: Year cards with stamped numbers, rubber stamp BC/AD toggles with ink effect
+- **Mobile**: Vertical timeline (better thumb reach), swipe gestures for era toggle
+- **Effort**: 6h
+
+**2. Hint Revelation → Filing Cabinet Drawer Pull**
+
+- **Current**: "Get Hint" button with instant text reveal
+- **New**: Redacted document slides down (drawer opening), bars fade out sequentially, typewriter text reveal, rotated date stamp with ink splatter
+- **Animation**: 1.2s choreographed sequence (300ms slide + 300ms redact fade + 300ms typewriter + 300ms stamp)
+- **Mobile**: Swipe-up gesture to reveal, haptic feedback
+- **Effort**: 8h
+
+**3. Score Breakdown → Research Certificate with Wax Seal**
+
+- **Current**: Static receipt-style list
+- **New**: Official archival certification with animated wax seal, ledger-format score table, timeline visualization, number counter animation
+- **Animation**: 2.5s narrative sequence (certificate slide + seal stamp + year counter + timeline draw + score rows stagger)
+- **Details**: Ornate corners, authentication footer, document ID
+- **Effort**: 10h
+
+**4. Mobile Gesture Interactions**
+
+- Swipe up on redacted card = reveal hint
+- Swipe left/right on year input = change era
+- Pinch/spread on timeline = adjust range width
+- Haptic feedback at 5 touchpoints (era toggle, hint reveal, score, invalid input, milestones)
+- **Effort**: 6h
+
+**5. Micro-interactions Catalog**
+
+- BC/AD stamp press effect (scale + rotate + border)
+- Year input typewriter snap per keystroke
+- Submit button: Embossed brass plate with press depth
+- Hint dots: Brass rivets with stamp animation
+- Invalid input: Horizontal shake with warning haptic
+- **Effort**: 8h
+
+#### Background & Atmosphere
+
+**Texture Layers**:
+
+- Paper grain seamless tile (512×512px, <10KB)
+- Film grain animation (256×256px, <5KB)
+- Subtle vignette radial gradient
+- Coffee ring watermarks (3% opacity, optional)
+
+**Card Shadow System**:
+
+- Layered paper effect with edge highlights
+- Hover states lift paper 2px with enhanced shadows
+- Slight rotation on all cards for organic feel
+
+**Decorative Elements**:
+
+- Brass paperclips, filing tabs, corner brackets
+- Faded stamp watermarks ("CLASSIFIED", "ARCHIVAL")
+- Visible brads/rivets, wax seals
+
+#### Loading & Transitions
+
+- **Daily puzzle load**: Filing cabinet drawer opening (800ms)
+- **Submit → Results**: Research report compilation with stamp machine (1.2s)
+- **Mobile pull-to-refresh**: Calendar page tear-off effect (600ms)
+- **Reduced motion**: All animations <10ms, instant state changes
+
+#### Accessibility Guarantees
+
+- **Color contrast**: All text WCAG AAA (7:1+ ratio)
+- **Motion preferences**: `prefers-reduced-motion` eliminates all animations
+- **Screen readers**: Complete aria-label coverage, semantic announcements
+- **Keyboard nav**: Tab order, arrow keys, focus indicators as brass highlight rings
+
+#### Implementation Phases (4 weeks)
+
+**Phase 1 - Foundation (Week 1)**:
+
+- Typography integration (3 Google Fonts)
+- Color system (CSS custom properties)
+- Background textures and paper effects
+- Card component shadow/rotation system
+- **Deliverable**: Visual identity established
+
+**Phase 2 - Key Interactions (Week 2)**:
+
+- Range input dual-handle slider redesign
+- BC/AD stamp toggle effect
+- Submit button brass styling
+- Mobile responsive layout
+- **Deliverable**: Core gameplay interactions feel archival
+
+**Phase 3 - Delight Layer (Week 3)**:
+
+- Hint revelation drawer animation
+- Score certificate with wax seal
+- Timeline visualization
+- Number counter effects
+- **Deliverable**: Memorable moments at every interaction
+
+**Phase 4 - Polish (Week 4)**:
+
+- Mobile gesture interactions
+- Haptic feedback integration
+- Loading/transition animations
+- Accessibility audit and fixes
+- **Deliverable**: Production-ready, fully polished experience
+
+#### Technical Constraints
+
+**Performance Targets**:
+
+- First Contentful Paint: <1.2s
+- Total animation JS: <15KB gzipped
+- Texture assets: <25KB combined
+- Font optimization: Next.js subset + swap strategy
+
+**Browser Support**:
+
+- Modern browsers (Chrome 90+, Safari 14+, Firefox 88+)
+- Graceful degradation: Flat shadows, reduced animations on older browsers
+- Fallback fonts: Georgia (display), Courier New (body), Menlo (data)
+
+**Assets Required**:
+
+- 2 texture PNGs (paper grain, film grain)
+- SVG icons for brass elements (inline)
+- Wax seal SVG with CSS gradient recoloring
+
+#### Success Metrics
+
+**Qualitative**:
+
+- Users screenshot and share the interface (not just scores)
+- "This feels like researching in an old library" feedback
+- Distinctive enough that competitors can't easily copy
+- Players remember Chrondle's visual identity after one session
+
+**Quantitative**:
+
+- Session duration +15-20% (users linger to appreciate animations)
+- Share rate +25-30% (interface worth showing off)
+- Return rate +10% (memorable brand creates habit)
+- NPS +5-10 points (delight drives recommendation)
+
+**Brand Impact**:
+
+- Chrondle becomes "that beautiful history game" vs. "that year game"
+- Creates moat against Wordle-clone competitors
+- Premium perception justifies future subscription pricing
+- Portfolio-worthy design attracts press/influencer coverage
+
+**Effort**: 160h (~4 weeks, 1 designer/developer)
+**Value**: 10/10 - Transforms commodity game into distinctive product
+**Risk**: Medium - Requires full commitment to aesthetic direction, no half-measures
+**Priority**: High-value product differentiation, schedule after current PR merge
+
 ---
 
 ## Medium Priority Issues

@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useSyncExternalStore,
-  useRef,
-} from "react";
+import { useState, useEffect, useCallback, useMemo, useSyncExternalStore, useRef } from "react";
 import { GAME_CONFIG } from "@/lib/constants";
 import {
   subscribeToStorage,
@@ -16,6 +9,7 @@ import {
   updateStorage,
   clearStorage,
 } from "@/lib/localStorageSync";
+import type { RangeGuess } from "@/types/range";
 
 // Stable empty array reference to avoid infinite loops
 const EMPTY_ARRAY: readonly number[] = Object.freeze([]);
@@ -25,8 +19,13 @@ const EMPTY_ARRAY: readonly number[] = Object.freeze([]);
  */
 interface UseLocalSessionReturn {
   sessionGuesses: number[];
+  sessionRanges: RangeGuess[];
   addGuess: (n: number) => void;
+  addRange: (range: RangeGuess) => void;
+  replaceLastRange: (range: RangeGuess) => void;
+  removeLastRange: () => void;
   clearGuesses: () => void;
+  clearRanges: () => void;
   markComplete: (hasWon: boolean) => void;
 }
 
@@ -62,9 +61,8 @@ export function useLocalSession(
   targetYear?: number,
 ): UseLocalSessionReturn {
   // For authenticated users, use React state
-  const [authenticatedGuesses, setAuthenticatedGuesses] = useState<number[]>(
-    [],
-  );
+  const [authenticatedGuesses, setAuthenticatedGuesses] = useState<number[]>([]);
+  const [sessionRangesState, setSessionRangesState] = useState<RangeGuess[]>([]);
 
   // For anonymous users, use localStorage via useSyncExternalStore
   // This ensures the state persists across navigation and syncs across tabs
@@ -86,21 +84,17 @@ export function useLocalSession(
   }, []);
 
   // Always call useSyncExternalStore (hooks must be called unconditionally)
-  const storageGuesses = useSyncExternalStore(
-    subscribeToStorage,
-    getSnapshot,
-    getServerSnapshot,
-  );
+  const storageGuesses = useSyncExternalStore(subscribeToStorage, getSnapshot, getServerSnapshot);
 
   // Select the appropriate guesses based on authentication status
-  const sessionGuesses = isAuthenticated
-    ? authenticatedGuesses
-    : storageGuesses;
+  const sessionGuesses = isAuthenticated ? authenticatedGuesses : storageGuesses;
+  const sessionRanges = sessionRangesState;
 
   // Reset authenticated guesses when puzzle changes
   useEffect(() => {
     if (isAuthenticated && puzzleId) {
       setAuthenticatedGuesses([]);
+      setSessionRangesState([]);
     }
   }, [puzzleId, isAuthenticated]);
 
@@ -140,8 +134,7 @@ export function useLocalSession(
         // Check if this guess wins the game
         const newGuesses = [...currentGuesses, guess];
         const hasWon = targetYear !== undefined && guess === targetYear;
-        const isComplete =
-          hasWon || newGuesses.length >= GAME_CONFIG.MAX_GUESSES;
+        const isComplete = hasWon || newGuesses.length >= GAME_CONFIG.MAX_GUESSES;
 
         // Update localStorage with the new guess and completion status
         updateStorage(puzzleId, newGuesses, isComplete, hasWon);
@@ -161,6 +154,34 @@ export function useLocalSession(
     }
   }, [isAuthenticated, puzzleId]);
 
+  const addRange = useCallback((range: RangeGuess) => {
+    setSessionRangesState((prev) => {
+      if (prev.length >= GAME_CONFIG.MAX_GUESSES) {
+        return prev;
+      }
+      return [...prev, range];
+    });
+  }, []);
+
+  const replaceLastRange = useCallback((range: RangeGuess) => {
+    setSessionRangesState((prev) => {
+      if (prev.length === 0) {
+        return prev;
+      }
+      const next = [...prev];
+      next[next.length - 1] = range;
+      return next;
+    });
+  }, []);
+
+  const removeLastRange = useCallback(() => {
+    setSessionRangesState((prev) => (prev.length ? prev.slice(0, -1) : prev));
+  }, []);
+
+  const clearRanges = useCallback(() => {
+    setSessionRangesState([]);
+  }, []);
+
   // Mark game as complete (for anonymous users)
   const markComplete = useCallback(
     (hasWon: boolean) => {
@@ -176,10 +197,25 @@ export function useLocalSession(
   return useMemo<UseLocalSessionReturn>(
     () => ({
       sessionGuesses,
+      sessionRanges,
       addGuess,
+      addRange,
+      replaceLastRange,
+      removeLastRange,
       clearGuesses,
+      clearRanges,
       markComplete,
     }),
-    [sessionGuesses, addGuess, clearGuesses, markComplete],
+    [
+      sessionGuesses,
+      sessionRanges,
+      addGuess,
+      addRange,
+      replaceLastRange,
+      removeLastRange,
+      clearGuesses,
+      clearRanges,
+      markComplete,
+    ],
   );
 }

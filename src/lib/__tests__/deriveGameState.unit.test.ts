@@ -6,6 +6,7 @@ import {
 } from "../deriveGameState";
 import { GAME_CONFIG } from "../constants";
 import { Id } from "convex/_generated/dataModel";
+import type { HintCount } from "@/types/range";
 
 describe("deriveGameState", () => {
   // Helper to create default data sources
@@ -31,8 +32,13 @@ describe("deriveGameState", () => {
     },
     session: {
       sessionGuesses: [],
+      sessionRanges: [],
       addGuess: () => {},
       clearGuesses: () => {},
+      addRange: () => {},
+      replaceLastRange: () => {},
+      removeLastRange: () => {},
+      clearRanges: () => {},
     },
     ...overrides,
   });
@@ -143,9 +149,13 @@ describe("deriveGameState", () => {
         status: "ready",
         puzzle: sources.puzzle.puzzle,
         guesses: [],
+        ranges: [],
+        totalScore: 0,
         isComplete: false,
         hasWon: false,
         remainingGuesses: GAME_CONFIG.MAX_GUESSES,
+        remainingAttempts: GAME_CONFIG.MAX_GUESSES,
+        hintsRevealed: 0,
       });
     });
 
@@ -169,7 +179,10 @@ describe("deriveGameState", () => {
       expect(state.status).toBe("ready");
       if (state.status === "ready") {
         expect(state.guesses).toEqual([1950, 1960, 1970, 1980]);
+        expect(state.ranges).toHaveLength(4);
+        expect(state.totalScore).toBe(0);
         expect(state.remainingGuesses).toBe(2);
+        expect(state.remainingAttempts).toBe(2);
       }
     });
 
@@ -247,6 +260,79 @@ describe("deriveGameState", () => {
         expect(state.guesses).toEqual([1969]);
         expect(state.isComplete).toBe(true);
         expect(state.hasWon).toBe(true);
+      }
+    });
+
+    it("should include range data and total score when provided", () => {
+      const ranges = [
+        { start: 1900, end: 1910, score: 300, hintsUsed: 1 as HintCount, timestamp: 1 },
+        { start: 1950, end: 1960, score: 200, hintsUsed: 2 as HintCount, timestamp: 2 },
+      ];
+      const sources = createDataSources({
+        progress: {
+          progress: {
+            guesses: [],
+            ranges,
+            totalScore: 750,
+            completedAt: null,
+          },
+          isLoading: false,
+        },
+      });
+
+      const state = deriveGameState(sources);
+      expect(state.status).toBe("ready");
+      if (state.status === "ready") {
+        expect(state.ranges).toEqual(ranges);
+        expect(state.totalScore).toBe(750);
+        expect(state.remainingAttempts).toBe(GAME_CONFIG.MAX_GUESSES - ranges.length);
+      }
+    });
+
+    it("should mark completion when range attempts are exhausted", () => {
+      const ranges = Array.from({ length: GAME_CONFIG.MAX_GUESSES }, (_, index) => ({
+        start: 1800 + index,
+        end: 1800 + index,
+        score: 0,
+        hintsUsed: 0 as HintCount,
+        timestamp: index,
+      }));
+
+      const sources = createDataSources({
+        progress: {
+          progress: {
+            guesses: [],
+            ranges,
+            totalScore: 0,
+            completedAt: null,
+          },
+          isLoading: false,
+        },
+      });
+
+      const state = deriveGameState(sources);
+      expect(state.status).toBe("ready");
+      if (state.status === "ready") {
+        expect(state.isComplete).toBe(true);
+        expect(state.remainingAttempts).toBe(0);
+      }
+    });
+
+    it("should derive ranges from guesses when none are provided", () => {
+      const sources = createDataSources({
+        session: {
+          sessionGuesses: [1900, 1950],
+          addGuess: () => {},
+          clearGuesses: () => {},
+        },
+      });
+
+      const state = deriveGameState(sources);
+      expect(state.status).toBe("ready");
+      if (state.status === "ready") {
+        expect(state.ranges).toHaveLength(2);
+        expect(state.ranges[0].start).toBe(1900);
+        expect(state.ranges[0].score).toBe(0);
       }
     });
   });

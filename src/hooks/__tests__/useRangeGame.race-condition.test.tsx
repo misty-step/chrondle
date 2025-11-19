@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { useChrondle } from "../useChrondle";
+import { useRangeGame } from "../useRangeGame";
 import { Id } from "convex/_generated/dataModel";
+import type { RangeGuess } from "@/types/range";
 
 // Mock all dependencies
 vi.mock("../data/usePuzzleData", () => ({
@@ -30,7 +31,7 @@ import { useUserProgress } from "../data/useUserProgress";
 import { useLocalSession } from "../data/useLocalSession";
 import { useGameActions } from "../actions/useGameActions";
 
-describe("useChrondle Race Condition Tests", () => {
+describe("useRangeGame Race Condition Tests", () => {
   const mockPuzzle = {
     id: "puzzle-1" as Id<"puzzles">,
     targetYear: 1969,
@@ -40,16 +41,37 @@ describe("useChrondle Race Condition Tests", () => {
 
   const mockSession = {
     sessionGuesses: [],
+    sessionRanges: [],
     addGuess: vi.fn(),
     clearGuesses: vi.fn(),
     markComplete: vi.fn(),
+    addRange: vi.fn(),
+    replaceLastRange: vi.fn(),
+    removeLastRange: vi.fn(),
+    clearRanges: vi.fn(),
   };
 
   const mockActions = {
     submitGuess: vi.fn(),
+    submitRange: vi.fn(),
     resetGame: vi.fn(),
     isSubmitting: false,
   };
+
+  const createProgressData = (
+    overrides?: Partial<{
+      guesses: number[];
+      ranges: RangeGuess[];
+      totalScore: number;
+      completedAt: number | null;
+    }>,
+  ) => ({
+    guesses: [],
+    ranges: [],
+    totalScore: 0,
+    completedAt: null,
+    ...(overrides || {}),
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,7 +97,7 @@ describe("useChrondle Race Condition Tests", () => {
         isLoading: false,
       });
 
-      const { result, rerender } = renderHook(() => useChrondle());
+      const { result, rerender } = renderHook(() => useRangeGame());
 
       // Should be loading auth
       expect(result.current.gameState.status).toBe("loading-auth");
@@ -98,10 +120,10 @@ describe("useChrondle Race Condition Tests", () => {
 
       // Step 3: Progress loads with completed puzzle
       vi.mocked(useUserProgress).mockReturnValue({
-        progress: {
+        progress: createProgressData({
           guesses: [1950, 1960, 1969],
           completedAt: Date.now(),
-        },
+        }),
         isLoading: false,
       });
 
@@ -135,7 +157,7 @@ describe("useChrondle Race Condition Tests", () => {
         isLoading: false,
       });
 
-      const { result, rerender } = renderHook(() => useChrondle());
+      const { result, rerender } = renderHook(() => useRangeGame());
 
       // Should be loading puzzle (highest priority)
       expect(result.current.gameState.status).toBe("loading-puzzle");
@@ -158,10 +180,10 @@ describe("useChrondle Race Condition Tests", () => {
 
       // Progress loads
       vi.mocked(useUserProgress).mockReturnValue({
-        progress: {
+        progress: createProgressData({
           guesses: [1969],
           completedAt: Date.now(),
-        },
+        }),
         isLoading: false,
       });
 
@@ -192,7 +214,7 @@ describe("useChrondle Race Condition Tests", () => {
         isLoading: false,
       });
 
-      const { result, rerender } = renderHook(() => useChrondle());
+      const { result, rerender } = renderHook(() => useRangeGame());
 
       // Should be ready (anonymous)
       expect(result.current.gameState.status).toBe("ready");
@@ -228,9 +250,14 @@ describe("useChrondle Race Condition Tests", () => {
       // Start with session guesses (anonymous)
       const sessionWithGuesses = {
         sessionGuesses: [1950, 1960],
+        sessionRanges: [],
         addGuess: vi.fn(),
         clearGuesses: vi.fn(),
         markComplete: vi.fn(),
+        addRange: vi.fn(),
+        replaceLastRange: vi.fn(),
+        removeLastRange: vi.fn(),
+        clearRanges: vi.fn(),
       };
       vi.mocked(useLocalSession).mockReturnValue(sessionWithGuesses);
 
@@ -249,7 +276,7 @@ describe("useChrondle Race Condition Tests", () => {
         isLoading: false,
       });
 
-      const { result, rerender } = renderHook(() => useChrondle());
+      const { result, rerender } = renderHook(() => useRangeGame());
 
       // Should have session guesses
       expect(result.current.gameState.status).toBe("ready");
@@ -264,10 +291,10 @@ describe("useChrondle Race Condition Tests", () => {
         isLoading: false,
       });
       vi.mocked(useUserProgress).mockReturnValue({
-        progress: {
+        progress: createProgressData({
           guesses: [1940], // Different server guesses
           completedAt: null,
-        },
+        }),
         isLoading: false,
       });
 
@@ -300,7 +327,7 @@ describe("useChrondle Race Condition Tests", () => {
         isLoading: true,
       });
 
-      const { result } = renderHook(() => useChrondle());
+      const { result } = renderHook(() => useRangeGame());
 
       // Should show loading progress
       expect(result.current.gameState.status).toBe("loading-progress");
@@ -324,17 +351,22 @@ describe("useChrondle Race Condition Tests", () => {
           isLoading: false,
         },
         progress: {
-          progress: {
+          progress: createProgressData({
             guesses: [1969],
             completedAt: Date.now(),
-          },
+          }),
           isLoading: false,
         },
         session: {
           sessionGuesses: [],
+          sessionRanges: [],
           addGuess: vi.fn(),
           clearGuesses: vi.fn(),
           markComplete: vi.fn(),
+          addRange: vi.fn(),
+          replaceLastRange: vi.fn(),
+          removeLastRange: vi.fn(),
+          clearRanges: vi.fn(),
         },
       };
 
@@ -343,8 +375,8 @@ describe("useChrondle Race Condition Tests", () => {
       vi.mocked(useUserProgress).mockReturnValue(inputs.progress);
       vi.mocked(useLocalSession).mockReturnValue(inputs.session);
 
-      const { result: result1 } = renderHook(() => useChrondle());
-      const { result: result2 } = renderHook(() => useChrondle());
+      const { result: result1 } = renderHook(() => useRangeGame());
+      const { result: result2 } = renderHook(() => useRangeGame());
 
       // Both hooks should produce identical state
       expect(result1.current.gameState).toEqual(result2.current.gameState);
@@ -362,10 +394,10 @@ describe("useChrondle Race Condition Tests", () => {
   });
 
   describe("All Possible Load Orders with Completed Progress", () => {
-    const completedProgress = {
+    const completedProgress = createProgressData({
       guesses: [1950, 1960, 1969],
       completedAt: Date.now(),
-    };
+    });
 
     const testLoadOrder = (name: string, loadOrder: string[]) => {
       it(`should handle ${name} order`, () => {
@@ -391,7 +423,7 @@ describe("useChrondle Race Condition Tests", () => {
         vi.mocked(useAuthState).mockReturnValue(states.auth);
         vi.mocked(useUserProgress).mockReturnValue(states.progress);
 
-        const { result, rerender } = renderHook(() => useChrondle());
+        const { result, rerender } = renderHook(() => useRangeGame());
 
         // Load components in specified order
         loadOrder.forEach((component) => {

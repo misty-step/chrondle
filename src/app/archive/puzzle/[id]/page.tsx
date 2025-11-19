@@ -1,24 +1,24 @@
 "use client";
 
-import { useState, useEffect, useCallback, use } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { fetchTotalPuzzles } from "@/lib/puzzleData";
-import { useChrondle } from "@/hooks/useChrondle";
+import { useRangeGame } from "@/hooks/useRangeGame";
 import { isReady } from "@/types/gameState";
 import { GameLayout } from "@/components/GameLayout";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { LiveAnnouncer } from "@/components/ui/LiveAnnouncer";
 import { useVictoryConfetti } from "@/hooks/useVictoryConfetti";
-import { getGuessDirectionInfo } from "@/lib/game/proximity";
 import { formatYear } from "@/lib/displayFormatting";
-import { getEnhancedProximityFeedback } from "@/lib/enhancedFeedback";
 import { BackgroundAnimation } from "@/components/BackgroundAnimation";
 import { ConfettiRef } from "@/components/magicui/confetti";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { logger } from "@/lib/logger";
+import { GAME_CONFIG } from "@/lib/constants";
+import { useScreenReaderAnnouncements } from "@/hooks/useScreenReaderAnnouncements";
 
 // Type for validation result
 type PuzzleIdValidation =
@@ -64,30 +64,36 @@ function ArchivePuzzleContent({ id }: ArchivePuzzleContentProps): React.ReactEle
   const puzzleNumber = validation.valid && validation.id ? validation.id : 0;
 
   // Use game state for archive puzzle with puzzle number
-  const chrondle = useChrondle(puzzleNumber > 0 ? puzzleNumber : undefined);
+  const chrondle = useRangeGame(puzzleNumber > 0 ? puzzleNumber : undefined);
 
-  // Adapt to old interface
-  const gameState = isReady(chrondle.gameState)
+  const readyState = isReady(chrondle.gameState) ? chrondle.gameState : null;
+
+  const gameState = readyState
     ? {
         puzzle: {
-          ...chrondle.gameState.puzzle,
-          year: chrondle.gameState.puzzle.targetYear,
+          ...readyState.puzzle,
+          year: readyState.puzzle.targetYear,
         },
-        guesses: chrondle.gameState.guesses,
-        isGameOver: chrondle.gameState.isComplete,
+        guesses: readyState.guesses,
+        ranges: readyState.ranges,
+        isGameOver: readyState.isComplete,
+        totalScore: readyState.totalScore,
       }
     : {
         puzzle: null,
         guesses: [],
+        ranges: [],
         isGameOver: false,
+        totalScore: 0,
       };
+
   const isLoading =
     chrondle.gameState.status === "loading-puzzle" ||
     chrondle.gameState.status === "loading-auth" ||
     chrondle.gameState.status === "loading-progress";
-  const isGameComplete = isReady(chrondle.gameState) ? chrondle.gameState.isComplete : false;
-  const hasWon = isReady(chrondle.gameState) ? chrondle.gameState.hasWon : false;
-  const makeGuess = chrondle.submitGuess;
+  const isGameComplete = readyState ? readyState.isComplete : false;
+  const hasWon = readyState ? readyState.hasWon : false;
+  const remainingAttempts = readyState ? readyState.remainingAttempts : GAME_CONFIG.MAX_GUESSES;
 
   // Get target year from game state puzzle
   const targetYear = gameState.puzzle?.year || 2000;
@@ -130,45 +136,27 @@ function ArchivePuzzleContent({ id }: ArchivePuzzleContentProps): React.ReactEle
     hasWon,
     isGameComplete,
     isMounted: isValidated, // Use isValidated as mounted state
-    guessCount: gameState.guesses.length,
+    guessCount: gameState.ranges.length,
     disabled: false,
+  });
+
+  const [screenReaderLastRangeCount, setScreenReaderLastRangeCount] = useState(0);
+  const rangeAnnouncement = useScreenReaderAnnouncements({
+    ranges: gameState.ranges,
+    lastRangeCount: screenReaderLastRangeCount,
+    setLastRangeCount: setScreenReaderLastRangeCount,
   });
 
   // Handle victory announcement
   useEffect(() => {
-    if (hasWon && !showSuccess && gameState.guesses.length > 0) {
-      // Check if this is a fresh win (last guess was just made)
-      const lastGuess = gameState.guesses[gameState.guesses.length - 1];
-      if (lastGuess === targetYear) {
+    if (hasWon && !showSuccess && gameState.ranges.length > 0) {
+      const lastRange = gameState.ranges[gameState.ranges.length - 1];
+      if (lastRange.score > 0) {
         setShowSuccess(true);
         setAnnouncement(`Correct! The year was ${formatYear(targetYear)}`);
       }
     }
-  }, [hasWon, targetYear, showSuccess, gameState.guesses]);
-
-  // Handle guess submission
-  const handleGuess = useCallback(
-    (guess: number): void => {
-      if (!gameState.puzzle || isGameComplete) return;
-
-      makeGuess(guess);
-
-      // Update announcement with feedback
-      const directionInfo = getGuessDirectionInfo(guess, targetYear);
-      const proximityInfo = getEnhancedProximityFeedback(guess, targetYear);
-
-      let message = `You guessed ${formatYear(guess)}. `;
-      if (directionInfo.direction === "correct") {
-        message = `Correct! The year was ${formatYear(targetYear)}`;
-      } else {
-        message += `The correct year is ${directionInfo.direction}. `;
-        message += proximityInfo.message;
-      }
-
-      setAnnouncement(message);
-    },
-    [gameState.puzzle, isGameComplete, makeGuess, targetYear],
-  );
+  }, [hasWon, targetYear, showSuccess, gameState.ranges]);
 
   // Handle navigation
   const handleNavigate = (direction: "prev" | "next"): void => {
@@ -181,6 +169,8 @@ function ArchivePuzzleContent({ id }: ArchivePuzzleContentProps): React.ReactEle
       router.push(`/archive/puzzle/${newId}`);
     }
   };
+
+  const liveAnnouncement = announcement || rangeAnnouncement;
 
   // Error state
   if (isValidated && (!validation.valid || fetchError || !gameState.puzzle)) {
@@ -225,10 +215,10 @@ function ArchivePuzzleContent({ id }: ArchivePuzzleContentProps): React.ReactEle
         gameState={gameState}
         isGameComplete={isGameComplete}
         hasWon={hasWon}
-        isLoading={false}
-        error={null}
-        onGuess={handleGuess}
-        onValidationError={(msg: string): void => setAnnouncement(msg)}
+        isLoading={isLoading}
+        error={chrondle.gameState.status === "error" ? chrondle.gameState.error : null}
+        onRangeCommit={chrondle.submitRange}
+        remainingAttempts={remainingAttempts}
         confettiRef={confettiRef}
         isArchive={true}
         headerContent={
@@ -277,7 +267,7 @@ function ArchivePuzzleContent({ id }: ArchivePuzzleContentProps): React.ReactEle
       {/* Hint review modal temporarily disabled - needs proper implementation */}
 
       {/* Live Announcer for Screen Readers */}
-      <LiveAnnouncer message={announcement} />
+      <LiveAnnouncer message={liveAnnouncement} />
 
       {/* Confetti is now handled by GameLayout */}
     </div>

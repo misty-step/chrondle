@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { safeConvexId } from "@/lib/validation";
 import type { Id } from "../../../convex/_generated/dataModel";
+import type { RangeGuess } from "@/types/range";
 
 /**
  * User progress data structure from Convex
@@ -14,6 +15,8 @@ interface ConvexPlay {
   userId: Id<"users">;
   puzzleId: Id<"puzzles">;
   guesses: number[];
+  ranges?: RangeGuess[];
+  totalScore?: number;
   completedAt?: number | undefined;
   updatedAt: number;
 }
@@ -23,6 +26,8 @@ interface ConvexPlay {
  */
 interface ProgressData {
   guesses: number[];
+  ranges: RangeGuess[];
+  totalScore: number;
   completedAt: number | null;
 }
 
@@ -111,7 +116,9 @@ export function useUserProgress(
 
     // Normalize the progress data
     const normalizedProgress: ProgressData = {
-      guesses: convexPlay.guesses,
+      guesses: convexPlay.guesses ?? [],
+      ranges: convexPlay.ranges ?? [],
+      totalScore: convexPlay.totalScore ?? 0,
       completedAt: convexPlay.completedAt ?? null,
     };
 

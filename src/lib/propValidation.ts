@@ -41,14 +41,28 @@ export function validateGameLayoutProps(props: unknown, componentName = "GameLay
     warn(componentName, "gameState.guesses must be an array");
   }
 
+  if (typeof p.gameState.totalScore !== "number") {
+    warn(componentName, "gameState.totalScore must be a number");
+  }
+
+  if (!Array.isArray(p.gameState.ranges)) {
+    warn(componentName, "gameState.ranges must be an array");
+  }
+
   // Check gameState.isGameOver is boolean
   if (typeof p.gameState.isGameOver !== "boolean") {
     warn(componentName, "gameState.isGameOver must be a boolean");
   }
 
-  // Check onGuess is function
-  if (typeof p.onGuess !== "function") {
-    warn(componentName, "onGuess must be a function");
+  // Check onRangeCommit is function
+  if (typeof p.onRangeCommit !== "function") {
+    warn(componentName, "onRangeCommit must be a function");
+  }
+
+  if (typeof p.remainingAttempts !== "number") {
+    warn(componentName, "remainingAttempts must be a number");
+  } else if (p.remainingAttempts < 0 || p.remainingAttempts > 6) {
+    warn(componentName, "remainingAttempts must be between 0 and 6");
   }
 
   // Check numeric props (removed currentHintIndex - now calculated internally)
@@ -59,37 +73,6 @@ export function validateGameLayoutProps(props: unknown, componentName = "GameLay
     if (typeof p[propName] !== "boolean") {
       warn(componentName, `${propName} must be a boolean`);
     }
-  }
-}
-
-/**
- * Validate GuessInput critical props
- */
-export function validateGuessInputProps(props: unknown, componentName = "GuessInput"): void {
-  if (!isDevelopment) return;
-
-  const p = props as Record<string, any>;
-
-  // Check onGuess is function
-  if (typeof p.onGuess !== "function") {
-    warn(componentName, "onGuess must be a function");
-  }
-
-  // Check disabled is boolean
-  if (typeof p.disabled !== "boolean") {
-    warn(componentName, "disabled must be a boolean");
-  }
-
-  // Check remainingGuesses is valid number
-  if (typeof p.remainingGuesses !== "number") {
-    warn(componentName, "remainingGuesses must be a number");
-  } else if (p.remainingGuesses < 0 || p.remainingGuesses > 6) {
-    warn(componentName, "remainingGuesses must be between 0 and 6");
-  }
-
-  // Check optional onValidationError
-  if (p.onValidationError !== undefined && typeof p.onValidationError !== "function") {
-    warn(componentName, "onValidationError must be a function if provided");
   }
 }
 
