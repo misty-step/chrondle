@@ -12,12 +12,7 @@ export * from "./Card";
 export { Badge } from "./Badge";
 export { Separator } from "./Separator";
 export { Progress } from "./progress";
-export {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "./accordion";
+export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./accordion";
 
 // Other UI components
 export { LoadingSpinner } from "./LoadingSpinner";
@@ -26,3 +21,4 @@ export { ProgressBar } from "./ProgressBar";
 export { SwipeProgressBar } from "./SwipeProgressBar";
 export { ThemeToggle } from "./ThemeToggle";
 export { EraToggle, EraToggleWithLabel } from "./EraToggle";
+export { ModeHero } from "./ModeHero";

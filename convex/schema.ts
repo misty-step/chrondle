@@ -28,6 +28,33 @@ export default defineSchema({
     .index("by_number", ["puzzleNumber"])
     .index("by_date", ["date"]),
 
+  // Order mode daily puzzles
+  orderPuzzles: defineTable({
+    puzzleNumber: v.number(), // Sequential, mirrors Classic numbering scheme
+    date: v.string(), // ISO date (YYYY-MM-DD)
+    events: v.array(
+      v.object({
+        id: v.string(), // Stable event identifier (derived from events table)
+        year: v.number(), // Used for scoring + reveal ordering
+        text: v.string(), // Event description
+      }),
+    ),
+    seed: v.string(), // Deterministic shuffle seed
+    updatedAt: v.number(), // Mutation timestamp
+  })
+    .index("by_number", ["puzzleNumber"])
+    .index("by_date", ["date"]),
+
+  // Authenticated Order plays
+  orderPlays: defineTable({
+    userId: v.id("users"),
+    puzzleId: v.id("orderPuzzles"),
+    ordering: v.array(v.string()), // Player-submitted ordering (event ids)
+    hints: v.array(v.string()), // Hint ids/types consumed
+    completedAt: v.optional(v.number()), // Timestamp when ordering committed
+    updatedAt: v.number(), // Last interaction timestamp
+  }).index("by_user_puzzle", ["userId", "puzzleId"]),
+
   // User puzzle attempts (authenticated users only)
   plays: defineTable({
     userId: v.id("users"),

@@ -19,4 +19,11 @@ crons.daily(
   { targetCount: 3 },
 );
 
+crons.daily(
+  "generate daily Order puzzle at UTC midnight",
+  { hourUTC: 0, minuteUTC: 0 },
+  internal.orderPuzzles.generateDailyOrderPuzzle,
+  {},
+);
+
 export default crons;

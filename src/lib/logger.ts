@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 const isDevelopment = process.env.NODE_ENV === "development";
 const isTesting = process.env.NODE_ENV === "test" || !!process.env.VITEST;
 
@@ -32,11 +31,7 @@ export class BatchedLogger {
   /**
    * Add a message to the batch queue
    */
-  private addToBatch(
-    level: BatchedMessage["level"],
-    message: string,
-    args: unknown[],
-  ): void {
+  private addToBatch(level: BatchedMessage["level"], message: string, args: unknown[]): void {
     if (!this.enabled) {
       // If batching is disabled, log immediately
       this.logImmediate(level, message, args);
@@ -99,11 +94,7 @@ export class BatchedLogger {
   /**
    * Log a message immediately without batching
    */
-  private logImmediate(
-    level: BatchedMessage["level"],
-    message: string,
-    args: unknown[],
-  ): void {
+  private logImmediate(level: BatchedMessage["level"], message: string, args: unknown[]): void {
     const prefix = `[${level.toUpperCase()}]`;
 
     switch (level) {
@@ -227,14 +218,10 @@ const batchedLogger = new BatchedLogger({
  * This batches and groups similar messages to prevent console flooding
  */
 export const debugLog = {
-  debug: (message: string, ...args: unknown[]) =>
-    batchedLogger.debug(message, ...args),
-  info: (message: string, ...args: unknown[]) =>
-    batchedLogger.info(message, ...args),
-  warn: (message: string, ...args: unknown[]) =>
-    batchedLogger.warn(message, ...args),
-  error: (message: string, ...args: unknown[]) =>
-    batchedLogger.error(message, ...args),
+  debug: (message: string, ...args: unknown[]) => batchedLogger.debug(message, ...args),
+  info: (message: string, ...args: unknown[]) => batchedLogger.info(message, ...args),
+  warn: (message: string, ...args: unknown[]) => batchedLogger.warn(message, ...args),
+  error: (message: string, ...args: unknown[]) => batchedLogger.error(message, ...args),
   flush: () => batchedLogger.forceFlush(),
   clear: () => batchedLogger.clear(),
 };

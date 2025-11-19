@@ -57,7 +57,7 @@ export function getStorageKey(): string {
 export function saveProgress(
   gameState: GameState,
   isDebugMode?: boolean,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   _archiveYear?: number,
 ): boolean {
   if (isDebugMode) {
@@ -124,7 +124,7 @@ export function loadProgress(gameState: GameState, isDebugMode?: boolean): void 
 }
 
 // Settings Management
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 export function saveSettings(_settings: GameSettings): void {
   // No localStorage persistence - settings should be stored in Convex for authenticated users
   logger.debug("Settings save skipped - no localStorage persistence");

@@ -9,7 +9,7 @@ export async function runAlertChecks(ctx: ActionCtx): Promise<void> {
 }
 
 async function checkZeroEvents(ctx: ActionCtx): Promise<void> {
-  const { start, end } = dayRange(-1);
+  const { start, end: _end } = dayRange(-1);
   const yesterday = await ctx.runQuery(internal.generationLogs.getDailyGenerationStats, {
     date: new Date(start).toISOString().slice(0, 10),
   });
@@ -41,7 +41,7 @@ async function checkCostSpike(ctx: ActionCtx): Promise<void> {
 }
 
 async function checkPassRate(ctx: ActionCtx): Promise<void> {
-  const { start } = dayRange(0);
+  const { start: _start } = dayRange(0);
   const recentLogs = await ctx.runQuery(internal.generationLogs.getFailedYears, { limit: 100 });
   const logs = summarizeGenerationLogs(recentLogs);
   if (logs.failedYears > logs.successfulYears) {

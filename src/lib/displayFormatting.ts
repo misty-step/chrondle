@@ -231,6 +231,23 @@ export function getEraDescription(era: Era): string {
 }
 
 /**
+ * Formats a date string into a readable format
+ * @param dateString - Date string (e.g., "2025-11-10" or ISO format)
+ * @returns Formatted date string (e.g., "Nov 10, 2025")
+ */
+export function formatDate(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    const day = date.getDate();
+    const year = date.getFullYear();
+    return `${month} ${day}, ${year}`;
+  } catch {
+    return dateString;
+  }
+}
+
+/**
  * Pluralizes a word based on count
  * @param count - Number determining pluralization
  * @param singular - Singular form of the word

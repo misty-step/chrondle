@@ -49,9 +49,17 @@ const baseConfig = {
     },
   },
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: [
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+      // Explicitly map the specific convex package subpaths to node_modules
+      // to avoid being shadowed by the local convex/ folder alias
+      {
+        find: /^convex\/(values|server|react|browser|nextjs|react-clerk|react-auth0)$/,
+        replacement: path.resolve(__dirname, "./node_modules/convex/$1"),
+      },
+      // Map everything else in convex/ to the local directory (e.g. convex/_generated)
+      { find: /^convex\/(.*)$/, replacement: path.resolve(__dirname, "./convex/$1") },
+    ],
   },
 };
 
