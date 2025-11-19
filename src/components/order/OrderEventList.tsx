@@ -14,7 +14,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -129,7 +129,7 @@ export function OrderEventList({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
         collisionDetection={closestCenter}
-        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        modifiers={[restrictToVerticalAxis]}
       >
         <SortableContext items={localOrder} strategy={verticalListSortingStrategy}>
           <ol className="space-y-4">

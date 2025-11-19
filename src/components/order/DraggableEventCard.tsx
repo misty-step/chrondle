@@ -130,7 +130,7 @@ function EventCardContent({
     <>
       <div
         className={[
-          "flex items-center justify-center border-b py-3",
+          "flex touch-none items-center justify-center border-b py-3",
           isLocked ? "border-transparent" : "border-border/50",
         ].join(" ")}
         {...handleProps}

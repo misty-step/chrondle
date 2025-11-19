@@ -232,7 +232,7 @@ function ReadyOrderGame({
       <AppHeader puzzleNumber={puzzle.puzzleNumber} isArchive={false} />
 
       {/* Main Content Area */}
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-6 sm:px-0">
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-6 pb-32 sm:px-0">
         <div className="space-y-4">
           {/* Instructions Banner */}
           <OrderInstructions />
@@ -288,7 +288,7 @@ function ReadyOrderGame({
       </main>
 
       {/* Sticky Submit Button - Bottom */}
-      <footer className="border-border bg-background/95 sticky bottom-0 z-30 border-t px-6 py-4 backdrop-blur-sm sm:px-0">
+      <footer className="border-border bg-background/95 fixed right-0 bottom-0 left-0 z-50 border-t px-6 py-4 backdrop-blur-sm sm:px-0">
         <div className="mx-auto max-w-4xl">
           <button
             type="button"
