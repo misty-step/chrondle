@@ -6,14 +6,6 @@
       .stroke-circle { stroke: #ffffff; }
     }
   </style>
-  <!-- 
-    Geometry Calculation:
-    Centers: 25, 70, 115 (Gap 45)
-    Target Visual Radius: 22 (Diameter 44) -> 1px gap between circles
-    Stroke Width: 10
-    Stroked Radius (r): 22 - (10/2) = 17
-    Filled Radius (r): 22
-  -->
   <circle cx="25" cy="70" r="17" class="stroke-circle" />
   <circle cx="70" cy="70" r="17" class="stroke-circle" />
   <circle cx="115" cy="70" r="22" class="fill-circle" />
