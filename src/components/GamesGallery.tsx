@@ -3,10 +3,11 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowRight, Crosshair, Shuffle, GripHorizontal, Crown } from "lucide-react";
+import { ArrowRight, Crosshair, Shuffle, GripHorizontal, Crown, Sun, Moon } from "lucide-react";
 
 import { setModePreferenceCookie, type ModeKey } from "@/lib/modePreference";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/SessionThemeProvider";
 
 // --- Configuration ---
 
@@ -36,9 +37,9 @@ const MODE_CARDS: ModeCardConfig[] = [
     route: "/classic",
     icon: Crosshair,
     theme: {
-      bg: "bg-[#EBE7DE]", // Warm parchment
-      fg: "text-[#3E3428]", // Darker brown for better contrast
-      accent: "text-[#B8360B]", // Vermilion
+      bg: "bg-[#EBE7DE] dark:bg-[#2A2420]", // Warm parchment / dark sepia
+      fg: "text-[#3E3428] dark:text-[#EBE7DE]", // Brown / light parchment
+      accent: "text-[#B8360B] dark:text-[#E8A090]", // Vermilion / soft coral
       texture: "bg-noise-pattern",
     },
   },
@@ -51,9 +52,9 @@ const MODE_CARDS: ModeCardConfig[] = [
     route: "/order",
     icon: Shuffle,
     theme: {
-      bg: "bg-[#E3E8EC]", // Cool slate paper
-      fg: "text-[#2C3E50]", // Navy
-      accent: "text-[#2563EB]", // Royal Blue
+      bg: "bg-[#E3E8EC] dark:bg-[#1A2530]", // Cool slate / dark navy
+      fg: "text-[#2C3E50] dark:text-[#E3E8EC]", // Navy / light slate
+      accent: "text-[#2563EB] dark:text-[#60A5FA]", // Royal blue / sky blue
       texture: "opacity-40",
     },
     badge: "New",
@@ -65,6 +66,7 @@ const MODE_CARDS: ModeCardConfig[] = [
 export function GamesGallery() {
   const router = useRouter();
   const [activeKey, setActiveKey] = useState<ModeKey | null>("classic");
+  const { currentTheme, toggle, isMounted } = useTheme();
 
   const handleSelect = useCallback(
     (mode: ModeKey, route: string) => {
@@ -75,14 +77,38 @@ export function GamesGallery() {
   );
 
   return (
-    <main className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-stone-950 md:flex-row">
-      {/* --- Branding Anchor --- */}
+    <main className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-stone-100 md:flex-row dark:bg-stone-950">
+      {/* --- Branding Anchor with Theme Toggle --- */}
       <div className="pointer-events-none absolute top-6 right-0 left-0 z-50 flex justify-center">
-        <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-5 py-2 shadow-2xl backdrop-blur-md">
-          <Crown className="h-4 w-4 text-white/80" />
-          <span className="font-heading text-lg font-bold tracking-wide text-white/90">
+        <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-stone-900/10 bg-stone-900/10 px-5 py-2 shadow-2xl backdrop-blur-md dark:border-white/10 dark:bg-black/20">
+          <div className="rounded-full p-1.5">
+            <Crown className="h-4 w-4 text-stone-900/80 dark:text-white/80" />
+          </div>
+          <span className="font-heading text-lg font-bold tracking-wide text-stone-900/90 dark:text-white/90">
             CHRONDLE
           </span>
+
+          {/* Theme toggle - morphing icon */}
+          <motion.button
+            onClick={toggle}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            className="cursor-pointer rounded-full p-1.5 transition-colors hover:bg-stone-900/10 dark:hover:bg-white/10"
+            aria-label={`Switch to ${currentTheme === "dark" ? "light" : "dark"} mode`}
+          >
+            <motion.div
+              animate={{ rotate: isMounted && currentTheme === "dark" ? 0 : 180 }}
+              transition={{ type: "spring", stiffness: 200, damping: 20 }}
+            >
+              {!isMounted ? (
+                <Sun className="h-4 w-4 text-stone-900/70 dark:text-white/70" />
+              ) : currentTheme === "dark" ? (
+                <Moon className="h-4 w-4 text-white/70" />
+              ) : (
+                <Sun className="h-4 w-4 text-stone-900/70" />
+              )}
+            </motion.div>
+          </motion.button>
         </div>
       </div>
 
@@ -161,7 +187,7 @@ export function GamesGallery() {
                   className={cn(
                     "rounded-full border p-3 transition-colors duration-500",
                     isActive
-                      ? "border-black/5 bg-white/50"
+                      ? "border-black/5 bg-white/50 dark:border-white/10 dark:bg-black/30"
                       : "border-transparent bg-transparent opacity-50",
                   )}
                 >
@@ -173,8 +199,8 @@ export function GamesGallery() {
                     className={cn(
                       "rounded-full px-3 py-1 text-xs font-bold tracking-wider uppercase transition-opacity duration-500",
                       mode.key === "classic"
-                        ? "bg-amber-100 text-amber-800"
-                        : "bg-blue-100 text-blue-800",
+                        ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200"
+                        : "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200",
                       isActive ? "opacity-100" : "opacity-0",
                     )}
                   >
@@ -257,8 +283,8 @@ export function GamesGallery() {
                         // Button pulsates/highlights slightly when hovering anywhere on the parent panel
                         "group-hover:scale-105 group-hover:shadow-2xl",
                         mode.key === "classic"
-                          ? "bg-[#3E3428] text-[#EBE7DE] hover:bg-[#2C2620]"
-                          : "bg-[#2C3E50] text-[#E3E8EC] hover:bg-[#1A2634]",
+                          ? "bg-[#3E3428] text-[#EBE7DE] hover:bg-[#2C2620] dark:bg-[#EBE7DE] dark:text-[#3E3428] dark:hover:bg-[#D4CFC6]"
+                          : "bg-[#2C3E50] text-[#E3E8EC] hover:bg-[#1A2634] dark:bg-[#E3E8EC] dark:text-[#2C3E50] dark:hover:bg-[#CDD4DB]",
                       )}
                     >
                       <span>Play Now</span>
