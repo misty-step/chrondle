@@ -20,6 +20,7 @@ interface GameCompleteProps {
   className?: string;
   targetYear?: number;
   totalHints?: number;
+  events?: string[];
 }
 
 const BASE_POTENTIAL = SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[0];
@@ -139,6 +140,7 @@ export function GameComplete({
   puzzleNumber,
   targetYear,
   totalHints,
+  events,
   className,
 }: GameCompleteProps) {
   const primaryRange = ranges[ranges.length - 1];
@@ -353,6 +355,25 @@ export function GameComplete({
           </div>
         </div>
       </div>
+
+      {/* Puzzle Hints Section */}
+      {events && events.length > 0 && (
+        <div className="border-border/40 bg-background/70 mt-4 rounded-xl border p-4">
+          <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+            Puzzle Hints
+          </p>
+          <ol className="space-y-2">
+            {events.map((event, index) => (
+              <li key={index} className="flex items-start gap-3 text-sm">
+                <span className="text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-medium dark:bg-amber-900/30">
+                  {index + 1}
+                </span>
+                <span className="text-foreground">{event}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {earlierRanges.length > 0 && (
         <div className="border-border/40 bg-background/60 mt-4 rounded-xl border p-4">
