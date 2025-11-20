@@ -3,4 +3,8 @@
  */
 export { generateDailyOrderPuzzle, ensureTodaysOrderPuzzle } from "./orderPuzzles/mutations";
 
-export { getDailyOrderPuzzle, getOrderPuzzleByNumber } from "./orderPuzzles/queries";
+export {
+  getDailyOrderPuzzle,
+  getOrderPuzzleByNumber,
+  getArchiveOrderPuzzles,
+} from "./orderPuzzles/queries";

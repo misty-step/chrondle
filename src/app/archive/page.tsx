@@ -8,7 +8,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, History, BarChart } from "lucide-react";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { UserCreationHandler } from "@/components/UserCreationHandler";
 import { logger } from "@/lib/logger";
@@ -272,6 +272,22 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
               Puzzle Archive
             </h1>
             <p className="text-muted-foreground text-lg">Explore and play past Chrondle puzzles</p>
+          </div>
+
+          {/* Navigation */}
+          <div className="mb-6 flex gap-2 border-b">
+            <Link
+              href="/archive"
+              className="border-primary text-primary flex items-center gap-2 border-b-2 px-3 py-2 font-semibold"
+            >
+              <History className="h-4 w-4" /> Classic
+            </Link>
+            <Link
+              href="/archive/order"
+              className="text-muted-foreground hover:text-foreground flex items-center gap-2 border-b-2 border-transparent px-3 py-2 transition-colors hover:border-gray-300"
+            >
+              <BarChart className="h-4 w-4" /> Order
+            </Link>
           </div>
 
           {/* Completion Statistics - Show loading state or data */}

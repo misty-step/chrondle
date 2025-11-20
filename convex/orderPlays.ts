@@ -1,1 +1,1 @@
-export { getOrderPlay } from "./orderPlays/queries";
+export { getOrderPlay, getUserCompletedOrderPlays } from "./orderPlays/queries";

@@ -11,6 +11,7 @@ import { OrderEventList } from "@/components/order/OrderEventList";
 import { DocumentHeader } from "@/components/order/DocumentHeader";
 import { OrderInstructions } from "@/components/order/OrderInstructions";
 import { AppHeader } from "@/components/AppHeader";
+import { Button } from "@/components/ui/button";
 import { generateAnchorHint, generateBracketHint, generateRelativeHint } from "@/lib/order/hints";
 import { deriveLockedPositions } from "@/lib/order/engine";
 import { copyOrderShareTextToClipboard, type OrderShareResult } from "@/lib/order/shareCard";
@@ -285,13 +286,14 @@ function ReadyOrderGame({
             </section>
 
             {/* Submit Button - Below Timeline */}
-            <button
+            <Button
               type="button"
               onClick={handleCommit}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-full px-6 py-3 text-base font-semibold shadow-lg transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              size="lg"
+              className="relative z-10 w-full rounded-full text-base font-semibold shadow-lg"
             >
               Submit My Timeline
-            </button>
+            </Button>
           </div>
         </div>
       </main>

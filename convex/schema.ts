@@ -53,7 +53,9 @@ export default defineSchema({
     hints: v.array(v.string()), // Hint ids/types consumed
     completedAt: v.optional(v.number()), // Timestamp when ordering committed
     updatedAt: v.number(), // Last interaction timestamp
-  }).index("by_user_puzzle", ["userId", "puzzleId"]),
+  })
+    .index("by_user_puzzle", ["userId", "puzzleId"])
+    .index("by_user", ["userId"]),
 
   // User puzzle attempts (authenticated users only)
   plays: defineTable({

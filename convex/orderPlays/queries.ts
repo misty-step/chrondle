@@ -15,3 +15,18 @@ export const getOrderPlay = query({
     return play;
   },
 });
+
+export const getUserCompletedOrderPlays = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { userId }) => {
+    const completedPlays = await ctx.db
+      .query("orderPlays")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .filter((q) => q.neq(q.field("completedAt"), null))
+      .collect();
+
+    return completedPlays;
+  },
+});
