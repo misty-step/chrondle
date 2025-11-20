@@ -23,14 +23,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Effort**: 3h | **Benefit**: Catches auth/token/validator regressions in real flow
 **Acceptance**: Test passes in CI; fails if server submission is rejected or progress not returned on reload.
 
-### [OBSERVABILITY] MEDIUM - Surface Convex Mutation Failures
-
-**Files**: `src/hooks/useOrderGame.ts`, `src/components/order/OrderGameIsland.tsx`
-**Problem**: Convex ArgumentValidationErrors are silent to users; perceived as “button does nothing.”
-**Fix**: Route mutation errors to Sentry/console and show inline toast with server error message; add metric/alert on `orderPuzzles:submitOrderPlay` failures in Convex dashboard/Slack.
-**Effort**: 1h | **Benefit**: Faster triage, user-visible feedback
-**Acceptance**: Error toast appears on failure; Convex alert triggers on validation spikes.
-
 ### [QUALITY] MEDIUM - Mock Contracts Must Match Convex Schema
 
 **Files**: `src/hooks/__tests__/useOrderGame.auth-submit.test.tsx`
@@ -226,23 +218,6 @@ export function GET() {
 
 ## Next (This Quarter, <3 months)
 
-### [INFRA] CRITICAL - No Sentry Error Tracking
-
-**File**: `src/components/ErrorBoundary.tsx:74-76`
-**Perspectives**: architecture-guardian, user-experience-advocate
-**Impact**: Errors invisible in production - only console.log telemetry
-**Evidence**: Comment says "In a real production app, you would send this to Sentry"
-**Fix**:
-
-- Install @sentry/nextjs
-- Configure in next.config.ts
-- Wrap ErrorBoundary with Sentry.captureException
-- Add to Convex actions for backend errors
-  **Effort**: 3h | **Impact**: Production error visibility, session replay
-  **Acceptance**: Errors appear in Sentry dashboard with stack traces
-
----
-
 ### [INFRA] HIGH - No Structured Logging (Pino)
 
 **Files**: `src/lib/logger.ts`, `convex/lib/logging.ts`
@@ -278,31 +253,6 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 
 **Effort**: 10m | **Impact**: Performance visibility, Core Web Vitals tracking
 **Acceptance**: Speed Insights data visible in Vercel dashboard
-
----
-
-### [INFRA] HIGH - No Deployment Tracking in CI/CD
-
-**File**: `.github/workflows/deploy.yml`
-**Perspectives**: observability-audit
-**Impact**: Cannot correlate errors with specific deployments ("which deploy broke this?")
-**Current State**: deploy.yml creates no Sentry releases or Grafana annotations
-**Fix**: Add Sentry release step after Sentry install:
-
-```yaml
-- name: Create Sentry release
-  uses: getsentry/action-release@v1
-  env:
-    SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-    SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-    SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-  with:
-    environment: production
-    version: ${{ github.sha }}
-```
-
-**Effort**: 30m | **Impact**: Error-to-deploy correlation
-**Acceptance**: Each deployment creates Sentry release with commit SHA
 
 ---
 
