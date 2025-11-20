@@ -32,14 +32,13 @@
        Depends: Mutation error adapter, Toaster.  
        Estimate: 1.25h
 
-- [ ] Convex observability wrapper and apply to `submitOrderPlay`  
-       Files: `convex/lib/observability.ts`, `convex/orderPuzzles/mutations.ts`  
-       Goal: Capture/metric errors with reason tags; optional Slack webhook; rethrow original.  
-       Approach: create `withObservability` decorator; classify reasons; call Sentry server helper; emit `order.submit.failure` metric; optional Slack post; wrap handler.  
-       Success: Mutation behavior unchanged on success; errors logged+captured; metrics increment; tests (Convex action/mutation unit) validate wrap classification.  
-       Depends: Sentry server helper.  
-       Estimate: 1.25h
-
+- [x] Convex observability wrapper and apply to `submitOrderPlay`
+      Files: `convex/lib/observability.ts`, `convex/orderPuzzles/mutations.ts`
+      Goal: Capture/metric errors with reason tags; optional Slack webhook; rethrow original.
+      Approach: create `withObservability` decorator; classify reasons; call Sentry server helper; emit `order.submit.failure` metric; optional Slack post; wrap handler.
+      Success: Mutation behavior unchanged on success; errors logged+captured; metrics increment; tests (Convex action/mutation unit) validate wrap classification.
+      Depends: Sentry server helper.
+      Estimate: 1.25h
 - [ ] Deploy workflow: Sentry release + sourcemaps  
        Files: `.github/workflows/deploy.yml`  
        Goal: Create Sentry release per commit; upload Next (and Convex if path known) source maps; pass release/env into build.  
