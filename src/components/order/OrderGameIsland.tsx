@@ -5,6 +5,7 @@ import { Preloaded, usePreloadedQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOrderGame } from "@/hooks/useOrderGame";
 import type { OrderEvent, OrderHint, OrderPuzzle, OrderScore } from "@/types/orderGameState";
+import type { MutationError } from "@/observability/mutationErrorAdapter";
 import { HintDisplay } from "@/components/order/HintDisplay";
 import { OrderReveal } from "@/components/order/OrderReveal";
 import { OrderEventList } from "@/components/order/OrderEventList";
@@ -92,12 +93,7 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
       hints={gameState.hints}
       reorderEvents={reorderEvents}
       takeHint={takeHint}
-      onCommit={(score) =>
-        commitOrdering(score).catch((error) => {
-          logger.error("Failed to commit ordering", error);
-          return false;
-        })
-      }
+      onCommit={commitOrdering}
     />
   );
 }
@@ -116,7 +112,7 @@ interface ReadyOrderGameProps {
   hints: OrderHint[];
   reorderEvents: (fromIndex: number, toIndex: number) => void;
   takeHint: (hint: OrderHint) => void;
-  onCommit: (score: OrderScore) => Promise<boolean>;
+  onCommit: (score: OrderScore) => Promise<[boolean, null] | [null, MutationError]>;
 }
 
 function ReadyOrderGame({
@@ -230,12 +226,15 @@ function ReadyOrderGame({
 
   const handleCommit = useCallback(async () => {
     const score = calculateOrderScore(currentOrder, puzzle.events, hints.length);
-    const synced = await onCommit(score);
-    if (!synced && "addToast" in toast && toast.addToast) {
+    const [_success, error] = await onCommit(score);
+
+    if (error && "addToast" in toast && toast.addToast) {
       toast.addToast({
-        title: "Saved locally",
-        description: "We couldn't sync your result. It will retry when the app refreshes.",
+        title: "Submission Failed",
+        description: error.message,
         variant: "destructive",
+        actionLabel: error.retryable ? "Retry" : undefined,
+        onAction: error.retryable ? handleCommit : undefined,
       });
     }
   }, [currentOrder, puzzle.events, hints.length, onCommit, toast]);

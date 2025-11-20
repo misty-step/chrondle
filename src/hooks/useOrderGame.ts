@@ -7,6 +7,7 @@ import { useOrderPuzzleData } from "@/hooks/data/useOrderPuzzleData";
 import { useOrderProgress } from "@/hooks/data/useOrderProgress";
 import { useOrderSession } from "@/hooks/useOrderSession";
 import { useMutationWithRetry } from "@/hooks/useMutationWithRetry";
+import { safeMutation, type MutationError } from "@/observability/mutationErrorAdapter";
 import { deriveOrderGameState, type OrderDataSources } from "@/lib/deriveOrderGameState";
 import {
   initializeOrderState,
@@ -16,7 +17,7 @@ import {
   type OrderEngineState,
 } from "@/lib/order/engine";
 import { mergeHints, serializeHint } from "@/lib/order/hintMerging";
-import { assertConvexId, isConvexIdValidationError } from "@/lib/validation";
+import { assertConvexId } from "@/lib/validation";
 import type { OrderGameState, OrderHint, OrderScore } from "@/types/orderGameState";
 import { logger } from "@/lib/logger";
 
@@ -24,7 +25,7 @@ interface UseOrderGameReturn {
   gameState: OrderGameState;
   reorderEvents: (fromIndex: number, toIndex: number) => void;
   takeHint: (hint: OrderHint) => void;
-  commitOrdering: (score: OrderScore) => Promise<boolean>;
+  commitOrdering: (score: OrderScore) => Promise<[boolean, null] | [null, MutationError]>;
 }
 
 export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): UseOrderGameReturn {
@@ -154,7 +155,7 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
   );
 
   const commitOrdering = useCallback(
-    async (score: OrderScore): Promise<boolean> => {
+    async (score: OrderScore): Promise<[boolean, null] | [null, MutationError]> => {
       const orderingForCommit =
         sessionOrderingRef.current && sessionOrderingRef.current.length
           ? sessionOrderingRef.current
@@ -163,39 +164,35 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
       session.markCommitted(score);
 
       if (!auth.isAuthenticated || !auth.userId || !puzzle.puzzle) {
-        return true;
+        return [true, null];
       }
 
-      try {
-        const puzzleId = assertConvexId(puzzle.puzzle.id, "orderPuzzles");
-        const userId = assertConvexId(auth.userId, "users");
-        const serializedHints = mergedHints.map(serializeHint);
-        const clientScore = {
-          totalScore: score.totalScore,
-          correctPairs: score.correctPairs,
-          totalPairs: score.totalPairs,
-          hintMultiplier: 1,
-        };
+      return await safeMutation(
+        async () => {
+          const puzzleId = assertConvexId(puzzle.puzzle!.id, "orderPuzzles");
+          const userId = assertConvexId(auth.userId!, "users");
+          const serializedHints = mergedHints.map(serializeHint);
+          const clientScore = {
+            totalScore: score.totalScore,
+            correctPairs: score.correctPairs,
+            totalPairs: score.totalPairs,
+            hintMultiplier: 1,
+          };
 
-        await submitOrderPlayMutation({
-          puzzleId,
-          userId,
-          ordering: orderingForCommit,
-          hints: serializedHints,
-          clientScore,
-        });
-        return true;
-      } catch (error) {
-        if (isConvexIdValidationError(error)) {
-          logger.error("[useOrderGame] Invalid Convex ID while submitting order play", {
-            id: error.id,
-            type: error.type,
+          await submitOrderPlayMutation({
+            puzzleId,
+            userId,
+            ordering: orderingForCommit,
+            hints: serializedHints,
+            clientScore,
           });
-        } else {
-          logger.error("[useOrderGame] Failed to submit Order play", error);
-        }
-        return false;
-      }
+          return true;
+        },
+        {
+          puzzleId: puzzle.puzzle.id,
+          userId: auth.userId,
+        },
+      );
     },
     [auth, baselineOrder, mergedHints, puzzle, session, submitOrderPlayMutation],
   );
