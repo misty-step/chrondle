@@ -46,9 +46,11 @@
       Success: Workflow interpolates release version; steps gated on secrets; does not break build.
       Tests: dry-run via workflow syntax check (CI), local lint of YAML if available.
       Estimate: 0.75h
-- [ ] Env/docs updates  
-       Files: `.env.example`, `docs/observability.md` (or new section), `README.md` short note if needed  
-       Goal: Document new envs (`SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`, sampling vars, optional `ORDER_FAILURE_SLACK_WEBHOOK`).  
+- [x] Env/docs updates
+      Files: `.env.example`, `docs/observability.md` (or new section), `README.md` short note if needed
+      Goal: Document new envs (`SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`, sampling vars, optional `ORDER_FAILURE_SLACK_WEBHOOK`).
+      Success: Templates list all required/optional vars; no secrets committed.
+      Estimate: 0.5h Goal: Document new envs (`SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`, sampling vars, optional `ORDER_FAILURE_SLACK_WEBHOOK`).  
        Success: Templates list all required/optional vars; no secrets committed.  
        Estimate: 0.5h
 
