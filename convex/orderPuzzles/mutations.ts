@@ -248,8 +248,35 @@ function selectEventsWithAttempts(
     }
   }
 
+  // FALLBACK: If the specific config failed (e.g., "Focused" span 50-500), try a very lenient "Wide" config
+  // This ensures we never fail to generate a daily puzzle just because of RNG + tight constraints
+  console.warn(
+    `[selectEventsWithAttempts] Failed to generate with config (span ${config.minSpan}-${config.maxSpan}), falling back to Wide config. Error: ${
+      lastError instanceof Error ? lastError.message : String(lastError)
+    }`,
+  );
+
+  const fallbackConfig: SelectionConfig = {
+    ...config,
+    minSpan: 500,
+    maxSpan: 5000,
+    maxAttempts: 20,
+  };
+
+  for (let attempt = 0; attempt < (fallbackConfig.maxAttempts ?? 10); attempt++) {
+    try {
+      const selection = selectEventsWithSpread(events, seed + maxAttempts + attempt, {
+        ...fallbackConfig,
+        maxAttempts: 1,
+      });
+      return { selection, attempts: maxAttempts + attempt };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
   throw new Error(
-    `Unable to generate Order puzzle selection after ${maxAttempts} attempts: ${
+    `Unable to generate Order puzzle selection even after fallback: ${
       lastError instanceof Error ? lastError.message : String(lastError)
     }`,
   );
