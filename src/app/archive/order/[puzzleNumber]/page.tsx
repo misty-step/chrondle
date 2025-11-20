@@ -3,8 +3,7 @@
 import { useState, useEffect, use, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
-// @ts-expect-error - API types not yet generated
-import { api } from "../../../../convex/_generated/api";
+import { api } from "convex/_generated/api";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { OrderEventList } from "@/components/order/OrderEventList";
