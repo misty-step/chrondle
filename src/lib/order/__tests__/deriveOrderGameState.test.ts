@@ -230,7 +230,7 @@ describe("deriveOrderGameState (Order)", () => {
       }
     });
 
-    it("surfaces an error when completion lacks score data", () => {
+    it("calculates score as fallback when completion lacks score data", () => {
       const progressData: OrderProgressData = {
         ordering: ["event-b", "event-a", "event-c"],
         hints: [],
@@ -245,9 +245,11 @@ describe("deriveOrderGameState (Order)", () => {
         }),
       );
 
-      expect(state.status).toBe("error");
-      if (state.status === "error") {
-        expect(state.error).toContain("Order state derivation failed");
+      expect(state.status).toBe("completed");
+      if (state.status === "completed") {
+        expect(state.finalOrder).toEqual(progressData.ordering);
+        expect(state.score).toBeDefined();
+        expect(state.score.hintsUsed).toBe(0);
       }
     });
   });

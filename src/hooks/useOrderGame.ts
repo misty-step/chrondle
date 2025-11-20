@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useMemo, useRef } from "react";
+import { api } from "../../convex/_generated/api";
 import { useAuthState } from "@/hooks/data/useAuthState";
 import { useOrderPuzzleData } from "@/hooks/data/useOrderPuzzleData";
 import { useOrderProgress } from "@/hooks/data/useOrderProgress";
 import { useOrderSession } from "@/hooks/useOrderSession";
+import { useMutationWithRetry } from "@/hooks/useMutationWithRetry";
 import { deriveOrderGameState, type OrderDataSources } from "@/lib/deriveOrderGameState";
 import {
   initializeOrderState,
@@ -13,8 +15,10 @@ import {
   type OrderEngineAction,
   type OrderEngineState,
 } from "@/lib/order/engine";
-import { mergeHints } from "@/lib/order/hintMerging";
+import { mergeHints, serializeHint } from "@/lib/order/hintMerging";
+import { assertConvexId, isConvexIdValidationError } from "@/lib/validation";
 import type { OrderGameState, OrderHint, OrderScore } from "@/types/orderGameState";
+import { logger } from "@/lib/logger";
 
 interface UseOrderGameReturn {
   gameState: OrderGameState;
@@ -66,6 +70,17 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
     () => mergeHints(serverHints, session.state.hints),
     [serverHints, session.state.hints],
   );
+
+  const submitOrderPlayMutation = useMutationWithRetry(api.orderPuzzles.submitOrderPlay, {
+    maxRetries: 3,
+    baseDelayMs: 800,
+    onRetry: (attempt, error) => {
+      logger.error(
+        `[useOrderGame] Retrying submitOrderPlay (attempt ${attempt}/3):`,
+        error.message,
+      );
+    },
+  });
 
   const engineContext = useMemo(() => ({ baseline: baselineOrder }), [baselineOrder]);
 
@@ -140,9 +155,41 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
 
   const commitOrdering = useCallback(
     async (score: OrderScore) => {
+      const orderingForCommit =
+        sessionOrderingRef.current && sessionOrderingRef.current.length
+          ? sessionOrderingRef.current
+          : baselineOrder;
+
       session.markCommitted(score);
+
+      if (!auth.isAuthenticated || !auth.userId || !puzzle.puzzle) {
+        return;
+      }
+
+      try {
+        const puzzleId = assertConvexId(puzzle.puzzle.id, "orderPuzzles");
+        const userId = assertConvexId(auth.userId, "users");
+        const serializedHints = mergedHints.map(serializeHint);
+
+        await submitOrderPlayMutation({
+          puzzleId,
+          userId,
+          ordering: orderingForCommit,
+          hints: serializedHints,
+          clientScore: { ...score, hintMultiplier: 1 },
+        });
+      } catch (error) {
+        if (isConvexIdValidationError(error)) {
+          logger.error("[useOrderGame] Invalid Convex ID while submitting order play", {
+            id: error.id,
+            type: error.type,
+          });
+        } else {
+          logger.error("[useOrderGame] Failed to submit Order play", error);
+        }
+      }
     },
-    [session],
+    [auth, baselineOrder, mergedHints, puzzle, session, submitOrderPlayMutation],
   );
 
   return useMemo(

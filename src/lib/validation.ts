@@ -14,7 +14,7 @@ const CONVEX_ID_REGEX = /^[a-z0-9]{32}$/;
 /**
  * Type representing any valid Convex table name
  */
-type TableNames = "users" | "puzzles" | "plays" | "events";
+type TableNames = "users" | "puzzles" | "plays" | "events" | "orderPuzzles" | "orderPlays";
 
 /**
  * Custom error class for Convex ID validation failures

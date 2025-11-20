@@ -14,6 +14,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { generateAnchorHint, generateBracketHint, generateRelativeHint } from "@/lib/order/hints";
 import { deriveLockedPositions } from "@/lib/order/engine";
+import { calculateOrderScore } from "@/lib/order/scoring";
 import { copyOrderShareTextToClipboard, type OrderShareResult } from "@/lib/order/shareCard";
 import { logger } from "@/lib/logger";
 
@@ -223,7 +224,7 @@ function ReadyOrderGame({
   );
 
   const handleCommit = useCallback(() => {
-    const score = calculateScore(currentOrder, puzzle.events, hints.length);
+    const score = calculateOrderScore(currentOrder, puzzle.events, hints.length);
     onCommit(score);
   }, [currentOrder, puzzle.events, hints.length, onCommit]);
 
@@ -319,43 +320,6 @@ function findMovedEventId(previous: string[], next: string[]): string | null {
   }
 
   return null;
-}
-
-function calculateScore(ordering: string[], events: OrderEvent[], hintCount: number): OrderScore {
-  const resolvedOrdering = ordering.length ? ordering : events.map((event) => event.id);
-  const trueOrder = [...events].sort((a, b) => a.year - b.year).map((event) => event.id);
-  const n = resolvedOrdering.length;
-  const totalPairs = (n * (n - 1)) / 2;
-  let correctPairs = 0;
-  let perfectPositions = 0;
-
-  // Count perfect positions (event at exact correct index)
-  for (let i = 0; i < n; i++) {
-    if (resolvedOrdering[i] === trueOrder[i]) {
-      perfectPositions += 1;
-    }
-  }
-
-  // Count correct pairwise orderings
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      const first = resolvedOrdering[i];
-      const second = resolvedOrdering[j];
-      if (trueOrder.indexOf(first) < trueOrder.indexOf(second)) {
-        correctPairs += 1;
-      }
-    }
-  }
-
-  // Simple accuracy-based scoring: 2 points per correct pair
-  // Max score: 30 for 6 events (15 pairs * 2)
-  return {
-    totalScore: correctPairs * 2,
-    correctPairs,
-    totalPairs,
-    perfectPositions,
-    hintsUsed: hintCount,
-  };
 }
 
 function createHintForType(

@@ -1,42 +1,45 @@
-import type { OrderEvent, OrderScore } from "../../types/orderGameState";
+import type { OrderEvent, OrderScore } from "@/types/orderGameState";
 
-export function scoreOrderSubmission(
-  playerOrdering: string[],
+/**
+ * Calculate the Order mode score given a proposed ordering and the puzzle events.
+ * Falls back to the baseline event order when no ordering has been recorded yet.
+ */
+export function calculateOrderScore(
+  ordering: string[],
   events: OrderEvent[],
-  hintsUsed: number,
+  hintCount: number,
 ): OrderScore {
-  const chronological = [...events].sort((a, b) => a.year - b.year).map((event) => event.id);
-  const totalPairs = (playerOrdering.length * (playerOrdering.length - 1)) / 2;
+  const resolvedOrdering = ordering.length ? ordering : events.map((event) => event.id);
+  const trueOrder = [...events].sort((a, b) => a.year - b.year).map((event) => event.id);
+
+  const n = resolvedOrdering.length;
+  const totalPairs = (n * (n - 1)) / 2;
   let correctPairs = 0;
   let perfectPositions = 0;
 
   // Count perfect positions (event at exact correct index)
-  for (let i = 0; i < playerOrdering.length; i++) {
-    if (playerOrdering[i] === chronological[i]) {
+  for (let i = 0; i < n; i++) {
+    if (resolvedOrdering[i] === trueOrder[i]) {
       perfectPositions += 1;
     }
   }
 
   // Count correct pairwise orderings
-  for (let i = 0; i < playerOrdering.length; i++) {
-    for (let j = i + 1; j < playerOrdering.length; j++) {
-      const first = playerOrdering[i];
-      const second = playerOrdering[j];
-      if (chronological.indexOf(first) < chronological.indexOf(second)) {
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const first = resolvedOrdering[i];
+      const second = resolvedOrdering[j];
+      if (trueOrder.indexOf(first) < trueOrder.indexOf(second)) {
         correctPairs += 1;
       }
     }
   }
 
-  // Simple accuracy-based scoring: 2 points per correct pair
-  // Max score: 30 for 6 events (15 pairs * 2)
-  const totalScore = correctPairs * 2;
-
   return {
-    totalScore,
+    totalScore: correctPairs * 2,
     correctPairs,
     totalPairs,
     perfectPositions,
-    hintsUsed,
+    hintsUsed: hintCount,
   };
 }

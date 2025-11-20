@@ -29,7 +29,6 @@ export function useOrderProgress(
   puzzleId: string | null,
 ): UseOrderProgressReturn {
   const validUserId = safeConvexId(userId, "users");
-  // @ts-expect-error - orderPuzzles table exists in schema but types haven't regenerated
   const validPuzzleId = safeConvexId(puzzleId, "orderPuzzles");
 
   const shouldQuery = validUserId !== null && validPuzzleId !== null;
@@ -39,7 +38,6 @@ export function useOrderProgress(
     shouldQuery
       ? {
           userId: validUserId as Id<"users">,
-          // @ts-expect-error - orderPuzzles table exists in schema but types haven't regenerated
           puzzleId: validPuzzleId as Id<"orderPuzzles">,
         }
       : "skip",

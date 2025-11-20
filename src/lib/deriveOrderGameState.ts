@@ -1,5 +1,6 @@
 import { logger } from "@/lib/logger";
 import { initializeOrderState, selectOrdering } from "@/lib/order/engine";
+import { calculateOrderScore } from "@/lib/order/scoring";
 import { mergeHints } from "@/lib/order/hintMerging";
 import type { OrderGameState, OrderHint, OrderPuzzle, OrderScore } from "@/types/orderGameState";
 
@@ -96,13 +97,6 @@ export function deriveOrderGameState(sources: OrderDataSources): OrderGameState 
     const isSessionComplete = !auth.isAuthenticated && Boolean(session.committedAt);
 
     if (isServerComplete || isSessionComplete) {
-      const score =
-        (auth.isAuthenticated ? progress.progress?.score : null) ?? session.score ?? null;
-
-      if (!score) {
-        throw new Error("Completed Order puzzle is missing score data");
-      }
-
       const finalOrder = resolveOrderingWithHints(
         isServerComplete ? serverOrdering : null,
         isSessionComplete ? session.ordering : [],
@@ -113,6 +107,11 @@ export function deriveOrderGameState(sources: OrderDataSources): OrderGameState 
       const correctOrder = [...orderPuzzle.events]
         .sort((a, b) => a.year - b.year)
         .map((event) => event.id);
+
+      const score =
+        (auth.isAuthenticated ? progress.progress?.score : null) ??
+        session.score ??
+        calculateOrderScore(finalOrder, orderPuzzle.events, hints.length);
 
       return {
         status: "completed",

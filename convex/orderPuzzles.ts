@@ -1,7 +1,11 @@
 /**
  * Order puzzle barrel file to expose cron mutations, queries, etc.
  */
-export { generateDailyOrderPuzzle, ensureTodaysOrderPuzzle } from "./orderPuzzles/mutations";
+export {
+  generateDailyOrderPuzzle,
+  ensureTodaysOrderPuzzle,
+  submitOrderPlay,
+} from "./orderPuzzles/mutations";
 
 export {
   getDailyOrderPuzzle,
