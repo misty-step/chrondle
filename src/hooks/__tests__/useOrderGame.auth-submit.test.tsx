@@ -99,8 +99,9 @@ describe("useOrderGame – authenticated submit", () => {
       hintsUsed: 1,
     };
 
+    let success = false;
     await act(async () => {
-      await result.current.commitOrdering(score);
+      success = await result.current.commitOrdering(score);
     });
 
     expect(session.markCommitted).toHaveBeenCalledWith(score);
@@ -110,7 +111,13 @@ describe("useOrderGame – authenticated submit", () => {
       userId,
       ordering: sessionState.ordering,
       hints: ["anchor:event-1:0"],
-      clientScore: { ...score, hintMultiplier: 1 },
+      clientScore: {
+        totalScore: score.totalScore,
+        correctPairs: score.correctPairs,
+        totalPairs: score.totalPairs,
+        hintMultiplier: 1,
+      },
     });
+    expect(success).toBe(true);
   });
 });

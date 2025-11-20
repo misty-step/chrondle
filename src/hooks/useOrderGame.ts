@@ -24,7 +24,7 @@ interface UseOrderGameReturn {
   gameState: OrderGameState;
   reorderEvents: (fromIndex: number, toIndex: number) => void;
   takeHint: (hint: OrderHint) => void;
-  commitOrdering: (score: OrderScore) => Promise<void>;
+  commitOrdering: (score: OrderScore) => Promise<boolean>;
 }
 
 export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): UseOrderGameReturn {
@@ -154,7 +154,7 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
   );
 
   const commitOrdering = useCallback(
-    async (score: OrderScore) => {
+    async (score: OrderScore): Promise<boolean> => {
       const orderingForCommit =
         sessionOrderingRef.current && sessionOrderingRef.current.length
           ? sessionOrderingRef.current
@@ -163,21 +163,28 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
       session.markCommitted(score);
 
       if (!auth.isAuthenticated || !auth.userId || !puzzle.puzzle) {
-        return;
+        return true;
       }
 
       try {
         const puzzleId = assertConvexId(puzzle.puzzle.id, "orderPuzzles");
         const userId = assertConvexId(auth.userId, "users");
         const serializedHints = mergedHints.map(serializeHint);
+        const clientScore = {
+          totalScore: score.totalScore,
+          correctPairs: score.correctPairs,
+          totalPairs: score.totalPairs,
+          hintMultiplier: 1,
+        };
 
         await submitOrderPlayMutation({
           puzzleId,
           userId,
           ordering: orderingForCommit,
           hints: serializedHints,
-          clientScore: { ...score, hintMultiplier: 1 },
+          clientScore,
         });
+        return true;
       } catch (error) {
         if (isConvexIdValidationError(error)) {
           logger.error("[useOrderGame] Invalid Convex ID while submitting order play", {
@@ -187,6 +194,7 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
         } else {
           logger.error("[useOrderGame] Failed to submit Order play", error);
         }
+        return false;
       }
     },
     [auth, baselineOrder, mergedHints, puzzle, session, submitOrderPlayMutation],

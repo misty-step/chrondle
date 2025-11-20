@@ -7,6 +7,46 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 
 ## Now (Sprint-Ready, <2 weeks)
 
+### [QUALITY] HIGH - Convex Contract Enforcement for Order Submissions
+
+**Files**: `convex/orderPuzzles/mutations.ts`, `src/hooks/useOrderGame.ts`
+**Problem**: Client payloads can drift from Convex validators (extra fields like `hintsUsed`) and only fail at runtime.
+**Fix**: Export a shared `SubmitOrderPlayArgs`/`ClientScore` type derived from Convex validator and use `satisfies` in the client payload. Add a Vitest integration test that calls `submitOrderPlay` against an in-memory Convex test instance.
+**Effort**: 2h | **Benefit**: Prevents runtime ArgumentValidationError + silent submission failures
+**Acceptance**: Shared type consumed by hook; integration test fails if payload shape diverges.
+
+### [QUALITY] HIGH - Order E2E Persistence Test (Auth + Refresh)
+
+**Files**: `e2e/order.spec.ts` (new)
+**Problem**: No end-to-end coverage to ensure authenticated Order submission persists after reload; UI can succeed locally while server write fails.
+**Fix**: Playwright/Cypress test: sign in (stub Clerk), play Order, submit, assert 200 on `submitOrderPlay`, reload, expect completed state. Run in mobile viewport.
+**Effort**: 3h | **Benefit**: Catches auth/token/validator regressions in real flow
+**Acceptance**: Test passes in CI; fails if server submission is rejected or progress not returned on reload.
+
+### [OBSERVABILITY] MEDIUM - Surface Convex Mutation Failures
+
+**Files**: `src/hooks/useOrderGame.ts`, `src/components/order/OrderGameIsland.tsx`
+**Problem**: Convex ArgumentValidationErrors are silent to users; perceived as “button does nothing.”
+**Fix**: Route mutation errors to Sentry/console and show inline toast with server error message; add metric/alert on `orderPuzzles:submitOrderPlay` failures in Convex dashboard/Slack.
+**Effort**: 1h | **Benefit**: Faster triage, user-visible feedback
+**Acceptance**: Error toast appears on failure; Convex alert triggers on validation spikes.
+
+### [QUALITY] MEDIUM - Mock Contracts Must Match Convex Schema
+
+**Files**: `src/hooks/__tests__/useOrderGame.auth-submit.test.tsx`
+**Problem**: Unit tests mock Convex mutation and don’t validate payload shape; they can pass with extra fields.
+**Fix**: Update mocks to assert exact payload using shared `ClientScore` type; add lint rule/custom matcher to forbid spreading unknown keys into Convex payloads in tests.
+**Effort**: 1h | **Benefit**: Prevents test false-positives on schema drift
+**Acceptance**: Tests fail if payload has extra/missing fields; lint rule in place.
+
+### [DEV UX] MEDIUM - Convex Drift Check in CI
+
+**Files**: `scripts/ci/convex-check.sh` (new), pipeline config
+**Problem**: Convex codegen/validators can change without failing CI.
+**Fix**: Add CI step: `pnpm convex codegen && git diff --exit-code convex/_generated` plus `pnpm convex lint` to fail on drift.
+**Effort**: 45m | **Benefit**: Early detection of schema changes
+**Acceptance**: CI fails on uncommitted codegen or lint errors.
+
 ### [SECURITY] CRITICAL - Broken Access Control in submitGuess/submitRange
 
 **Files**: `convex/puzzles/mutations.ts:84-177, 179-287`

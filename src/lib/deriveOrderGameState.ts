@@ -94,12 +94,16 @@ export function deriveOrderGameState(sources: OrderDataSources): OrderGameState 
 
     const isServerComplete =
       auth.isAuthenticated && Boolean(progress.progress?.completedAt ?? null);
-    const isSessionComplete = !auth.isAuthenticated && Boolean(session.committedAt);
+    const isSessionComplete = Boolean(session.committedAt);
 
     if (isServerComplete || isSessionComplete) {
+      const preferServer = isServerComplete && serverOrdering?.length;
+      const preferredOrdering = preferServer ? serverOrdering : null;
+      const fallbackOrdering = preferServer ? session.ordering : session.ordering;
+
       const finalOrder = resolveOrderingWithHints(
-        isServerComplete ? serverOrdering : null,
-        isSessionComplete ? session.ordering : [],
+        preferredOrdering,
+        fallbackOrdering,
         baselineOrder,
         hints,
       );
@@ -109,7 +113,7 @@ export function deriveOrderGameState(sources: OrderDataSources): OrderGameState 
         .map((event) => event.id);
 
       const score =
-        (auth.isAuthenticated ? progress.progress?.score : null) ??
+        (isServerComplete ? progress.progress?.score : null) ??
         session.score ??
         calculateOrderScore(finalOrder, orderPuzzle.events, hints.length);
 

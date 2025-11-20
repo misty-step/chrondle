@@ -12,6 +12,7 @@ import { DocumentHeader } from "@/components/order/DocumentHeader";
 import { OrderInstructions } from "@/components/order/OrderInstructions";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { generateAnchorHint, generateBracketHint, generateRelativeHint } from "@/lib/order/hints";
 import { deriveLockedPositions } from "@/lib/order/engine";
 import { calculateOrderScore } from "@/lib/order/scoring";
@@ -92,7 +93,10 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
       reorderEvents={reorderEvents}
       takeHint={takeHint}
       onCommit={(score) =>
-        commitOrdering(score).catch((error) => logger.error("Failed to commit ordering", error))
+        commitOrdering(score).catch((error) => {
+          logger.error("Failed to commit ordering", error);
+          return false;
+        })
       }
     />
   );
@@ -112,7 +116,7 @@ interface ReadyOrderGameProps {
   hints: OrderHint[];
   reorderEvents: (fromIndex: number, toIndex: number) => void;
   takeHint: (hint: OrderHint) => void;
-  onCommit: (score: OrderScore) => void;
+  onCommit: (score: OrderScore) => Promise<boolean>;
 }
 
 function ReadyOrderGame({
@@ -123,6 +127,7 @@ function ReadyOrderGame({
   takeHint,
   onCommit,
 }: ReadyOrderGameProps) {
+  const toast = useToast();
   const [pendingHintType, setPendingHintType] = useState<HintType | null>(null);
   const [hintError, setHintError] = useState<string | null>(null);
 
@@ -223,10 +228,17 @@ function ReadyOrderGame({
     ],
   );
 
-  const handleCommit = useCallback(() => {
+  const handleCommit = useCallback(async () => {
     const score = calculateOrderScore(currentOrder, puzzle.events, hints.length);
-    onCommit(score);
-  }, [currentOrder, puzzle.events, hints.length, onCommit]);
+    const synced = await onCommit(score);
+    if (!synced && "addToast" in toast && toast.addToast) {
+      toast.addToast({
+        title: "Saved locally",
+        description: "We couldn't sync your result. It will retry when the app refreshes.",
+        variant: "destructive",
+      });
+    }
+  }, [currentOrder, puzzle.events, hints.length, onCommit, toast]);
 
   return (
     <div className="paper-texture flex min-h-screen flex-col">
@@ -234,7 +246,10 @@ function ReadyOrderGame({
       <AppHeader puzzleNumber={puzzle.puzzleNumber} isArchive={false} />
 
       {/* Main Content Area */}
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-6 sm:px-0">
+      <main
+        className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-6 sm:px-0"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}
+      >
         <div className="space-y-4">
           {/* Instructions Banner */}
           <OrderInstructions />

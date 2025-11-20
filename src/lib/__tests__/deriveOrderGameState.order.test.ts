@@ -71,4 +71,30 @@ describe("deriveOrderGameState", () => {
     expect(state.finalOrder[0]).toBe("event-a");
     expect(new Set(state.finalOrder)).toEqual(new Set(["event-a", "event-b", "event-c"]));
   });
+
+  it("falls back to session completion when authenticated but server progress missing", () => {
+    const sources = buildSources({
+      auth: { userId: "user-1", isAuthenticated: true, isLoading: false },
+      progress: { progress: null, isLoading: false },
+      session: {
+        ordering: ["event-c", "event-b", "event-a"],
+        hints: [],
+        committedAt: Date.now(),
+        score: {
+          totalScore: 5,
+          correctPairs: 2,
+          totalPairs: 3,
+          perfectPositions: 0,
+          hintsUsed: 0,
+        },
+      },
+    });
+
+    const state = deriveOrderGameState(sources);
+    if (state.status !== "completed") {
+      throw new Error("Expected completed state");
+    }
+    expect(state.finalOrder).toEqual(["event-c", "event-b", "event-a"]);
+    expect(state.score?.totalScore).toBe(5);
+  });
 });
