@@ -70,6 +70,7 @@ export const ensureTodaysOrderPuzzle = mutation({
 });
 
 import { withObservability } from "../lib/observability";
+import type { Id } from "../_generated/dataModel";
 
 /**
  * Validates a player's submission, recalculates the score server-side,
@@ -89,7 +90,21 @@ export const submitOrderPlay = mutation({
     }),
   },
   handler: withObservability(
-    async (ctx, args) => {
+    async (
+      ctx: MutationCtx,
+      args: {
+        puzzleId: Id<"orderPuzzles">;
+        userId: Id<"users">;
+        ordering: string[];
+        hints: string[];
+        clientScore: {
+          totalScore: number;
+          correctPairs: number;
+          totalPairs: number;
+          hintMultiplier: number;
+        };
+      },
+    ) => {
       const identity = await ctx.auth.getUserIdentity();
       if (!identity) {
         throw new Error("Authentication required");
@@ -138,7 +153,7 @@ export const submitOrderPlay = mutation({
       }
 
       return {
-        status: "recorded",
+        status: "recorded" as const,
         score: verifiedScore,
       };
     },
