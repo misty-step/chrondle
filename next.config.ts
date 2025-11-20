@@ -89,6 +89,9 @@ const nextConfig: NextConfig = {
   images: {
     domains: ["img.clerk.com", "www.gravatar.com"],
   },
+
+  // Enable source maps for Sentry
+  productionBrowserSourceMaps: true,
 };
 
 export default withBundleAnalyzer(nextConfig);

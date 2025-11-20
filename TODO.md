@@ -39,14 +39,13 @@
       Success: Mutation behavior unchanged on success; errors logged+captured; metrics increment; tests (Convex action/mutation unit) validate wrap classification.
       Depends: Sentry server helper.
       Estimate: 1.25h
-- [ ] Deploy workflow: Sentry release + sourcemaps  
-       Files: `.github/workflows/deploy.yml`  
-       Goal: Create Sentry release per commit; upload Next (and Convex if path known) source maps; pass release/env into build.  
-       Approach: add getsentry/action-release step; export `SENTRY_RELEASE=${{ github.sha }}` env; add sourcemap upload commands; keep cache steps intact.  
-       Success: Workflow interpolates release version; steps gated on secrets; does not break build.  
-       Tests: dry-run via workflow syntax check (CI), local lint of YAML if available.  
-       Estimate: 0.75h
-
+- [x] Deploy workflow: Sentry release + sourcemaps
+      Files: `.github/workflows/deploy.yml`
+      Goal: Create Sentry release per commit; upload Next (and Convex if path known) source maps; pass release/env into build.
+      Approach: add getsentry/action-release step; export `SENTRY_RELEASE=${{ github.sha }}` env; add sourcemap upload commands; keep cache steps intact.
+      Success: Workflow interpolates release version; steps gated on secrets; does not break build.
+      Tests: dry-run via workflow syntax check (CI), local lint of YAML if available.
+      Estimate: 0.75h
 - [ ] Env/docs updates  
        Files: `.env.example`, `docs/observability.md` (or new section), `README.md` short note if needed  
        Goal: Document new envs (`SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`, sampling vars, optional `ORDER_FAILURE_SLACK_WEBHOOK`).  
