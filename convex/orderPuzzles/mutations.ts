@@ -157,7 +157,7 @@ export const submitOrderPlay = mutation({
         score: verifiedScore,
       };
     },
-    { name: "submitOrderPlay", slack: true },
+    { name: "submitOrderPlay" },
   ),
 });
 

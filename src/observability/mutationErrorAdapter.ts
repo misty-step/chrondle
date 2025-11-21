@@ -18,9 +18,11 @@ export function classifyMutationError(error: unknown): MutationError {
   // Handle Convex business logic errors (thrown via throw new ConvexError(...))
   if (error instanceof ConvexError) {
     const message =
-      error.data && typeof error.data === "string"
+      typeof error.data === "string"
         ? error.data
-        : error.message || "Validation failed";
+        : typeof error.data === "object" && error.data && "message" in error.data
+          ? String(error.data.message)
+          : error.message || "Validation failed";
 
     return {
       code: "VALIDATION",
@@ -35,7 +37,11 @@ export function classifyMutationError(error: unknown): MutationError {
     const message = error.message.toLowerCase();
 
     // Auth errors
-    if (message.includes("unauthenticated") || message.includes("unauthorized")) {
+    if (
+      message.includes("unauthenticated") ||
+      message.includes("unauthorized") ||
+      message.includes("forbidden")
+    ) {
       return {
         code: "AUTH",
         message: "Please sign in to perform this action.",
@@ -49,7 +55,15 @@ export function classifyMutationError(error: unknown): MutationError {
       message.includes("network") ||
       message.includes("fetch") ||
       message.includes("connection") ||
-      message.includes("offline")
+      message.includes("offline") ||
+      message.includes("timeout") ||
+      message.includes("timed out") ||
+      message.includes("dns") ||
+      message.includes("econnrefused") ||
+      message.includes("econnreset") ||
+      message.includes("etimedout") ||
+      message.includes("enotfound") ||
+      message.includes("socket")
     ) {
       return {
         code: "NETWORK",

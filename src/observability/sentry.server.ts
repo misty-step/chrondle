@@ -27,7 +27,7 @@ export interface SentryContext {
 export function initSentryServer(): void {
   if (isInitialized) return;
 
-  const dsn = process.env.SENTRY_DSN;
+  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
   // No-op if DSN not configured
   if (!dsn) {

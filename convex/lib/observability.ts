@@ -26,14 +26,12 @@ function captureServerException(
  * - Error capturing (Sentry-compatible logs)
  * - Failure classification
  * - Metrics logging
- * - Optional Slack alerts
  */
 export function withObservability<Ctx, Args, Return>(
   fn: (ctx: Ctx, args: Args) => Promise<Return>,
   config: {
     name: string;
     tags?: Record<string, string>;
-    slack?: boolean;
     ignoreErrors?: string[]; // Error messages to ignore
   },
 ) {
@@ -69,13 +67,6 @@ export function withObservability<Ctx, Args, Return>(
         function: config.name,
       });
 
-      // 3. Optional Slack Alert
-      if (config.slack && process.env.ORDER_FAILURE_SLACK_WEBHOOK) {
-        sendSlackAlert(process.env.ORDER_FAILURE_SLACK_WEBHOOK, config.name, reason, message).catch(
-          (e) => console.error("Failed to send Slack alert", e),
-        );
-      }
-
       throw error;
     }
   };
@@ -89,31 +80,6 @@ function classifyError(error: unknown): FailureReason {
   if (msg.includes("validation") || msg.includes("invalid") || msg.includes("score verification"))
     return "validation";
   return "unknown"; // Defaults to unknown (potential server error)
-}
-
-async function sendSlackAlert(webhookUrl: string, fnName: string, reason: string, message: string) {
-  const payload = {
-    text: `🛑 *${fnName}* Failed`,
-    blocks: [
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Function:* 
-*${fnName}*
-*Reason:* 
-*${reason}*
-*Error:* ${message}`,
-        },
-      },
-    ],
-  };
-
-  await fetch(webhookUrl, {
-    method: "POST",
-    body: JSON.stringify(payload),
-    headers: { "Content-Type": "application/json" },
-  });
 }
 
 function sanitizeArgs(args: unknown): unknown {

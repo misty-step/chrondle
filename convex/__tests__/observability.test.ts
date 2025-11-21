@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { withObservability } from "../lib/observability";
 
 describe("withObservability", () => {
@@ -8,18 +8,10 @@ describe("withObservability", () => {
   // Spies
   const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   const _consoleInfoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-  const fetchSpy = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("fetch", fetchSpy);
     process.env.CONVEX_ENV = "test";
-    // Mock return of fetch to avoid unhandled promise rejections in background
-    fetchSpy.mockResolvedValue({ ok: true });
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
   });
 
   it("executes function and returns result on success", async () => {
@@ -61,24 +53,6 @@ describe("withObservability", () => {
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "[Sentry Capture]",
       expect.stringContaining('"reason":"validation"'),
-    );
-  });
-
-  it("sends slack alert if configured", async () => {
-    process.env.ORDER_FAILURE_SLACK_WEBHOOK = "https://slack.com/webhook";
-    const error = new Error("Boom");
-    mockFn.mockRejectedValue(error);
-
-    const wrapped = withObservability(mockFn, { name: "testFn", slack: true });
-
-    await expect(wrapped(mockCtx, {})).rejects.toThrow();
-
-    expect(fetchSpy).toHaveBeenCalledWith(
-      "https://slack.com/webhook",
-      expect.objectContaining({
-        method: "POST",
-        body: expect.stringContaining("Boom"),
-      }),
     );
   });
 
