@@ -36,8 +36,15 @@ export const getCurrentUser = query({
       .withIndex("by_clerk", (q) => q.eq("clerkId", identity.subject))
       .first();
 
-    // Add debug logging when user lookup returns null
+    // Diagnostic logging for auth edge case
     if (!user && identity.subject) {
+      console.error("[getCurrentUser] Authenticated but user not found", {
+        clerkId: identity.subject,
+        email: identity.email,
+        tokenIssuer: identity.tokenIdentifier,
+        identityKeys: Object.keys(identity),
+        timestamp: new Date().toISOString(),
+      });
     }
 
     return user;

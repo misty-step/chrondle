@@ -10,6 +10,7 @@ import { useMutationWithRetry } from "@/hooks/useMutationWithRetry";
 import { logger } from "@/lib/logger";
 import { scoreRange, SCORING_CONSTANTS } from "@/lib/scoring";
 import type { HintCount, RangeGuess } from "@/types/range";
+import { checkSubmissionAuth, logSubmissionAttempt } from "@/lib/gameSubmission";
 
 /**
  * Return type for the useGameActions hook
@@ -132,68 +133,107 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
       // Optimistic update - add to session immediately for instant feedback
       session.addGuess(guess);
 
-      // If authenticated, persist to server
-      if (auth.isAuthenticated && auth.userId) {
-        setIsSubmitting(true);
+      // Check authentication state and determine if we can persist
+      const authCheck = checkSubmissionAuth(
+        {
+          isAuthenticated: auth.isAuthenticated,
+          userId: auth.userId,
+          isLoading: auth.isLoading,
+        },
+        puzzle.puzzle?.id ?? null,
+        { gameMode: "classic", action: "submitGuess" },
+      );
 
-        try {
-          // Validate and assert IDs with proper error handling
-          const validPuzzleId = assertConvexId(puzzle.puzzle.id, "puzzles");
-          const validUserId = assertConvexId(auth.userId, "users");
+      // Handle auth edge case: authenticated but userId null
+      if (authCheck.error) {
+        logSubmissionAttempt("classic", "submitGuess", authCheck, "failure");
 
-          await submitGuessMutation({
-            puzzleId: validPuzzleId,
-            userId: validUserId,
-            guess,
+        if ("addToast" in toastContext) {
+          toastContext.addToast({
+            title: "Authentication Error",
+            description: authCheck.error.message,
+            variant: "destructive",
           });
+        }
 
-          // Success - guess is already in session from optimistic update
-          return true;
-        } catch (error) {
-          // Check if it's a validation error
-          if (isConvexIdValidationError(error)) {
-            logger.error("Invalid ID format detected:", error.id, "for type:", error.type);
+        // Don't return success for auth edge case - this is the bug we're fixing
+        return false;
+      }
 
-            if ("addToast" in toastContext) {
-              toastContext.addToast({
-                title: "Authentication Error",
-                description: "There was an issue with your user session. Please refresh the page.",
-                variant: "destructive",
-              });
-            }
+      // Anonymous users: local-only gameplay, no server persistence
+      if (authCheck.isAnonymous) {
+        logSubmissionAttempt("classic", "submitGuess", authCheck, "success");
+        return true;
+      }
 
-            // Still return true to keep the guess in session
-            return true;
-          }
+      // Fully authenticated: persist to server
+      setIsSubmitting(true);
 
-          // Other errors - keep the guess in session for eventual consistency
-          // The guess stays in the session, allowing the user to see it
-          // and it will be merged properly when the page refreshes
-          logger.error("Failed to persist guess to server:", error);
+      try {
+        // At this point we know puzzle.puzzle and auth.userId are non-null
+        // because checkSubmissionAuth returned canPersist: true
+        if (!puzzle.puzzle || !auth.userId) {
+          logger.error("[submitGuess] Impossible state: canPersist true but missing data");
+          return false;
+        }
+
+        // Validate and assert IDs with proper error handling
+        const validPuzzleId = assertConvexId(puzzle.puzzle.id, "puzzles");
+        const validUserId = assertConvexId(auth.userId, "users");
+
+        await submitGuessMutation({
+          puzzleId: validPuzzleId,
+          userId: validUserId,
+          guess,
+        });
+
+        // Success - guess is already in session from optimistic update
+        logSubmissionAttempt("classic", "submitGuess", authCheck, "success");
+        return true;
+      } catch (error) {
+        // Check if it's a validation error
+        if (isConvexIdValidationError(error)) {
+          logger.error("Invalid ID format detected:", error.id, "for type:", error.type);
 
           if ("addToast" in toastContext) {
             toastContext.addToast({
-              title: "Connection Issue",
-              description: "Your guess was saved locally but couldn't sync to the server",
+              title: "Authentication Error",
+              description: "There was an issue with your user session. Please refresh the page.",
               variant: "destructive",
             });
           }
 
-          // Return true because the guess was added to session successfully
-          // This maintains eventual consistency - the guess will sync later
+          logSubmissionAttempt("classic", "submitGuess", authCheck, "failure");
+          // Still return true to keep the guess in session
           return true;
-        } finally {
-          setIsSubmitting(false);
         }
-      }
 
-      // Not authenticated - guess only saved in session
-      return true;
+        // Other errors - keep the guess in session for eventual consistency
+        // The guess stays in the session, allowing the user to see it
+        // and it will be merged properly when the page refreshes
+        logger.error("Failed to persist guess to server:", error);
+
+        if ("addToast" in toastContext) {
+          toastContext.addToast({
+            title: "Connection Issue",
+            description: "Your guess was saved locally but couldn't sync to the server",
+            variant: "destructive",
+          });
+        }
+
+        logSubmissionAttempt("classic", "submitGuess", authCheck, "failure");
+        // Return true because the guess was added to session successfully
+        // This maintains eventual consistency - the guess will sync later
+        return true;
+      } finally {
+        setIsSubmitting(false);
+      }
     },
     [
       puzzle.puzzle,
       auth.isAuthenticated,
       auth.userId,
+      auth.isLoading,
       session,
       isSubmitting,
       submitGuessMutation,
@@ -264,8 +304,46 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
 
       session.addRange?.(optimisticRange);
 
-      if (!auth.isAuthenticated || !auth.userId) {
+      // Check authentication state and determine if we can persist
+      const authCheck = checkSubmissionAuth(
+        {
+          isAuthenticated: auth.isAuthenticated,
+          userId: auth.userId,
+          isLoading: auth.isLoading,
+        },
+        puzzle.puzzle?.id ?? null,
+        { gameMode: "classic", action: "submitRange" },
+      );
+
+      // Handle auth edge case: authenticated but userId null
+      if (authCheck.error) {
+        logSubmissionAttempt("classic", "submitRange", authCheck, "failure");
+
+        if ("addToast" in toastContext) {
+          toastContext.addToast({
+            title: "Authentication Error",
+            description: authCheck.error.message,
+            variant: "destructive",
+          });
+        }
+
+        // Don't return success for auth edge case - this is the bug we're fixing
+        session.removeLastRange?.();
+        return false;
+      }
+
+      // Anonymous users: local-only gameplay, no server persistence
+      if (authCheck.isAnonymous) {
+        logSubmissionAttempt("classic", "submitRange", authCheck, "success");
         return true;
+      }
+
+      // Fully authenticated: persist to server
+      // At this point we know puzzle.puzzle and auth.userId are non-null
+      if (!puzzle.puzzle || !auth.userId) {
+        logger.error("[submitRange] Impossible state: canPersist true but missing data");
+        session.removeLastRange?.();
+        return false;
       }
 
       setIsSubmitting(true);
@@ -290,9 +368,11 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
           });
         }
 
+        logSubmissionAttempt("classic", "submitRange", authCheck, "success");
         return true;
       } catch (error) {
         session.removeLastRange?.();
+        logSubmissionAttempt("classic", "submitRange", authCheck, "failure");
 
         if (isConvexIdValidationError(error)) {
           logger.error("Invalid ID format detected:", error.id, "for type:", error.type);
@@ -324,6 +404,7 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
       puzzle.puzzle,
       auth.isAuthenticated,
       auth.userId,
+      auth.isLoading,
       session,
       isSubmitting,
       submitRangeMutation,

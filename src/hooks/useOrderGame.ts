@@ -8,6 +8,11 @@ import { useOrderProgress } from "@/hooks/data/useOrderProgress";
 import { useOrderSession } from "@/hooks/useOrderSession";
 import { useMutationWithRetry } from "@/hooks/useMutationWithRetry";
 import { safeMutation, type MutationError } from "@/observability/mutationErrorAdapter";
+import {
+  checkSubmissionAuth,
+  handleSubmissionError,
+  logSubmissionAttempt,
+} from "@/lib/gameSubmission";
 import { deriveOrderGameState, type OrderDataSources } from "@/lib/deriveOrderGameState";
 import {
   initializeOrderState,
@@ -161,16 +166,57 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
           ? sessionOrderingRef.current
           : baselineOrder;
 
+      // Optimistic update - mark as committed immediately for UI responsiveness
       session.markCommitted(score);
 
-      if (!auth.isAuthenticated || !auth.userId || !puzzle.puzzle) {
+      // Check authentication state and determine if we can persist
+      const authCheck = checkSubmissionAuth(
+        {
+          isAuthenticated: auth.isAuthenticated,
+          userId: auth.userId,
+          isLoading: auth.isLoading,
+        },
+        puzzle.puzzle?.id ?? null,
+        { gameMode: "order", action: "commitOrdering" },
+      );
+
+      // Handle auth edge case: authenticated but userId null
+      // This is the bug we're fixing - we used to return [true, null] here!
+      if (authCheck.error) {
+        logSubmissionAttempt("order", "commitOrdering", authCheck, "failure");
+        return handleSubmissionError(authCheck.error);
+      }
+
+      // Anonymous users: local-only gameplay, no server persistence
+      if (authCheck.isAnonymous) {
+        logSubmissionAttempt("order", "commitOrdering", authCheck, "success");
         return [true, null];
       }
 
-      return await safeMutation(
+      // Fully authenticated: persist to server
+      // At this point we know puzzle.puzzle and auth.userId are non-null
+      // because checkSubmissionAuth returned canPersist: true
+      if (!puzzle.puzzle || !auth.userId) {
+        // This should never happen due to checkSubmissionAuth, but TypeScript needs it
+        logger.error("[commitOrdering] Impossible state: canPersist true but missing data");
+        return [
+          null,
+          {
+            code: "UNKNOWN" as const,
+            message: "An unexpected error occurred. Please try again.",
+            retryable: true,
+            originalError: new Error("Impossible auth state"),
+          },
+        ];
+      }
+
+      const currentPuzzleId = puzzle.puzzle.id;
+      const currentUserId = auth.userId;
+
+      const result = await safeMutation(
         async () => {
-          const puzzleId = assertConvexId(puzzle.puzzle!.id, "orderPuzzles");
-          const userId = assertConvexId(auth.userId!, "users");
+          const puzzleId = assertConvexId(currentPuzzleId, "orderPuzzles");
+          const userId = assertConvexId(currentUserId, "users");
           const serializedHints = mergedHints.map(serializeHint);
           const clientScore = {
             totalScore: score.totalScore,
@@ -189,10 +235,15 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
           return true;
         },
         {
-          puzzleId: puzzle.puzzle.id,
-          userId: auth.userId,
+          puzzleId: currentPuzzleId,
+          userId: currentUserId,
         },
       );
+
+      // Log submission outcome
+      logSubmissionAttempt("order", "commitOrdering", authCheck, result[0] ? "success" : "failure");
+
+      return result;
     },
     [auth, baselineOrder, mergedHints, puzzle, session, submitOrderPlayMutation],
   );
