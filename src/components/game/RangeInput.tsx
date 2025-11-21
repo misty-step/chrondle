@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EraToggle } from "@/components/ui/EraToggle";
 import { SCORING_CONSTANTS } from "@/lib/scoring";
 import { GAME_CONFIG } from "@/lib/constants";
 import { convertToInternalYear, convertFromInternalYear, type Era } from "@/lib/eraUtils";
-import { formatYearWithOptions, pluralize } from "@/lib/displayFormatting";
+import { pluralize } from "@/lib/displayFormatting";
 import { cn } from "@/lib/utils";
 
 interface RangeInputProps {
@@ -39,21 +38,15 @@ export function RangeInput({
   disabled = false,
   className,
   hintsUsed = 0,
+  isOneGuessMode = false,
   value,
   onChange,
 }: RangeInputProps) {
   const defaultRange = useMemo(() => createFullTimelineRange(minYear, maxYear), [minYear, maxYear]);
-
-  // Check if controlled
   const isControlled = value !== undefined && onChange !== undefined;
-
-  // Internal year representation (negative = BC) - only used when uncontrolled
   const [internalRange, setInternalRange] = useState<[number, number]>(defaultRange);
-
-  // Use external state if controlled, internal state if uncontrolled
   const range = isControlled ? value : internalRange;
 
-  // Internal setter that respects controlled/uncontrolled mode
   const updateRange = useCallback(
     (newRange: [number, number]) => {
       if (isControlled) {
@@ -65,22 +58,15 @@ export function RangeInput({
     [isControlled, onChange],
   );
 
-  // Track if user has modified the range from default
   const [hasBeenModified, setHasBeenModified] = useState(false);
-
-  // Convert internal years to UI representation
   const startEraYear = convertFromInternalYear(range[0]);
   const endEraYear = convertFromInternalYear(range[1]);
 
-  // UI state for year inputs (positive numbers only)
   const [startInput, setStartInput] = useState(String(startEraYear.year));
   const [endInput, setEndInput] = useState(String(endEraYear.year));
-
-  // UI state for era toggles
   const [startEra, setStartEra] = useState<Era>(startEraYear.era);
   const [endEra, setEndEra] = useState<Era>(endEraYear.era);
 
-  // Sync UI state when internal range changes
   useEffect(() => {
     const start = convertFromInternalYear(range[0]);
     const end = convertFromInternalYear(range[1]);
@@ -91,7 +77,6 @@ export function RangeInput({
     setEndEra(end.era);
   }, [range]);
 
-  // Reset to default when bounds change
   useEffect(() => {
     if (!isControlled) {
       setInternalRange(defaultRange);
@@ -108,6 +93,8 @@ export function RangeInput({
     setHasBeenModified(false);
   }, [minYear, maxYear, updateRange]);
 
+  // --- Slider Interaction Logic ---
+
   const handleStartInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setStartInput(e.target.value);
   };
@@ -118,7 +105,6 @@ export function RangeInput({
 
   const handleStartEraChange = (era: Era) => {
     setStartEra(era);
-    // Immediately apply era change if we have a valid year
     const parsed = parseInt(startInput, 10);
     if (!Number.isNaN(parsed)) {
       const internalYear = convertToInternalYear(parsed, era);
@@ -131,7 +117,6 @@ export function RangeInput({
 
   const handleEndEraChange = (era: Era) => {
     setEndEra(era);
-    // Immediately apply era change if we have a valid year
     const parsed = parseInt(endInput, 10);
     if (!Number.isNaN(parsed)) {
       const internalYear = convertToInternalYear(parsed, era);
@@ -150,13 +135,11 @@ export function RangeInput({
         updateRange([internalYear, Math.max(internalYear, range[1])]);
         setHasBeenModified(true);
       } else {
-        // Reset to current valid value
         const current = convertFromInternalYear(range[0]);
         setStartInput(String(current.year));
         setStartEra(current.era);
       }
     } else {
-      // Reset to current valid value
       const current = convertFromInternalYear(range[0]);
       setStartInput(String(current.year));
     }
@@ -170,22 +153,18 @@ export function RangeInput({
         updateRange([Math.min(range[0], internalYear), internalYear]);
         setHasBeenModified(true);
       } else {
-        // Reset to current valid value
         const current = convertFromInternalYear(range[1]);
         setEndInput(String(current.year));
         setEndEra(current.era);
       }
     } else {
-      // Reset to current valid value
       const current = convertFromInternalYear(range[1]);
       setEndInput(String(current.year));
     }
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent, applyFn: () => void) => {
-    if (e.key === "Enter") {
-      applyFn();
-    }
+    if (e.key === "Enter") applyFn();
   };
 
   const handleRangeCommit = () => {
@@ -195,112 +174,133 @@ export function RangeInput({
   };
 
   return (
-    <div className={cn("space-y-5", className)}>
-      {/* Section Header with Range Summary */}
-      <div className="flex items-baseline justify-between border-b pb-2">
-        <h3 className="text-foreground text-sm font-semibold tracking-wider uppercase">
-          Your Guess
+    <div className={cn("space-y-6", className)}>
+      {/* Timeline Header */}
+      <div className="border-parchment-300 flex items-baseline justify-between border-b pb-2">
+        <h3 className="text-ink-700 font-sans text-xs font-bold tracking-[0.2em] uppercase">
+          Target Range
         </h3>
-        <span className="text-muted-foreground text-xs">
-          {formatYearWithOptions(range[0])} – {formatYearWithOptions(range[1])}
-        </span>
+        <div className="text-ink-900 font-mono font-medium tabular-nums">
+          {range[0] < 0 ? `${Math.abs(range[0])} BC` : `${range[0]} AD`}
+          <span className="text-parchment-300 mx-2">–</span>
+          {range[1] < 0 ? `${Math.abs(range[1])} BC` : `${range[1]} AD`}
+        </div>
       </div>
 
-      {/* Form Card Container */}
+      {/* Interactive Ruler Card */}
       <div
         className={cn(
-          "from-background to-muted/20 rounded-xl bg-gradient-to-br p-6 shadow-lg transition-all sm:p-8",
+          "material-card group relative p-6 transition-all sm:p-8",
           rangeTooWide
-            ? "border-destructive/30 border-3"
+            ? "border-feedback-error/50"
             : hasBeenModified
-              ? "border-primary/40 border-3"
-              : "border-primary/10 border-3",
+              ? "border-vermilion-500"
+              : "border-parchment-300",
         )}
       >
-        {/* Range Inputs - Grid layout with labels */}
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-center sm:gap-6">
-          {/* Start Year Input Group */}
-          <div className="flex flex-1 flex-col gap-2">
-            <label
-              htmlFor="start-year"
-              className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-            >
-              Start Year
+        {/* Decorative Ruler Marks (Top/Bottom) */}
+        <div className="pointer-events-none absolute top-0 right-4 left-4 flex h-2 justify-between opacity-30">
+          {[...Array(20)].map((_, i) => (
+            <div key={i} className="bg-ink-500 h-full w-px" />
+          ))}
+        </div>
+        <div className="pointer-events-none absolute right-4 bottom-0 left-4 flex h-2 justify-between opacity-30">
+          {[...Array(20)].map((_, i) => (
+            <div key={i} className="bg-ink-500 h-full w-px" />
+          ))}
+        </div>
+
+        {/* Input Controls */}
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">
+          {/* Start Year Group */}
+          <div className="flex-1 space-y-2">
+            <label className="text-ink-500 mb-1 block text-[10px] font-bold tracking-[0.1em] uppercase">
+              From Year
+              <div className="mt-1 flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    id="start-year"
+                    type="text"
+                    inputMode="numeric"
+                    value={startInput}
+                    onChange={handleStartInputChange}
+                    onBlur={applyStartYear}
+                    onKeyDown={(e) => handleInputKeyDown(e, applyStartYear)}
+                    disabled={disabled}
+                    className="bg-parchment-50 border-parchment-300 focus:border-vermilion-500 focus:ring-vermilion-500/20 h-12 text-center font-serif text-2xl"
+                  />
+                </div>
+                <EraToggle
+                  value={startEra}
+                  onChange={handleStartEraChange}
+                  disabled={disabled}
+                  size="default"
+                />
+              </div>
             </label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="start-year"
-                type="text"
-                inputMode="numeric"
-                value={startInput}
-                onChange={handleStartInputChange}
-                onBlur={applyStartYear}
-                onKeyDown={(e) => handleInputKeyDown(e, applyStartYear)}
-                disabled={disabled}
-                className="h-12 flex-1 border-2 text-center text-xl font-semibold focus-visible:shadow-lg"
-                aria-label="Start year"
-              />
-              <EraToggle
-                value={startEra}
-                onChange={handleStartEraChange}
-                disabled={disabled}
-                size="lg"
-              />
-            </div>
           </div>
 
-          {/* End Year Input Group */}
-          <div className="flex flex-1 flex-col gap-2">
-            <label
-              htmlFor="end-year"
-              className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-            >
-              End Year
+          {/* Link Icon */}
+          <div className="text-parchment-300 hidden items-center justify-center pb-3 sm:flex">
+            →
+          </div>
+
+          {/* End Year Group */}
+          <div className="flex-1 space-y-2">
+            <label className="text-ink-500 mb-1 block text-[10px] font-bold tracking-[0.1em] uppercase">
+              To Year
+              <div className="mt-1 flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    id="end-year"
+                    type="text"
+                    inputMode="numeric"
+                    value={endInput}
+                    onChange={handleEndInputChange}
+                    onBlur={applyEndYear}
+                    onKeyDown={(e) => handleInputKeyDown(e, applyEndYear)}
+                    disabled={disabled}
+                    className="bg-parchment-50 border-parchment-300 focus:border-vermilion-500 focus:ring-vermilion-500/20 h-12 text-center font-serif text-2xl"
+                  />
+                </div>
+                <EraToggle
+                  value={endEra}
+                  onChange={handleEndEraChange}
+                  disabled={disabled}
+                  size="default"
+                />
+              </div>
             </label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="end-year"
-                type="text"
-                inputMode="numeric"
-                value={endInput}
-                onChange={handleEndInputChange}
-                onBlur={applyEndYear}
-                onKeyDown={(e) => handleInputKeyDown(e, applyEndYear)}
-                disabled={disabled}
-                className="h-12 flex-1 border-2 text-center text-xl font-semibold focus-visible:shadow-lg"
-                aria-label="End year"
-              />
-              <EraToggle
-                value={endEra}
-                onChange={handleEndEraChange}
-                disabled={disabled}
-                size="lg"
-              />
-            </div>
           </div>
         </div>
 
-        {/* Range Width Display - Only show when invalid */}
-        {rangeTooWide && (
-          <div className="border-destructive/30 bg-destructive/5 mt-5 rounded-lg border-2 p-3 text-center transition-all">
-            <div className="text-destructive text-2xl font-bold tabular-nums">
-              {pluralize(width, "year")}
+        {/* Validation Message */}
+        <div className="mt-4 flex h-8 items-center justify-center">
+          {rangeTooWide ? (
+            <div className="text-feedback-error flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
+              <span className="border-feedback-error border-b-2 pb-0.5">
+                ⚠️ Range too wide ({pluralize(width, "year")})
+              </span>
             </div>
-            <div className="text-destructive mt-1 text-xs font-medium">
-              Max: {SCORING_CONSTANTS.W_MAX.toLocaleString()} years
+          ) : (
+            <div className="text-ink-500 font-mono text-xs">
+              Span: {width.toLocaleString()} years
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Submit Button with gradient and arrow */}
+        {/* Submit Action */}
         <Button
           onClick={handleRangeCommit}
           disabled={commitDisabled}
+          variant={commitDisabled ? "outline" : "default"}
           size="lg"
-          className="from-primary to-primary/80 shadow-primary/25 mt-6 h-14 w-full bg-gradient-to-r text-lg font-semibold shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl disabled:scale-100"
+          className={cn(
+            "mt-2 h-14 w-full text-lg transition-all duration-300",
+            !commitDisabled && "shadow-hard hover:shadow-hard-lg hover:translate-y-[-2px]",
+          )}
         >
-          Submit Range
-          <span className="ml-2 text-xl">→</span>
+          {isOneGuessMode ? "Lock In Final Guess" : "Submit Range"}
         </Button>
       </div>
     </div>

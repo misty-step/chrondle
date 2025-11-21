@@ -7,6 +7,8 @@ import { HintIndicator } from "@/components/game/HintIndicator";
 import { Confetti, ConfettiRef } from "@/components/magicui/confetti";
 import { GameComplete } from "@/components/modals/GameComplete";
 import { validateGameLayoutProps } from "@/lib/propValidation";
+import { motion, AnimatePresence } from "motion/react";
+import { cn } from "@/lib/utils";
 import type { RangeGuess } from "@/types/range";
 
 export interface GameLayoutProps {
@@ -84,10 +86,28 @@ export function GameLayout(props: GameLayoutProps) {
   // Starts at 0 (first hint is free and always shown)
   const [hintsRevealed, setHintsRevealed] = useState(0);
 
+  // Track the latest guess to trigger the stamp animation
+  const [lastGuessStamp, setLastGuessStamp] = useState<RangeGuess | null>(null);
+
   // Reset hints when game completes or puzzle changes
   useEffect(() => {
     setHintsRevealed(0);
+    setLastGuessStamp(null);
   }, [gameState.puzzle?.year, isGameComplete]);
+
+  // Watch for new guesses to trigger stamp animation
+  useEffect(() => {
+    if (gameState.ranges.length > 0) {
+      const latest = gameState.ranges[gameState.ranges.length - 1];
+      // Only stamp if this is a new guess we haven't stamped yet
+      // Simple check using array length would be enough usually, but explicit is better
+      setLastGuessStamp(latest);
+
+      // Clear the stamp after animation
+      const timer = setTimeout(() => setLastGuessStamp(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.ranges]); // Dependent on the whole array to catch changes in length or content
 
   const targetYear = gameState.puzzle?.year ?? 0;
   const totalScore = gameState.totalScore ?? 0;
@@ -106,7 +126,38 @@ export function GameLayout(props: GameLayoutProps) {
       {headerContent && <div>{headerContent}</div>}
 
       {/* Main game content */}
-      <main className="flex-1 overflow-auto px-4 py-6 sm:px-6 sm:py-8">
+      <main className="relative flex-1 overflow-auto px-4 py-6 sm:px-6 sm:py-8">
+        {/* Stamp Overlay */}
+        <AnimatePresence>
+          {lastGuessStamp && (
+            <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center overflow-hidden">
+              <motion.div
+                initial={{ scale: 2, opacity: 0, rotate: -15 }}
+                animate={{ scale: 1, opacity: 1, rotate: Math.random() * 4 - 2 }} // Slight random rotation
+                exit={{ opacity: 0, scale: 1.1, transition: { duration: 0.5 } }}
+                transition={{
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 15,
+                  mass: 0.5,
+                }}
+                className={cn(
+                  "material-stamp rounded-lg border-4 p-4 text-4xl font-black tracking-widest uppercase mix-blend-multiply backdrop-blur-[1px]",
+                  // Color based on accuracy (logic simplified for visual impact)
+                  // Ideally we'd check if the target year is in the range
+                  lastGuessStamp.start <= targetYear && lastGuessStamp.end >= targetYear
+                    ? "border-feedback-correct text-feedback-correct rotate-[-2deg]"
+                    : "border-ink-900 text-ink-900 rotate-[2deg]",
+                )}
+              >
+                {lastGuessStamp.start <= targetYear && lastGuessStamp.end >= targetYear
+                  ? "LOCKED IN"
+                  : "RECORDED"}
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         <div className="mx-auto w-full max-w-2xl space-y-10 sm:space-y-12">
           {/* Active Game: Header */}
           {!isGameComplete && (
@@ -129,11 +180,17 @@ export function GameLayout(props: GameLayoutProps) {
           {!isGameComplete && gameState.puzzle && (
             <div className="space-y-5">
               {/* The Puzzle Event - Hero Display */}
-              <div className="border-primary bg-primary/10 rounded-xl border-2 p-5 shadow-md sm:p-6">
-                <div className="text-primary mb-2 text-xs font-bold tracking-wider uppercase">
-                  The Event
+              <div className="material-card group relative overflow-hidden p-6 sm:p-8">
+                {/* Decorative corner accents */}
+                <div className="border-parchment-300 absolute top-0 left-0 h-16 w-16 rounded-tl-xl border-t-2 border-l-2 opacity-50" />
+                <div className="border-parchment-300 absolute right-0 bottom-0 h-16 w-16 rounded-br-xl border-r-2 border-b-2 opacity-50" />
+
+                <div className="text-vermilion-500 mb-3 flex items-center gap-2 font-sans text-xs font-bold tracking-[0.2em] uppercase">
+                  <span className="bg-vermilion-500/50 h-px w-8" />
+                  Primary Source
+                  <span className="bg-vermilion-500/50 h-px flex-1" />
                 </div>
-                <div className="text-foreground text-base leading-relaxed sm:text-lg">
+                <div className="text-ink-900 font-serif text-2xl leading-tight tracking-tight drop-shadow-sm sm:text-3xl">
                   {gameState.puzzle.events[0]}
                 </div>
               </div>
@@ -142,14 +199,11 @@ export function GameLayout(props: GameLayoutProps) {
               {hintsRevealed > 0 && (
                 <div className="space-y-3">
                   {gameState.puzzle.events.slice(1, hintsRevealed + 1).map((hint, index) => (
-                    <div
-                      key={index}
-                      className="border-primary/40 bg-primary/5 rounded-lg border p-4 shadow-sm"
-                    >
-                      <div className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wider uppercase">
+                    <div key={index} className="material-paper relative p-4">
+                      <div className="text-ink-500 mb-1.5 font-sans text-xs font-semibold tracking-wider uppercase">
                         Clue {index + 2}
                       </div>
-                      <div className="text-sm">{hint}</div>
+                      <div className="text-ink-900 font-serif text-lg leading-snug">{hint}</div>
                     </div>
                   ))}
                 </div>
