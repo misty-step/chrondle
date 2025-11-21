@@ -52,12 +52,12 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://healthy-doe-23.clerk.accounts.dev https://clerk.chrondle.app", // Required for Next.js and Clerk
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://healthy-doe-23.clerk.accounts.dev https://clerk.chrondle.app https://va.vercel-scripts.com", // Required for Next.js, Clerk, and Vercel Analytics
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Required for Tailwind CSS and Google Fonts
               "img-src 'self' data: blob: https://img.clerk.com https://www.gravatar.com", // Clerk avatar CDN and Gravatar fallback
               "font-src 'self' data: https://fonts.gstatic.com", // Required for Google Fonts
               "worker-src 'self' blob:", // Required for Clerk and canvas-confetti web workers
-              "connect-src 'self' wss://fleet-goldfish-183.convex.cloud https://fleet-goldfish-183.convex.cloud https://openrouter.ai https://query.wikidata.org https://api.wikimedia.org https://healthy-doe-23.clerk.accounts.dev https://clerk.chrondle.app https://clerk-telemetry.com https://vitals.vercel-insights.com", // Convex production URL and Vercel analytics
+              "connect-src 'self' wss://fleet-goldfish-183.convex.cloud https://fleet-goldfish-183.convex.cloud https://openrouter.ai https://query.wikidata.org https://api.wikimedia.org https://healthy-doe-23.clerk.accounts.dev https://clerk.chrondle.app https://clerk-telemetry.com https://vitals.vercel-insights.com https://vercel-insights.com", // Convex production URL and Vercel analytics
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

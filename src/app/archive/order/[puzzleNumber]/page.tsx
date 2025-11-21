@@ -1,188 +1,74 @@
 "use client";
 
-import { useState, useEffect, use, useCallback, useMemo } from "react";
+import { use, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "convex/react";
-import { api } from "convex/_generated/api";
-import { AppHeader } from "@/components/AppHeader";
-import { Footer } from "@/components/Footer";
-import { OrderEventList } from "@/components/order/OrderEventList";
-import { DocumentHeader } from "@/components/order/DocumentHeader";
+import { useOrderGame } from "@/hooks/useOrderGame";
+import type { OrderEvent, OrderHint, OrderPuzzle, OrderScore } from "@/types/orderGameState";
+import type { MutationError } from "@/observability/mutationErrorAdapter";
 import { HintDisplay } from "@/components/order/HintDisplay";
 import { OrderReveal } from "@/components/order/OrderReveal";
-import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
-import { logger } from "@/lib/logger";
-import type { OrderEvent, OrderHint, OrderScore } from "@/types/orderGameState";
-import { deriveLockedPositions } from "@/lib/order/engine";
-import { generateAnchorHint, generateBracketHint, generateRelativeHint } from "@/lib/order/hints";
+import { OrderEventList } from "@/components/order/OrderEventList";
+import { DocumentHeader } from "@/components/order/DocumentHeader";
+import { AppHeader } from "@/components/AppHeader";
+import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { generateAnchorHint, generateBracketHint, generateRelativeHint } from "@/lib/order/hints";
+import { deriveLockedPositions } from "@/lib/order/engine";
+import { calculateOrderScore } from "@/lib/order/scoring";
+import { copyOrderShareTextToClipboard, type OrderShareResult } from "@/lib/order/shareCard";
+import { logger } from "@/lib/logger";
+import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 
-// Re-implementing core Order Logic locally for archive to avoid hook complexity
-// Ideally this should share code with useOrderGame, but for now we just want a working archive view
+type HintType = OrderHint["type"];
 
 interface ArchiveOrderPuzzleContentProps {
   puzzleNumber: string;
 }
 
-type HintType = OrderHint["type"];
-
 function ArchiveOrderPuzzleContent({
   puzzleNumber,
 }: ArchiveOrderPuzzleContentProps): React.ReactElement {
   const parsedNumber = parseInt(puzzleNumber, 10);
+  const { gameState, reorderEvents, takeHint, commitOrdering } = useOrderGame(parsedNumber);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
-  // Fetch Puzzle Data
-  const puzzle = useQuery(api.orderPuzzles.getOrderPuzzleByNumber, { puzzleNumber: parsedNumber });
-
-  // Fetch User's Play Data (if any)
-  // We need to know if the user is logged in first to avoid errors?
-  // The hook handles auth check internally or returns null
-  // We can't easily get the userId here without Auth0/Clerk hooks,
-  // so we'll rely on a slightly different pattern or just assume no play history for anonymous users in archive for now.
-  // BETTER: The archive is primarily for replaying or viewing.
-  // Let's just load the puzzle and let the user play it client-side.
-  // Persistence is tricky in archive without full auth context setup.
-
-  // For this iteration: Client-side only play for archive (no persistence)
-  // UNLESS we are logged in.
-
-  const [gameState, setGameState] = useState<{
-    currentOrder: string[];
-    hints: OrderHint[];
-    isComplete: boolean;
-    score: OrderScore | null;
-  }>({
-    currentOrder: [],
-    hints: [],
-    isComplete: false,
-    score: null,
-  });
-
-  // Initialize state when puzzle loads
-  useEffect(() => {
-    if (puzzle && gameState.currentOrder.length === 0) {
-      const shuffledIds = puzzle.events.map((e: OrderEvent) => e.id);
-      setGameState((prev) => ({
-        ...prev,
-        currentOrder: shuffledIds,
-      }));
-    }
-  }, [puzzle, gameState.currentOrder.length]);
-
-  // Hint Logic
-  const [pendingHintType, setPendingHintType] = useState<HintType | null>(null);
-  const [hintError, setHintError] = useState<string | null>(null);
-
-  const correctOrder = useMemo(
-    () =>
-      puzzle
-        ? [...puzzle.events]
-            .sort((a: OrderEvent, b: OrderEvent) => a.year - b.year)
-            .map((e: OrderEvent) => e.id)
-        : [],
-    [puzzle],
-  );
-
-  const requestHint = useCallback(
-    (type: HintType) => {
-      if (!puzzle || gameState.isComplete) return;
-
-      setPendingHintType(type);
-      setHintError(null);
-
-      try {
-        // Seed generation (simplified)
-        const seed = 12345 + gameState.hints.length;
-
-        let newHint: OrderHint;
-
-        // Simple hint generation using the library functions
-        // Note: We need to reconstruct the "context" object expected by the generators
-        if (type === "anchor") {
-          const exclude = gameState.hints.filter((h) => h.type === "anchor").map((h) => h.eventId);
-          newHint = generateAnchorHint(gameState.currentOrder, correctOrder, {
-            seed,
-            excludeEventIds: exclude,
-          });
-        } else if (type === "relative") {
-          const exclude = gameState.hints
-            .filter((h) => h.type === "relative")
-            .map((h) => ({ earlierEventId: h.earlierEventId, laterEventId: h.laterEventId }));
-          newHint = generateRelativeHint(gameState.currentOrder, puzzle.events, {
-            seed,
-            excludePairs: exclude,
-          });
-        } else {
-          // Bracket - simple selection
-          const bracketed = new Set(
-            gameState.hints.filter((h) => h.type === "bracket").map((h) => h.eventId),
-          );
-          const available = puzzle.events.filter((e: OrderEvent) => !bracketed.has(e.id));
-          if (available.length === 0) throw new Error("No events left to bracket");
-          const target = available[0]; // Simplest selection
-          newHint = generateBracketHint(target);
-        }
-
-        setGameState((prev) => ({
-          ...prev,
-          hints: [...prev.hints, newHint],
-        }));
-      } catch (e) {
-        setHintError("Could not generate hint");
-        logger.error("Hint generation failed", e);
-      } finally {
-        setPendingHintType(null);
-      }
-    },
-    [puzzle, gameState.currentOrder, gameState.hints, gameState.isComplete, correctOrder],
-  );
-
-  const handleSubmit = () => {
-    if (!puzzle) return;
-
-    // Calculate Score
-    const n = puzzle.events.length;
-    let correctPairs = 0;
-    const totalPairs = (n * (n - 1)) / 2;
-    const trueOrder = [...puzzle.events].sort((a, b) => a.year - b.year).map((e) => e.id);
-
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        const a = gameState.currentOrder[i];
-        const b = gameState.currentOrder[j];
-        if (trueOrder.indexOf(a) < trueOrder.indexOf(b)) {
-          correctPairs++;
-        }
-      }
-    }
-
-    const score: OrderScore = {
-      totalScore: correctPairs * 2,
-      correctPairs,
-      totalPairs,
-      perfectPositions: 0, // Simplified
-      hintsUsed: gameState.hints.length,
-    };
-
-    setGameState((prev) => ({
-      ...prev,
-      isComplete: true,
-      score,
-    }));
-  };
-
-  if (!puzzle) {
-    return (
-      <div className="text-muted-foreground flex min-h-screen items-center justify-center">
-        Loading puzzle...
-      </div>
-    );
+  if (gameState.status === "loading-puzzle") {
+    return renderShell("Loading Order puzzle…");
   }
 
-  if (gameState.isComplete && gameState.score) {
+  if (gameState.status === "loading-auth" || gameState.status === "loading-progress") {
+    return renderShell("Preparing your Order session…");
+  }
+
+  if (gameState.status === "error") {
+    return renderShell(`Something went wrong: ${gameState.error}`);
+  }
+
+  if (gameState.status === "completed") {
+    const handleShare = async () => {
+      try {
+        const results: OrderShareResult[] = gameState.correctOrder.map((id, idx) =>
+          gameState.finalOrder[idx] === id ? "correct" : "incorrect",
+        );
+
+        await copyOrderShareTextToClipboard({
+          dateLabel: gameState.puzzle.date,
+          puzzleNumber: gameState.puzzle.puzzleNumber,
+          results,
+          score: gameState.score,
+        });
+
+        setShareFeedback("Copied to clipboard!");
+      } catch (error) {
+        logger.error("Failed to copy Order share text", error);
+        setShareFeedback("Share failed. Try again.");
+      }
+    };
+
     return (
       <div className="bg-background flex min-h-screen flex-col">
-        <AppHeader currentStreak={0} />
+        <AppHeader puzzleNumber={gameState.puzzle.puzzleNumber} isArchive={true} />
         <main className="mx-auto flex max-w-3xl flex-1 flex-col gap-6 px-6 py-16 sm:px-0">
           <div className="mb-4">
             <Link
@@ -193,31 +79,180 @@ function ArchiveOrderPuzzleContent({
             </Link>
           </div>
           <OrderReveal
-            events={puzzle.events}
-            finalOrder={gameState.currentOrder}
-            correctOrder={correctOrder}
+            events={gameState.puzzle.events}
+            finalOrder={gameState.finalOrder}
+            correctOrder={gameState.correctOrder}
             score={gameState.score}
-            puzzleNumber={puzzle.puzzleNumber}
-            onShare={() => {}} // Share disabled in archive for now
+            puzzleNumber={gameState.puzzle.puzzleNumber}
+            onShare={handleShare}
           />
+          {shareFeedback && (
+            <p className="text-muted-foreground text-center text-sm" role="status">
+              {shareFeedback}
+            </p>
+          )}
         </main>
         <Footer />
       </div>
     );
   }
 
-  const lockedPositions = deriveLockedPositions(gameState.hints);
+  return (
+    <ReadyArchiveOrderGame
+      puzzle={gameState.puzzle}
+      currentOrder={gameState.currentOrder}
+      hints={gameState.hints}
+      reorderEvents={reorderEvents}
+      takeHint={takeHint}
+      onCommit={commitOrdering}
+    />
+  );
+}
 
-  const hintsByEvent: Record<string, OrderHint[]> = {};
-  gameState.hints.forEach((h) => {
-    const id = h.type === "anchor" || h.type === "bracket" ? h.eventId : h.earlierEventId; // Simplified mapping
-    if (!hintsByEvent[id]) hintsByEvent[id] = [];
-    hintsByEvent[id].push(h);
-  });
+function renderShell(message: string) {
+  return (
+    <main className="bg-background flex min-h-screen items-center justify-center">
+      <p className="text-muted-foreground text-base">{message}</p>
+    </main>
+  );
+}
+
+interface ReadyArchiveOrderGameProps {
+  puzzle: OrderPuzzle;
+  currentOrder: string[];
+  hints: OrderHint[];
+  reorderEvents: (fromIndex: number, toIndex: number) => void;
+  takeHint: (hint: OrderHint) => void;
+  onCommit: (score: OrderScore) => Promise<[boolean, null] | [null, MutationError]>;
+}
+
+function ReadyArchiveOrderGame({
+  puzzle,
+  currentOrder,
+  hints,
+  reorderEvents,
+  takeHint,
+  onCommit,
+}: ReadyArchiveOrderGameProps) {
+  const toast = useToast();
+  const [pendingHintType, setPendingHintType] = useState<HintType | null>(null);
+  const [hintError, setHintError] = useState<string | null>(null);
+
+  const correctOrder = useMemo(
+    () =>
+      [...puzzle.events]
+        .sort((a, b) => a.year - b.year || a.id.localeCompare(b.id))
+        .map((event) => event.id),
+    [puzzle.events],
+  );
+
+  const puzzleSeed = useMemo(() => {
+    // Hash the puzzle seed for deterministic hint generation
+    return hashHintContext([puzzle.seed]);
+  }, [puzzle.seed]);
+
+  const disabledHintTypes: Partial<Record<HintType, boolean>> = useMemo(
+    () => ({
+      anchor: hints.some((hint) => hint.type === "anchor"),
+      relative: hints.some((hint) => hint.type === "relative"),
+      bracket: hints.some((hint) => hint.type === "bracket"),
+    }),
+    [hints],
+  );
+
+  const lockedPositions = useMemo(() => deriveLockedPositions(hints), [hints]);
+
+  const hintsByEvent = useMemo(() => {
+    const grouped: Record<string, OrderHint[]> = {};
+    for (const hint of hints) {
+      const eventId =
+        hint.type === "anchor" || hint.type === "bracket"
+          ? hint.eventId
+          : hint.type === "relative"
+            ? hint.earlierEventId
+            : null;
+      if (eventId) {
+        grouped[eventId] = grouped[eventId] || [];
+        grouped[eventId].push(hint);
+      }
+    }
+    return grouped;
+  }, [hints]);
+
+  const handleOrderingChange = useCallback(
+    (nextOrdering: string[], movedId?: string) => {
+      const resolvedId = movedId ?? findMovedEventId(currentOrder, nextOrdering);
+      if (!resolvedId) {
+        return;
+      }
+
+      const fromIndex = currentOrder.indexOf(resolvedId);
+      const toIndex = nextOrdering.indexOf(resolvedId);
+
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) {
+        return;
+      }
+
+      reorderEvents(fromIndex, toIndex);
+    },
+    [currentOrder, reorderEvents],
+  );
+
+  const requestHint = useCallback(
+    (type: HintType) => {
+      if (pendingHintType || disabledHintTypes[type]) {
+        return;
+      }
+
+      setPendingHintType(type);
+      setHintError(null);
+
+      try {
+        const hint = createHintForType(type, {
+          currentOrder,
+          events: puzzle.events,
+          hints,
+          correctOrder,
+          puzzleSeed,
+        });
+        takeHint(hint);
+      } catch (error) {
+        logger.error("Failed to generate Order hint", error);
+        setHintError("Unable to generate hint. Adjust your ordering and try again.");
+      } finally {
+        setPendingHintType(null);
+      }
+    },
+    [
+      pendingHintType,
+      disabledHintTypes,
+      currentOrder,
+      puzzle.events,
+      hints,
+      correctOrder,
+      puzzleSeed,
+      takeHint,
+    ],
+  );
+
+  const handleCommit = useCallback(async () => {
+    const score = calculateOrderScore(currentOrder, puzzle.events, hints.length);
+    const [_success, error] = await onCommit(score);
+
+    if (error && "addToast" in toast && toast.addToast) {
+      toast.addToast({
+        title: "Submission Failed",
+        description: error.message,
+        variant: "destructive",
+        actionLabel: error.retryable ? "Retry" : undefined,
+        onAction: error.retryable ? handleCommit : undefined,
+      });
+    }
+  }, [currentOrder, puzzle.events, hints.length, onCommit, toast]);
 
   return (
     <div className="bg-background flex min-h-screen flex-col">
-      <AppHeader currentStreak={0} />
+      <AppHeader puzzleNumber={puzzle.puzzleNumber} isArchive={true} />
 
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-6 sm:px-0">
         {/* Archive Nav */}
@@ -225,7 +260,7 @@ function ArchiveOrderPuzzleContent({
           <Link href="/archive/order" className="text-muted-foreground hover:text-primary text-sm">
             ← Back to Order Archive
           </Link>
-          <span className="text-muted-foreground text-sm font-medium">Archive Mode (Practice)</span>
+          <span className="text-muted-foreground text-sm font-medium">Archive Mode</span>
         </div>
 
         <div className="space-y-4">
@@ -240,13 +275,9 @@ function ArchiveOrderPuzzleContent({
           <div className="hidden lg:block lg:w-[360px]">
             <HintDisplay
               events={puzzle.events}
-              hints={gameState.hints}
+              hints={hints}
               onRequestHint={requestHint}
-              disabledTypes={{
-                anchor: gameState.hints.some((h) => h.type === "anchor"),
-                relative: gameState.hints.some((h) => h.type === "relative"),
-                bracket: gameState.hints.some((h) => h.type === "bracket"),
-              }}
+              disabledTypes={disabledHintTypes}
               pendingType={pendingHintType}
               error={hintError ?? undefined}
             />
@@ -256,13 +287,9 @@ function ArchiveOrderPuzzleContent({
             <div className="lg:hidden">
               <HintDisplay
                 events={puzzle.events}
-                hints={gameState.hints}
+                hints={hints}
                 onRequestHint={requestHint}
-                disabledTypes={{
-                  anchor: gameState.hints.some((h) => h.type === "anchor"),
-                  relative: gameState.hints.some((h) => h.type === "relative"),
-                  bracket: gameState.hints.some((h) => h.type === "bracket"),
-                }}
+                disabledTypes={disabledHintTypes}
                 pendingType={pendingHintType}
                 error={hintError ?? undefined}
               />
@@ -271,20 +298,15 @@ function ArchiveOrderPuzzleContent({
             <section className="border-border bg-card shadow-warm rounded-xl border p-4 md:p-6">
               <OrderEventList
                 events={puzzle.events}
-                ordering={gameState.currentOrder}
-                onOrderingChange={(newOrder) => {
-                  // Find change
-                  // This is a bit hacky because the list component is complex
-                  // We just replace the whole state
-                  setGameState((prev) => ({ ...prev, currentOrder: newOrder }));
-                }}
+                ordering={currentOrder}
+                onOrderingChange={handleOrderingChange}
                 lockedPositions={lockedPositions}
                 hintsByEvent={hintsByEvent}
               />
             </section>
 
             <Button
-              onClick={handleSubmit}
+              onClick={handleCommit}
               size="lg"
               className="relative z-10 w-full rounded-full text-base font-semibold shadow-lg"
             >
@@ -296,6 +318,72 @@ function ArchiveOrderPuzzleContent({
       <Footer />
     </div>
   );
+}
+
+// Helper function to find which event was moved
+function findMovedEventId(oldOrder: string[], newOrder: string[]): string | null {
+  for (let i = 0; i < oldOrder.length; i++) {
+    if (oldOrder[i] !== newOrder[i]) {
+      return newOrder[i];
+    }
+  }
+  return null;
+}
+
+// Helper function to create hint (deterministic based on puzzle seed)
+function createHintForType(
+  type: HintType,
+  context: {
+    currentOrder: string[];
+    events: OrderEvent[];
+    hints: OrderHint[];
+    correctOrder: string[];
+    puzzleSeed: number;
+  },
+): OrderHint {
+  const { currentOrder, events, hints, correctOrder, puzzleSeed } = context;
+  const seed = puzzleSeed + hints.length;
+
+  if (type === "anchor") {
+    const excludeEventIds = hints
+      .filter((h) => h.type === "anchor")
+      .map((h) => (h as Extract<OrderHint, { type: "anchor" }>).eventId);
+    return generateAnchorHint(currentOrder, correctOrder, { seed, excludeEventIds });
+  }
+
+  if (type === "relative") {
+    const excludePairs = hints
+      .filter((h) => h.type === "relative")
+      .map((h) => {
+        const relHint = h as Extract<OrderHint, { type: "relative" }>;
+        return { earlierEventId: relHint.earlierEventId, laterEventId: relHint.laterEventId };
+      });
+    return generateRelativeHint(currentOrder, events, { seed, excludePairs });
+  }
+
+  // bracket
+  const excludeEventIds = hints
+    .filter((h) => h.type === "bracket")
+    .map((h) => (h as Extract<OrderHint, { type: "bracket" }>).eventId);
+  const available = events.filter((e) => !excludeEventIds.includes(e.id));
+  if (available.length === 0) {
+    throw new Error("No events available for bracket hint");
+  }
+  // Deterministic selection using seed
+  const index = seed % available.length;
+  return generateBracketHint(available[index]);
+}
+
+// Simple hash function for hint context
+function hashHintContext(values: (string | number)[]): number {
+  const str = values.join("|");
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
 }
 
 interface PageProps {

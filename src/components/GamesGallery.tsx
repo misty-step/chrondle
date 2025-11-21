@@ -94,7 +94,11 @@ export function GamesGallery() {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             className="cursor-pointer rounded-full p-1.5 transition-colors hover:bg-stone-900/10 dark:hover:bg-white/10"
-            aria-label={`Switch to ${currentTheme === "dark" ? "light" : "dark"} mode`}
+            aria-label={
+              isMounted
+                ? `Switch to ${currentTheme === "dark" ? "light" : "dark"} mode`
+                : "Toggle theme"
+            }
           >
             <motion.div
               animate={{ rotate: isMounted && currentTheme === "dark" ? 0 : 180 }}

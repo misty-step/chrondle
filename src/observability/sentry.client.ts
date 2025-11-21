@@ -86,7 +86,7 @@ export function initSentryClient(): void {
  */
 export function captureClientException(error: unknown, context?: SentryContext): void {
   if (!isInitialized) {
-    logger.error("[Sentry] Exception (not initialized)", { error, context });
+    logger.debug("[Sentry] Not initialized, skipping exception capture", { error, context });
     return;
   }
 
