@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { ClerkProvider, useAuth } from "@clerk/nextjs";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
@@ -9,6 +10,7 @@ import { UserCreationProvider } from "@/components/UserCreationProvider";
 import { MigrationProvider } from "@/components/providers/MigrationProvider";
 import { ToastProvider } from "@/hooks/use-toast";
 import { validateEnvironment, getEnvErrorMessage, isProduction } from "@/lib/env";
+import { initSentryClient } from "@/observability/sentry.client";
 
 // Validate environment variables using enhanced validation
 const envValidation = validateEnvironment();
@@ -84,6 +86,11 @@ function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  // Initialize Sentry client on app startup
+  useEffect(() => {
+    initSentryClient();
+  }, []);
+
   // Show error UI if environment variables are missing
   if (missingEnvVars.length > 0) {
     return (
