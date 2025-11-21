@@ -24,11 +24,16 @@ vi.mock("../useMutationWithRetry", () => ({
   useMutationWithRetry: vi.fn(),
 }));
 
+vi.mock("../../observability/sentry.client", () => ({
+  captureClientException: vi.fn(),
+}));
+
 import { useOrderPuzzleData } from "../data/useOrderPuzzleData";
 import { useAuthState } from "../data/useAuthState";
 import { useOrderProgress } from "../data/useOrderProgress";
 import { useOrderSession } from "../useOrderSession";
 import { useMutationWithRetry } from "../useMutationWithRetry";
+import { captureClientException } from "../../observability/sentry.client";
 
 describe("useOrderGame – authenticated submit", () => {
   const puzzleId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Id<"orderPuzzles">;
@@ -99,9 +104,9 @@ describe("useOrderGame – authenticated submit", () => {
       hintsUsed: 1,
     };
 
-    let success = false;
+    let commitResult;
     await act(async () => {
-      success = await result.current.commitOrdering(score);
+      commitResult = await result.current.commitOrdering(score);
     });
 
     expect(session.markCommitted).toHaveBeenCalledWith(score);
@@ -118,6 +123,35 @@ describe("useOrderGame – authenticated submit", () => {
         hintMultiplier: 1,
       },
     });
-    expect(success).toBe(true);
+    expect(commitResult).toEqual([true, null]);
+  });
+
+  it("returns error tuple when mutation fails", async () => {
+    const { result } = renderHook(() => useOrderGame());
+    const error = new Error("Network error");
+    submitOrderPlayMock.mockRejectedValueOnce(error);
+
+    const score = {
+      totalScore: 0,
+      correctPairs: 0,
+      totalPairs: 0,
+      perfectPositions: 0,
+      hintsUsed: 0,
+    };
+
+    let commitResult;
+    await act(async () => {
+      commitResult = await result.current.commitOrdering(score);
+    });
+
+    expect(submitOrderPlayMock).toHaveBeenCalled();
+    expect(commitResult).toEqual([
+      null,
+      expect.objectContaining({
+        code: "NETWORK",
+        originalError: error,
+      }),
+    ]);
+    expect(captureClientException).toHaveBeenCalled();
   });
 });

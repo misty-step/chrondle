@@ -120,7 +120,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
               {/* Archive Button */}
               <NavbarButton
-                href="/archive"
+                href={isOrderMode ? "/archive/order" : "/archive"}
                 title="Browse puzzle archive"
                 aria-label="Browse puzzle archive"
                 overlayColor="primary"

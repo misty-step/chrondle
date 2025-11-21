@@ -7,11 +7,13 @@ import { SessionThemeProvider } from "@/components/SessionThemeProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { UserCreationProvider } from "@/components/UserCreationProvider";
 import { MigrationProvider } from "@/components/providers/MigrationProvider";
-import {
-  validateEnvironment,
-  getEnvErrorMessage,
-  isProduction,
-} from "@/lib/env";
+import { ToastProvider } from "@/hooks/use-toast";
+import { validateEnvironment, getEnvErrorMessage, isProduction } from "@/lib/env";
+import { initSentryClient } from "@/observability/sentry.client";
+
+// Initialize Sentry at module scope (before React components render)
+// This ensures Sentry is ready before any component can call captureClientException
+initSentryClient();
 
 // Validate environment variables using enhanced validation
 const envValidation = validateEnvironment();
@@ -27,22 +29,18 @@ function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
   const isProd = isProduction();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="max-w-2xl w-full">
-        <div className="bg-destructive/10 border-2 border-destructive rounded-lg p-6">
-          <h1 className="text-2xl font-bold text-destructive mb-4">
-            Configuration Error
-          </h1>
+    <div className="bg-background flex min-h-screen items-center justify-center p-4">
+      <div className="w-full max-w-2xl">
+        <div className="bg-destructive/10 border-destructive rounded-lg border-2 p-6">
+          <h1 className="text-destructive mb-4 text-2xl font-bold">Configuration Error</h1>
 
-          <p className="text-foreground mb-6">
-            {getEnvErrorMessage(variables)}
-          </p>
+          <p className="text-foreground mb-6">{getEnvErrorMessage(variables)}</p>
 
           {!isProd && (
             <>
-              <div className="bg-background rounded-md p-4 mb-6">
-                <p className="font-semibold mb-2">Missing variables:</p>
-                <ul className="list-disc list-inside space-y-1">
+              <div className="bg-background mb-6 rounded-md p-4">
+                <p className="mb-2 font-semibold">Missing variables:</p>
+                <ul className="list-inside list-disc space-y-1">
                   {variables.map((varName) => (
                     <li key={varName} className="font-mono text-sm">
                       {varName}
@@ -53,10 +51,8 @@ function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
 
               <div className="space-y-4">
                 <div>
-                  <h2 className="font-semibold mb-2">
-                    For Vercel deployments:
-                  </h2>
-                  <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                  <h2 className="mb-2 font-semibold">For Vercel deployments:</h2>
+                  <ol className="text-muted-foreground list-inside list-decimal space-y-2 text-sm">
                     <li>Go to your Vercel dashboard</li>
                     <li>Navigate to Settings → Environment Variables</li>
                     <li>Add the missing variables for all environments</li>
@@ -65,17 +61,11 @@ function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
                 </div>
 
                 <div>
-                  <h2 className="font-semibold mb-2">For local development:</h2>
-                  <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                  <h2 className="mb-2 font-semibold">For local development:</h2>
+                  <ol className="text-muted-foreground list-inside list-decimal space-y-2 text-sm">
                     <li>
-                      Copy{" "}
-                      <code className="bg-muted px-1 py-0.5 rounded">
-                        .env.example
-                      </code>{" "}
-                      to{" "}
-                      <code className="bg-muted px-1 py-0.5 rounded">
-                        .env.local
-                      </code>
+                      Copy <code className="bg-muted rounded px-1 py-0.5">.env.example</code> to{" "}
+                      <code className="bg-muted rounded px-1 py-0.5">.env.local</code>
                     </li>
                     <li>Fill in the missing values</li>
                     <li>Restart your development server</li>
@@ -83,14 +73,11 @@ function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-muted rounded-md">
+              <div className="bg-muted mt-6 rounded-md p-4">
                 <p className="text-sm">
                   <strong>Note:</strong> Environment variables starting with{" "}
-                  <code className="bg-background px-1 py-0.5 rounded">
-                    NEXT_PUBLIC_
-                  </code>{" "}
-                  are embedded at build time. You&apos;ll need to rebuild after
-                  adding them.
+                  <code className="bg-background rounded px-1 py-0.5">NEXT_PUBLIC_</code> are
+                  embedded at build time. You&apos;ll need to rebuild after adding them.
                 </p>
               </div>
             </>
@@ -116,15 +103,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ErrorBoundary>
-      <MigrationProvider>
-        <ClerkProvider publishableKey={clerkKey} dynamic>
-          <ConvexProviderWithClerk client={convex!} useAuth={useAuth}>
-            <UserCreationProvider>
-              <SessionThemeProvider>{children}</SessionThemeProvider>
-            </UserCreationProvider>
-          </ConvexProviderWithClerk>
-        </ClerkProvider>
-      </MigrationProvider>
+      <ToastProvider>
+        <MigrationProvider>
+          <ClerkProvider publishableKey={clerkKey} dynamic>
+            <ConvexProviderWithClerk client={convex!} useAuth={useAuth}>
+              <UserCreationProvider>
+                <SessionThemeProvider>{children}</SessionThemeProvider>
+              </UserCreationProvider>
+            </ConvexProviderWithClerk>
+          </ClerkProvider>
+        </MigrationProvider>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }

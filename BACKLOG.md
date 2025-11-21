@@ -23,14 +23,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Effort**: 3h | **Benefit**: Catches auth/token/validator regressions in real flow
 **Acceptance**: Test passes in CI; fails if server submission is rejected or progress not returned on reload.
 
-### [OBSERVABILITY] MEDIUM - Surface Convex Mutation Failures
-
-**Files**: `src/hooks/useOrderGame.ts`, `src/components/order/OrderGameIsland.tsx`
-**Problem**: Convex ArgumentValidationErrors are silent to users; perceived as “button does nothing.”
-**Fix**: Route mutation errors to Sentry/console and show inline toast with server error message; add metric/alert on `orderPuzzles:submitOrderPlay` failures in Convex dashboard/Slack.
-**Effort**: 1h | **Benefit**: Faster triage, user-visible feedback
-**Acceptance**: Error toast appears on failure; Convex alert triggers on validation spikes.
-
 ### [QUALITY] MEDIUM - Mock Contracts Must Match Convex Schema
 
 **Files**: `src/hooks/__tests__/useOrderGame.auth-submit.test.tsx`
@@ -226,20 +218,179 @@ export function GET() {
 
 ## Next (This Quarter, <3 months)
 
-### [INFRA] CRITICAL - No Sentry Error Tracking
+### [QUALITY] HIGH - Toast Provider Unmount Cleanup
 
-**File**: `src/components/ErrorBoundary.tsx:74-76`
-**Perspectives**: architecture-guardian, user-experience-advocate
-**Impact**: Errors invisible in production - only console.log telemetry
-**Evidence**: Comment says "In a real production app, you would send this to Sentry"
-**Fix**:
+**File**: `src/hooks/use-toast.tsx:51-61`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Auto-dismiss timeouts persist after ToastProvider unmounts, causing dispatch on unmounted component
+**Fix**: Track timeouts in ref, clear all on unmount
 
-- Install @sentry/nextjs
-- Configure in next.config.ts
-- Wrap ErrorBoundary with Sentry.captureException
-- Add to Convex actions for backend errors
-  **Effort**: 3h | **Impact**: Production error visibility, session replay
-  **Acceptance**: Errors appear in Sentry dashboard with stack traces
+```typescript
+const timeoutsRef = React.useRef<Set<NodeJS.Timeout>>(new Set());
+React.useEffect(() => {
+  return () => timeoutsRef.current.forEach(clearTimeout);
+}, []);
+```
+
+**Effort**: 30m | **Benefit**: Prevents React warnings, memory leaks
+**Acceptance**: No console warnings when provider unmounts with pending toasts
+
+---
+
+### [QUALITY] HIGH - Clarify Hash Privacy Guarantees
+
+**File**: `src/observability/hash.ts:34`
+**Source**: PR #55 CodeRabbit review
+**Problem**: FNV-1a is non-cryptographic but docs imply PII protection
+**Fix**: Update JSDoc to clarify weak privacy guarantee OR implement HMAC-SHA256 with salt
+
+```typescript
+/**
+ * Hash user identifier using FNV-1a (non-cryptographic).
+ * NOT reversible-proof or collision-resistant.
+ * For stronger privacy, consider HMAC-SHA256 with salt.
+ */
+```
+
+**Effort**: 15m (docs) or 2h (upgrade to HMAC)
+**Benefit**: Clear security expectations
+**Acceptance**: JSDoc updated OR cryptographic hash implemented
+
+---
+
+### [UX] MEDIUM - ARIA Role Clarity for Toast Notifications
+
+**File**: `src/components/ui/toaster.tsx:13-118`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Mixing `role="alert"` with `aria-live="polite"` sends conflicting signals
+**Fix**: Use `role="status"` with `aria-live="polite"` for non-destructive toasts, reserve `role="alert"` for destructive
+
+**Effort**: 1h | **Benefit**: Better screen reader UX
+**Acceptance**: Non-destructive toasts use status role, destructive use alert
+
+---
+
+### [QUALITY] MEDIUM - Sentry Test Initialization Robustness
+
+**File**: `src/observability/__tests__/sentry.client.test.ts:39-93`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Tests depend on execution order (first test initializes, others assume initialized)
+**Fix**: Add `beforeEach` to explicitly initialize Sentry with test DSN
+
+**Effort**: 30m | **Benefit**: Tests isolated, reordering-safe
+**Acceptance**: Tests pass in any order
+
+---
+
+### [QUALITY] MEDIUM - ConvexError for Structured Validation
+
+**File**: `convex/orderPuzzles/mutations.ts:92-161`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Plain `Error` objects lose client-side error classification context
+**Fix**: Use `ConvexError` for validation errors to enable structured handling
+
+```typescript
+if (Math.abs(verifiedScore.totalScore - args.clientScore.totalScore) > 1) {
+  throw new ConvexError("Score verification failed");
+}
+```
+
+**Effort**: 1h | **Benefit**: Better client error UX, proper retryable classification
+**Acceptance**: Validation errors classified as VALIDATION with retryable: false
+
+---
+
+### [OBSERVABILITY] MEDIUM - Deep Argument Sanitization
+
+**File**: `convex/lib/observability.ts:119-126`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Shallow sanitization only redacts top-level `token`/`password`, misses nested sensitive data
+**Fix**: Implement recursive sanitization or use library
+
+```typescript
+{
+  user: {
+    password: "secret";
+  }
+} // Currently NOT sanitized
+```
+
+**Effort**: 2h | **Benefit**: Comprehensive PII protection in error logs
+**Acceptance**: Nested sensitive fields redacted in Sentry extras
+
+---
+
+### [OBSERVABILITY] MEDIUM - User Context Enrichment in Observability
+
+**File**: `convex/lib/observability.ts:31-82`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Wrapper doesn't extract user context from args (e.g., `args.userId`)
+**Fix**: Add truncated userId to Sentry tags
+
+```typescript
+tags: {
+  convexFn: config.name,
+  userId: args?.userId ? String(args.userId).slice(0, 8) : undefined,
+  ...config.tags,
+}
+```
+
+**Effort**: 30m | **Benefit**: User-scoped error tracking
+**Acceptance**: userId appears in Sentry tags when present in args
+
+---
+
+### [OBSERVABILITY] LOW - classifyError Type Alignment
+
+**File**: `convex/lib/observability.ts:91`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Returns "unknown" but type includes "server" - unclassified errors likely server-side
+**Fix**: Return "server" instead of "unknown" OR align type with implementation
+
+**Effort**: 10m | **Benefit**: More accurate error classification
+**Acceptance**: Unclassified errors tagged as "server" or type updated
+
+---
+
+### [OBSERVABILITY] MEDIUM - Sample Rate Validation
+
+**File**: `src/observability/sentry.client.ts:27-80`
+**Source**: PR #55 CodeRabbit review
+**Problem**: `parseFloat` on env vars can produce NaN, breaking sampling
+**Fix**: Add validation helper
+
+```typescript
+function parseSampleRate(value: string | undefined, defaultValue: number): number {
+  if (!value) return defaultValue;
+  const parsed = parseFloat(value);
+  return isNaN(parsed) || parsed < 0 || parsed > 1 ? defaultValue : parsed;
+}
+```
+
+**Effort**: 30m | **Benefit**: Prevents NaN sampling rates
+**Acceptance**: Invalid sample rates fall back to defaults
+
+---
+
+### [OBSERVABILITY] MEDIUM - Error Deduplication
+
+**File**: `src/observability/mutationErrorAdapter.ts:78-110`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Repeated errors (e.g., spamming submit) create noise in Sentry
+**Fix**: Add 5-second deduplication window
+
+```typescript
+const recentErrors = new Map<string, number>();
+const errorKey = `${error.code}:${error.message}`;
+const lastSeen = recentErrors.get(errorKey);
+if (!lastSeen || Date.now() - lastSeen > 5000) {
+  recentErrors.set(errorKey, Date.now());
+  captureClientException(error.originalError, {...});
+}
+```
+
+**Effort**: 1h | **Benefit**: Reduces Sentry quota usage
+**Acceptance**: Duplicate errors within 5s not sent to Sentry
 
 ---
 
@@ -278,31 +429,6 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 
 **Effort**: 10m | **Impact**: Performance visibility, Core Web Vitals tracking
 **Acceptance**: Speed Insights data visible in Vercel dashboard
-
----
-
-### [INFRA] HIGH - No Deployment Tracking in CI/CD
-
-**File**: `.github/workflows/deploy.yml`
-**Perspectives**: observability-audit
-**Impact**: Cannot correlate errors with specific deployments ("which deploy broke this?")
-**Current State**: deploy.yml creates no Sentry releases or Grafana annotations
-**Fix**: Add Sentry release step after Sentry install:
-
-```yaml
-- name: Create Sentry release
-  uses: getsentry/action-release@v1
-  env:
-    SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-    SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-    SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-  with:
-    environment: production
-    version: ${{ github.sha }}
-```
-
-**Effort**: 30m | **Impact**: Error-to-deploy correlation
-**Acceptance**: Each deployment creates Sentry release with commit SHA
 
 ---
 

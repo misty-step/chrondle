@@ -54,8 +54,23 @@ jobs:
         env:
           NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          NEXT_PUBLIC_SENTRY_ENVIRONMENT: production
+          NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
 
-      # Step 5: Deploy to Convex (production)
+      # Step 5: Create Sentry release and upload sourcemaps
+      - name: Create Sentry release
+        uses: getsentry/action-release@v3.4.0
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          sourcemaps: './.next'
+          version: ${{ github.sha }}
+
+      # Step 6: Deploy to Convex (production)
       - name: Deploy to Convex
         run: npx convex deploy --prod
         env:

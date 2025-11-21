@@ -4,6 +4,7 @@ import { useMemo, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useUserCreation } from "@/components/UserCreationProvider";
 import { logger } from "@/lib/logger";
+import { captureClientException } from "@/observability/sentry.client";
 
 /**
  * Return type for the useAuthState hook
@@ -112,9 +113,38 @@ export function useAuthState(): UseAuthStateReturn {
       if (process.env.NODE_ENV === "development") {
         logger.warn("[useAuthState] Clerk authenticated but Convex user not ready:", {
           clerkId: user.id,
+          email: user.primaryEmailAddress?.emailAddress,
           currentUser,
         });
       }
+
+      // Production diagnostic: Capture to Sentry if this persists
+      // If we've been in this state for multiple renders, something is wrong
+      if (!prevStateRef.current || !prevStateRef.current.isLoading) {
+        // First time hitting this state - start tracking
+        prevStateRef.current = result;
+        return result;
+      }
+
+      // Still in this state on subsequent render - log to Sentry
+      captureClientException(
+        new Error("Auth edge case: Clerk authenticated but Convex user not found"),
+        {
+          tags: {
+            error_type: "auth_user_not_found",
+            clerk_id: user.id,
+          },
+          extras: {
+            clerkId: user.id,
+            email: user.primaryEmailAddress?.emailAddress,
+            emailVerified: user.primaryEmailAddress?.verification?.status,
+            createdAt: user.createdAt,
+            userCreationLoading,
+            hasCurrentUser: !!currentUser,
+          },
+          level: "warning",
+        },
+      );
 
       prevStateRef.current = result;
       return result;
