@@ -218,6 +218,182 @@ export function GET() {
 
 ## Next (This Quarter, <3 months)
 
+### [QUALITY] HIGH - Toast Provider Unmount Cleanup
+
+**File**: `src/hooks/use-toast.tsx:51-61`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Auto-dismiss timeouts persist after ToastProvider unmounts, causing dispatch on unmounted component
+**Fix**: Track timeouts in ref, clear all on unmount
+
+```typescript
+const timeoutsRef = React.useRef<Set<NodeJS.Timeout>>(new Set());
+React.useEffect(() => {
+  return () => timeoutsRef.current.forEach(clearTimeout);
+}, []);
+```
+
+**Effort**: 30m | **Benefit**: Prevents React warnings, memory leaks
+**Acceptance**: No console warnings when provider unmounts with pending toasts
+
+---
+
+### [QUALITY] HIGH - Clarify Hash Privacy Guarantees
+
+**File**: `src/observability/hash.ts:34`
+**Source**: PR #55 CodeRabbit review
+**Problem**: FNV-1a is non-cryptographic but docs imply PII protection
+**Fix**: Update JSDoc to clarify weak privacy guarantee OR implement HMAC-SHA256 with salt
+
+```typescript
+/**
+ * Hash user identifier using FNV-1a (non-cryptographic).
+ * NOT reversible-proof or collision-resistant.
+ * For stronger privacy, consider HMAC-SHA256 with salt.
+ */
+```
+
+**Effort**: 15m (docs) or 2h (upgrade to HMAC)
+**Benefit**: Clear security expectations
+**Acceptance**: JSDoc updated OR cryptographic hash implemented
+
+---
+
+### [UX] MEDIUM - ARIA Role Clarity for Toast Notifications
+
+**File**: `src/components/ui/toaster.tsx:13-118`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Mixing `role="alert"` with `aria-live="polite"` sends conflicting signals
+**Fix**: Use `role="status"` with `aria-live="polite"` for non-destructive toasts, reserve `role="alert"` for destructive
+
+**Effort**: 1h | **Benefit**: Better screen reader UX
+**Acceptance**: Non-destructive toasts use status role, destructive use alert
+
+---
+
+### [QUALITY] MEDIUM - Sentry Test Initialization Robustness
+
+**File**: `src/observability/__tests__/sentry.client.test.ts:39-93`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Tests depend on execution order (first test initializes, others assume initialized)
+**Fix**: Add `beforeEach` to explicitly initialize Sentry with test DSN
+
+**Effort**: 30m | **Benefit**: Tests isolated, reordering-safe
+**Acceptance**: Tests pass in any order
+
+---
+
+### [QUALITY] MEDIUM - ConvexError for Structured Validation
+
+**File**: `convex/orderPuzzles/mutations.ts:92-161`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Plain `Error` objects lose client-side error classification context
+**Fix**: Use `ConvexError` for validation errors to enable structured handling
+
+```typescript
+if (Math.abs(verifiedScore.totalScore - args.clientScore.totalScore) > 1) {
+  throw new ConvexError("Score verification failed");
+}
+```
+
+**Effort**: 1h | **Benefit**: Better client error UX, proper retryable classification
+**Acceptance**: Validation errors classified as VALIDATION with retryable: false
+
+---
+
+### [OBSERVABILITY] MEDIUM - Deep Argument Sanitization
+
+**File**: `convex/lib/observability.ts:119-126`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Shallow sanitization only redacts top-level `token`/`password`, misses nested sensitive data
+**Fix**: Implement recursive sanitization or use library
+
+```typescript
+{
+  user: {
+    password: "secret";
+  }
+} // Currently NOT sanitized
+```
+
+**Effort**: 2h | **Benefit**: Comprehensive PII protection in error logs
+**Acceptance**: Nested sensitive fields redacted in Sentry extras
+
+---
+
+### [OBSERVABILITY] MEDIUM - User Context Enrichment in Observability
+
+**File**: `convex/lib/observability.ts:31-82`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Wrapper doesn't extract user context from args (e.g., `args.userId`)
+**Fix**: Add truncated userId to Sentry tags
+
+```typescript
+tags: {
+  convexFn: config.name,
+  userId: args?.userId ? String(args.userId).slice(0, 8) : undefined,
+  ...config.tags,
+}
+```
+
+**Effort**: 30m | **Benefit**: User-scoped error tracking
+**Acceptance**: userId appears in Sentry tags when present in args
+
+---
+
+### [OBSERVABILITY] LOW - classifyError Type Alignment
+
+**File**: `convex/lib/observability.ts:91`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Returns "unknown" but type includes "server" - unclassified errors likely server-side
+**Fix**: Return "server" instead of "unknown" OR align type with implementation
+
+**Effort**: 10m | **Benefit**: More accurate error classification
+**Acceptance**: Unclassified errors tagged as "server" or type updated
+
+---
+
+### [OBSERVABILITY] MEDIUM - Sample Rate Validation
+
+**File**: `src/observability/sentry.client.ts:27-80`
+**Source**: PR #55 CodeRabbit review
+**Problem**: `parseFloat` on env vars can produce NaN, breaking sampling
+**Fix**: Add validation helper
+
+```typescript
+function parseSampleRate(value: string | undefined, defaultValue: number): number {
+  if (!value) return defaultValue;
+  const parsed = parseFloat(value);
+  return isNaN(parsed) || parsed < 0 || parsed > 1 ? defaultValue : parsed;
+}
+```
+
+**Effort**: 30m | **Benefit**: Prevents NaN sampling rates
+**Acceptance**: Invalid sample rates fall back to defaults
+
+---
+
+### [OBSERVABILITY] MEDIUM - Error Deduplication
+
+**File**: `src/observability/mutationErrorAdapter.ts:78-110`
+**Source**: PR #55 CodeRabbit review
+**Problem**: Repeated errors (e.g., spamming submit) create noise in Sentry
+**Fix**: Add 5-second deduplication window
+
+```typescript
+const recentErrors = new Map<string, number>();
+const errorKey = `${error.code}:${error.message}`;
+const lastSeen = recentErrors.get(errorKey);
+if (!lastSeen || Date.now() - lastSeen > 5000) {
+  recentErrors.set(errorKey, Date.now());
+  captureClientException(error.originalError, {...});
+}
+```
+
+**Effort**: 1h | **Benefit**: Reduces Sentry quota usage
+**Acceptance**: Duplicate errors within 5s not sent to Sentry
+
+---
+
 ### [INFRA] HIGH - No Structured Logging (Pino)
 
 **Files**: `src/lib/logger.ts`, `convex/lib/logging.ts`
