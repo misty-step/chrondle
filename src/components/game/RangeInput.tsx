@@ -176,13 +176,13 @@ export function RangeInput({
   return (
     <div className={cn("space-y-6", className)}>
       {/* Timeline Header */}
-      <div className="border-parchment-300 flex items-baseline justify-between border-b pb-2">
-        <h3 className="text-ink-700 font-sans text-xs font-bold tracking-[0.2em] uppercase">
+      <div className="border-outline-default flex items-baseline justify-between border-b pb-2">
+        <h3 className="text-secondary font-sans text-xs font-bold tracking-[0.2em] uppercase">
           Target Range
         </h3>
-        <div className="text-ink-900 font-mono font-medium tabular-nums">
+        <div className="text-primary font-mono font-medium tabular-nums">
           {range[0] < 0 ? `${Math.abs(range[0])} BC` : `${range[0]} AD`}
-          <span className="text-parchment-300 mx-2">–</span>
+          <span className="text-tertiary mx-2">–</span>
           {range[1] < 0 ? `${Math.abs(range[1])} BC` : `${range[1]} AD`}
         </div>
       </div>
@@ -195,18 +195,18 @@ export function RangeInput({
             ? "border-feedback-error/50"
             : hasBeenModified
               ? "border-vermilion-500"
-              : "border-parchment-300",
+              : "border-outline-default",
         )}
       >
         {/* Decorative Ruler Marks (Top/Bottom) */}
         <div className="pointer-events-none absolute top-0 right-4 left-4 flex h-2 justify-between opacity-30">
           {[...Array(20)].map((_, i) => (
-            <div key={i} className="bg-ink-500 h-full w-px" />
+            <div key={i} className="bg-outline-default h-full w-px" />
           ))}
         </div>
         <div className="pointer-events-none absolute right-4 bottom-0 left-4 flex h-2 justify-between opacity-30">
           {[...Array(20)].map((_, i) => (
-            <div key={i} className="bg-ink-500 h-full w-px" />
+            <div key={i} className="bg-outline-default h-full w-px" />
           ))}
         </div>
 
@@ -214,7 +214,7 @@ export function RangeInput({
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">
           {/* Start Year Group */}
           <div className="flex-1 space-y-2">
-            <label className="text-ink-500 mb-1 block text-[10px] font-bold tracking-[0.1em] uppercase">
+            <label className="text-tertiary mb-1 block text-[10px] font-bold tracking-[0.1em] uppercase">
               From Year
               <div className="mt-1 flex items-center gap-2">
                 <div className="relative flex-1">
@@ -227,7 +227,7 @@ export function RangeInput({
                     onBlur={applyStartYear}
                     onKeyDown={(e) => handleInputKeyDown(e, applyStartYear)}
                     disabled={disabled}
-                    className="bg-parchment-50 border-parchment-300 focus:border-vermilion-500 focus:ring-vermilion-500/20 h-12 text-center font-serif text-2xl"
+                    className="bg-surface-elevated border-outline-default focus:border-vermilion-500 focus:ring-vermilion-500/20 text-primary h-12 text-center font-serif text-2xl"
                   />
                 </div>
                 <EraToggle
@@ -241,13 +241,11 @@ export function RangeInput({
           </div>
 
           {/* Link Icon */}
-          <div className="text-parchment-300 hidden items-center justify-center pb-3 sm:flex">
-            →
-          </div>
+          <div className="text-tertiary hidden items-center justify-center pb-3 sm:flex">→</div>
 
           {/* End Year Group */}
           <div className="flex-1 space-y-2">
-            <label className="text-ink-500 mb-1 block text-[10px] font-bold tracking-[0.1em] uppercase">
+            <label className="text-tertiary mb-1 block text-[10px] font-bold tracking-[0.1em] uppercase">
               To Year
               <div className="mt-1 flex items-center gap-2">
                 <div className="relative flex-1">
@@ -260,7 +258,7 @@ export function RangeInput({
                     onBlur={applyEndYear}
                     onKeyDown={(e) => handleInputKeyDown(e, applyEndYear)}
                     disabled={disabled}
-                    className="bg-parchment-50 border-parchment-300 focus:border-vermilion-500 focus:ring-vermilion-500/20 h-12 text-center font-serif text-2xl"
+                    className="bg-surface-elevated border-outline-default focus:border-vermilion-500 focus:ring-vermilion-500/20 text-primary h-12 text-center font-serif text-2xl"
                   />
                 </div>
                 <EraToggle
@@ -283,7 +281,7 @@ export function RangeInput({
               </span>
             </div>
           ) : (
-            <div className="text-ink-500 font-mono text-xs">
+            <div className="text-tertiary font-mono text-xs">
               Span: {width.toLocaleString()} years
             </div>
           )}

@@ -45,8 +45,8 @@ describe("RangeInput", () => {
       renderRangeInput();
 
       // Should display default years in inputs
-      const startInput = screen.getByLabelText(/start year/i);
-      const endInput = screen.getByLabelText(/end year/i);
+      const startInput = screen.getByLabelText(/from year/i);
+      const endInput = screen.getByLabelText(/to year/i);
 
       // Default start is 3000 BC, end is 2025 AD
       expect(startInput).toHaveValue("3000");
@@ -65,7 +65,7 @@ describe("RangeInput", () => {
       // Default range spans full timeline which exceeds max, so error should be visible
       const defaultWidth = GAME_CONFIG.MAX_YEAR - GAME_CONFIG.MIN_YEAR + 1;
       const expectedLabel = pluralize(defaultWidth, "year");
-      expect(screen.getByText(/max:/i)).toBeInTheDocument();
+      expect(screen.getByText(/range too wide/i)).toBeInTheDocument();
       expect(screen.getByText(new RegExp(expectedLabel))).toBeInTheDocument();
     });
   });
@@ -83,8 +83,8 @@ describe("RangeInput", () => {
       renderRangeInput();
 
       const commitButton = screen.getByRole("button", { name: /submit range/i });
-      const startInput = screen.getByLabelText(/start year/i);
-      const endInput = screen.getByLabelText(/end year/i);
+      const startInput = screen.getByLabelText(/from year/i);
+      const endInput = screen.getByLabelText(/to year/i);
 
       expect(commitButton).toBeDisabled();
 
@@ -124,7 +124,7 @@ describe("RangeInput", () => {
     it("accepts positive year values", () => {
       renderRangeInput();
 
-      const startInput = screen.getByLabelText(/start year/i);
+      const startInput = screen.getByLabelText(/from year/i);
 
       // Toggle to AD and change input
       fireEvent.click(screen.getAllByText("AD")[0]);
@@ -142,8 +142,8 @@ describe("RangeInput", () => {
     it("enables submit after modifying year input", () => {
       renderRangeInput();
 
-      const startInput = screen.getByLabelText(/start year/i);
-      const endInput = screen.getByLabelText(/end year/i);
+      const startInput = screen.getByLabelText(/from year/i);
+      const endInput = screen.getByLabelText(/to year/i);
 
       // Initial state: button should be disabled (range not modified)
       const commitButton = screen.getByRole("button", { name: /submit range/i });
@@ -189,8 +189,8 @@ describe("RangeInput", () => {
     it("allows editing without resetting to defaults", async () => {
       render(<ControlledWrapper />);
 
-      const startInput = screen.getByLabelText(/start year/i);
-      const endInput = screen.getByLabelText(/end year/i);
+      const startInput = screen.getByLabelText(/from year/i);
+      const endInput = screen.getByLabelText(/to year/i);
 
       // Toggle start to AD so a modern year is valid
       const startAdToggle = screen.getByTestId("toggle-ad-BC");
@@ -218,8 +218,8 @@ describe("RangeInput", () => {
     it("prevents committing when the range exceeds 250 years", () => {
       renderRangeInput();
 
-      const startInput = screen.getByLabelText(/start year/i);
-      const endInput = screen.getByLabelText(/end year/i);
+      const startInput = screen.getByLabelText(/from year/i);
+      const endInput = screen.getByLabelText(/to year/i);
 
       // Set to range > 250 years within bounds (e.g., 1700 BC - 100 BC = 1601 years)
       // Start defaults to BC, so just change the values
@@ -246,8 +246,8 @@ describe("RangeInput", () => {
       const handleCommit = vi.fn();
       renderRangeInput({ onCommit: handleCommit });
 
-      const startInput = screen.getByLabelText(/start year/i);
-      const endInput = screen.getByLabelText(/end year/i);
+      const startInput = screen.getByLabelText(/from year/i);
+      const endInput = screen.getByLabelText(/to year/i);
       const commitButton = screen.getByRole("button", { name: /submit range/i });
 
       // Initially button is disabled (default range, not modified)
@@ -301,8 +301,8 @@ describe("RangeInput", () => {
       const handleCommit = vi.fn();
       renderRangeInput({ onCommit: handleCommit, hintsUsed: 2 });
 
-      const startInput = screen.getByLabelText(/start year/i);
-      const endInput = screen.getByLabelText(/end year/i);
+      const startInput = screen.getByLabelText(/from year/i);
+      const endInput = screen.getByLabelText(/to year/i);
 
       // Set valid narrow range (1900-1920 AD = 21 years)
       // Toggle start to AD first

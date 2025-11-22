@@ -142,12 +142,12 @@ export function GameLayout(props: GameLayoutProps) {
                   mass: 0.5,
                 }}
                 className={cn(
-                  "material-stamp rounded-lg border-4 p-4 text-4xl font-black tracking-widest uppercase mix-blend-multiply backdrop-blur-[1px]",
+                  "material-stamp rounded-lg border-4 p-4 text-4xl font-black tracking-widest uppercase mix-blend-multiply backdrop-blur-[1px] dark:mix-blend-normal",
                   // Color based on accuracy (logic simplified for visual impact)
                   // Ideally we'd check if the target year is in the range
                   lastGuessStamp.start <= targetYear && lastGuessStamp.end >= targetYear
                     ? "border-feedback-correct text-feedback-correct rotate-[-2deg]"
-                    : "border-ink-900 text-ink-900 rotate-[2deg]",
+                    : "border-outline-default text-primary rotate-[2deg]",
                 )}
               >
                 {lastGuessStamp.start <= targetYear && lastGuessStamp.end >= targetYear
@@ -182,15 +182,15 @@ export function GameLayout(props: GameLayoutProps) {
               {/* The Puzzle Event - Hero Display */}
               <div className="material-card group relative overflow-hidden p-6 sm:p-8">
                 {/* Decorative corner accents */}
-                <div className="border-parchment-300 absolute top-0 left-0 h-16 w-16 rounded-tl-xl border-t-2 border-l-2 opacity-50" />
-                <div className="border-parchment-300 absolute right-0 bottom-0 h-16 w-16 rounded-br-xl border-r-2 border-b-2 opacity-50" />
+                <div className="border-outline-default absolute top-0 left-0 h-16 w-16 rounded-tl-xl border-t-2 border-l-2 opacity-50" />
+                <div className="border-outline-default absolute right-0 bottom-0 h-16 w-16 rounded-br-xl border-r-2 border-b-2 opacity-50" />
 
                 <div className="text-vermilion-500 mb-3 flex items-center gap-2 font-sans text-xs font-bold tracking-[0.2em] uppercase">
                   <span className="bg-vermilion-500/50 h-px w-8" />
                   Primary Source
                   <span className="bg-vermilion-500/50 h-px flex-1" />
                 </div>
-                <div className="text-ink-900 font-serif text-2xl leading-tight tracking-tight drop-shadow-sm sm:text-3xl">
+                <div className="text-primary font-serif text-2xl leading-tight tracking-tight drop-shadow-sm sm:text-3xl">
                   {gameState.puzzle.events[0]}
                 </div>
               </div>
@@ -200,10 +200,10 @@ export function GameLayout(props: GameLayoutProps) {
                 <div className="space-y-3">
                   {gameState.puzzle.events.slice(1, hintsRevealed + 1).map((hint, index) => (
                     <div key={index} className="material-paper relative p-4">
-                      <div className="text-ink-500 mb-1.5 font-sans text-xs font-semibold tracking-wider uppercase">
+                      <div className="text-secondary mb-1.5 font-sans text-xs font-semibold tracking-wider uppercase">
                         Clue {index + 2}
                       </div>
-                      <div className="text-ink-900 font-serif text-lg leading-snug">{hint}</div>
+                      <div className="text-primary font-serif text-lg leading-snug">{hint}</div>
                     </div>
                   ))}
                 </div>

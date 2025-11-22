@@ -81,11 +81,11 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = "", size =
         {/* Always render Sun icon initially to prevent hydration mismatch */}
         {/* The animation and appearance will update after mount */}
         {!isMounted ? (
-          <Sun className={cn(iconSize, "text-foreground")} />
+          <Sun className={cn(iconSize, "text-primary")} />
         ) : currentTheme === "dark" ? (
-          <Moon className={cn(iconSize, "text-foreground")} />
+          <Moon className={cn(iconSize, "text-primary")} />
         ) : (
-          <Sun className={cn(iconSize, "text-foreground")} />
+          <Sun className={cn(iconSize, "text-primary")} />
         )}
       </motion.div>
 

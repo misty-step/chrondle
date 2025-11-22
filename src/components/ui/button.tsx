@@ -20,7 +20,7 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline normal-case tracking-normal",
         // Archival variants
         "ink-bleed":
-          "bg-transparent text-ink-900 border-2 border-ink-900 hover:bg-ink-900 hover:text-parchment-50 transition-colors duration-300",
+          "bg-transparent text-primary border-2 border-primary hover:bg-primary hover:text-background transition-colors duration-300",
         stamp:
           "bg-transparent text-primary border-2 border-primary material-stamp hover:scale-105 active:scale-95 transition-transform",
       },

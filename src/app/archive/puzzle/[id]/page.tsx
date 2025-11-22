@@ -197,7 +197,7 @@ function ArchivePuzzleContent({ id }: ArchivePuzzleContentProps): React.ReactEle
   // Loading state
   if (!isValidated || isLoading || !gameState.puzzle) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="bg-background flex min-h-screen items-center justify-center">
         <div className="text-muted-foreground animate-pulse">Loading puzzle...</div>
       </div>
     );
@@ -238,7 +238,7 @@ function ArchivePuzzleContent({ id }: ArchivePuzzleContentProps): React.ReactEle
                   <button
                     onClick={(): void => handleNavigate("prev")}
                     disabled={validation.id === 1}
-                    className="border-border hover:bg-muted rounded-md border px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-foreground border-border hover:bg-muted rounded-md border px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Previous
                   </button>
@@ -250,7 +250,7 @@ function ArchivePuzzleContent({ id }: ArchivePuzzleContentProps): React.ReactEle
                   <button
                     onClick={(): void => handleNavigate("next")}
                     disabled={validation.id === totalPuzzles}
-                    className="border-border hover:bg-muted rounded-md border px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-foreground border-border hover:bg-muted rounded-md border px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Next
                   </button>

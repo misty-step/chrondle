@@ -61,7 +61,7 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
   // Derive current mode from pathname (information hiding - caller doesn't need to know)
   const currentMode: ModeKey = useMemo(() => {
     if (!pathname) return "classic";
-    if (pathname.startsWith("/order")) return "order";
+    if (pathname.startsWith("/order") || pathname.startsWith("/archive/order")) return "order";
     return "classic";
   }, [pathname]);
 
@@ -83,8 +83,8 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
           // Warm archival colors - override defaults
           "border-timeline-spine/30 bg-locked-badge-bg",
           "hover:bg-locked-badge-bg/80 hover:border-timeline-spine/50",
-          // Typography - warm brown text
-          "text-sm font-medium",
+          // Typography - warm brown text (theme-adaptive)
+          "text-primary text-sm font-medium",
           // Enhanced shadow on hover
           "hover:shadow-md",
           // Custom focus ring - warm amber
@@ -97,9 +97,6 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
           "cursor-pointer",
           className,
         )}
-        style={{
-          color: "var(--timeline-marker)",
-        }}
         size="sm"
         aria-label="Select game mode"
       >
@@ -127,17 +124,12 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
               "rounded-lg",
               // Better padding
               "px-3 py-2",
-              // Typography
-              "text-sm",
+              // Typography (theme-adaptive)
+              "text-primary text-sm",
               mode === currentMode && "font-semibold",
               // Hover state - warm amber highlight
               "hover:bg-locked-badge-bg focus:bg-locked-badge-bg",
             )}
-            style={
-              mode === currentMode
-                ? { color: "var(--locked-badge)" }
-                : { color: "var(--foreground)" }
-            }
           >
             {MODE_CONFIG[mode].label}
           </SelectItem>

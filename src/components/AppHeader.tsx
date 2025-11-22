@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Flame, Archive, Heart } from "lucide-react";
 
 import { AuthButtons } from "@/components/AuthButtons";
+import { LayoutContainer } from "@/components/LayoutContainer";
 import SupportModal from "@/components/SupportModal";
 import { ModeDropdown } from "@/components/ModeDropdown";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -23,6 +23,7 @@ interface AppHeaderProps {
   isDebugMode?: boolean;
   puzzleNumber?: number;
   isArchive?: boolean;
+  mode?: "classic" | "order";
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -30,8 +31,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   isDebugMode = false,
   puzzleNumber,
   isArchive = false,
+  mode = "classic",
 }) => {
-  const pathname = usePathname();
   const [showSupport, setShowSupport] = useState(false);
   const [showHeartbeat, setShowHeartbeat] = useState(false);
 
@@ -48,16 +49,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   }, []);
 
   const streakColors = currentStreak ? getStreakColorClasses(currentStreak) : null;
+  const archiveHref = mode === "order" ? "/archive/order" : "/archive";
 
-  // Adaptive navbar width based on game mode
-  const isOrderMode = pathname?.startsWith("/order");
-  const maxWidthClass = isOrderMode ? "max-w-4xl" : "max-w-2xl";
   return (
     <>
       <header className="border-border bg-card w-full border-b py-4">
-        <div
-          className={cn("mx-auto px-6 transition-all duration-200 ease-out sm:px-0", maxWidthClass)}
-        >
+        <LayoutContainer className="transition-all duration-200 ease-out">
           <div className="flex min-h-[40px] items-center justify-between">
             {/* Logo/Brand - with integrated mode switcher */}
             <div className="flex h-10 items-baseline gap-2">
@@ -120,7 +117,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
               {/* Archive Button */}
               <NavbarButton
-                href={isOrderMode ? "/archive/order" : "/archive"}
+                href={archiveHref}
                 title="Browse puzzle archive"
                 aria-label="Browse puzzle archive"
                 overlayColor="primary"
@@ -136,7 +133,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 overlayColor="rose"
                 className={cn(showHeartbeat && "animate-heartbeat")}
               >
-                <Heart className="text-foreground h-4 w-4 transition-colors group-hover:text-rose-600" />
+                <Heart className="text-primary h-4 w-4 transition-colors group-hover:text-rose-600" />
               </NavbarButton>
 
               {/* Theme Toggle */}
@@ -146,7 +143,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <AuthButtons />
             </div>
           </div>
-        </div>
+        </LayoutContainer>
       </header>
 
       <SupportModal open={showSupport} onOpenChange={setShowSupport} />

@@ -12,6 +12,8 @@ import { OrderEventList } from "@/components/order/OrderEventList";
 import { DocumentHeader } from "@/components/order/DocumentHeader";
 import { OrderInstructions } from "@/components/order/OrderInstructions";
 import { AppHeader } from "@/components/AppHeader";
+import { LayoutContainer } from "@/components/LayoutContainer";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { generateAnchorHint, generateBracketHint, generateRelativeHint } from "@/lib/order/hints";
@@ -32,15 +34,15 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   if (gameState.status === "loading-puzzle") {
-    return renderShell("Loading Order puzzle…");
+    return <LoadingScreen message="Loading Order puzzle…" />;
   }
 
   if (gameState.status === "loading-auth" || gameState.status === "loading-progress") {
-    return renderShell("Preparing your Order session…");
+    return <LoadingScreen message="Preparing your Order session…" />;
   }
 
   if (gameState.status === "error") {
-    return renderShell(`Something went wrong: ${gameState.error}`);
+    return <LoadingScreen message={`Something went wrong: ${gameState.error}`} />;
   }
 
   if (gameState.status === "completed") {
@@ -66,21 +68,23 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
 
     return (
       <div className="flex min-h-screen flex-col">
-        <AppHeader puzzleNumber={gameState.puzzle.puzzleNumber} isArchive={false} />
-        <main className="mx-auto flex max-w-3xl flex-1 flex-col gap-6 px-6 py-16 sm:px-0">
-          <OrderReveal
-            events={gameState.puzzle.events}
-            finalOrder={gameState.finalOrder}
-            correctOrder={gameState.correctOrder}
-            score={gameState.score}
-            puzzleNumber={gameState.puzzle.puzzleNumber}
-            onShare={handleShare}
-          />
-          {shareFeedback && (
-            <p className="text-muted-foreground text-center text-sm" role="status">
-              {shareFeedback}
-            </p>
-          )}
+        <AppHeader puzzleNumber={gameState.puzzle.puzzleNumber} isArchive={false} mode="order" />
+        <main className="flex-1 py-16">
+          <LayoutContainer className="flex max-w-3xl flex-col gap-6">
+            <OrderReveal
+              events={gameState.puzzle.events}
+              finalOrder={gameState.finalOrder}
+              correctOrder={gameState.correctOrder}
+              score={gameState.score}
+              puzzleNumber={gameState.puzzle.puzzleNumber}
+              onShare={handleShare}
+            />
+            {shareFeedback && (
+              <p className="text-muted-foreground text-center text-sm" role="status">
+                {shareFeedback}
+              </p>
+            )}
+          </LayoutContainer>
         </main>
       </div>
     );
@@ -95,14 +99,6 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
       takeHint={takeHint}
       onCommit={commitOrdering}
     />
-  );
-}
-
-function renderShell(message: string) {
-  return (
-    <main className="bg-background flex min-h-screen items-center justify-center">
-      <p className="text-muted-foreground text-base">{message}</p>
-    </main>
   );
 }
 
@@ -240,45 +236,32 @@ function ReadyOrderGame({
   }, [currentOrder, puzzle.events, hints.length, onCommit, toast]);
 
   return (
-    <div className="paper-texture flex min-h-screen flex-col">
+    <div className="bg-background flex min-h-screen flex-col">
       {/* App Header - Consistent with Classic Mode */}
-      <AppHeader puzzleNumber={puzzle.puzzleNumber} isArchive={false} />
+      <AppHeader puzzleNumber={puzzle.puzzleNumber} isArchive={false} mode="order" />
 
       {/* Main Content Area */}
       <main
-        className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-6 sm:px-0"
+        className="flex-1 py-6"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}
       >
-        <div className="space-y-4">
-          {/* Instructions Banner */}
-          <OrderInstructions />
+        <LayoutContainer className="flex w-full flex-col gap-6">
+          <div className="space-y-4">
+            {/* Instructions Banner */}
+            <OrderInstructions />
 
-          {/* Document Header - Archival catalog style */}
-          <DocumentHeader
-            puzzleNumber={puzzle.puzzleNumber}
-            date={puzzle.date}
-            events={puzzle.events}
-          />
-        </div>
-
-        {/* Desktop: Side-by-side layout */}
-        <div className="flex flex-col gap-6 lg:flex-row-reverse">
-          {/* Hints Panel - Desktop sidebar */}
-          <div className="hidden lg:block lg:w-[360px]">
-            <HintDisplay
+            {/* Document Header - Archival catalog style */}
+            <DocumentHeader
+              puzzleNumber={puzzle.puzzleNumber}
+              date={puzzle.date}
               events={puzzle.events}
-              hints={hints}
-              onRequestHint={requestHint}
-              disabledTypes={disabledHintTypes}
-              pendingType={pendingHintType}
-              error={hintError ?? undefined}
             />
           </div>
 
-          {/* Event List Section */}
-          <div className="flex-1 space-y-4">
-            {/* Mobile Hints - below headings, above events */}
-            <div className="lg:hidden">
+          {/* Desktop: Side-by-side layout */}
+          <div className="flex flex-col gap-6 lg:flex-row-reverse">
+            {/* Hints Panel - Desktop sidebar */}
+            <div className="hidden lg:block lg:w-[360px]">
               <HintDisplay
                 events={puzzle.events}
                 hints={hints}
@@ -289,28 +272,43 @@ function ReadyOrderGame({
               />
             </div>
 
-            {/* Event Cards */}
-            <section className="border-border bg-card shadow-warm rounded-xl border p-4 md:p-6">
-              <OrderEventList
-                events={puzzle.events}
-                ordering={currentOrder}
-                onOrderingChange={handleOrderingChange}
-                lockedPositions={lockedPositions}
-                hintsByEvent={hintsByEvent}
-              />
-            </section>
+            {/* Event List Section */}
+            <div className="flex-1 space-y-4">
+              {/* Mobile Hints - below headings, above events */}
+              <div className="lg:hidden">
+                <HintDisplay
+                  events={puzzle.events}
+                  hints={hints}
+                  onRequestHint={requestHint}
+                  disabledTypes={disabledHintTypes}
+                  pendingType={pendingHintType}
+                  error={hintError ?? undefined}
+                />
+              </div>
 
-            {/* Submit Button - Below Timeline */}
-            <Button
-              type="button"
-              onClick={handleCommit}
-              size="lg"
-              className="relative z-10 w-full rounded-full text-base font-semibold shadow-lg"
-            >
-              Submit My Timeline
-            </Button>
+              {/* Event Cards */}
+              <section className="border-border bg-card shadow-warm rounded-xl border p-4 md:p-6">
+                <OrderEventList
+                  events={puzzle.events}
+                  ordering={currentOrder}
+                  onOrderingChange={handleOrderingChange}
+                  lockedPositions={lockedPositions}
+                  hintsByEvent={hintsByEvent}
+                />
+              </section>
+
+              {/* Submit Button - Below Timeline */}
+              <Button
+                type="button"
+                onClick={handleCommit}
+                size="lg"
+                className="relative z-10 w-full rounded-full text-base font-semibold shadow-lg"
+              >
+                Submit My Timeline
+              </Button>
+            </div>
           </div>
-        </div>
+        </LayoutContainer>
       </main>
     </div>
   );

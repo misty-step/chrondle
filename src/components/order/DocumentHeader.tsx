@@ -55,7 +55,7 @@ export function DocumentHeader({ puzzleNumber, date, events }: DocumentHeaderPro
             Chronological Sorting Exercise
           </h2>
           <div className="mt-1 flex items-center gap-2 text-sm">
-            <span className="text-foreground font-year font-semibold">Puzzle №{puzzleNumber}</span>
+            <span className="text-primary font-year font-semibold">Puzzle №{puzzleNumber}</span>
             <span className="text-muted-foreground">·</span>
             <span className="text-muted-foreground font-sans">{formattedDate}</span>
           </div>

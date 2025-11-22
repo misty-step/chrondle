@@ -201,7 +201,7 @@ function CompactHintPanel(props: HintPanelProps) {
               {/* Icon + Title on same row */}
               <div className="mb-1 flex w-full items-center gap-1.5">
                 <div className="text-primary flex-shrink-0">{getHintIcon(type, "h-4 w-4")}</div>
-                <span className="text-foreground text-xs leading-tight font-semibold">
+                <span className="text-primary text-xs leading-tight font-semibold">
                   {isUsed ? "✓ " : ""}
                   {HINT_COPY[type].label.split(" ")[0]}
                 </span>
@@ -317,7 +317,7 @@ function AvailableHintButton({ type, pending, onSelect }: AvailableHintButtonPro
       {/* Icon + Title on same row */}
       <div className="flex w-full items-center gap-3">
         <div className="text-primary flex-shrink-0">{getHintIcon(type, "h-5 w-5")}</div>
-        <p className="text-foreground text-sm font-semibold">{copy.label}</p>
+        <p className="text-primary text-sm font-semibold">{copy.label}</p>
       </div>
 
       {/* Description below with indent */}
@@ -372,7 +372,7 @@ function UsedHintsList({ events, hints }: UsedHintsListProps) {
                   {getHintIcon(hint.type, "h-4 w-4")}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-foreground text-sm leading-relaxed">{description}</p>
+                  <p className="text-primary text-sm leading-relaxed">{description}</p>
                 </div>
               </motion.li>
             );

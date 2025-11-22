@@ -11,6 +11,9 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  {
+    ignores: ["**/*.css"]
+  },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     plugins: {
@@ -35,6 +38,14 @@ const eslintConfig = [
           "argsIgnorePattern": "^_",
           "varsIgnorePattern": "^_",
           "destructuredArrayIgnorePattern": "^_"
+        }
+      ],
+      // Ban primitive token usage - use semantic tokens instead
+      "no-restricted-syntax": [
+        "error",
+        {
+          "selector": "Literal[value=/\\b(text|bg|border)-(ink|parchment)-\\d+\\b/]",
+          "message": "Do not use primitive tokens (text-ink-*, bg-parchment-*, etc). Use semantic tokens (text-primary, bg-surface-elevated, etc) from globals.css instead. See DESIGN_SYSTEM.md for token reference."
         }
       ]
     }

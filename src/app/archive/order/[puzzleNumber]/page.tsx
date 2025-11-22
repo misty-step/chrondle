@@ -10,6 +10,8 @@ import { OrderReveal } from "@/components/order/OrderReveal";
 import { OrderEventList } from "@/components/order/OrderEventList";
 import { DocumentHeader } from "@/components/order/DocumentHeader";
 import { AppHeader } from "@/components/AppHeader";
+import { LayoutContainer } from "@/components/LayoutContainer";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -34,15 +36,15 @@ function ArchiveOrderPuzzleContent({
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   if (gameState.status === "loading-puzzle") {
-    return renderShell("Loading Order puzzle…");
+    return <LoadingScreen message="Loading Order puzzle…" />;
   }
 
   if (gameState.status === "loading-auth" || gameState.status === "loading-progress") {
-    return renderShell("Preparing your Order session…");
+    return <LoadingScreen message="Preparing your Order session…" />;
   }
 
   if (gameState.status === "error") {
-    return renderShell(`Something went wrong: ${gameState.error}`);
+    return <LoadingScreen message={`Something went wrong: ${gameState.error}`} />;
   }
 
   if (gameState.status === "completed") {
@@ -68,29 +70,31 @@ function ArchiveOrderPuzzleContent({
 
     return (
       <div className="bg-background flex min-h-screen flex-col">
-        <AppHeader puzzleNumber={gameState.puzzle.puzzleNumber} isArchive={true} />
-        <main className="mx-auto flex max-w-3xl flex-1 flex-col gap-6 px-6 py-16 sm:px-0">
-          <div className="mb-4">
-            <Link
-              href="/archive/order"
-              className="text-muted-foreground hover:text-primary text-sm"
-            >
-              ← Back to Order Archive
-            </Link>
-          </div>
-          <OrderReveal
-            events={gameState.puzzle.events}
-            finalOrder={gameState.finalOrder}
-            correctOrder={gameState.correctOrder}
-            score={gameState.score}
-            puzzleNumber={gameState.puzzle.puzzleNumber}
-            onShare={handleShare}
-          />
-          {shareFeedback && (
-            <p className="text-muted-foreground text-center text-sm" role="status">
-              {shareFeedback}
-            </p>
-          )}
+        <AppHeader puzzleNumber={gameState.puzzle.puzzleNumber} isArchive={true} mode="order" />
+        <main className="flex-1 py-16">
+          <LayoutContainer className="flex max-w-3xl flex-col gap-6">
+            <div className="mb-4">
+              <Link
+                href="/archive/order"
+                className="text-muted-foreground hover:text-primary text-sm"
+              >
+                ← Back to Order Archive
+              </Link>
+            </div>
+            <OrderReveal
+              events={gameState.puzzle.events}
+              finalOrder={gameState.finalOrder}
+              correctOrder={gameState.correctOrder}
+              score={gameState.score}
+              puzzleNumber={gameState.puzzle.puzzleNumber}
+              onShare={handleShare}
+            />
+            {shareFeedback && (
+              <p className="text-muted-foreground text-center text-sm" role="status">
+                {shareFeedback}
+              </p>
+            )}
+          </LayoutContainer>
         </main>
         <Footer />
       </div>
@@ -106,14 +110,6 @@ function ArchiveOrderPuzzleContent({
       takeHint={takeHint}
       onCommit={commitOrdering}
     />
-  );
-}
-
-function renderShell(message: string) {
-  return (
-    <main className="bg-background flex min-h-screen items-center justify-center">
-      <p className="text-muted-foreground text-base">{message}</p>
-    </main>
   );
 }
 
@@ -252,39 +248,31 @@ function ReadyArchiveOrderGame({
 
   return (
     <div className="bg-background flex min-h-screen flex-col">
-      <AppHeader puzzleNumber={puzzle.puzzleNumber} isArchive={true} />
+      <AppHeader puzzleNumber={puzzle.puzzleNumber} isArchive={true} mode="order" />
 
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-6 sm:px-0">
-        {/* Archive Nav */}
-        <div className="flex items-center justify-between">
-          <Link href="/archive/order" className="text-muted-foreground hover:text-primary text-sm">
-            ← Back to Order Archive
-          </Link>
-          <span className="text-muted-foreground text-sm font-medium">Archive Mode</span>
-        </div>
+      <main className="flex-1 py-6">
+        <LayoutContainer className="flex w-full flex-col gap-6">
+          {/* Archive Nav */}
+          <div className="flex items-center justify-between">
+            <Link
+              href="/archive/order"
+              className="text-muted-foreground hover:text-primary text-sm"
+            >
+              ← Back to Order Archive
+            </Link>
+            <span className="text-muted-foreground text-sm font-medium">Archive Mode</span>
+          </div>
 
-        <div className="space-y-4">
-          <DocumentHeader
-            puzzleNumber={puzzle.puzzleNumber}
-            date={puzzle.date}
-            events={puzzle.events}
-          />
-        </div>
-
-        <div className="flex flex-col gap-6 lg:flex-row-reverse">
-          <div className="hidden lg:block lg:w-[360px]">
-            <HintDisplay
+          <div className="space-y-4">
+            <DocumentHeader
+              puzzleNumber={puzzle.puzzleNumber}
+              date={puzzle.date}
               events={puzzle.events}
-              hints={hints}
-              onRequestHint={requestHint}
-              disabledTypes={disabledHintTypes}
-              pendingType={pendingHintType}
-              error={hintError ?? undefined}
             />
           </div>
 
-          <div className="flex-1 space-y-4">
-            <div className="lg:hidden">
+          <div className="flex flex-col gap-6 lg:flex-row-reverse">
+            <div className="hidden lg:block lg:w-[360px]">
               <HintDisplay
                 events={puzzle.events}
                 hints={hints}
@@ -295,25 +283,38 @@ function ReadyArchiveOrderGame({
               />
             </div>
 
-            <section className="border-border bg-card shadow-warm rounded-xl border p-4 md:p-6">
-              <OrderEventList
-                events={puzzle.events}
-                ordering={currentOrder}
-                onOrderingChange={handleOrderingChange}
-                lockedPositions={lockedPositions}
-                hintsByEvent={hintsByEvent}
-              />
-            </section>
+            <div className="flex-1 space-y-4">
+              <div className="lg:hidden">
+                <HintDisplay
+                  events={puzzle.events}
+                  hints={hints}
+                  onRequestHint={requestHint}
+                  disabledTypes={disabledHintTypes}
+                  pendingType={pendingHintType}
+                  error={hintError ?? undefined}
+                />
+              </div>
 
-            <Button
-              onClick={handleCommit}
-              size="lg"
-              className="relative z-10 w-full rounded-full text-base font-semibold shadow-lg"
-            >
-              Submit My Timeline
-            </Button>
+              <section className="border-border bg-card shadow-warm rounded-xl border p-4 md:p-6">
+                <OrderEventList
+                  events={puzzle.events}
+                  ordering={currentOrder}
+                  onOrderingChange={handleOrderingChange}
+                  lockedPositions={lockedPositions}
+                  hintsByEvent={hintsByEvent}
+                />
+              </section>
+
+              <Button
+                onClick={handleCommit}
+                size="lg"
+                className="relative z-10 w-full rounded-full text-base font-semibold shadow-lg"
+              >
+                Submit My Timeline
+              </Button>
+            </div>
           </div>
-        </div>
+        </LayoutContainer>
       </main>
       <Footer />
     </div>

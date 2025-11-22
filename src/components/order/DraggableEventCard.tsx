@@ -165,7 +165,7 @@ function EventCardContent({
 
         <div className="min-w-0 flex-1">
           {/* Event Text - Larger, more readable serif typography */}
-          <p className="font-event text-foreground line-clamp-3 text-xl leading-relaxed">
+          <p className="font-event text-primary line-clamp-3 text-xl leading-relaxed">
             {event.text}
           </p>
 

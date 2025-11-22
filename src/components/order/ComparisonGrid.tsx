@@ -81,7 +81,7 @@ export function ComparisonGrid({ events, finalOrder, correctOrder }: ComparisonG
                       <div className="text-muted-foreground font-year mb-1 text-xs font-medium">
                         #{index + 1}
                       </div>
-                      <div className="text-foreground font-event mb-1 text-sm leading-snug">
+                      <div className="text-primary font-event mb-1 text-sm leading-snug">
                         {event.text}
                       </div>
                       <div className="text-muted-foreground font-year text-xs">
@@ -138,7 +138,7 @@ export function ComparisonGrid({ events, finalOrder, correctOrder }: ComparisonG
                       <div className="text-muted-foreground font-year mb-1 text-xs font-medium">
                         #{index + 1}
                       </div>
-                      <div className="text-foreground font-event mb-1 text-sm leading-snug">
+                      <div className="text-primary font-event mb-1 text-sm leading-snug">
                         {event.text}
                       </div>
                       <div className="text-muted-foreground font-year text-xs">
@@ -203,7 +203,7 @@ export function ComparisonGrid({ events, finalOrder, correctOrder }: ComparisonG
                       <div className="text-muted-foreground font-year mb-1 text-xs font-medium">
                         #{index + 1}
                       </div>
-                      <div className="text-foreground font-event mb-1 text-sm leading-snug">
+                      <div className="text-primary font-event mb-1 text-sm leading-snug">
                         {event.text}
                       </div>
                       <div className="text-muted-foreground font-year text-xs">
@@ -240,7 +240,7 @@ export function ComparisonGrid({ events, finalOrder, correctOrder }: ComparisonG
                       <div className="text-muted-foreground font-year mb-1 text-xs font-medium">
                         #{index + 1}
                       </div>
-                      <div className="text-foreground font-event mb-1 text-sm leading-snug">
+                      <div className="text-primary font-event mb-1 text-sm leading-snug">
                         {event.text}
                       </div>
                       <div className="text-muted-foreground font-year text-xs">

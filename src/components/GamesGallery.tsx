@@ -41,7 +41,7 @@ const MODE_CARDS: ModeCardConfig[] = [
       bg: "bg-mode-classic-bg",
       fg: "text-mode-classic-text",
       accent: "text-mode-classic-accent",
-      button: "bg-mode-classic-text text-mode-classic-bg hover:bg-ink-900",
+      button: "bg-mode-classic-text text-mode-classic-bg hover:bg-primary",
       badge: "bg-mode-classic-accent/10 text-mode-classic-accent",
     },
   },
@@ -57,7 +57,7 @@ const MODE_CARDS: ModeCardConfig[] = [
       bg: "bg-mode-order-bg",
       fg: "text-mode-order-text",
       accent: "text-mode-order-accent",
-      button: "bg-mode-order-text text-mode-order-bg hover:bg-ink-900",
+      button: "bg-mode-order-text text-mode-order-bg hover:bg-primary",
       badge: "bg-mode-order-accent/10 text-mode-order-accent",
     },
     badge: "New",
@@ -80,14 +80,14 @@ export function GamesGallery() {
   );
 
   return (
-    <main className="bg-parchment-100 dark:bg-ink-900 relative flex h-[100dvh] w-full flex-col overflow-hidden md:flex-row">
+    <main className="bg-background relative flex h-[100dvh] w-full flex-col overflow-hidden md:flex-row">
       {/* --- Branding Anchor with Theme Toggle --- */}
       <div className="pointer-events-none absolute top-6 right-0 left-0 z-50 flex justify-center">
-        <div className="border-ink-900/10 bg-parchment-50/80 shadow-hard-sm dark:border-parchment-50/10 dark:bg-ink-900/80 pointer-events-auto flex items-center gap-2 rounded-full border px-5 py-2 backdrop-blur-md">
+        <div className="border-outline-default/10 bg-card/80 shadow-hard-sm pointer-events-auto flex items-center gap-2 rounded-full border px-5 py-2 backdrop-blur-md">
           <div className="rounded-full p-1.5">
-            <Crown className="text-ink-900/80 dark:text-parchment-50/80 h-4 w-4" />
+            <Crown className="text-primary/80 h-4 w-4" />
           </div>
-          <span className="font-heading text-ink-900/90 dark:text-parchment-50/90 text-lg font-bold tracking-wide">
+          <span className="font-heading text-primary/90 text-lg font-bold tracking-wide">
             CHRONDLE
           </span>
 
@@ -96,7 +96,7 @@ export function GamesGallery() {
             onClick={toggle}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
-            className="hover:bg-ink-900/5 dark:hover:bg-parchment-50/10 cursor-pointer rounded-full p-1.5 transition-colors"
+            className="hover:bg-surface-hover cursor-pointer rounded-full p-1.5 transition-colors"
             aria-label={
               isMounted
                 ? `Switch to ${currentTheme === "dark" ? "light" : "dark"} mode`
@@ -108,11 +108,11 @@ export function GamesGallery() {
               transition={{ type: "spring", stiffness: 200, damping: 20 }}
             >
               {!isMounted ? (
-                <Sun className="text-ink-900/70 dark:text-parchment-50/70 h-4 w-4" />
+                <Sun className="text-secondary h-4 w-4" />
               ) : currentTheme === "dark" ? (
-                <Moon className="text-parchment-50/70 h-4 w-4" />
+                <Moon className="text-secondary h-4 w-4" />
               ) : (
-                <Sun className="text-ink-900/70 h-4 w-4" />
+                <Sun className="text-secondary h-4 w-4" />
               )}
             </motion.div>
           </motion.button>
@@ -171,7 +171,7 @@ export function GamesGallery() {
 
             {/* Background Texture - Mode specific overlays */}
             <div
-              className="pointer-events-none absolute inset-0 opacity-10 mix-blend-multiply transition-opacity duration-500"
+              className="pointer-events-none absolute inset-0 opacity-10 mix-blend-multiply transition-opacity duration-500 dark:mix-blend-normal"
               style={{
                 backgroundImage:
                   mode.key === "classic"
