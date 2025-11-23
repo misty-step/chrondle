@@ -6,65 +6,59 @@ import { useCopyEmail } from "@/hooks/useCopyEmail";
 import { cn } from "@/lib/utils";
 
 export function Footer() {
-  const { hasCopied, copy, email } = useCopyEmail("hello@mistystep.io");
+  const { hasCopied, copy } = useCopyEmail("hello@mistystep.io");
 
   return (
-    <footer className="mt-auto w-full py-12">
-      <div className="flex flex-col items-center justify-center gap-8 text-center">
-        {/* Tier 1: The Action (Support) */}
-        <div className="group relative">
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              copy();
-            }}
-            className={cn(
-              "flex items-center gap-2 rounded-full px-4 py-2 transition-all duration-300",
-              "text-muted-foreground hover:text-foreground",
-              "hover:bg-muted/50 bg-transparent",
-              "text-sm font-medium",
-            )}
-            aria-label="Copy support email address"
-          >
-            {hasCopied ? (
-              <>
-                <Check className="animate-in zoom-in h-4 w-4 text-green-600 duration-300" />
-                <span className="text-foreground">Email Copied!</span>
-              </>
-            ) : (
-              <>
-                <Mail className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5" />
-                <span>Feedback & Support</span>
-              </>
-            )}
-          </button>
-          {/* Accessible Fallback (hidden but readable/functional if JS fails or for right-click) */}
-          <a href={`mailto:${email}`} className="sr-only">
-            Send email to {email}
-          </a>
-        </div>
+    <footer className="border-border/40 bg-muted/5 mt-auto w-full border-t py-8">
+      <div className="flex flex-col items-center justify-center gap-4 text-center md:flex-row md:gap-8">
+        {/* Tier 1: The Maker */}
+        <p className="text-muted-foreground font-serif text-sm tracking-wide">
+          <span className="italic">Crafted by</span> <MistyStepLink />
+        </p>
 
-        {/* Tier 2: The Maker */}
-        <div className="flex flex-col items-center gap-1">
-          <p className="text-muted-foreground font-serif text-sm tracking-wide italic">
-            A <MistyStepLink /> Production
-          </p>
-        </div>
+        {/* Separator (Desktop) */}
+        <span className="text-muted-foreground/20 hidden md:inline">•</span>
 
-        {/* Tier 3: The Foundation (Legal) */}
+        {/* Tier 2: The Action (Support) - Text Link style now */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            copy();
+          }}
+          className={cn(
+            "group flex items-center gap-1.5 text-xs font-medium transition-colors",
+            hasCopied ? "text-green-600" : "text-muted-foreground hover:text-foreground",
+          )}
+          aria-label="Copy support email address"
+        >
+          {hasCopied ? (
+            <>
+              <Check className="h-3.5 w-3.5" />
+              <span>Email Copied</span>
+            </>
+          ) : (
+            <>
+              <Mail className="h-3.5 w-3.5 opacity-70 transition-opacity group-hover:opacity-100" />
+              <span>Feedback</span>
+            </>
+          )}
+        </button>
+
+        {/* Separator (Desktop) */}
+        <span className="text-muted-foreground/20 hidden md:inline">•</span>
+
+        {/* Tier 3: Legal */}
         <nav
           aria-label="Legal"
           className="text-muted-foreground/60 flex items-center gap-4 text-xs"
         >
-          <span>© {new Date().getFullYear()}</span>
-          <span aria-hidden="true">•</span>
           <Link href="/legal/terms" className="hover:text-foreground transition-colors">
             Terms
           </Link>
-          <span aria-hidden="true">•</span>
           <Link href="/legal/privacy" className="hover:text-foreground transition-colors">
             Privacy
           </Link>
+          <span className="opacity-50">© {new Date().getFullYear()}</span>
         </nav>
       </div>
     </footer>

@@ -65,14 +65,8 @@ export function DocumentHeader({ puzzleNumber, date, events }: DocumentHeaderPro
       {/* Timeline Range Visualization */}
       <div className="mt-4 flex items-center gap-3">
         <div className="flex-1">
-          <div className="bg-timeline-spine/20 relative h-[3px] overflow-hidden rounded-full">
-            <div
-              className="absolute inset-y-0 right-0 left-0 rounded-full"
-              style={{
-                background:
-                  "linear-gradient(to right, var(--timeline-spine), var(--timeline-marker))",
-              }}
-            />
+          <div className="bg-timeline-spine/20 relative h-[2px] w-full overflow-hidden rounded-full">
+            <div className="bg-timeline-spine absolute inset-y-0 right-0 left-0 h-full rounded-full opacity-50" />
           </div>
           <div className="mt-2 flex items-center justify-between">
             <span

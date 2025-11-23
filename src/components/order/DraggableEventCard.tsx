@@ -130,21 +130,23 @@ function EventCardContent({
     <>
       <div
         className={[
-          "flex touch-none items-center justify-center border-b py-3",
-          isLocked ? "border-transparent" : "border-border/50",
+          "flex touch-none items-center justify-center py-2",
+          isLocked ? "cursor-not-allowed" : "cursor-grab",
+          "bg-muted/20 border-border/30 rounded-t-xl border-b", // Subtle separation
         ].join(" ")}
         {...handleProps}
       >
         <div
           className={[
-            "flex flex-col gap-[3px] transition-opacity",
-            isLocked || mutedHandle ? "opacity-30" : "opacity-50 hover:opacity-100",
+            "flex gap-1 transition-opacity", // Horizontal dots instead of vertical lines
+            isLocked || mutedHandle ? "opacity-20" : "opacity-40 hover:opacity-70",
           ].join(" ")}
-          style={{ color: "var(--timeline-marker)" }}
         >
-          <div className="h-[2px] w-6 rounded-full bg-current" />
-          <div className="h-[2px] w-6 rounded-full bg-current" />
-          <div className="h-[2px] w-6 rounded-full bg-current" />
+          {/* Simple Grip Dots */}
+          <div className="bg-foreground h-1 w-1 rounded-full" />
+          <div className="bg-foreground h-1 w-1 rounded-full" />
+          <div className="bg-foreground h-1 w-1 rounded-full" />
+          <div className="bg-foreground h-1 w-1 rounded-full" />
         </div>
       </div>
 
@@ -217,9 +219,10 @@ function LockedBadge() {
 
 function cardClasses({ isDragging, isLocked }: { isDragging: boolean; isLocked: boolean }) {
   return [
-    "border-border bg-card relative flex min-h-[100px] flex-col rounded-xl border text-left shadow-warm will-change-transform",
-    isDragging ? "border-timeline-spine z-20 scale-105 shadow-warm-lg" : "hover:shadow-md",
-    isLocked ? "cursor-not-allowed bg-locked-badge-bg/30" : "cursor-grab active:cursor-grabbing",
+    "relative flex min-h-[100px] flex-col rounded-xl text-left will-change-transform transition-shadow duration-200",
+    "bg-card border border-border/40", // Subtle border for definition
+    isDragging ? "z-50 shadow-xl ring-2 ring-primary/20 scale-[1.02]" : "shadow-sm hover:shadow-md",
+    isLocked ? "cursor-not-allowed bg-muted/30 opacity-90" : "cursor-grab active:cursor-grabbing",
   ].join(" ");
 }
 

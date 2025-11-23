@@ -121,7 +121,10 @@ export function OrderEventList({
   const activeLocked = activeEvent ? lockedPositions.has(activeEvent.id) : false;
 
   return (
-    <div>
+    <div className="relative">
+      {/* Timeline Spine (Visual Connector) */}
+      <div className="bg-timeline-spine/20 absolute top-4 bottom-4 left-[34px] w-[2px] rounded-full" />
+
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
