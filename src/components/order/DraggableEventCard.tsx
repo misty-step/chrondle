@@ -9,6 +9,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { Lock, Anchor, ArrowRight, CalendarRange } from "lucide-react";
 import { formatYear } from "@/lib/displayFormatting";
 import type { OrderEvent, OrderHint } from "@/types/orderGameState";
+import { ExpandableText } from "./ExpandableText";
 
 export interface DraggableEventCardProps {
   event: OrderEvent;
@@ -165,9 +166,10 @@ function EventCardContent({
 
         <div className="min-w-0 flex-1">
           {/* Event Text - Larger, more readable serif typography */}
-          <p className="font-event text-foreground line-clamp-3 text-xl leading-relaxed">
-            {event.text}
-          </p>
+          <ExpandableText
+            text={event.text}
+            className="font-event text-foreground text-xl leading-relaxed"
+          />
 
           {hints.length > 0 && (
             <ul className="mt-3 flex flex-wrap gap-2">
