@@ -1,7 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "../../../convex/_generated/api";
+import { api, getConvexClient } from "@/lib/convexServer";
 import { currentUser } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { AppHeader } from "@/components/AppHeader";
@@ -11,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Check, ChevronLeft, ChevronRight, History, BarChart } from "lucide-react";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { UserCreationHandler } from "@/components/UserCreationHandler";
+import { LoadingShell } from "@/components/LoadingShell";
 import { logger } from "@/lib/logger";
 
 interface PuzzleCardData {
@@ -59,11 +59,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
   // Debug: Running in environment
 
   // Initialize Convex client
-  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-  if (!convexUrl) {
-    throw new Error("NEXT_PUBLIC_CONVEX_URL environment variable is not set");
-  }
-  const client = new ConvexHttpClient(convexUrl);
+  const client = getConvexClient();
 
   // Performance timing
 
@@ -449,9 +445,12 @@ export default function ArchivePage({ searchParams }: ArchivePageProps): React.R
     <ArchiveErrorBoundary>
       <React.Suspense
         fallback={
-          <div className="flex min-h-screen items-center justify-center">
-            <div className="text-muted-foreground animate-pulse">Loading archive...</div>
-          </div>
+          <LoadingShell
+            intent="generic"
+            stage="fetching"
+            message="Loading archive…"
+            subMessage="Fetching puzzles and progress"
+          />
         }
       >
         <ArchivePageContent searchParams={searchParams} />

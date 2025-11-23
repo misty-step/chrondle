@@ -21,6 +21,7 @@ import { deriveLockedPositions } from "@/lib/order/engine";
 import { calculateOrderScore } from "@/lib/order/scoring";
 import { copyOrderShareTextToClipboard, type OrderShareResult } from "@/lib/order/shareCard";
 import { logger } from "@/lib/logger";
+import { hashHintContext } from "@/lib/order/hashHintContext";
 
 interface OrderGameIslandProps {
   preloadedPuzzle: Preloaded<typeof api.orderPuzzles.getDailyOrderPuzzle>;
@@ -34,15 +35,36 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   if (gameState.status === "loading-puzzle") {
-    return <LoadingScreen message="Loading Order puzzle…" />;
+    return (
+      <LoadingScreen
+        intent="order"
+        stage="fetching"
+        message="Loading Order puzzle…"
+        subMessage="Fetching events and your progress"
+      />
+    );
   }
 
   if (gameState.status === "loading-auth" || gameState.status === "loading-progress") {
-    return <LoadingScreen message="Preparing your Order session…" />;
+    return (
+      <LoadingScreen
+        intent="order"
+        stage="hydrating"
+        message="Preparing your Order session…"
+        subMessage="Securing your streak and restoring hints"
+      />
+    );
   }
 
   if (gameState.status === "error") {
-    return <LoadingScreen message={`Something went wrong: ${gameState.error}`} />;
+    return (
+      <LoadingScreen
+        intent="order"
+        stage="readying"
+        message="Something went wrong"
+        subMessage={gameState.error}
+      />
+    );
   }
 
   if (gameState.status === "completed") {
@@ -375,7 +397,7 @@ function createHintForType(
     }
     case "bracket": {
       const event = selectBracketEvent(currentOrder, events, hints, stateSeed);
-      return generateBracketHint(event);
+      return generateBracketHint([event]);
     }
     default: {
       const exhaustiveCheck: never = type;
@@ -419,18 +441,4 @@ function selectBracketEvent(
   const normalizedSeed = Math.abs(seed);
   const index = topCandidates.length > 1 ? normalizedSeed % topCandidates.length : 0;
   return topCandidates[Math.max(0, index)].event;
-}
-
-function hashHintContext(parts: Array<string | number>): number {
-  let hash = 0x811c9dc5;
-  for (const part of parts) {
-    const chunk = String(part);
-    for (let i = 0; i < chunk.length; i++) {
-      hash ^= chunk.charCodeAt(i);
-      hash = Math.imul(hash, 0x01000193);
-    }
-    hash ^= chunk.length;
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash >>> 0;
 }

@@ -1,18 +1,15 @@
-/**
- * LoadingScreen - Centralized loading/error state component
- *
- * Replaces duplicate `renderShell` functions across the codebase.
- * Uses semantic tokens for theme-adaptive rendering.
- */
+"use client";
 
-interface LoadingScreenProps {
-  message: string;
-}
+import { useReducedMotion } from "motion/react";
+import React from "react";
+import { LoadingExperience } from "@/components/loading/LoadingExperience";
+import type { LoadingProps } from "@/components/loading/loadingTokens";
+import { useDelayedRender } from "@/components/loading/useDelayedRender";
 
-export function LoadingScreen({ message }: LoadingScreenProps) {
-  return (
-    <main className="bg-background flex min-h-screen items-center justify-center">
-      <p className="text-foreground text-base">{message}</p>
-    </main>
-  );
+// Client wrapper that respects prefers-reduced-motion at runtime.
+export function LoadingScreen(props: Omit<LoadingProps, "prefersReducedMotion">) {
+  const prefersReducedMotion = useReducedMotion();
+  const ready = useDelayedRender(props.delayMs ?? 150);
+  if (!ready) return null;
+  return <LoadingExperience {...props} prefersReducedMotion={prefersReducedMotion ?? undefined} />;
 }

@@ -92,13 +92,14 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
           // Tighter padding for pill shape
           "px-3 py-1.5",
           // Custom styling for chevron icon color
-          "[&_svg]:!text-timeline-marker [&_svg]:!opacity-60",
+          "[&_svg]:text-[var(--icon-color)] [&_svg]:!opacity-80",
           // Cursor pointer for better affordance
           "cursor-pointer",
           className,
         )}
         size="sm"
         aria-label="Select game mode"
+        style={{ ["--icon-color" as string]: "var(--timeline-marker-contrast)" }}
       >
         <SelectValue />
       </SelectTrigger>

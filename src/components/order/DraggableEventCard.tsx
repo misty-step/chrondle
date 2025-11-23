@@ -160,7 +160,12 @@ function EventCardContent({
 
         {/* Position Indicator - Larger and bolder */}
         <div className="flex min-w-[32px] flex-shrink-0 items-center justify-center">
-          <div className="font-year text-timeline-marker text-lg font-bold">{index + 1}</div>
+          <div
+            className="font-year text-lg font-bold"
+            style={{ color: "var(--timeline-marker-contrast)" }}
+          >
+            {index + 1}
+          </div>
         </div>
 
         <div className="min-w-0 flex-1">

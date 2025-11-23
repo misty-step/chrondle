@@ -145,7 +145,9 @@ function InlineHintPanel(props: HintPanelProps) {
           <Accordion.Header>
             <Accordion.Trigger className="flex w-full items-center justify-between gap-2 text-left text-base font-semibold">
               <div className="flex flex-col">
-                <span id="order-hints-heading">Hints</span>
+                <span id="order-hints-heading" className="text-primary">
+                  Hints
+                </span>
                 <span className="text-muted-foreground text-xs font-medium">
                   {hintsRemaining} of 3 remaining
                 </span>
@@ -174,7 +176,7 @@ function CompactHintPanel(props: HintPanelProps) {
         <div className="flex items-center gap-2">
           <Lightbulb className="text-primary h-4 w-4" aria-hidden="true" />
           <div>
-            <h3 id="compact-hints-heading" className="text-sm font-semibold">
+            <h3 id="compact-hints-heading" className="text-primary text-sm font-semibold">
               {hintsRemaining} Hints Left
             </h3>
             <p className="text-muted-foreground text-xs">{props.hints.length} of 3 used</p>

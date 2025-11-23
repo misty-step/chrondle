@@ -75,11 +75,17 @@ export function DocumentHeader({ puzzleNumber, date, events }: DocumentHeaderPro
             />
           </div>
           <div className="mt-2 flex items-center justify-between">
-            <span className="font-year text-timeline-marker text-xs font-semibold">
+            <span
+              className="font-year text-xs font-semibold"
+              style={{ color: "var(--timeline-marker-contrast)" }}
+            >
               {formatYear(earliestYear)}
             </span>
             <span className="text-muted-foreground font-sans text-xs italic">{formattedSpan}</span>
-            <span className="font-year text-timeline-marker text-xs font-semibold">
+            <span
+              className="font-year text-xs font-semibold"
+              style={{ color: "var(--timeline-marker-contrast)" }}
+            >
               {formatYear(latestYear)}
             </span>
           </div>

@@ -54,13 +54,13 @@ describe("Order hint generation", () => {
   });
 
   it("produces bracket hints around the event year", () => {
-    const hint = generateBracketHint(events[1], 50);
+    const hint = generateBracketHint([events[1]], { span: 50 });
     expect(hint).toEqual({ type: "bracket", eventId: "b", yearRange: [1450, 1550] });
   });
 
   it("handles BC events when creating bracket hints", () => {
     const bcEvent: OrderEvent = { id: "rome", year: -44, text: "Julius Caesar assassinated" };
-    const hint = generateBracketHint(bcEvent);
+    const hint = generateBracketHint([bcEvent]);
     expect(hint).toEqual({ type: "bracket", eventId: "rome", yearRange: [-69, -19] });
   });
 });
