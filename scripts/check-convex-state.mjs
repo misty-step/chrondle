@@ -17,7 +17,7 @@ try {
   Object.assign(process.env, envVars);
 } catch (error) {
   // In CI, environment variables should already be set
-  if (error.code !== 'ENOENT') {
+  if (error.code !== "ENOENT") {
     console.error("Error loading .env.local:", error.message);
     process.exit(1);
   }
@@ -54,16 +54,18 @@ async function checkState() {
     console.log("\n📚 Archive Status:");
     const archive = await client.query(api.puzzles.getArchivePuzzles, {
       page: 1,
-      pageSize: 5
+      pageSize: 5,
     });
     console.log(`   Total puzzles in database: ${archive.totalCount}`);
     console.log(`   Total pages: ${archive.totalPages}`);
     console.log(`   Current page: ${archive.currentPage}`);
-    
+
     if (archive.puzzles.length > 0) {
       console.log("   Recent puzzles:");
-      archive.puzzles.forEach(puzzle => {
-        console.log(`     - Puzzle #${puzzle.puzzleNumber} (${puzzle.date}): Year ${puzzle.targetYear}`);
+      archive.puzzles.forEach((puzzle) => {
+        console.log(
+          `     - Puzzle #${puzzle.puzzleNumber} (${puzzle.date}): Year ${puzzle.targetYear}`,
+        );
       });
     }
 
@@ -77,9 +79,10 @@ async function checkState() {
       console.log(`   Insufficient events: ${poolStats.insufficientEvents}`);
     } catch (error) {
       console.log("   ❌ Year events pool not available yet");
-      console.log("   Run 'node scripts/migrate-year-events.mjs' after Convex picks up the new functions");
+      console.log(
+        "   Run 'node scripts/migrate-year-events.mjs' after Convex picks up the new functions",
+      );
     }
-
   } catch (error) {
     console.error("Error checking state:", error.message);
     process.exit(1);

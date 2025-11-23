@@ -31,22 +31,22 @@ const client = new ConvexHttpClient(CONVEX_URL);
 
 async function test() {
   console.log("Testing Convex queries...\n");
-  
+
   // Test today's puzzle
   const today = await client.query(api.puzzles.getTodaysPuzzle);
   console.log("Today's puzzle:", today);
-  
+
   // Test archive query
   const archive = await client.query(api.puzzles.getArchivePuzzles, {
-    paginationOpts: { numItems: 5 }
+    paginationOpts: { numItems: 5 },
   });
   console.log("\nArchive preview:");
-  archive.page.forEach(puzzle => {
+  archive.page.forEach((puzzle) => {
     console.log(`  ${puzzle.date}: Year ${puzzle.year} - ${puzzle.events.length} events`);
   });
   console.log(`Total in page: ${archive.page.length}`);
   console.log(`Has more: ${!archive.isDone}`);
-  
+
   // Test specific date
   const specificDate = "2024-01-01";
   const specific = await client.query(api.puzzles.getPuzzleByDate, { date: specificDate });

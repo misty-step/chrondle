@@ -20,14 +20,7 @@ describe("usePuzzleData Integration Tests", () => {
       const mockPuzzle = {
         _id: "puzzle-1",
         targetYear: 1969,
-        events: [
-          "Event 1",
-          "Event 2",
-          "Event 3",
-          "Event 4",
-          "Event 5",
-          "Event 6",
-        ],
+        events: ["Event 1", "Event 2", "Event 3", "Event 4", "Event 5", "Event 6"],
         puzzleNumber: 1,
         createdAt: Date.now(),
       };
@@ -39,14 +32,7 @@ describe("usePuzzleData Integration Tests", () => {
       expect(result.current.puzzle).toEqual({
         id: "puzzle-1",
         targetYear: 1969,
-        events: [
-          "Event 1",
-          "Event 2",
-          "Event 3",
-          "Event 4",
-          "Event 5",
-          "Event 6",
-        ],
+        events: ["Event 1", "Event 2", "Event 3", "Event 4", "Event 5", "Event 6"],
         puzzleNumber: 1,
       });
       expect(result.current.isLoading).toBe(false);
@@ -72,9 +58,7 @@ describe("usePuzzleData Integration Tests", () => {
       // The hook will trigger the mutation but we still get the error state
       expect(result.current.puzzle).toBe(null);
       expect(result.current.isLoading).toBe(false);
-      expect(result.current.error).toEqual(
-        new Error("No daily puzzle available"),
-      );
+      expect(result.current.error).toEqual(new Error("No daily puzzle available"));
     });
   });
 
@@ -83,14 +67,7 @@ describe("usePuzzleData Integration Tests", () => {
       const mockPuzzle = {
         _id: "puzzle-42",
         targetYear: 1776,
-        events: [
-          "Declaration signed",
-          "Event 2",
-          "Event 3",
-          "Event 4",
-          "Event 5",
-          "Event 6",
-        ],
+        events: ["Declaration signed", "Event 2", "Event 3", "Event 4", "Event 5", "Event 6"],
         puzzleNumber: 42,
         createdAt: Date.now(),
       };
@@ -102,14 +79,7 @@ describe("usePuzzleData Integration Tests", () => {
       expect(result.current.puzzle).toEqual({
         id: "puzzle-42",
         targetYear: 1776,
-        events: [
-          "Declaration signed",
-          "Event 2",
-          "Event 3",
-          "Event 4",
-          "Event 5",
-          "Event 6",
-        ],
+        events: ["Declaration signed", "Event 2", "Event 3", "Event 4", "Event 5", "Event 6"],
         puzzleNumber: 42,
       });
     });
@@ -131,14 +101,7 @@ describe("usePuzzleData Integration Tests", () => {
       const mockPuzzle1 = {
         _id: "puzzle-1",
         targetYear: 1969,
-        events: [
-          "Event 1",
-          "Event 2",
-          "Event 3",
-          "Event 4",
-          "Event 5",
-          "Event 6",
-        ],
+        events: ["Event 1", "Event 2", "Event 3", "Event 4", "Event 5", "Event 6"],
         puzzleNumber: 1,
         createdAt: Date.now(),
       };
@@ -160,10 +123,9 @@ describe("usePuzzleData Integration Tests", () => {
 
       vi.mocked(useQuery).mockReturnValue(mockPuzzle1);
 
-      const { result, rerender } = renderHook(
-        ({ puzzleNumber }) => usePuzzleData(puzzleNumber),
-        { initialProps: { puzzleNumber: 1 } },
-      );
+      const { result, rerender } = renderHook(({ puzzleNumber }) => usePuzzleData(puzzleNumber), {
+        initialProps: { puzzleNumber: 1 },
+      });
 
       expect(result.current.puzzle?.id).toBe("puzzle-1");
 
@@ -179,14 +141,7 @@ describe("usePuzzleData Integration Tests", () => {
       const mockPuzzle = {
         _id: "puzzle-1",
         targetYear: 1969,
-        events: [
-          "Event 1",
-          "Event 2",
-          "Event 3",
-          "Event 4",
-          "Event 5",
-          "Event 6",
-        ],
+        events: ["Event 1", "Event 2", "Event 3", "Event 4", "Event 5", "Event 6"],
         puzzleNumber: 1,
         createdAt: Date.now(),
       };

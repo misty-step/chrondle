@@ -52,9 +52,7 @@ export function useDebugMode(gameState: GameState): UseDebugModeReturn {
     const activeParams: string[] = [];
     if (debugYear) activeParams.push(`year=${debugYear}`);
     if (scenario) activeParams.push(`scenario=${scenario}`);
-    const debugParams = activeParams.length
-      ? activeParams.join(" | ")
-      : "Basic debug mode";
+    const debugParams = activeParams.length ? activeParams.join(" | ") : "Basic debug mode";
 
     return {
       isDebugMode,
@@ -122,9 +120,7 @@ export function useDebugMode(gameState: GameState): UseDebugModeReturn {
     }
 
     document.addEventListener("keydown", handleDebugShortcuts);
-    logger.info(
-      "⌨️  Debug shortcuts: Ctrl+R (reset), Ctrl+C (clear storage), Ctrl+D (dump state)",
-    );
+    logger.info("⌨️  Debug shortcuts: Ctrl+R (reset), Ctrl+C (clear storage), Ctrl+D (dump state)");
 
     return () => {
       document.removeEventListener("keydown", handleDebugShortcuts);

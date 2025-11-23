@@ -13,9 +13,7 @@ export const isMobileDevice = (): boolean => {
     return false;
   }
 
-  return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent,
-  );
+  return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
 /**
@@ -43,11 +41,7 @@ export const getShareStrategy = (): ShareStrategy => {
   }
 
   // Use clipboard on desktop with modern browsers
-  if (
-    typeof navigator !== "undefined" &&
-    navigator.clipboard &&
-    window.isSecureContext
-  ) {
+  if (typeof navigator !== "undefined" && navigator.clipboard && window.isSecureContext) {
     return "clipboard";
   }
 
@@ -82,10 +76,7 @@ export const isTabletDevice = (): boolean => {
   }
 
   // Android tablet detection (approximate)
-  if (
-    /Android/i.test(navigator.userAgent) &&
-    !/Mobile/i.test(navigator.userAgent)
-  ) {
+  if (/Android/i.test(navigator.userAgent) && !/Mobile/i.test(navigator.userAgent)) {
     return true;
   }
 

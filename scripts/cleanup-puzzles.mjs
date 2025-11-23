@@ -39,12 +39,14 @@ console.log("5. Delete all records (they were created with the wrong approach)")
 console.log("\nAfter cleaning up, run: node scripts/migrate-year-events.mjs");
 console.log("\nPress Enter to open the Convex dashboard...");
 
-process.stdin.once('data', () => {
+process.stdin.once("data", () => {
   console.log("Opening Convex dashboard...");
-  import('open').then(open => {
-    open.default("https://dashboard.convex.dev");
-  }).catch(() => {
-    console.log("Please open https://dashboard.convex.dev manually");
-  });
+  import("open")
+    .then((open) => {
+      open.default("https://dashboard.convex.dev");
+    })
+    .catch(() => {
+      console.log("Please open https://dashboard.convex.dev manually");
+    });
   process.exit(0);
 });

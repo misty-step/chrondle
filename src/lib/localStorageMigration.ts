@@ -128,8 +128,7 @@ export function migrateLegacyLocalStorage(): MigrationResult {
 
         // Check if key matches any removal pattern
         const shouldRemove =
-          removePatterns.some((pattern) => pattern.test(key)) ||
-          removeKeys.includes(key);
+          removePatterns.some((pattern) => pattern.test(key)) || removeKeys.includes(key);
 
         if (shouldRemove) {
           // Log the data before removal for debugging (in dev only)
@@ -142,14 +141,9 @@ export function migrateLegacyLocalStorage(): MigrationResult {
               if (value && value.includes("guesses")) {
                 const data = JSON.parse(value);
                 if (data.guesses && Array.isArray(data.guesses)) {
-                  const hasNegativeYears = data.guesses.some(
-                    (g: number) => g < 0,
-                  );
+                  const hasNegativeYears = data.guesses.some((g: number) => g < 0);
                   if (hasNegativeYears) {
-                    logger.debug(
-                      `Found negative years (BC) in ${key}:`,
-                      data.guesses,
-                    );
+                    logger.debug(`Found negative years (BC) in ${key}:`, data.guesses);
                   }
                 }
               }
@@ -219,10 +213,7 @@ export function runMigrationOnInit(): void {
     try {
       sessionStorage.setItem(migrationKey, "true");
     } catch (error) {
-      logger.warn(
-        "Could not mark migration as complete in sessionStorage:",
-        error,
-      );
+      logger.warn("Could not mark migration as complete in sessionStorage:", error);
     }
   }
 }

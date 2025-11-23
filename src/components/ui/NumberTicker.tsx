@@ -54,8 +54,7 @@ export const NumberTicker: React.FC<NumberTickerProps> = ({
 
     if (delta > maxDelta && startValue === undefined) {
       // For large jumps without explicit startValue, use a closer starting point
-      const clampedStart =
-        value > currentValue ? value - maxDelta : value + maxDelta;
+      const clampedStart = value > currentValue ? value - maxDelta : value + maxDelta;
 
       logger.debug(
         `NumberTicker clamping large jump: ${currentValue} → ${clampedStart} → ${value}`,

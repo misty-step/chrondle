@@ -8,10 +8,7 @@ export function useUserData() {
   const { isUserReady, userCreationLoading, currentUser } = useUserCreation();
 
   // Only fetch user stats when user is ready (signed in + user record exists + not creating)
-  const userStats = useQuery(
-    api.users.getUserStats,
-    isUserReady && currentUser ? {} : undefined,
-  );
+  const userStats = useQuery(api.users.getUserStats, isUserReady && currentUser ? {} : undefined);
 
   // Comprehensive loading state that accounts for:
   // 1. Clerk authentication loading

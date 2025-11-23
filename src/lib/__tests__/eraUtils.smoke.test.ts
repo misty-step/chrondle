@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  convertToInternalYear,
-  convertFromInternalYear,
-  formatEraYear,
-} from "../eraUtils";
+import { convertToInternalYear, convertFromInternalYear, formatEraYear } from "../eraUtils";
 
 describe("Era Conversion Smoke Tests", () => {
   it("era conversion handles full range", () => {

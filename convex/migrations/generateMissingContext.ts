@@ -47,9 +47,7 @@ export const generateMissingContext = internalMutation({
       startFromPuzzle = 1,
     } = args;
 
-    console.error(
-      `[Migration] Starting historical context generation migration`,
-    );
+    console.error(`[Migration] Starting historical context generation migration`);
     console.error(
       `[Migration] Config: batchSize=${batchSize}, delayMs=${delayMs}, dryRun=${dryRun}, testMode=${testMode}`,
     );
@@ -62,9 +60,7 @@ export const generateMissingContext = internalMutation({
 
       // Apply puzzle number filtering if specified
       if (startFromPuzzle > 1) {
-        puzzlesQuery = puzzlesQuery.filter((q) =>
-          q.gte(q.field("puzzleNumber"), startFromPuzzle),
-        );
+        puzzlesQuery = puzzlesQuery.filter((q) => q.gte(q.field("puzzleNumber"), startFromPuzzle));
       }
 
       // Order by puzzle number ascending for consistent processing
@@ -73,14 +69,10 @@ export const generateMissingContext = internalMutation({
         .sort((a, b) => a.puzzleNumber - b.puzzleNumber)
         .slice(0, maxPuzzles || allPuzzles.length);
 
-      console.error(
-        `[Migration] Found ${sortedPuzzles.length} puzzles missing historical context`,
-      );
+      console.error(`[Migration] Found ${sortedPuzzles.length} puzzles missing historical context`);
 
       if (sortedPuzzles.length === 0) {
-        console.error(
-          `[Migration] No puzzles found needing historical context generation`,
-        );
+        console.error(`[Migration] No puzzles found needing historical context generation`);
         return {
           success: true,
           message: "No puzzles need historical context generation",
@@ -95,9 +87,7 @@ export const generateMissingContext = internalMutation({
 
       // Dry run mode - just count and report
       if (dryRun) {
-        console.error(
-          `[Migration] DRY RUN: Would process ${sortedPuzzles.length} puzzles`,
-        );
+        console.error(`[Migration] DRY RUN: Would process ${sortedPuzzles.length} puzzles`);
         console.error(
           `[Migration] DRY RUN: Would create ${Math.ceil(sortedPuzzles.length / batchSize)} batches`,
         );
@@ -126,8 +116,7 @@ export const generateMissingContext = internalMutation({
             scheduled: 0,
             errors: 0,
             batches: Math.ceil(sortedPuzzles.length / batchSize),
-            estimatedTimeSeconds:
-              Math.ceil(sortedPuzzles.length / batchSize) * (delayMs / 1000),
+            estimatedTimeSeconds: Math.ceil(sortedPuzzles.length / batchSize) * (delayMs / 1000),
           },
         };
       }
@@ -136,9 +125,7 @@ export const generateMissingContext = internalMutation({
       if (testMode) {
         let testPuzzle;
         if (testPuzzleNumber) {
-          testPuzzle = sortedPuzzles.find(
-            (p) => p.puzzleNumber === testPuzzleNumber,
-          );
+          testPuzzle = sortedPuzzles.find((p) => p.puzzleNumber === testPuzzleNumber);
           if (!testPuzzle) {
             throw new Error(
               `Test puzzle number ${testPuzzleNumber} not found in missing context puzzles`,
@@ -218,8 +205,7 @@ export const generateMissingContext = internalMutation({
         for (const puzzle of batch) {
           try {
             // Calculate delay for this puzzle (spread out within batch)
-            const puzzleDelay =
-              batchIndex * delayMs + batch.indexOf(puzzle) * 500; // 500ms between puzzles in batch
+            const puzzleDelay = batchIndex * delayMs + batch.indexOf(puzzle) * 500; // 500ms between puzzles in batch
 
             await ctx.scheduler.runAfter(
               puzzleDelay,
@@ -237,19 +223,14 @@ export const generateMissingContext = internalMutation({
             );
           } catch (error) {
             errors++;
-            console.error(
-              `[Migration] Failed to schedule puzzle ${puzzle.puzzleNumber}:`,
-              error,
-            );
+            console.error(`[Migration] Failed to schedule puzzle ${puzzle.puzzleNumber}:`, error);
           }
 
           processed++;
         }
 
         // Progress update
-        const progressPercent = Math.round(
-          (processed / sortedPuzzles.length) * 100,
-        );
+        const progressPercent = Math.round((processed / sortedPuzzles.length) * 100);
         console.error(
           `[Migration] Progress: ${processed}/${sortedPuzzles.length} puzzles processed (${progressPercent}%), ${scheduled} scheduled, ${errors} errors`,
         );

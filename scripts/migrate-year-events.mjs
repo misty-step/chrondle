@@ -2,7 +2,9 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api.js";
 import { readFileSync } from "fs";
-const puzzleData = JSON.parse(readFileSync(new URL("../src/data/puzzles.json", import.meta.url), "utf-8"));
+const puzzleData = JSON.parse(
+  readFileSync(new URL("../src/data/puzzles.json", import.meta.url), "utf-8"),
+);
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -44,18 +46,18 @@ async function migrateYearEvents() {
     try {
       // Import all events for this year
       console.log(`Importing year ${year} with ${events.length} events...`);
-      
+
       await client.mutation(api.yearEvents.importYearEvents, {
         year,
         events, // Import all events, not just the first 6
       });
 
       successCount++;
-      
+
       // Rate limiting to avoid overwhelming the database
       if (successCount % 10 === 0) {
         console.log(`Progress: ${successCount} years imported`);
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
     } catch (error) {
       console.error(`Error importing year ${year}:`, error);
@@ -66,7 +68,7 @@ async function migrateYearEvents() {
   console.log("\nMigration completed!");
   console.log(`Successfully imported: ${successCount} years`);
   console.log(`Errors: ${errorCount}`);
-  
+
   // Get pool statistics
   try {
     const stats = await client.query(api.yearEvents.getPoolStats);

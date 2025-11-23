@@ -35,7 +35,7 @@ async function testConnection() {
   try {
     console.log("\nTesting getTodaysPuzzle query...");
     const puzzle = await client.query(api.puzzles.getTodaysPuzzle);
-    
+
     if (puzzle) {
       console.log("✅ Successfully fetched today's puzzle!");
       console.log("   Date:", puzzle.date);

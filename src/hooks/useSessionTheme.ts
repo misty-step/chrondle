@@ -33,9 +33,7 @@ function getInitialSystemTheme(): "light" | "dark" {
   }
 
   try {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   } catch {
     return "light";
   }
@@ -50,9 +48,7 @@ function getInitialOverride(): ThemeOverride {
 export function useSessionTheme(): UseSessionThemeReturn {
   // Initialize with synchronously detected values to reduce flashing
   const [override, setOverride] = useState<ThemeOverride>(getInitialOverride);
-  const [systemTheme, setSystemTheme] = useState<"light" | "dark">(
-    getInitialSystemTheme,
-  );
+  const [systemTheme, setSystemTheme] = useState<"light" | "dark">(getInitialSystemTheme);
   const [isMounted, setIsMounted] = useState(false);
 
   // Use layout effect for theme-critical initialization that affects rendering

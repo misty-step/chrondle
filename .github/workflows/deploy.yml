@@ -67,7 +67,7 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         with:
           environment: production
-          sourcemaps: './.next'
+          sourcemaps: "./.next"
           version: ${{ github.sha }}
 
       # Step 6: Deploy to Convex (production)

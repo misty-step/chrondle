@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from "react";
 
 /**
  * Hook to trap focus within a modal or dialog element
@@ -12,41 +12,44 @@ export const useFocusTrap = (isActive: boolean) => {
 
   const getFocusableElements = useCallback((container: HTMLElement): HTMLElement[] => {
     const focusableSelectors = [
-      'button:not([disabled])',
-      'input:not([disabled])',
-      'select:not([disabled])',
-      'textarea:not([disabled])',
-      'a[href]',
+      "button:not([disabled])",
+      "input:not([disabled])",
+      "select:not([disabled])",
+      "textarea:not([disabled])",
+      "a[href]",
       '[tabindex]:not([tabindex="-1"])',
-      '[contenteditable]'
-    ].join(', ');
+      "[contenteditable]",
+    ].join(", ");
 
     return Array.from(container.querySelectorAll(focusableSelectors));
   }, []);
 
-  const trapFocus = useCallback((e: KeyboardEvent) => {
-    if (!isActive || !containerRef.current || e.key !== 'Tab') return;
+  const trapFocus = useCallback(
+    (e: KeyboardEvent) => {
+      if (!isActive || !containerRef.current || e.key !== "Tab") return;
 
-    const focusableElements = getFocusableElements(containerRef.current);
-    if (focusableElements.length === 0) return;
+      const focusableElements = getFocusableElements(containerRef.current);
+      if (focusableElements.length === 0) return;
 
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
 
-    if (e.shiftKey) {
-      // Shift + Tab: going backwards
-      if (document.activeElement === firstElement) {
-        e.preventDefault();
-        lastElement.focus();
+      if (e.shiftKey) {
+        // Shift + Tab: going backwards
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        }
+      } else {
+        // Tab: going forwards
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
       }
-    } else {
-      // Tab: going forwards
-      if (document.activeElement === lastElement) {
-        e.preventDefault();
-        firstElement.focus();
-      }
-    }
-  }, [isActive, getFocusableElements]);
+    },
+    [isActive, getFocusableElements],
+  );
 
   // Set up focus trap when activated
   useEffect(() => {
@@ -64,11 +67,11 @@ export const useFocusTrap = (isActive: boolean) => {
     }
 
     // Add event listener for tab trap
-    document.addEventListener('keydown', trapFocus);
+    document.addEventListener("keydown", trapFocus);
 
     return () => {
-      document.removeEventListener('keydown', trapFocus);
-      
+      document.removeEventListener("keydown", trapFocus);
+
       // Restore focus to the previously focused element
       if (previousActiveElement.current) {
         previousActiveElement.current.focus();

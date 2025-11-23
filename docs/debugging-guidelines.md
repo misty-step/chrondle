@@ -336,9 +336,7 @@ useEffect(() => {
 ```typescript
 // Debug storage operations
 const debugStorage = () => {
-  const allKeys = Object.keys(localStorage).filter((k) =>
-    k.startsWith("chrondle-"),
-  );
+  const allKeys = Object.keys(localStorage).filter((k) => k.startsWith("chrondle-"));
 
   logger.debug("Chrondle storage state", {
     keys: allKeys,

@@ -16,7 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { generateAnchorHint, generateBracketHint, generateRelativeHint } from "@/lib/order/hints";
 import { deriveLockedPositions } from "@/lib/order/engine";
 import { calculateOrderScore } from "@/lib/order/scoring";
-import { copyOrderShareTextToClipboard, type OrderShareResult } from "@/lib/order/shareCard";
+import { generateOrderShareText, type OrderShareResult } from "@/lib/order/shareCard";
+import { useShare } from "@/hooks/useShare";
 import { logger } from "@/lib/logger";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 
@@ -32,6 +33,10 @@ function ArchiveOrderPuzzleContent({
   const parsedNumber = parseInt(puzzleNumber, 10);
   const { gameState, reorderEvents, takeHint, commitOrdering } = useOrderGame(parsedNumber);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+  const { share } = useShare({
+    onSuccess: () => setShareFeedback("Shared!"),
+    onError: () => setShareFeedback("Share failed"),
+  });
 
   if (gameState.status === "loading-puzzle") {
     return renderShell("Loading Order puzzle…");
@@ -47,23 +52,18 @@ function ArchiveOrderPuzzleContent({
 
   if (gameState.status === "completed") {
     const handleShare = async () => {
-      try {
-        const results: OrderShareResult[] = gameState.correctOrder.map((id, idx) =>
-          gameState.finalOrder[idx] === id ? "correct" : "incorrect",
-        );
+      const results: OrderShareResult[] = gameState.correctOrder.map((id, idx) =>
+        gameState.finalOrder[idx] === id ? "correct" : "incorrect",
+      );
 
-        await copyOrderShareTextToClipboard({
-          dateLabel: gameState.puzzle.date,
-          puzzleNumber: gameState.puzzle.puzzleNumber,
-          results,
-          score: gameState.score,
-        });
+      const text = generateOrderShareText({
+        dateLabel: gameState.puzzle.date,
+        puzzleNumber: gameState.puzzle.puzzleNumber,
+        results,
+        score: gameState.score,
+      });
 
-        setShareFeedback("Copied to clipboard!");
-      } catch (error) {
-        logger.error("Failed to copy Order share text", error);
-        setShareFeedback("Share failed. Try again.");
-      }
+      await share(text);
     };
 
     return (

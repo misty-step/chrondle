@@ -71,10 +71,7 @@ describe("secureStorage", () => {
       invalidKeys.forEach((key) => {
         const result = secureSetItem(key, { test: "data" });
         expect(result).toBe(false);
-        expect(localStorageMock.setItem).not.toHaveBeenCalledWith(
-          key,
-          expect.anything(),
-        );
+        expect(localStorageMock.setItem).not.toHaveBeenCalledWith(key, expect.anything());
       });
     });
 
@@ -158,10 +155,7 @@ describe("secureStorage", () => {
       expect(result).toBe(true); // Should store as string
 
       // Manually inject actual function into localStorage
-      localStorageMock.setItem(
-        "func-key",
-        '{"data": "test", "func": function() {}}',
-      );
+      localStorageMock.setItem("func-key", '{"data": "test", "func": function() {}}');
       const retrieved = secureGetItem("func-key");
       expect(retrieved).toBe(null); // Should reject invalid JSON
     });
@@ -193,11 +187,7 @@ describe("secureStorage", () => {
         timestamp: Date.now(),
       };
 
-      const result = secureSetItem(
-        "game-state",
-        validState,
-        anonymousGameStateSchema,
-      );
+      const result = secureSetItem("game-state", validState, anonymousGameStateSchema);
       expect(result).toBe(true);
 
       const retrieved = secureGetItem("game-state", anonymousGameStateSchema);
@@ -244,11 +234,7 @@ describe("secureStorage", () => {
       ];
 
       invalidStates.forEach((state) => {
-        const result = secureSetItem(
-          "game-state",
-          state,
-          anonymousGameStateSchema,
-        );
+        const result = secureSetItem("game-state", state, anonymousGameStateSchema);
         expect(result).toBe(false);
       });
     });

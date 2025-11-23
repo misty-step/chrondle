@@ -3,25 +3,14 @@
 import { cn } from "@/lib/utils";
 import React, { MouseEvent, useEffect, useState } from "react";
 
-interface RippleButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface RippleButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   rippleColor?: string;
   duration?: string;
 }
 
-export const RippleButton = React.forwardRef<
-  HTMLButtonElement,
-  RippleButtonProps
->(
+export const RippleButton = React.forwardRef<HTMLButtonElement, RippleButtonProps>(
   (
-    {
-      className,
-      children,
-      rippleColor = "#ffffff",
-      duration = "600ms",
-      onClick,
-      ...props
-    },
+    { className, children, rippleColor = "#ffffff", duration = "600ms", onClick, ...props },
     ref,
   ) => {
     const [buttonRipples, setButtonRipples] = useState<
@@ -59,7 +48,7 @@ export const RippleButton = React.forwardRef<
     return (
       <button
         className={cn(
-          "relative flex cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 bg-background px-4 py-2 text-center text-primary",
+          "bg-background text-primary relative flex cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 px-4 py-2 text-center",
           className,
         )}
         onClick={handleClick}
@@ -70,7 +59,7 @@ export const RippleButton = React.forwardRef<
         <span className="pointer-events-none absolute inset-0">
           {buttonRipples.map((ripple) => (
             <span
-              className="absolute animate-rippling rounded-full bg-background opacity-30"
+              className="animate-rippling bg-background absolute rounded-full opacity-30"
               key={ripple.key}
               style={{
                 width: `${ripple.size}px`,

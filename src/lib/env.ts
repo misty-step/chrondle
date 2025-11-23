@@ -37,9 +37,7 @@ export function validateEnvironment(): EnvValidationResult {
 
   // Check optional but recommended variables
   if (!process.env.OPENROUTER_API_KEY) {
-    result.warnings.push(
-      "OPENROUTER_API_KEY is not set - AI features will be disabled",
-    );
+    result.warnings.push("OPENROUTER_API_KEY is not set - AI features will be disabled");
   }
 
   // Log validation results
@@ -64,9 +62,7 @@ export function validateEnvironment(): EnvValidationResult {
  */
 export function validateServerEnvironment(): void {
   if (!process.env.OPENROUTER_API_KEY) {
-    throw new Error(
-      "OPENROUTER_API_KEY is required for AI historical context generation",
-    );
+    throw new Error("OPENROUTER_API_KEY is required for AI historical context generation");
   }
 }
 

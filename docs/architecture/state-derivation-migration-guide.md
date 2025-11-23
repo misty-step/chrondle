@@ -91,10 +91,7 @@ export function useUserProfile() {
 
 // Step 1: Create orthogonal data hooks
 function useProfileData(userId: string | null) {
-  const data = useQuery(
-    userId ? api.users.getProfile : "skip",
-    userId ? { userId } : "skip",
-  );
+  const data = useQuery(userId ? api.users.getProfile : "skip", userId ? { userId } : "skip");
 
   return useMemo(
     () => ({
@@ -107,10 +104,7 @@ function useProfileData(userId: string | null) {
 }
 
 function usePostsData(userId: string | null) {
-  const data = useQuery(
-    userId ? api.posts.getUserPosts : "skip",
-    userId ? { userId } : "skip",
-  );
+  const data = useQuery(userId ? api.posts.getUserPosts : "skip", userId ? { userId } : "skip");
 
   return useMemo(
     () => ({
@@ -166,8 +160,7 @@ function deriveProfileState(sources: {
     status: "ready",
     profile: sources.profile.profile,
     posts: sources.posts.posts,
-    displayName:
-      sources.profile.profile.name || sources.auth.email || "Anonymous",
+    displayName: sources.profile.profile.name || sources.auth.email || "Anonymous",
     isComplete: sources.posts.posts.length > 0,
   };
 }
@@ -178,10 +171,7 @@ export function useUserProfile() {
   const profile = useProfileData(auth.userId);
   const posts = usePostsData(auth.userId);
 
-  return useMemo(
-    () => deriveProfileState({ auth, profile, posts }),
-    [auth, profile, posts],
-  );
+  return useMemo(() => deriveProfileState({ auth, profile, posts }), [auth, profile, posts]);
 }
 ```
 
@@ -266,10 +256,7 @@ export function useComponent() {
   const sourceB = useDataSourceB();
 
   // Derive state
-  const state = useMemo(
-    () => deriveState({ sourceA, sourceB }),
-    [sourceA, sourceB],
-  );
+  const state = useMemo(() => deriveState({ sourceA, sourceB }), [sourceA, sourceB]);
 
   // Add actions if needed
   const actions = useActions({ sourceA, sourceB });
@@ -464,10 +451,7 @@ function useOptimisticData() {
 
 ```typescript
 function useLazyDataSource(shouldLoad: boolean) {
-  const data = useQuery(
-    shouldLoad ? api.endpoint : "skip",
-    shouldLoad ? params : "skip",
-  );
+  const data = useQuery(shouldLoad ? api.endpoint : "skip", shouldLoad ? params : "skip");
 
   return useMemo(
     () => ({

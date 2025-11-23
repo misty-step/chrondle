@@ -4,7 +4,8 @@ import React from "react";
 
 import { formatYear, pluralize } from "@/lib/displayFormatting";
 import { SCORING_CONSTANTS } from "@/lib/scoring";
-import { useShareGame } from "@/hooks/useShareGame";
+import { useShare } from "@/hooks/useShare";
+import { generateShareText } from "@/lib/sharing/generator";
 import type { RangeGuess } from "@/types/range";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -165,15 +166,17 @@ export function GameComplete({
   const displayedFinalScore = hasWon ? finalRangeScore : 0;
   const outcomeCopy = buildOutcomeCopy(hasWon, primaryRange, targetYear);
 
-  const { shareGame, shareStatus, isSharing } = useShareGame(
-    ranges,
-    totalScore,
-    hasWon,
-    puzzleNumber,
-    {
-      targetYear,
+  const { share, shareStatus, isSharing } = useShare({
+    onSuccess: () => {
+      if (hasWon) {
+        window.dispatchEvent(new CustomEvent("chrondle:celebrate"));
+      }
     },
-  );
+  });
+
+  const shareText = generateShareText(ranges, totalScore, hasWon, puzzleNumber, {
+    targetYear,
+  });
 
   const shareButtonLabel = (() => {
     if (isSharing) return "Sharing…";
@@ -241,7 +244,7 @@ export function GameComplete({
         </div>
 
         <Button
-          onClick={() => shareGame()}
+          onClick={() => share(shareText)}
           disabled={isSharing}
           className={cn(
             "w-full justify-center gap-2 text-sm font-semibold text-white",

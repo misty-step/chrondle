@@ -74,9 +74,7 @@ describe("Convex ID Validation Utilities", () => {
     });
 
     it("should throw ConvexIdValidationError for invalid ID", () => {
-      expect(() => assertConvexId(clerkId, "users")).toThrow(
-        ConvexIdValidationError,
-      );
+      expect(() => assertConvexId(clerkId, "users")).toThrow(ConvexIdValidationError);
     });
 
     it("should include ID and type in error message", () => {
@@ -95,9 +93,7 @@ describe("Convex ID Validation Utilities", () => {
     });
 
     it("should throw for empty string", () => {
-      expect(() => assertConvexId("", "users")).toThrow(
-        ConvexIdValidationError,
-      );
+      expect(() => assertConvexId("", "users")).toThrow(ConvexIdValidationError);
     });
 
     it("should work with different table types", () => {
@@ -197,12 +193,7 @@ describe("Convex ID Validation Utilities", () => {
 
       expect(result.allValid).toBe(false);
       expect(result.valid).toEqual(["validId1", "validId2"]);
-      expect(result.invalid).toEqual([
-        "invalidId1",
-        "invalidId2",
-        "nullId",
-        "undefinedId",
-      ]);
+      expect(result.invalid).toEqual(["invalidId1", "invalidId2", "nullId", "undefinedId"]);
       expect(result.results).toEqual({
         validId1: true,
         validId2: true,
@@ -290,11 +281,7 @@ describe("Convex ID Validation Utilities", () => {
     });
 
     it("should store id and type properties", () => {
-      const error = new ConvexIdValidationError(
-        "test message",
-        "testId",
-        "testType",
-      );
+      const error = new ConvexIdValidationError("test message", "testId", "testType");
       expect(error.message).toBe("test message");
       expect(error.id).toBe("testId");
       expect(error.type).toBe("testType");

@@ -27,12 +27,8 @@ describe("Display Formatting Utilities", () => {
     });
 
     it("formats with abbreviated style", () => {
-      expect(formatYearWithOptions(-776, { style: "abbreviated" })).toBe(
-        "776 B",
-      );
-      expect(formatYearWithOptions(1969, { style: "abbreviated" })).toBe(
-        "1969 A",
-      );
+      expect(formatYearWithOptions(-776, { style: "abbreviated" })).toBe("776 B");
+      expect(formatYearWithOptions(1969, { style: "abbreviated" })).toBe("1969 A");
     });
 
     it("formats with BCE/CE style", () => {
@@ -73,9 +69,7 @@ describe("Display Formatting Utilities", () => {
 
     it("applies formatting options", () => {
       expect(formatYearWithEra(776, "BC", { style: "bce-ce" })).toBe("776 BCE");
-      expect(formatYearWithEra(1969, "AD", { style: "compact" })).toBe(
-        "1969ad",
-      );
+      expect(formatYearWithEra(1969, "AD", { style: "compact" })).toBe("1969ad");
     });
   });
 
@@ -105,9 +99,7 @@ describe("Display Formatting Utilities", () => {
     });
 
     it("applies formatting options", () => {
-      expect(formatYearRange(-776, -500, { style: "bce-ce" })).toBe(
-        "776–500 BCE",
-      );
+      expect(formatYearRange(-776, -500, { style: "bce-ce" })).toBe("776–500 BCE");
       expect(formatYearRange(100, 200, { style: "compact" })).toBe("100–200ad");
     });
 

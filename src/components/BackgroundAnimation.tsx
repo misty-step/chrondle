@@ -1,12 +1,12 @@
 // Background Animation Component for Chrondle
 // Renders ambient parchment and star animations based on game progress
 
-'use client';
+"use client";
 
-import React from 'react';
-import { useBackgroundAnimation } from '@/hooks/useBackgroundAnimation';
-import { AnimationPhase, ANIMATION_CONFIG } from '@/lib/backgroundAnimation';
-import '@/styles/background-animation.css';
+import React from "react";
+import { useBackgroundAnimation } from "@/hooks/useBackgroundAnimation";
+import { AnimationPhase, ANIMATION_CONFIG } from "@/lib/backgroundAnimation";
+import "@/styles/background-animation.css";
 
 export interface BackgroundAnimationProps {
   guesses: number[];
@@ -19,17 +19,17 @@ export interface BackgroundAnimationProps {
  * BackgroundAnimation component provides ambient visual feedback
  * that intensifies as player guesses get closer to the target year
  */
-export function BackgroundAnimation({ 
-  guesses, 
-  targetYear, 
+export function BackgroundAnimation({
+  guesses,
+  targetYear,
   isGameOver,
-  className = ''
+  className = "",
 }: BackgroundAnimationProps) {
   const { phase, isAnimating } = useBackgroundAnimation({
     guesses,
     targetYear,
     isGameOver,
-    respectsReducedMotion: true
+    respectsReducedMotion: true,
   });
 
   // Don't render anything if animation is disabled or no animation needed
@@ -41,13 +41,13 @@ export function BackgroundAnimation({
   const starCount = ANIMATION_CONFIG.ELEMENT_COUNT[phase];
   const stars = Array.from({ length: starCount }, (_, index) => {
     // Vary star sizes based on index for visual interest
-    let starClass = 'star';
+    let starClass = "star";
     if (index % 5 === 0) {
-      starClass += ' star--large';
+      starClass += " star--large";
     } else if (index % 3 === 0) {
-      starClass += ' star--medium';
+      starClass += " star--medium";
     } else {
-      starClass += ' star--small';
+      starClass += " star--small";
     }
 
     return (
@@ -57,7 +57,7 @@ export function BackgroundAnimation({
         style={{
           // Distribute stars across viewport with some randomness
           // but keep positions consistent for each phase
-          animationDelay: `${(index * 0.3) % parseFloat(ANIMATION_CONFIG.DURATIONS[phase].toString())}s`
+          animationDelay: `${(index * 0.3) % parseFloat(ANIMATION_CONFIG.DURATIONS[phase].toString())}s`,
         }}
       />
     );
@@ -67,12 +67,9 @@ export function BackgroundAnimation({
     <div className={`background-animation ${className}`}>
       {/* Parchment texture layer */}
       <div className="parchment-layer" />
-      
+
       {/* Stars layer with phase-specific positioning */}
-      <div 
-        className="stars-layer" 
-        data-phase={phase}
-      >
+      <div className="stars-layer" data-phase={phase}>
         {stars}
       </div>
     </div>

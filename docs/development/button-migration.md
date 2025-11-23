@@ -88,19 +88,9 @@ interface RippleButtonProps extends ButtonProps {
   duration?: string;
 }
 
-export const RippleButton = React.forwardRef<
-  HTMLButtonElement,
-  RippleButtonProps
->(
+export const RippleButton = React.forwardRef<HTMLButtonElement, RippleButtonProps>(
   (
-    {
-      className,
-      rippleColor = "#ffffff",
-      duration = "600ms",
-      onClick,
-      children,
-      ...props
-    },
+    { className, rippleColor = "#ffffff", duration = "600ms", onClick, children, ...props },
     ref,
   ) => {
     const [ripples, setRipples] = useState<
@@ -127,9 +117,7 @@ export const RippleButton = React.forwardRef<
       if (ripples.length > 0) {
         const lastRipple = ripples[ripples.length - 1];
         const timeout = setTimeout(() => {
-          setRipples((prev) =>
-            prev.filter((ripple) => ripple.key !== lastRipple.key),
-          );
+          setRipples((prev) => prev.filter((ripple) => ripple.key !== lastRipple.key));
         }, parseInt(duration));
         return () => clearTimeout(timeout);
       }
@@ -146,7 +134,7 @@ export const RippleButton = React.forwardRef<
         <span className="pointer-events-none absolute inset-0">
           {ripples.map((ripple) => (
             <span
-              className="absolute animate-rippling rounded-full bg-background opacity-30"
+              className="animate-rippling bg-background absolute rounded-full opacity-30"
               key={ripple.key}
               style={{
                 width: `${ripple.size}px`,

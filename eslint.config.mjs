@@ -32,36 +32,42 @@ const eslintConfig = [
       "@typescript-eslint/no-unused-vars": [
         "error",
         {
-          "argsIgnorePattern": "^_",
-          "varsIgnorePattern": "^_",
-          "destructuredArrayIgnorePattern": "^_"
-        }
-      ]
-    }
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+        },
+      ],
+    },
   },
   {
     // Allow console usage in logger.ts itself (where logger is implemented)
     files: ["src/lib/logger.ts"],
     rules: {
-      "no-console": "off"
-    }
+      "no-console": "off",
+    },
   },
   {
     // Allow console usage in scripts and test files
-    files: ["scripts/**/*.js", "scripts/**/*.mjs", "**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"],
+    files: [
+      "scripts/**/*.js",
+      "scripts/**/*.mjs",
+      "**/__tests__/**",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+    ],
     rules: {
       "no-console": "off",
       "@typescript-eslint/no-require-imports": "off",
-      "@typescript-eslint/no-unused-vars": "warn"
-    }
+      "@typescript-eslint/no-unused-vars": "warn",
+    },
   },
   {
     // Allow console usage in Convex actions (Node.js context, not browser)
     files: ["convex/actions/**/*.ts", "convex/**/*.ts"],
     rules: {
-      "no-console": "off"
-    }
-  }
+      "no-console": "off",
+    },
+  },
 ];
 
 export default eslintConfig;

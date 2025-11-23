@@ -41,7 +41,7 @@ async function verifyDeployment() {
     // Try a simple query to verify connection
     await client.query(api.puzzles.getArchivePuzzles, {
       page: 1,
-      pageSize: 1
+      pageSize: 1,
     });
     console.log("   ✅ Convex connection successful");
   } catch (error) {
@@ -55,7 +55,7 @@ async function verifyDeployment() {
   console.log("\n2️⃣  Checking event data...");
   try {
     const eventStats = await client.query(api.events.getEventPoolStats);
-    
+
     if (eventStats.totalEvents === 0) {
       console.error("   ❌ No events found in database!");
       console.error("   Run 'pnpm migrate-events' to populate events");
@@ -65,8 +65,10 @@ async function verifyDeployment() {
       console.log(`      - ${eventStats.assignedEvents} assigned to puzzles`);
       console.log(`      - ${eventStats.unassignedEvents} available for new puzzles`);
       console.log(`      - ${eventStats.uniqueYears} unique years`);
-      console.log(`      - ${eventStats.availableYearsForPuzzles} years ready for puzzle generation`);
-      
+      console.log(
+        `      - ${eventStats.availableYearsForPuzzles} years ready for puzzle generation`,
+      );
+
       if (eventStats.availableYearsForPuzzles === 0) {
         console.warn("   ⚠️  Warning: No years have enough events for new puzzles!");
         hasErrors = true;
@@ -82,22 +84,22 @@ async function verifyDeployment() {
   try {
     const recentPuzzles = await client.query(api.puzzles.getArchivePuzzles, {
       page: 1,
-      pageSize: 7 // Last week
+      pageSize: 7, // Last week
     });
-    
+
     if (recentPuzzles.puzzles.length === 0) {
       console.error("   ❌ No puzzles found in database!");
       console.error("   Cron job may not be running");
       hasErrors = true;
     } else {
       // Check if puzzles are being generated daily
-      const puzzleDates = recentPuzzles.puzzles.map(p => p.date);
+      const puzzleDates = recentPuzzles.puzzles.map((p) => p.date);
       const today = new Date().toISOString().slice(0, 10);
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-      
+
       console.log(`   ✅ Found ${recentPuzzles.puzzles.length} recent puzzles`);
       console.log(`      Latest puzzle: ${puzzleDates[0]}`);
-      
+
       // Check if today's or yesterday's puzzle exists (allowing for timezone differences)
       if (!puzzleDates.includes(today) && !puzzleDates.includes(yesterday)) {
         console.warn("   ⚠️  Warning: No puzzle for today or yesterday found");
@@ -106,19 +108,19 @@ async function verifyDeployment() {
       } else {
         console.log("   ✅ Daily puzzle generation appears to be working");
       }
-      
+
       // Check for gaps in recent puzzles
       const sortedDates = puzzleDates.sort().reverse();
       let gaps = 0;
       for (let i = 1; i < sortedDates.length; i++) {
-        const date1 = new Date(sortedDates[i-1]);
+        const date1 = new Date(sortedDates[i - 1]);
         const date2 = new Date(sortedDates[i]);
         const dayDiff = Math.floor((date1 - date2) / 86400000);
         if (dayDiff > 1) {
           gaps++;
         }
       }
-      
+
       if (gaps > 0) {
         console.warn(`   ⚠️  Warning: Found ${gaps} gap(s) in recent puzzle dates`);
       }
@@ -132,17 +134,19 @@ async function verifyDeployment() {
   console.log("\n4️⃣  Checking today's puzzle...");
   try {
     const todaysPuzzle = await client.query(api.puzzles.getDailyPuzzle);
-    
+
     if (todaysPuzzle) {
       console.log("   ✅ Today's puzzle is available");
       console.log(`      - Date: ${todaysPuzzle.date}`);
       console.log(`      - Target Year: ${todaysPuzzle.targetYear}`);
       console.log(`      - Events: ${todaysPuzzle.events.length}`);
       console.log(`      - Play count: ${todaysPuzzle.playCount}`);
-      
+
       // Verify puzzle integrity
       if (todaysPuzzle.events.length !== 6) {
-        console.error(`   ❌ Today's puzzle has ${todaysPuzzle.events.length} events (expected 6)!`);
+        console.error(
+          `   ❌ Today's puzzle has ${todaysPuzzle.events.length} events (expected 6)!`,
+        );
         hasErrors = true;
       }
     } else {
@@ -169,7 +173,7 @@ async function verifyDeployment() {
 }
 
 // Run verification
-verifyDeployment().catch(error => {
+verifyDeployment().catch((error) => {
   console.error("❌ Unexpected error during verification:", error);
   process.exit(1);
 });

@@ -116,9 +116,7 @@ describe("LocalStorage Migration", () => {
       expect(result.success).toBe(true);
       expect(result.migratedKeys).toContain("chrondle-progress-2024-01-01");
       expect(result.migratedKeys).toContain("chrondle-settings");
-      expect(localStorageMock.getItem("chrondle-anonymous-id")).toBe(
-        anonymousId,
-      );
+      expect(localStorageMock.getItem("chrondle-anonymous-id")).toBe(anonymousId);
     });
 
     it("removes old progress keys", () => {
@@ -136,12 +134,8 @@ describe("LocalStorage Migration", () => {
       expect(result.success).toBe(true);
       expect(result.migratedKeys).toContain("chrondle-progress-2024-01-01");
       expect(result.migratedKeys).toContain("chrondle-progress-2024-01-02");
-      expect(
-        localStorageMock.getItem("chrondle-progress-2024-01-01"),
-      ).toBeNull();
-      expect(
-        localStorageMock.getItem("chrondle-progress-2024-01-02"),
-      ).toBeNull();
+      expect(localStorageMock.getItem("chrondle-progress-2024-01-01")).toBeNull();
+      expect(localStorageMock.getItem("chrondle-progress-2024-01-02")).toBeNull();
     });
 
     it("handles negative years (BC years) in old data", () => {
@@ -150,18 +144,13 @@ describe("LocalStorage Migration", () => {
         isGameOver: false,
         puzzleYear: -776,
       };
-      localStorageMock.setItem(
-        "chrondle-progress-2024-01-01",
-        JSON.stringify(oldData),
-      );
+      localStorageMock.setItem("chrondle-progress-2024-01-01", JSON.stringify(oldData));
 
       const result = migrateLegacyLocalStorage();
 
       expect(result.success).toBe(true);
       expect(result.migratedKeys).toContain("chrondle-progress-2024-01-01");
-      expect(
-        localStorageMock.getItem("chrondle-progress-2024-01-01"),
-      ).toBeNull();
+      expect(localStorageMock.getItem("chrondle-progress-2024-01-01")).toBeNull();
     });
 
     it("removes all legacy keys", () => {
@@ -214,21 +203,15 @@ describe("LocalStorage Migration", () => {
 
       // First run
       runMigrationOnInit();
-      expect(
-        localStorageMock.getItem("chrondle-progress-2024-01-01"),
-      ).toBeNull();
-      expect(sessionStorageMock.getItem("chrondle-migration-v2-complete")).toBe(
-        "true",
-      );
+      expect(localStorageMock.getItem("chrondle-progress-2024-01-01")).toBeNull();
+      expect(sessionStorageMock.getItem("chrondle-migration-v2-complete")).toBe("true");
 
       // Add another legacy key
       localStorageMock.setItem("chrondle-progress-2024-01-02", "{}");
 
       // Second run - should skip
       runMigrationOnInit();
-      expect(localStorageMock.getItem("chrondle-progress-2024-01-02")).toBe(
-        "{}",
-      );
+      expect(localStorageMock.getItem("chrondle-progress-2024-01-02")).toBe("{}");
     });
 
     it("handles sessionStorage errors gracefully", () => {
@@ -244,9 +227,7 @@ describe("LocalStorage Migration", () => {
       expect(() => runMigrationOnInit()).not.toThrow();
 
       // Migration should still have run
-      expect(
-        localStorageMock.getItem("chrondle-progress-2024-01-01"),
-      ).toBeNull();
+      expect(localStorageMock.getItem("chrondle-progress-2024-01-01")).toBeNull();
 
       // Restore
       sessionStorageMock.setItem = originalSetItem;
@@ -267,19 +248,13 @@ describe("LocalStorage Migration", () => {
       clearAllChronldeLocalStorage();
 
       // Anonymous ID should remain
-      expect(localStorageMock.getItem("chrondle-anonymous-id")).toBe(
-        anonymousId,
-      );
+      expect(localStorageMock.getItem("chrondle-anonymous-id")).toBe(anonymousId);
 
       // Non-Chrondle keys should remain
-      expect(localStorageMock.getItem("non-chrondle-key")).toBe(
-        "should-remain",
-      );
+      expect(localStorageMock.getItem("non-chrondle-key")).toBe("should-remain");
 
       // All other Chrondle keys should be removed
-      expect(
-        localStorageMock.getItem("chrondle-progress-2024-01-01"),
-      ).toBeNull();
+      expect(localStorageMock.getItem("chrondle-progress-2024-01-01")).toBeNull();
       expect(localStorageMock.getItem("chrondle-settings")).toBeNull();
       expect(localStorageMock.getItem("chrondle-theme")).toBeNull();
     });

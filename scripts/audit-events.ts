@@ -87,9 +87,7 @@ function hasProperNouns(event: string): boolean {
   // Check for capital letters (proper nouns)
   const hasCapitals = remainingWords.some(
     (word) =>
-      word.length > 0 &&
-      word[0] === word[0].toUpperCase() &&
-      word[0] !== word[0].toLowerCase(),
+      word.length > 0 && word[0] === word[0].toUpperCase() && word[0] !== word[0].toLowerCase(),
   );
 
   // Check for known proper noun indicators
@@ -268,9 +266,7 @@ program
 
       console.log("\n🔴 Issues by Type:\n");
 
-      const sortedIssues = Object.entries(issuesByType).sort(
-        (a, b) => b[1] - a[1],
-      );
+      const sortedIssues = Object.entries(issuesByType).sort((a, b) => b[1] - a[1]);
 
       for (const [issue, count] of sortedIssues) {
         console.log(`${issue}: ${count} events`);
@@ -278,20 +274,14 @@ program
         if (options.fixSuggestions && examplesByType[issue]) {
           console.log("  Examples:");
           for (const example of examplesByType[issue].slice(0, 2)) {
-            console.log(
-              `    Year ${example.year}: "${example.event.substring(0, 60)}..."`,
-            );
+            console.log(`    Year ${example.year}: "${example.event.substring(0, 60)}..."`);
 
             // Suggest fixes
             if (issue === "Missing proper nouns") {
-              console.log(
-                `      💡 Add specific names, places, or organizations`,
-              );
+              console.log(`      💡 Add specific names, places, or organizations`);
             } else if (issue.includes("generic term")) {
               const term = issue.match(/"([^"]+)"/)?.[1];
-              console.log(
-                `      💡 Replace "${term}" with the actual person's name`,
-              );
+              console.log(`      💡 Replace "${term}" with the actual person's name`);
             }
           }
         }
@@ -306,20 +296,13 @@ program
 program
   .command("duplicates")
   .description("Find similar or duplicate events across different years")
-  .option(
-    "--threshold <number>",
-    "Similarity threshold (0-1)",
-    parseFloat,
-    0.85,
-  )
+  .option("--threshold <number>", "Similarity threshold (0-1)", parseFloat, 0.85)
   .action(async (options) => {
     try {
       const client = await getConvexClient();
       const threshold = options.threshold;
 
-      console.log(
-        `🔍 Finding duplicate events (similarity > ${threshold})...\n`,
-      );
+      console.log(`🔍 Finding duplicate events (similarity > ${threshold})...\n`);
 
       const yearStats = await client.query(api.events.getAllYearsWithStats);
       const allEvents: { year: number; event: string; id: string }[] = [];
@@ -344,10 +327,7 @@ program
 
       for (let i = 0; i < allEvents.length; i++) {
         for (let j = i + 1; j < allEvents.length; j++) {
-          const similarity = calculateSimilarity(
-            allEvents[i].event,
-            allEvents[j].event,
-          );
+          const similarity = calculateSimilarity(allEvents[i].event, allEvents[j].event);
 
           if (similarity >= threshold) {
             duplicates.push({
@@ -360,9 +340,7 @@ program
       }
 
       if (duplicates.length === 0) {
-        console.log(
-          `✅ No duplicate events found with similarity > ${threshold}`,
-        );
+        console.log(`✅ No duplicate events found with similarity > ${threshold}`);
       } else {
         console.log(`Found ${duplicates.length} potential duplicates:\n`);
 
@@ -377,9 +355,7 @@ program
         }
 
         if (duplicates.length > 20) {
-          console.log(
-            `... and ${duplicates.length - 20} more potential duplicates`,
-          );
+          console.log(`... and ${duplicates.length - 20} more potential duplicates`);
         }
       }
     } catch (error: any) {
@@ -440,9 +416,7 @@ program
           for (const issue of issues) {
             console.log(`      - ${issue}`);
           }
-          console.log(
-            `   💡 To fix: pnpm events update-one -y ${year} -n ${i + 1} -t "..."`,
-          );
+          console.log(`   💡 To fix: pnpm events update-one -y ${year} -n ${i + 1} -t "..."`);
           console.log("");
         }
       }
@@ -456,21 +430,12 @@ program
       console.log(`   Total events: ${events.length}`);
 
       if (events.length < 10) {
-        console.log(
-          `   💡 Consider adding ${10 - events.length} more events for variety`,
-        );
+        console.log(`   💡 Consider adding ${10 - events.length} more events for variety`);
       }
 
       // Check event diversity
       const categories = {
-        politics: [
-          "president",
-          "king",
-          "queen",
-          "parliament",
-          "election",
-          "treaty",
-        ],
+        politics: ["president", "king", "queen", "parliament", "election", "treaty"],
         science: ["discovers", "invents", "patent", "laboratory", "experiment"],
         culture: ["publishes", "performs", "exhibition", "museum", "festival"],
         war: ["battle", "war", "siege", "invasion", "surrender", "victory"],

@@ -18,63 +18,48 @@ interface GuessRowProps {
   index: number;
 }
 
-const GuessRow: React.FC<GuessRowProps> = React.memo(
-  ({ guess, targetYear, hint, index }) => {
-    const isCorrect = guess === targetYear;
+const GuessRow: React.FC<GuessRowProps> = React.memo(({ guess, targetYear, hint, index }) => {
+  const isCorrect = guess === targetYear;
 
-    if (isCorrect) {
-      return (
-        <div className="flex items-center justify-between p-4 rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-muted-foreground">
-              #{index + 1}
-            </span>
-            <Badge
-              variant="default"
-              className="bg-green-500 hover:bg-green-600"
-            >
-              CORRECT
-            </Badge>
-            <span className="font-accent font-bold text-lg tracking-wide">
-              {formatYear(guess)}
-            </span>
-          </div>
-          <span className="text-green-700 dark:text-green-300 font-semibold">
-            You won!
-          </span>
-        </div>
-      );
-    }
-
-    const isEarlier = guess > targetYear;
-    const badgeVariant = isEarlier ? "earlier" : "later";
-    const badgeText = isEarlier ? "EARLIER" : "LATER";
-
+  if (isCorrect) {
     return (
-      <div className="space-y-3 p-4 rounded-lg border bg-card">
+      <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-muted-foreground">
-            #{index + 1}
-          </span>
-          <Badge variant={badgeVariant} className="text-sm px-3 py-1">
-            {badgeText}
+          <span className="text-muted-foreground text-sm font-medium">#{index + 1}</span>
+          <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+            CORRECT
           </Badge>
-          <span className="font-accent font-semibold text-lg tracking-wide">
-            {formatYear(guess)}
-          </span>
+          <span className="font-accent text-lg font-bold tracking-wide">{formatYear(guess)}</span>
         </div>
-
-        {hint && (
-          <div className="pl-8">
-            <p className="text-sm text-muted-foreground font-body">
-              <span className="font-medium font-accent">Next hint:</span> {hint}
-            </p>
-          </div>
-        )}
+        <span className="font-semibold text-green-700 dark:text-green-300">You won!</span>
       </div>
     );
-  },
-);
+  }
+
+  const isEarlier = guess > targetYear;
+  const badgeVariant = isEarlier ? "earlier" : "later";
+  const badgeText = isEarlier ? "EARLIER" : "LATER";
+
+  return (
+    <div className="bg-card space-y-3 rounded-lg border p-4">
+      <div className="flex items-center gap-3">
+        <span className="text-muted-foreground text-sm font-medium">#{index + 1}</span>
+        <Badge variant={badgeVariant} className="px-3 py-1 text-sm">
+          {badgeText}
+        </Badge>
+        <span className="font-accent text-lg font-semibold tracking-wide">{formatYear(guess)}</span>
+      </div>
+
+      {hint && (
+        <div className="pl-8">
+          <p className="text-muted-foreground font-body text-sm">
+            <span className="font-accent font-medium">Next hint:</span> {hint}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+});
 
 GuessRow.displayName = "GuessRow";
 
@@ -92,23 +77,16 @@ export const GuessHistory: React.FC<GuessHistoryProps> = React.memo(
       >
         <div className="mb-4">
           <h3
-            className="text-xl font-heading font-bold mb-2"
+            className="font-heading mb-2 text-xl font-bold"
             style={{ color: "var(--foreground)" }}
             id="guess-history-heading"
           >
             Your Guesses
           </h3>
-          <div
-            className="h-px w-full"
-            style={{ background: "var(--border)" }}
-          />
+          <div className="h-px w-full" style={{ background: "var(--border)" }} />
         </div>
 
-        <div
-          className="space-y-3"
-          role="list"
-          aria-labelledby="guess-history-heading"
-        >
+        <div className="space-y-3" role="list" aria-labelledby="guess-history-heading">
           {guesses.map((guess, index) => {
             const hint = events[index + 1] || "";
 

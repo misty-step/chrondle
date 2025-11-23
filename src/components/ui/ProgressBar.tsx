@@ -107,9 +107,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     return Array.from({ length: maxGuesses }, (_, index) => {
       const guess = guesses[index] || null;
       const distance = guess ? Math.abs(guess - targetYear) : 0;
-      const distanceData = guess
-        ? getDistanceColor(distance)
-        : DISTANCE_COLORS[0];
+      const distanceData = guess ? getDistanceColor(distance) : DISTANCE_COLORS[0];
       const hint = events[index] || "";
 
       return {
@@ -198,16 +196,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
               )}
 
               {/* Accessibility content */}
-              <span className="sr-only">
-                {segment.guess ? formatYear(segment.guess) : "Empty"}
-              </span>
+              <span className="sr-only">{segment.guess ? formatYear(segment.guess) : "Empty"}</span>
 
               {/* Hover tooltip */}
               {segment.accessible && isHovered && (
                 <div className="segment-tooltip" role="tooltip">
-                  <div className="font-semibold">
-                    {formatYear(segment.guess!)}
-                  </div>
+                  <div className="font-semibold">{formatYear(segment.guess!)}</div>
                   <div className="text-sm opacity-75">{segment.label}</div>
                 </div>
               )}
@@ -218,7 +212,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
       {/* Progress label */}
       <div className="progress-label" aria-live="polite">
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-muted-foreground text-xs font-medium">
           {filledSegments}/{maxGuesses} guesses
         </span>
       </div>

@@ -347,10 +347,7 @@ git commit -m "Remove .env from tracking"
 2. Check API availability:
    ```javascript
    console.log("Share API:", navigator.share ? "Available" : "Not available");
-   console.log(
-     "Clipboard API:",
-     navigator.clipboard ? "Available" : "Not available",
-   );
+   console.log("Clipboard API:", navigator.clipboard ? "Available" : "Not available");
    ```
 
 ### Problem: Puzzle not loading

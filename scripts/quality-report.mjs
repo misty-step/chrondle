@@ -18,7 +18,8 @@ const runCommand = (cmd, fallback = "N/A") => {
 const metrics = {
   "Test Count": runCommand('find src -name "*.test.ts*" -o -name "*.test.js*" | wc -l'),
   "Test Files": runCommand('find src -name "*.test.ts*" -o -name "*.test.js*" | wc -l') + " files",
-  "Source Files": runCommand('find src -name "*.ts*" -o -name "*.js*" | grep -v test | wc -l') + " files",
+  "Source Files":
+    runCommand('find src -name "*.ts*" -o -name "*.js*" | grep -v test | wc -l') + " files",
 };
 
 // Get coverage if available

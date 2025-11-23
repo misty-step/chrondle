@@ -30,7 +30,7 @@ if (!CONVEX_URL) {
 const client = new ConvexHttpClient(CONVEX_URL);
 
 async function createTodaysPuzzle() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
   console.log(`Creating puzzle for ${today}...`);
 
   try {

@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import {
-  useDebouncedValue,
-  useDebouncedValues,
-  useDebouncedCallback,
-} from "../useDebouncedValue";
+import { useDebouncedValue, useDebouncedValues, useDebouncedCallback } from "../useDebouncedValue";
 
 describe("useDebouncedValue", () => {
   beforeEach(() => {
@@ -22,10 +18,9 @@ describe("useDebouncedValue", () => {
     });
 
     it("should debounce value changes", () => {
-      const { result, rerender } = renderHook(
-        ({ value }) => useDebouncedValue(value, 100),
-        { initialProps: { value: "initial" } },
-      );
+      const { result, rerender } = renderHook(({ value }) => useDebouncedValue(value, 100), {
+        initialProps: { value: "initial" },
+      });
 
       expect(result.current).toBe("initial");
 
@@ -49,10 +44,9 @@ describe("useDebouncedValue", () => {
     });
 
     it("should cancel previous timeout on rapid changes", () => {
-      const { result, rerender } = renderHook(
-        ({ value }) => useDebouncedValue(value, 100),
-        { initialProps: { value: "initial" } },
-      );
+      const { result, rerender } = renderHook(({ value }) => useDebouncedValue(value, 100), {
+        initialProps: { value: "initial" },
+      });
 
       // Make rapid changes
       rerender({ value: "change1" });
@@ -80,10 +74,9 @@ describe("useDebouncedValue", () => {
     });
 
     it("should update immediately with 0 delay", () => {
-      const { result, rerender } = renderHook(
-        ({ value }) => useDebouncedValue(value, 0),
-        { initialProps: { value: "initial" } },
-      );
+      const { result, rerender } = renderHook(({ value }) => useDebouncedValue(value, 0), {
+        initialProps: { value: "initial" },
+      });
 
       expect(result.current).toBe("initial");
 
@@ -92,10 +85,9 @@ describe("useDebouncedValue", () => {
     });
 
     it("should handle null and undefined values", () => {
-      const { result, rerender } = renderHook(
-        ({ value }) => useDebouncedValue(value, 100),
-        { initialProps: { value: null as string | null | undefined } },
-      );
+      const { result, rerender } = renderHook(({ value }) => useDebouncedValue(value, 100), {
+        initialProps: { value: null as string | null | undefined },
+      });
 
       expect(result.current).toBe(null);
 
@@ -115,14 +107,11 @@ describe("useDebouncedValue", () => {
 
   describe("multiple values debouncing", () => {
     it("should debounce multiple values together", () => {
-      const { result, rerender } = renderHook(
-        ({ values }) => useDebouncedValues(values, 100),
-        {
-          initialProps: {
-            values: { userId: "user1", puzzleId: "puzzle1" },
-          },
+      const { result, rerender } = renderHook(({ values }) => useDebouncedValues(values, 100), {
+        initialProps: {
+          values: { userId: "user1", puzzleId: "puzzle1" },
         },
-      );
+      });
 
       expect(result.current).toEqual({ userId: "user1", puzzleId: "puzzle1" });
 
@@ -147,14 +136,11 @@ describe("useDebouncedValue", () => {
       // This test verifies that the hook properly handles reference stability
       // When values are the same but object reference changes, it should still debounce
 
-      const { result, rerender } = renderHook(
-        ({ values }) => useDebouncedValues(values, 100),
-        {
-          initialProps: {
-            values: { userId: "user1", puzzleId: "puzzle1" },
-          },
+      const { result, rerender } = renderHook(({ values }) => useDebouncedValues(values, 100), {
+        initialProps: {
+          values: { userId: "user1", puzzleId: "puzzle1" },
         },
-      );
+      });
 
       expect(result.current).toEqual({ userId: "user1", puzzleId: "puzzle1" });
 
@@ -180,14 +166,11 @@ describe("useDebouncedValue", () => {
     });
 
     it("should fire debounce exactly once when values actually change", () => {
-      const { result, rerender } = renderHook(
-        ({ values }) => useDebouncedValues(values, 100),
-        {
-          initialProps: {
-            values: { userId: "user1", puzzleId: "puzzle1" },
-          },
+      const { result, rerender } = renderHook(({ values }) => useDebouncedValues(values, 100), {
+        initialProps: {
+          values: { userId: "user1", puzzleId: "puzzle1" },
         },
-      );
+      });
 
       expect(result.current).toEqual({ userId: "user1", puzzleId: "puzzle1" });
 
@@ -213,14 +196,11 @@ describe("useDebouncedValue", () => {
       // This test verifies behavior when object reference changes rapidly
       // but values remain the same - a common React anti-pattern
 
-      const { result, rerender } = renderHook(
-        ({ values }) => useDebouncedValues(values, 100),
-        {
-          initialProps: {
-            values: { userId: "user1", puzzleId: "puzzle1" },
-          },
+      const { result, rerender } = renderHook(({ values }) => useDebouncedValues(values, 100), {
+        initialProps: {
+          values: { userId: "user1", puzzleId: "puzzle1" },
         },
-      );
+      });
 
       expect(result.current).toEqual({ userId: "user1", puzzleId: "puzzle1" });
 
@@ -254,24 +234,17 @@ describe("useDebouncedValue", () => {
     });
 
     it("should warn in development when unmemoized object with same values is passed", () => {
-      const consoleWarnSpy = vi
-        .spyOn(console, "warn")
-        .mockImplementation(() => {});
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       // Mock NODE_ENV to be development for this test
       vi.stubEnv("NODE_ENV", "development");
 
-      const { rerender } = renderHook(
-        ({ values }) => useDebouncedValues(values, 100),
-        {
-          initialProps: {
-            values: { userId: "user1", puzzleId: "puzzle1" },
-          },
+      const { rerender } = renderHook(({ values }) => useDebouncedValues(values, 100), {
+        initialProps: {
+          values: { userId: "user1", puzzleId: "puzzle1" },
         },
-      );
+      });
 
       // Clear initial logs
       consoleWarnSpy.mockClear();
@@ -284,14 +257,10 @@ describe("useDebouncedValue", () => {
 
       // Should have warned about unmemoized object
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          "Values object reference changed but contents are identical",
-        ),
+        expect.stringContaining("Values object reference changed but contents are identical"),
       );
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          "Please memoize the values object with useMemo",
-        ),
+        expect.stringContaining("Please memoize the values object with useMemo"),
       );
 
       // Restore environment
@@ -301,14 +270,11 @@ describe("useDebouncedValue", () => {
     });
 
     it("should handle partial value changes", () => {
-      const { result, rerender } = renderHook(
-        ({ values }) => useDebouncedValues(values, 100),
-        {
-          initialProps: {
-            values: { userId: "user1", puzzleId: "puzzle1", other: "value1" },
-          },
+      const { result, rerender } = renderHook(({ values }) => useDebouncedValues(values, 100), {
+        initialProps: {
+          values: { userId: "user1", puzzleId: "puzzle1", other: "value1" },
         },
-      );
+      });
 
       // Change only one value
       rerender({
@@ -354,9 +320,7 @@ describe("useDebouncedValue", () => {
 
     it("should cancel on unmount", () => {
       const mockFn = vi.fn();
-      const { result, unmount } = renderHook(() =>
-        useDebouncedCallback(mockFn, 100),
-      );
+      const { result, unmount } = renderHook(() => useDebouncedCallback(mockFn, 100));
 
       act(() => {
         result.current("test");

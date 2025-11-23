@@ -16,23 +16,19 @@ export const GameProgress: React.FC<GameProgressProps> = ({
   const remainingGuesses = Math.max(0, totalHints - guessCount);
 
   return (
-    <div className={`flex justify-start items-center gap-2 py-2 ${className}`}>
-      <span className="text-sm font-medium text-muted-foreground mr-2">
-        Guesses Remaining:
-      </span>
+    <div className={`flex items-center justify-start gap-2 py-2 ${className}`}>
+      <span className="text-muted-foreground mr-2 text-sm font-medium">Guesses Remaining:</span>
       <div
-        className="flex gap-2 items-center"
+        className="flex items-center gap-2"
         aria-label={`Guesses remaining: ${remainingGuesses}`}
       >
         {Array.from({ length: remainingGuesses }, (_, i) => (
           <div
             key={i}
-            className="w-3 h-3 rounded-full transition-all duration-300 bg-primary shadow-lg ring-1 ring-primary/30"
+            className="bg-primary ring-primary/30 h-3 w-3 rounded-full shadow-lg ring-1 transition-all duration-300"
           />
         ))}
-        {remainingGuesses === 0 && (
-          <span className="text-sm text-muted-foreground">None</span>
-        )}
+        {remainingGuesses === 0 && <span className="text-muted-foreground text-sm">None</span>}
       </div>
     </div>
   );

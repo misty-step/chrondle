@@ -29,9 +29,7 @@ describe("GameProgress Component", () => {
     });
 
     it("updates aria-label when guesses change", () => {
-      const { rerender } = render(
-        <GameProgress guessCount={1} totalHints={6} />,
-      );
+      const { rerender } = render(<GameProgress guessCount={1} totalHints={6} />);
 
       expect(screen.getByLabelText("Guesses remaining: 5")).toBeTruthy();
 
@@ -63,9 +61,7 @@ describe("GameProgress Component", () => {
       const filledBubbles = screen
         .getAllByRole("generic")
         .filter(
-          (el) =>
-            el.className.includes("rounded-full") &&
-            el.className.includes("bg-primary"),
+          (el) => el.className.includes("rounded-full") && el.className.includes("bg-primary"),
         );
       expect(filledBubbles).toHaveLength(4); // 6 - 2 = 4 remaining
     });
@@ -76,9 +72,7 @@ describe("GameProgress Component", () => {
       const filledBubbles = screen
         .getAllByRole("generic")
         .filter(
-          (el) =>
-            el.className.includes("rounded-full") &&
-            el.className.includes("bg-primary"),
+          (el) => el.className.includes("rounded-full") && el.className.includes("bg-primary"),
         );
       expect(filledBubbles).toHaveLength(2); // 6 - 4 = 2 remaining
     });
