@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "convex/_generated/dataModel";
-import type { OrderPuzzle, OrderEvent } from "@/types/orderGameState";
+import type { OrderPuzzle } from "@/types/orderGameState";
 import { logger } from "@/lib/logger";
 
 interface ConvexOrderEvent {
@@ -103,12 +103,14 @@ export function useOrderPuzzleData(
   }, [convexPuzzle, hasInitialData, initialData, puzzleNumber]);
 }
 
-function normalizePuzzle(convexPuzzle: ConvexOrderPuzzle): OrderPuzzle {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizePuzzle(convexPuzzle: any): OrderPuzzle {
   return {
-    id: convexPuzzle._id as Id<"orderPuzzles">,
+    id: (convexPuzzle._id || convexPuzzle.id) as Id<"orderPuzzles">,
     date: convexPuzzle.date,
     puzzleNumber: convexPuzzle.puzzleNumber,
-    events: convexPuzzle.events.map<OrderEvent>((event) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    events: convexPuzzle.events.map((event: any) => ({
       id: event.id,
       year: event.year,
       text: event.text,
