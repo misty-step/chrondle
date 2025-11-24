@@ -80,38 +80,33 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
         className={cn(
           // Override default height and shape - archival angular aesthetic
           "h-8 rounded-sm",
-          // Warm archival colors - override defaults
-          "border-timeline-spine/30 bg-locked-badge-bg",
-          "hover:bg-locked-badge-bg/80 hover:border-timeline-spine/50",
-          // Typography - warm brown text (theme-adaptive)
-          "text-primary text-sm font-medium",
-          // Enhanced shadow on hover
-          "hover:shadow-md",
-          // Custom focus ring - warm amber
-          "focus-visible:ring-locked-badge/20",
+          // Solid, confident colors - no translucency
+          "bg-surface-elevated border-outline-default border-2",
+          "hover:border-primary/50 hover:shadow-hard-sm",
+          // Typography - clear, readable (theme-adaptive)
+          "text-foreground text-sm font-semibold",
+          // Custom focus ring
+          "focus-visible:ring-primary/20",
           // Padding for archival badge
           "px-3 py-1.5",
-          // Custom styling for chevron icon color
-          "[&_svg]:text-[var(--icon-color)] [&_svg]:!opacity-80",
           // Cursor pointer for better affordance
           "cursor-pointer",
           className,
         )}
         size="sm"
         aria-label="Select game mode"
-        style={{ ["--icon-color" as string]: "var(--timeline-marker-contrast)" }}
       >
         <SelectValue />
       </SelectTrigger>
 
       <SelectContent
         className={cn(
-          // Archival card dropdown
-          "rounded-card",
-          // Warm borders and shadows
-          "border-timeline-spine/30 shadow-warm-lg",
+          // Archival dropdown - consistent with trigger
+          "rounded-sm",
+          // Solid borders and shadows
+          "border-outline-default shadow-hard border-2",
           // Background
-          "bg-card",
+          "bg-surface-elevated",
         )}
         position="popper"
         sideOffset={8}
@@ -121,15 +116,15 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
             key={mode}
             value={mode}
             className={cn(
-              // Archival items - subtle rounding
-              "rounded-soft",
+              // Archival items - consistent angular aesthetic
+              "rounded-sm",
               // Better padding
               "px-3 py-2",
               // Typography (theme-adaptive)
-              "text-primary text-sm",
+              "text-foreground text-sm",
               mode === currentMode && "font-semibold",
-              // Hover state - warm amber highlight
-              "hover:bg-locked-badge-bg focus:bg-locked-badge-bg",
+              // Hover state - clear highlight
+              "hover:bg-muted focus:bg-muted",
             )}
           >
             {MODE_CONFIG[mode].label}
