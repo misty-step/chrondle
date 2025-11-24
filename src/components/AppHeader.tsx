@@ -53,26 +53,29 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <>
-      <header className="border-border bg-card w-full border-b py-4">
+      <header
+        className="w-full border-b border-[var(--elevation-navbar-border)] bg-[var(--elevation-navbar-bg)] py-4"
+        style={{ boxShadow: "var(--elevation-navbar-shadow)" }}
+      >
         <LayoutContainer className="transition-all duration-200 ease-out">
           <div className="flex min-h-[40px] items-center justify-between">
             {/* Logo/Brand - with integrated mode switcher */}
             <div className="flex h-10 items-baseline gap-2">
               <Link href="/" className="flex items-baseline">
-                <h1 className="font-heading text-primary m-0 flex cursor-pointer items-baseline text-2xl font-bold transition-opacity hover:opacity-80 md:text-3xl">
+                <h1 className="font-display text-primary m-0 flex cursor-pointer items-baseline text-2xl transition-opacity hover:opacity-80 md:text-3xl">
                   <span className="flex h-10 w-10 items-center justify-center sm:hidden">C</span>
                   <span className="hidden sm:inline">CHRONDLE</span>
                 </h1>
               </Link>
 
               {/* Mode Dropdown inline with brand */}
-              <span className="text-muted-foreground hidden text-xl sm:inline">·</span>
+              <span className="bg-border hidden h-4 w-px sm:inline" aria-hidden="true" />
               <ModeDropdown className="hidden sm:inline-flex" />
 
               {/* Puzzle Number */}
               {puzzleNumber && (
                 <>
-                  <span className="text-muted-foreground hidden text-xl sm:inline">·</span>
+                  <span className="bg-border hidden h-4 w-px sm:inline" aria-hidden="true" />
                   <span
                     className={cn(
                       "font-mono text-xs sm:text-sm",
@@ -95,10 +98,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
             {/* Action Buttons with Streak Counter */}
             <div className="flex h-10 items-center gap-3">
-              {/* Streak Counter - Horizontal Badge */}
+              {/* Streak Counter - Archival Badge */}
               {currentStreak !== undefined && currentStreak > 0 && streakColors && (
                 <div
-                  className={`flex items-center gap-2 rounded-full border px-3 py-2 ${streakColors.borderColor} h-10 shadow-sm`}
+                  className={`material-paper flex items-center gap-2 rounded-sm border-2 px-3 py-2 ${streakColors.borderColor} shadow-hard h-10`}
                   title={streakColors.milestone || `${currentStreak} day streak`}
                   aria-label={`Current streak: ${currentStreak} day streak`}
                 >

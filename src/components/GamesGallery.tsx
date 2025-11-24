@@ -220,7 +220,7 @@ export function GamesGallery() {
                   transition={{ duration: 0.5, ease: "circOut" }}
                   className="origin-left"
                 >
-                  <h2 className="font-heading text-5xl leading-none font-medium tracking-tight drop-shadow-sm sm:text-6xl md:text-7xl lg:text-8xl">
+                  <h2 className="font-display text-5xl leading-none tracking-tight drop-shadow-sm sm:text-6xl md:text-7xl lg:text-8xl">
                     {mode.title}
                   </h2>
                 </motion.div>

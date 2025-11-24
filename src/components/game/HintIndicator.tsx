@@ -11,14 +11,13 @@ interface HintIndicatorProps {
 }
 
 /**
- * Minimal hint progress indicator with subtle dots and compact button.
- * Inspired by Minute Cryptic's clean UI approach.
+ * Archival hint progress indicator with stamp marks and document unlock button.
  *
- * Shows filled dots for revealed hints and empty dots for remaining hints.
- * Only displays the "Get Hint" button when more hints are available.
+ * Shows filled stamps for revealed hints and empty frames for remaining hints.
+ * Only displays the "Unlock Hint" button when more hints are available.
  *
  * Note: The first event is the puzzle itself (not a hint), so we show
- * totalHints - 1 circles (5 circles for 6 total events).
+ * totalHints - 1 marks (5 marks for 6 total events).
  */
 export function HintIndicator({
   hintsRevealed,
@@ -33,7 +32,7 @@ export function HintIndicator({
 
   return (
     <div className={cn("flex items-center justify-start gap-4", className)}>
-      {/* Dot indicators - 5 circles for 5 additional hints (not counting the puzzle event) */}
+      {/* Stamp indicators - 5 marks for 5 additional hints (not counting the puzzle event) */}
       <div
         className="flex gap-2"
         role="img"
@@ -43,24 +42,26 @@ export function HintIndicator({
           <div
             key={i}
             className={cn(
-              "h-3 w-3 rounded-full transition-colors duration-300",
-              i < hintsRevealed ? "bg-primary" : "bg-muted-foreground/30",
+              "h-3.5 w-3.5 rounded-[1px] border-2 transition-all duration-300",
+              i < hintsRevealed
+                ? "bg-vermilion-500 border-vermilion-600 shadow-sm"
+                : "border-muted-foreground/40 bg-transparent",
             )}
             aria-hidden="true"
           />
         ))}
       </div>
 
-      {/* Prominent button - only show if more hints available */}
+      {/* Archival unlock button - only show if more hints available */}
       {hasMoreHints && (
         <Button
           variant="outline"
           size="default"
           onClick={onRevealHint}
           disabled={disabled}
-          className="h-10 px-4 text-sm font-semibold"
+          className="hover:border-vermilion-500 hover:text-vermilion-500 h-10 border-2 px-4 text-sm font-semibold transition-colors"
         >
-          Get Hint
+          Unlock Hint
         </Button>
       )}
     </div>

@@ -9,23 +9,25 @@
    ----------------------------------------------------------------- */
 :root {
   /* --- PRIMITIVES (Raw Palette) --- */
+  --color-vermilion-300: oklch(0.68 0.18 25); /* Softer, less saturated */
   --color-vermilion-400: oklch(0.62 0.22 25);
-  --color-vermilion-500: oklch(0.55 0.25 260); /* Fixed Vermilion */
+  --color-vermilion-500: oklch(0.58 0.3 25); /* True Vermilion - red-orange archival ink */
   --color-vermilion-600: oklch(0.48 0.24 25);
+  --color-vermilion-700: oklch(0.42 0.28 25); /* Deeper */
 
   --color-ink-500: oklch(0.45 0.08 50);
   --color-ink-700: oklch(0.28 0.1 50);
   --color-ink-900: oklch(0.15 0.1 50);
 
-  --color-parchment-50: oklch(0.98 0.08 85);
-  --color-parchment-100: oklch(0.96 0.1 85);
-  --color-parchment-200: oklch(0.92 0.12 85);
-  --color-parchment-300: oklch(0.88 0.14 85);
+  --color-parchment-50: oklch(0.96 0.08 85); /* Boosted for visible texture */
+  --color-parchment-100: oklch(0.94 0.1 85);
+  --color-parchment-200: oklch(0.9 0.12 85);
+  --color-parchment-300: oklch(0.86 0.14 85);
 
-  /* Archival Accents */
-  --color-sepia: oklch(0.65 0.15 60);
-  --color-oxidized: oklch(0.45 0.18 140);
-  --color-wax-seal: oklch(0.35 0.2 10);
+  /* Archival Accents - Boosted for visibility */
+  --color-sepia: oklch(0.6 0.2 60);
+  --color-oxidized: oklch(0.5 0.22 140);
+  --color-wax-seal: oklch(0.4 0.24 10);
 
   /* --- SEMANTIC TOKENS (Abstraction Layer) --- */
   /* Surface Tokens - for backgrounds and containers */
@@ -49,7 +51,7 @@
   --outline-focus: var(--ring);
 
   /* --- MATERIALS (Surfaces) --- */
-  --texture-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.06'/%3E%3C/svg%3E");
+  --texture-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E");
 
   --material-paper-bg: var(--color-parchment-100);
   --material-paper-fg: var(--color-ink-900);
@@ -104,14 +106,25 @@
   --locked-badge: var(--color-vermilion-500);
   --locked-badge-bg: oklch(from var(--locked-badge) l c h / 0.1);
 
-  /* --- FEEDBACK --- */
-  --feedback-success: oklch(0.65 0.18 145);
-  --feedback-warning: oklch(0.7 0.15 80);
-  --feedback-error: oklch(0.6 0.2 25);
+  /* --- INTERACTIVE STATE TOKENS --- */
+  --interactive-bg: var(--color-vermilion-500);
+  --interactive-bg-hover: var(--color-vermilion-600);
+  --interactive-bg-soft: var(--color-vermilion-300);
+  --interactive-border: var(--color-vermilion-600);
+
+  /* --- FEEDBACK (Softened for archival warmth) --- */
+  --feedback-success: oklch(0.6 0.14 145); /* Softer green */
+  --feedback-warning: oklch(0.65 0.12 65); /* Warmer amber */
+  --feedback-error: oklch(0.55 0.15 25); /* Warmer red, less harsh */
   --feedback-info: oklch(0.6 0.15 250);
   --feedback-earlier: var(--feedback-warning);
   --feedback-later: var(--feedback-info);
   --feedback-correct: var(--feedback-success);
+
+  /* --- ELEVATION SYSTEM --- */
+  --elevation-navbar-bg: var(--color-parchment-50);
+  --elevation-navbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --elevation-navbar-border: var(--color-parchment-200);
 
   /* --- MATERIALS (Dynamic) --- */
   --material-overlay: linear-gradient(
@@ -191,6 +204,11 @@
     --color-order-bg: oklch(0.18 0.03 240);
     --color-order-text: oklch(0.93 0.02 240);
     --color-order-accent: oklch(0.7 0.15 260);
+
+    /* ELEVATION SYSTEM - Dark Mode */
+    --elevation-navbar-bg: var(--color-parchment-100);
+    --elevation-navbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --elevation-navbar-border: var(--color-parchment-300);
 
     /* MATERIALS */
     --material-overlay: linear-gradient(
@@ -274,6 +292,11 @@ html.dark {
   --locked-badge: var(--color-vermilion-500);
   --locked-badge-bg: oklch(from var(--locked-badge) l c h / 0.15);
 
+  /* ELEVATION SYSTEM - Dark Mode */
+  --elevation-navbar-bg: var(--color-parchment-100);
+  --elevation-navbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --elevation-navbar-border: var(--color-parchment-300);
+
   /* MATERIALS */
   --material-overlay: linear-gradient(
     to bottom right,
@@ -301,7 +324,7 @@ html.dark {
 /* EXPLICIT LIGHT MODE OVERRIDES (Forces Light Mode) */
 html.light {
   --color-vermilion-400: oklch(0.62 0.22 25);
-  --color-vermilion-500: oklch(0.55 0.25 260);
+  --color-vermilion-500: oklch(0.58 0.3 25); /* True Vermilion - red-orange archival ink */
   --color-vermilion-600: oklch(0.48 0.24 25);
 
   --color-ink-500: oklch(0.45 0.08 50);
@@ -383,6 +406,8 @@ html.light {
   --font-serif: "Crimson Text", "Georgia", serif;
   --font-mono: "JetBrains Mono", "Courier New", monospace;
   --font-accent: "Newsreader", "Georgia", serif;
+  --font-display:
+    "IM Fell English", "Crimson Text", serif; /* Dramatic 17th-century revival for hero moments */
 
   /* Colors - Core */
   --color-background: var(--background);
@@ -466,10 +491,22 @@ html.light {
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Radius */
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  /* Archival Border Radius Scale */
+  --radius-none: 0px;
+  --radius-archival: 2px; /* Angular archival aesthetic */
+  --radius-soft: 4px; /* Subtle modern touch */
+  --radius-card: 6px; /* Cards and containers */
+  --radius-pill: 999px; /* ONLY for specific badges */
+
+  /* Semantic Radius Tokens */
+  --radius-interactive: var(--radius-archival); /* Buttons, toggles */
+  --radius-container: var(--radius-card); /* Cards, panels */
+  --radius-badge: var(--radius-archival); /* Status badges */
+
+  /* Legacy Radius (for compatibility) */
+  --radius-lg: var(--radius-card);
+  --radius-md: var(--radius-soft);
+  --radius-sm: var(--radius-archival);
 
   /* Animations */
   --animate-bounce-once: bounce-once 0.5s ease-in-out;
@@ -643,14 +680,22 @@ html.light {
     font-variant-numeric: tabular-nums;
   }
 
+  /* Display Font - Dramatic hero typography */
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 400; /* IM Fell English is naturally bold */
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
   /* Dramatic Archival Typography */
   .text-archival-hero {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: clamp(3rem, 10vw, 7rem);
-    font-weight: 700;
+    font-weight: 400; /* IM Fell English doesn't need bold */
     line-height: 0.9;
-    letter-spacing: -0.04em;
-    text-transform: uppercase;
+    letter-spacing: -0.02em; /* Less aggressive for display font */
+    text-transform: none; /* Let the font's natural character shine */
   }
 
   .text-manuscript {
@@ -670,15 +715,21 @@ html.light {
     display: inline-block;
   }
 
-  /* Shadow System */
+  /* Shadow System - Layered with color tint for depth */
   .shadow-hard {
-    box-shadow: 4px 4px 0px var(--border);
+    box-shadow:
+      4px 4px 0px var(--border),
+      6px 6px 0px color-mix(in oklch, var(--primary) 10%, transparent);
   }
   .shadow-hard-sm {
-    box-shadow: 2px 2px 0px var(--border);
+    box-shadow:
+      2px 2px 0px var(--border),
+      3px 3px 0px color-mix(in oklch, var(--primary) 10%, transparent);
   }
   .shadow-hard-lg {
-    box-shadow: 6px 6px 0px var(--border);
+    box-shadow:
+      6px 6px 0px var(--border),
+      9px 9px 0px color-mix(in oklch, var(--primary) 10%, transparent);
   }
 
   .bg-texture-noise {
@@ -705,4 +756,32 @@ html.light {
       animation: none;
     }
   }
+
+  /* Paper Edge Treatment - Subtle deckle edge effect */
+  .paper-edge {
+    /* Subtle displacement for organic paper edges */
+    filter: url(#paper-edge-filter);
+  }
+
+  /* More pronounced edge for dramatic cards */
+  .paper-edge-dramatic {
+    filter: url(#paper-edge-filter-dramatic);
+  }
+}
+
+/* SVG Filters for Paper Edge Effects (defined globally) */
+.svg-filters {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Inline SVG filter definitions */
+body::before {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='paper-edge-filter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.02' numOctaves='2' seed='1'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='2' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Cfilter id='paper-edge-filter-dramatic'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03' numOctaves='3' seed='2'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='4' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3C/defs%3E%3C/svg%3E");
 }

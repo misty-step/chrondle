@@ -78,8 +78,8 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
     <Select value={currentMode} onValueChange={handleModeChange}>
       <SelectTrigger
         className={cn(
-          // Override default height and shape
-          "h-8 rounded-full",
+          // Override default height and shape - archival angular aesthetic
+          "h-8 rounded-sm",
           // Warm archival colors - override defaults
           "border-timeline-spine/30 bg-locked-badge-bg",
           "hover:bg-locked-badge-bg/80 hover:border-timeline-spine/50",
@@ -89,7 +89,7 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
           "hover:shadow-md",
           // Custom focus ring - warm amber
           "focus-visible:ring-locked-badge/20",
-          // Tighter padding for pill shape
+          // Padding for archival badge
           "px-3 py-1.5",
           // Custom styling for chevron icon color
           "[&_svg]:text-[var(--icon-color)] [&_svg]:!opacity-80",
@@ -106,8 +106,8 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
 
       <SelectContent
         className={cn(
-          // Card-like dropdown - override default rounded-md
-          "rounded-xl",
+          // Archival card dropdown
+          "rounded-card",
           // Warm borders and shadows
           "border-timeline-spine/30 shadow-warm-lg",
           // Background
@@ -121,8 +121,8 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
             key={mode}
             value={mode}
             className={cn(
-              // Rounded items to match card aesthetic
-              "rounded-lg",
+              // Archival items - subtle rounding
+              "rounded-soft",
               // Better padding
               "px-3 py-2",
               // Typography (theme-adaptive)

@@ -180,30 +180,31 @@ export function GameLayout(props: GameLayoutProps) {
           {!isGameComplete && gameState.puzzle && (
             <div className="space-y-5">
               {/* The Puzzle Event - Hero Display */}
-              <div className="material-card group relative overflow-hidden p-6 sm:p-8">
-                {/* Decorative corner accents */}
-                <div className="border-outline-default absolute top-0 left-0 h-16 w-16 rounded-tl-xl border-t-2 border-l-2 opacity-50" />
-                <div className="border-outline-default absolute right-0 bottom-0 h-16 w-16 rounded-br-xl border-r-2 border-b-2 opacity-50" />
+              <div className="material-card paper-edge group border-primary/20 relative overflow-hidden border-2 p-8 sm:p-10">
+                {/* Removed decorative corner accents - unnecessary visual noise */}
 
-                <div className="text-vermilion-500 mb-3 flex items-center gap-2 font-sans text-xs font-bold tracking-[0.2em] uppercase">
-                  <span className="bg-vermilion-500/50 h-px w-8" />
-                  Primary Source
-                  <span className="bg-vermilion-500/50 h-px flex-1" />
+                <div className="text-primary mb-4 flex items-center gap-2 font-sans text-xs font-bold tracking-wider uppercase">
+                  <span className="bg-primary/50 h-px w-8" />
+                  Primary Clue
+                  <span className="bg-primary/50 h-px flex-1" />
                 </div>
-                <div className="text-primary font-serif text-2xl leading-tight tracking-tight drop-shadow-sm sm:text-3xl">
+                <div className="text-primary font-display text-3xl leading-tight sm:text-4xl lg:text-5xl">
                   {gameState.puzzle.events[0]}
                 </div>
               </div>
 
               {/* Additional Revealed Hints */}
               {hintsRevealed > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {gameState.puzzle.events.slice(1, hintsRevealed + 1).map((hint, index) => (
-                    <div key={index} className="material-paper relative p-4">
-                      <div className="text-secondary mb-1.5 font-sans text-xs font-semibold tracking-wider uppercase">
+                    <div
+                      key={index}
+                      className="material-paper paper-edge border-primary/30 relative border-l-4 p-3"
+                    >
+                      <div className="text-secondary mb-1 font-sans text-xs font-semibold uppercase">
                         Clue {index + 2}
                       </div>
-                      <div className="text-primary font-serif text-lg leading-snug">{hint}</div>
+                      <div className="text-primary font-serif text-base leading-snug">{hint}</div>
                     </div>
                   ))}
                 </div>

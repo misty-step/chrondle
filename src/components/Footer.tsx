@@ -9,25 +9,32 @@ export function Footer() {
   const { hasCopied, copy } = useCopyEmail("hello@mistystep.io");
 
   return (
-    <footer className="border-border/40 bg-muted/5 mt-auto w-full border-t py-8">
-      <div className="flex flex-col items-center justify-center gap-4 text-center md:flex-row md:gap-8">
-        {/* Tier 1: The Maker */}
-        <p className="text-muted-foreground font-serif text-sm tracking-wide">
-          <span className="italic">Crafted by</span> <MistyStepLink />
-        </p>
+    <footer className="material-paper border-border/40 mt-auto w-full border-t py-8">
+      <div className="flex flex-row flex-wrap items-center justify-center gap-2 text-center sm:gap-3 md:gap-6">
+        {/* Attribution - Archival subtlety */}
+        <a
+          href="https://mistystep.io"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group text-muted-foreground/70 hover:text-primary inline-flex items-baseline gap-1 transition-colors"
+        >
+          <span className="font-serif text-sm">A</span>
+          <span className="font-display text-sm">Misty Step</span>
+          <span className="font-serif text-sm">project</span>
+        </a>
 
-        {/* Separator (Desktop) */}
+        {/* Separator */}
         <span className="text-muted-foreground/20 hidden md:inline">•</span>
 
-        {/* Tier 2: The Action (Support) - Text Link style now */}
+        {/* Feedback - Functional with archival styling */}
         <button
           onClick={(e) => {
             e.preventDefault();
             copy();
           }}
           className={cn(
-            "group flex items-center gap-1.5 text-xs font-medium transition-colors",
-            hasCopied ? "text-green-600" : "text-muted-foreground hover:text-foreground",
+            "group flex items-center gap-1.5 font-serif text-xs font-medium transition-colors",
+            hasCopied ? "text-feedback-success" : "text-muted-foreground/70 hover:text-foreground",
           )}
           aria-label="Copy support email address"
         >
@@ -44,41 +51,29 @@ export function Footer() {
           )}
         </button>
 
-        {/* Separator (Desktop) */}
+        {/* Separator */}
         <span className="text-muted-foreground/20 hidden md:inline">•</span>
 
-        {/* Tier 3: Legal */}
+        {/* Legal - Unified opacity */}
         <nav
           aria-label="Legal"
-          className="text-muted-foreground/60 flex items-center gap-4 text-xs"
+          className="text-muted-foreground/70 flex items-center gap-4 font-serif text-xs"
         >
-          <Link href="/legal/terms" className="hover:text-foreground transition-colors">
+          <Link
+            href="/legal/terms"
+            className="decoration-primary/50 hover:text-foreground underline-offset-4 transition-all hover:underline"
+          >
             Terms
           </Link>
-          <Link href="/legal/privacy" className="hover:text-foreground transition-colors">
+          <Link
+            href="/legal/privacy"
+            className="decoration-primary/50 hover:text-foreground underline-offset-4 transition-all hover:underline"
+          >
             Privacy
           </Link>
-          <span className="opacity-50">© {new Date().getFullYear()}</span>
+          <span>© {new Date().getFullYear()}</span>
         </nav>
       </div>
     </footer>
-  );
-}
-
-function MistyStepLink() {
-  return (
-    <a
-      href="https://mistystep.io"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group text-foreground hover:text-primary inline-flex items-center font-semibold not-italic transition-colors"
-    >
-      Misty Step
-      {/* Subtle dot pulse animation */}
-      <span className="relative -mt-2 ml-0.5 flex h-1.5 w-1.5">
-        <span className="bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 duration-1000 group-hover:opacity-100"></span>
-        <span className="bg-primary/80 relative inline-flex h-1.5 w-1.5 rounded-full"></span>
-      </span>
-    </a>
   );
 }

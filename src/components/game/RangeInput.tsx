@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EraToggle } from "@/components/ui/EraToggle";
+import { InlineWarning } from "@/components/ui/InlineWarning";
 import { SCORING_CONSTANTS } from "@/lib/scoring";
 import { GAME_CONFIG } from "@/lib/constants";
 import { convertToInternalYear, convertFromInternalYear, type Era } from "@/lib/eraUtils";
@@ -198,15 +199,27 @@ export function RangeInput({
               : "border-outline-default",
         )}
       >
-        {/* Decorative Ruler Marks (Top/Bottom) */}
-        <div className="pointer-events-none absolute top-0 right-4 left-4 flex h-2 justify-between opacity-30">
+        {/* Archival Ruler Marks (Top/Bottom) - Varied heights like period measurements */}
+        <div className="pointer-events-none absolute top-0 right-4 left-4 flex h-3 justify-between opacity-50">
           {[...Array(20)].map((_, i) => (
-            <div key={i} className="bg-outline-default h-full w-px" />
+            <div
+              key={i}
+              className={cn(
+                "bg-primary w-px",
+                i % 5 === 0 ? "h-full" : i % 2 === 0 ? "h-2/3" : "h-1/2",
+              )}
+            />
           ))}
         </div>
-        <div className="pointer-events-none absolute right-4 bottom-0 left-4 flex h-2 justify-between opacity-30">
+        <div className="pointer-events-none absolute right-4 bottom-0 left-4 flex h-3 justify-between opacity-50">
           {[...Array(20)].map((_, i) => (
-            <div key={i} className="bg-outline-default h-full w-px" />
+            <div
+              key={i}
+              className={cn(
+                "bg-primary w-px",
+                i % 5 === 0 ? "h-full" : i % 2 === 0 ? "h-2/3" : "h-1/2",
+              )}
+            />
           ))}
         </div>
 
@@ -275,11 +288,9 @@ export function RangeInput({
         {/* Validation Message */}
         <div className="mt-4 flex h-8 items-center justify-center">
           {rangeTooWide ? (
-            <div className="text-feedback-error flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
-              <span className="border-feedback-error border-b-2 pb-0.5">
-                ⚠️ Range too wide ({pluralize(width, "year")})
-              </span>
-            </div>
+            <InlineWarning variant="error">
+              Range too wide: {pluralize(width, "year")}
+            </InlineWarning>
           ) : (
             <div className="text-tertiary font-mono text-xs">
               Span: {width.toLocaleString()} years
@@ -287,15 +298,16 @@ export function RangeInput({
           )}
         </div>
 
-        {/* Submit Action */}
+        {/* Submit Action - Seal Aesthetic */}
         <Button
           onClick={handleRangeCommit}
           disabled={commitDisabled}
           variant={commitDisabled ? "outline" : "default"}
           size="lg"
           className={cn(
-            "mt-2 h-14 w-full text-lg transition-all duration-300",
-            !commitDisabled && "shadow-hard hover:shadow-hard-lg hover:translate-y-[-2px]",
+            "mt-2 h-14 w-full rounded-sm text-lg font-bold tracking-wide transition-all duration-300",
+            !commitDisabled &&
+              "shadow-hard hover:shadow-hard-lg bg-vermilion-500 hover:bg-vermilion-600 border-vermilion-600 border-2 text-white hover:translate-y-[-2px]",
           )}
         >
           {isOneGuessMode ? "Lock In Final Guess" : "Submit Range"}

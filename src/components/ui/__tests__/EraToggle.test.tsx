@@ -312,8 +312,8 @@ describe("EraToggle", () => {
       const bcButton = screen.getByRole("radio", { name: /BC/i });
       const adButton = screen.getByRole("radio", { name: /AD/i });
 
-      expect(bcButton.className).toContain("bg-primary");
-      expect(bcButton.className).toContain("text-primary-foreground");
+      expect(bcButton.className).toContain("bg-vermilion-500");
+      expect(bcButton.className).toContain("text-white");
       expect(adButton.className).toContain("text-muted-foreground");
     });
 
@@ -323,13 +323,13 @@ describe("EraToggle", () => {
       const bcButton = screen.getByRole("radio", { name: /BC/i });
       const adButton = screen.getByRole("radio", { name: /AD/i });
 
-      expect(bcButton.className).toContain("bg-primary");
-      expect(adButton.className).not.toContain("bg-primary");
+      expect(bcButton.className).toContain("bg-vermilion-500");
+      expect(adButton.className).not.toContain("bg-vermilion-500");
 
       rerender(<EraToggle value="AD" onChange={mockOnChange} />);
 
-      expect(bcButton.className).not.toContain("bg-primary");
-      expect(adButton.className).toContain("bg-primary");
+      expect(bcButton.className).not.toContain("bg-vermilion-500");
+      expect(adButton.className).toContain("bg-vermilion-500");
     });
   });
 

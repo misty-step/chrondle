@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import type { Era } from "@/lib/eraUtils";
 
 const toggleContainerVariants = cva(
-  "inline-flex rounded-lg bg-muted/50 border border-input shadow-sm p-1 gap-1 relative",
+  "inline-flex rounded-sm material-paper border border-outline-default p-1 gap-1 relative",
   {
     variants: {
       size: {
@@ -28,24 +28,21 @@ const toggleContainerVariants = cva(
 );
 
 const toggleButtonVariants = cva(
-  "inline-flex items-center justify-center rounded-md px-3 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 flex-1 sm:flex-initial relative z-10",
+  "inline-flex items-center justify-center rounded-sm px-3 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-vermilion-500 disabled:pointer-events-none disabled:opacity-50 flex-1 sm:flex-initial relative z-10",
   {
     variants: {
       variant: {
         active: [
-          "bg-primary text-primary-foreground",
+          "bg-vermilion-500 text-white",
           "font-bold tracking-wide",
-          "shadow-md shadow-primary/20",
-          "ring-2 ring-primary/30 ring-offset-1 ring-offset-background/50",
-          "border-2 border-primary",
-          "scale-[1.02]",
+          "shadow-hard",
+          "border-2 border-vermilion-600",
         ].join(" "),
         inactive: [
           "text-muted-foreground hover:text-foreground",
           "font-medium",
-          "bg-background/30 hover:bg-background/50",
+          "bg-transparent hover:bg-surface-hover",
           "border-2 border-transparent",
-          "hover:border-input/50",
         ].join(" "),
       },
       size: {
