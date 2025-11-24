@@ -170,7 +170,7 @@ async function OrderArchivePageContent({
                       {totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}%
                     </span>
                   </div>
-                  <div className="bg-muted h-3 w-full overflow-hidden rounded-full">
+                  <div className="bg-muted border-outline-default/30 h-3 w-full overflow-hidden rounded-sm border">
                     <div
                       className="h-full bg-green-600 transition-all duration-300 ease-out"
                       style={{
@@ -183,10 +183,10 @@ async function OrderArchivePageContent({
                 // Show skeleton loader while user data loads
                 <div className="animate-pulse">
                   <div className="mb-2 flex items-center justify-between">
-                    <div className="bg-muted h-5 w-32 rounded" />
-                    <div className="bg-muted h-4 w-12 rounded" />
+                    <div className="bg-muted h-5 w-32 rounded-sm" />
+                    <div className="bg-muted h-4 w-12 rounded-sm" />
                   </div>
-                  <div className="bg-muted h-2 w-full rounded-full" />
+                  <div className="bg-muted border-outline-default/30 h-2 w-full rounded-sm border" />
                 </div>
               )}
             </div>

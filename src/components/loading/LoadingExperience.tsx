@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Loader2 } from "lucide-react";
+import { Hourglass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { INTENT_TOKENS, STAGE_COPY, type LoadingProps } from "./loadingTokens";
 
@@ -80,10 +80,10 @@ function TopBar({
 
 function InlineSpinner({ intentAccent }: { intentAccent: string }) {
   return (
-    <div className="border-outline-default/60 flex h-12 w-12 items-center justify-center rounded-full border">
-      <Loader2
-        className="h-5 w-5 animate-spin"
-        style={{ color: intentAccent, animationDuration: "0.9s" }}
+    <div className="border-outline-default/60 bg-card shadow-hard-sm flex h-12 w-12 items-center justify-center rounded-sm border">
+      <Hourglass
+        className="h-5 w-5 animate-pulse"
+        style={{ color: intentAccent, animationDuration: "1.5s" }}
         aria-hidden
       />
     </div>
@@ -103,10 +103,10 @@ function ProgressBar({
   const pct = progress ?? 34;
 
   return (
-    <div className="bg-muted/70 relative mt-4 h-1.5 w-48 overflow-hidden rounded-full">
+    <div className="bg-muted/70 border-outline-default/30 relative mt-4 h-1.5 w-48 overflow-hidden rounded-sm border">
       <div
         className={cn(
-          "absolute inset-y-0 left-0 rounded-full",
+          "absolute inset-y-0 left-0 rounded-sm",
           !showDeterminate && !prefersReducedMotion && "loading-shimmer",
         )}
         style={{
