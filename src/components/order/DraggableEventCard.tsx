@@ -132,7 +132,7 @@ function EventCardContent({
         className={[
           "flex touch-none items-center justify-center py-2",
           isLocked ? "cursor-not-allowed" : "cursor-grab",
-          "bg-muted/20 border-border/30 rounded-t-xl border-b", // Subtle separation
+          "bg-muted/20 border-border/30 rounded-t-sm border-b", // Subtle separation
         ].join(" ")}
         {...handleProps}
       >
@@ -160,14 +160,9 @@ function EventCardContent({
           </div>
         )}
 
-        {/* Position Indicator - Larger and bolder */}
+        {/* Position Indicator - Vermilion badge */}
         <div className="flex min-w-[32px] flex-shrink-0 items-center justify-center">
-          <div
-            className="font-year text-lg font-bold"
-            style={{ color: "var(--timeline-marker-contrast)" }}
-          >
-            {index + 1}
-          </div>
+          <div className="number-badge">{index + 1}</div>
         </div>
 
         <div className="min-w-0 flex-1">
@@ -219,9 +214,11 @@ function LockedBadge() {
 
 function cardClasses({ isDragging, isLocked }: { isDragging: boolean; isLocked: boolean }) {
   return [
-    "relative flex min-h-[100px] flex-col rounded-xl text-left will-change-transform transition-shadow duration-200",
-    "bg-card border border-border/40", // Subtle border for definition
-    isDragging ? "z-50 shadow-xl ring-2 ring-primary/20 scale-[1.02]" : "shadow-sm hover:shadow-md",
+    "relative flex min-h-[100px] flex-col rounded-sm text-left will-change-transform transition-all duration-200",
+    "bg-card border-2 border-border", // Angular archival border
+    isDragging
+      ? "z-50 shadow-hard-lg ring-2 ring-primary/20 scale-[1.02]"
+      : "shadow-hard hover:shadow-hard-lg hover:-translate-y-0.5",
     isLocked ? "cursor-not-allowed bg-muted/30 opacity-90" : "cursor-grab active:cursor-grabbing",
   ].join(" ");
 }

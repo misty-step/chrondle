@@ -5,7 +5,8 @@ import { DocumentHeader } from "@/components/order/DocumentHeader";
 import { HintDisplay } from "@/components/order/HintDisplay";
 import { OrderEventList } from "@/components/order/OrderEventList";
 import { OrderInstructions } from "@/components/order/OrderInstructions";
-import { Button } from "@/components/ui/button";
+import { GameCard } from "@/components/ui/GameCard";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import type { OrderEvent, ReadyState, OrderHint, OrderScore } from "@/types/orderGameState";
@@ -183,7 +184,7 @@ export function OrderGameBoard({
           </div>
 
           {/* The Board */}
-          <section className="border-border bg-card shadow-warm rounded-xl border p-4 md:p-6">
+          <GameCard as="section" padding="default">
             <OrderEventList
               events={puzzle.events}
               ordering={currentOrder}
@@ -191,16 +192,9 @@ export function OrderGameBoard({
               lockedPositions={lockedPositions}
               hintsByEvent={hintsByEvent}
             />
-          </section>
+          </GameCard>
 
-          <Button
-            type="button"
-            onClick={handleCommit}
-            size="lg"
-            className="relative z-10 w-full rounded-full text-base font-semibold shadow-lg"
-          >
-            Submit My Timeline
-          </Button>
+          <SubmitButton onClick={handleCommit}>Submit My Timeline</SubmitButton>
         </div>
       </div>
     </div>

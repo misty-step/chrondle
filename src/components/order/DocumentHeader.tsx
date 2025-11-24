@@ -43,7 +43,7 @@ export function DocumentHeader({ puzzleNumber, date, events }: DocumentHeaderPro
 
   return (
     <motion.div
-      className="bg-card border-border shadow-warm rounded-xl border p-4 md:p-5"
+      className="bg-surface-elevated border-outline-default shadow-hard rounded-sm border-2 p-4 md:p-5"
       initial={prefersReducedMotion ? undefined : { opacity: 0, y: -12 }}
       animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
       transition={prefersReducedMotion ? undefined : { duration: 0.4, ease: "easeOut" }}

@@ -31,14 +31,14 @@ vi.mock("@/hooks/useOrderGame", () => ({
   }),
 }));
 
-vi.mock("@/components/order/OrderEventList", () => ({
-  OrderEventList: () => <div data-testid="event-list">event-list</div>,
-}));
-vi.mock("@/components/order/HintDisplay", () => ({
-  HintDisplay: () => <div data-testid="hints">hints</div>,
-}));
-vi.mock("@/components/order/DocumentHeader", () => ({
-  DocumentHeader: () => <div data-testid="doc-header">doc-header</div>,
+vi.mock("@/components/order/OrderGameBoard", () => ({
+  OrderGameBoard: () => (
+    <div data-testid="order-game-board">
+      <div data-testid="doc-header">doc-header</div>
+      <div data-testid="event-list">event-list</div>
+      <div data-testid="hints">hints</div>
+    </div>
+  ),
 }));
 vi.mock("@/components/order/OrderReveal", () => ({
   OrderReveal: () => <div data-testid="reveal">reveal</div>,
@@ -48,6 +48,15 @@ vi.mock("@/components/AppHeader", () => ({
 }));
 vi.mock("@/components/Footer", () => ({
   Footer: () => <div data-testid="footer">footer</div>,
+}));
+vi.mock("@/components/LayoutContainer", () => ({
+  LayoutContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+vi.mock("@/components/LoadingScreen", () => ({
+  LoadingScreen: () => <div data-testid="loading">loading</div>,
+}));
+vi.mock("@/components/ArchiveErrorBoundary", () => ({
+  ArchiveErrorBoundary: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 describe("ArchiveOrderPuzzleClient", () => {

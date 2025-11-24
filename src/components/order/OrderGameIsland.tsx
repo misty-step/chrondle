@@ -6,7 +6,7 @@ import { api } from "../../../convex/_generated/api";
 import { useOrderGame } from "@/hooks/useOrderGame";
 import { OrderReveal } from "@/components/order/OrderReveal";
 import { OrderGameBoard } from "@/components/order/OrderGameBoard";
-import { AppHeader } from "@/components/AppHeader";
+import { GameModeLayout } from "@/components/GameModeLayout";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { copyOrderShareTextToClipboard, type OrderShareResult } from "@/lib/order/shareCard";
@@ -76,45 +76,36 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
     };
 
     return (
-      <div className="bg-background flex min-h-screen flex-col">
-        <AppHeader puzzleNumber={gameState.puzzle.puzzleNumber} isArchive={false} mode="order" />
-        <main className="flex-1 py-16">
-          <LayoutContainer className="flex max-w-3xl flex-col gap-6">
-            <OrderReveal
-              events={gameState.puzzle.events}
-              finalOrder={gameState.finalOrder}
-              correctOrder={gameState.correctOrder}
-              score={gameState.score}
-              puzzleNumber={gameState.puzzle.puzzleNumber}
-              onShare={handleShare}
-            />
-            {shareFeedback && (
-              <p className="text-muted-foreground text-center text-sm" role="status">
-                {shareFeedback}
-              </p>
-            )}
-          </LayoutContainer>
-        </main>
-      </div>
+      <GameModeLayout mode="order" puzzleNumber={gameState.puzzle.puzzleNumber} isArchive={false}>
+        <LayoutContainer className="flex max-w-4xl flex-col gap-6">
+          <OrderReveal
+            events={gameState.puzzle.events}
+            finalOrder={gameState.finalOrder}
+            correctOrder={gameState.correctOrder}
+            score={gameState.score}
+            puzzleNumber={gameState.puzzle.puzzleNumber}
+            onShare={handleShare}
+          />
+          {shareFeedback && (
+            <p className="text-muted-foreground text-center text-sm" role="status">
+              {shareFeedback}
+            </p>
+          )}
+        </LayoutContainer>
+      </GameModeLayout>
     );
   }
 
   return (
-    <div className="bg-background flex min-h-screen flex-col">
-      <AppHeader puzzleNumber={gameState.puzzle.puzzleNumber} isArchive={false} mode="order" />
-      <main
-        className="flex-1 py-6"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}
-      >
-        <LayoutContainer className="flex w-full max-w-5xl flex-col gap-6">
-          <OrderGameBoard
-            gameState={gameState as import("@/types/orderGameState").ReadyState}
-            reorderEvents={reorderEvents}
-            takeHint={takeHint}
-            commitOrdering={commitOrdering}
-          />
-        </LayoutContainer>
-      </main>
-    </div>
+    <GameModeLayout mode="order" puzzleNumber={gameState.puzzle.puzzleNumber} isArchive={false}>
+      <LayoutContainer className="flex w-full max-w-4xl flex-col gap-6">
+        <OrderGameBoard
+          gameState={gameState as import("@/types/orderGameState").ReadyState}
+          reorderEvents={reorderEvents}
+          takeHint={takeHint}
+          commitOrdering={commitOrdering}
+        />
+      </LayoutContainer>
+    </GameModeLayout>
   );
 }
