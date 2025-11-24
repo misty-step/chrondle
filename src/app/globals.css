@@ -24,6 +24,9 @@
   --color-parchment-200: oklch(0.9 0.12 85);
   --color-parchment-300: oklch(0.86 0.14 85);
 
+  /* Aged Newsprint - Cool gray-beige for body background */
+  --color-newsprint: oklch(0.88 0.015 75); /* Cooler, less saturated than parchment */
+
   /* Archival Accents - Boosted for visibility */
   --color-sepia: oklch(0.6 0.2 60);
   --color-oxidized: oklch(0.5 0.22 140);
@@ -58,7 +61,7 @@
   --material-paper-border: var(--color-parchment-300);
 
   /* --- INTENTS (Semantic Roles) --- */
-  --background: var(--material-paper-bg);
+  --background: var(--color-newsprint);
   --foreground: var(--material-paper-fg);
 
   --card: var(--color-parchment-100);
@@ -83,7 +86,7 @@
   --destructive-foreground: #ffffff;
 
   --border: var(--material-paper-border);
-  --input: var(--color-parchment-50);
+  --input: oklch(0.92 0.01 85); /* Cooler, slightly darker for differentiation */
   --ring: var(--color-vermilion-500);
 
   --radius: 0.375rem;
@@ -122,9 +125,9 @@
   --feedback-correct: var(--feedback-success);
 
   /* --- ELEVATION SYSTEM --- */
-  --elevation-navbar-bg: var(--color-parchment-50);
-  --elevation-navbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --elevation-navbar-border: var(--color-parchment-200);
+  --elevation-navbar-bg: oklch(0.99 0.005 85); /* Bright white editorial header */
+  --elevation-navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); /* Strong editorial shadow */
+  --elevation-navbar-border: oklch(0.92 0.02 85); /* Subtle border for definition */
 
   /* --- MATERIALS (Dynamic) --- */
   --material-overlay: linear-gradient(
@@ -206,9 +209,9 @@
     --color-order-accent: oklch(0.7 0.15 260);
 
     /* ELEVATION SYSTEM - Dark Mode */
-    --elevation-navbar-bg: var(--color-parchment-100);
-    --elevation-navbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
-    --elevation-navbar-border: var(--color-parchment-300);
+    --elevation-navbar-bg: oklch(0.22 0.02 85); /* Slightly elevated dark surface */
+    --elevation-navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); /* Strong shadow for depth */
+    --elevation-navbar-border: oklch(0.28 0.03 85); /* Subtle border */
 
     /* MATERIALS */
     --material-overlay: linear-gradient(
@@ -293,9 +296,9 @@ html.dark {
   --locked-badge-bg: oklch(from var(--locked-badge) l c h / 0.15);
 
   /* ELEVATION SYSTEM - Dark Mode */
-  --elevation-navbar-bg: var(--color-parchment-100);
-  --elevation-navbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
-  --elevation-navbar-border: var(--color-parchment-300);
+  --elevation-navbar-bg: oklch(0.22 0.02 85); /* Slightly elevated dark surface */
+  --elevation-navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); /* Strong shadow for depth */
+  --elevation-navbar-border: oklch(0.28 0.03 85); /* Subtle border */
 
   /* MATERIALS */
   --material-overlay: linear-gradient(
@@ -340,7 +343,7 @@ html.light {
   --material-paper-fg: var(--color-ink-900);
   --material-paper-border: var(--color-parchment-300);
 
-  --background: var(--material-paper-bg);
+  --background: var(--color-newsprint);
   --foreground: var(--material-paper-fg);
 
   --card: var(--color-parchment-100);
@@ -362,7 +365,7 @@ html.light {
   --accent-foreground: var(--color-ink-900);
 
   --border: var(--material-paper-border);
-  --input: var(--color-parchment-50);
+  --input: oklch(0.92 0.01 85); /* Cooler, slightly darker for differentiation */
   --ring: var(--color-vermilion-500);
 
   --color-classic-bg: oklch(0.94 0.03 85);
@@ -372,6 +375,11 @@ html.light {
   --color-order-bg: oklch(0.93 0.02 240);
   --color-order-text: oklch(0.28 0.06 250);
   --color-order-accent: oklch(0.5 0.2 260);
+
+  /* ELEVATION SYSTEM - Light Mode Override */
+  --elevation-navbar-bg: oklch(0.99 0.005 85); /* Bright white editorial header */
+  --elevation-navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); /* Strong editorial shadow */
+  --elevation-navbar-border: oklch(0.92 0.02 85); /* Subtle border for definition */
 
   --material-overlay: linear-gradient(
     to bottom right,

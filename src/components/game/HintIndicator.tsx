@@ -31,7 +31,7 @@ export function HintIndicator({
   const hasMoreHints = hintsRevealed < numberOfHintCircles;
 
   return (
-    <div className={cn("flex items-center justify-start gap-4", className)}>
+    <div className={cn("flex items-center justify-end gap-4", className)}>
       {/* Stamp indicators - 5 marks for 5 additional hints (not counting the puzzle event) */}
       <div
         className="flex gap-2"
@@ -59,9 +59,9 @@ export function HintIndicator({
           size="default"
           onClick={onRevealHint}
           disabled={disabled}
-          className="hover:border-vermilion-500 hover:text-vermilion-500 h-10 border-2 px-4 text-sm font-semibold transition-colors"
+          className="hover:border-vermilion-500 hover:text-vermilion-500 h-10 rounded-sm border-2 px-4 text-sm font-semibold transition-colors"
         >
-          Unlock Hint
+          Take Hint
         </Button>
       )}
     </div>

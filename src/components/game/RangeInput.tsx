@@ -240,7 +240,7 @@ export function RangeInput({
                     onBlur={applyStartYear}
                     onKeyDown={(e) => handleInputKeyDown(e, applyStartYear)}
                     disabled={disabled}
-                    className="bg-surface-elevated border-outline-default focus:border-vermilion-500 focus:ring-vermilion-500/20 text-primary h-12 text-center font-serif text-2xl"
+                    className="bg-input border-outline-default focus:border-vermilion-500 focus:ring-vermilion-500/20 text-primary h-12 text-center font-serif text-2xl"
                   />
                 </div>
                 <EraToggle
@@ -271,7 +271,7 @@ export function RangeInput({
                     onBlur={applyEndYear}
                     onKeyDown={(e) => handleInputKeyDown(e, applyEndYear)}
                     disabled={disabled}
-                    className="bg-surface-elevated border-outline-default focus:border-vermilion-500 focus:ring-vermilion-500/20 text-primary h-12 text-center font-serif text-2xl"
+                    className="bg-input border-outline-default focus:border-vermilion-500 focus:ring-vermilion-500/20 text-primary h-12 text-center font-serif text-2xl"
                   />
                 </div>
                 <EraToggle
