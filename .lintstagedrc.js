@@ -1,6 +1,11 @@
 const config = {
   // TypeScript and JavaScript files - lint and format only changed files
-  "**/*.{ts,tsx,js,jsx}": ["eslint --fix", "prettier --write"],
+  // Exclude convex/_generated (auto-generated, should not be linted)
+  "**/*.{ts,tsx,js,jsx}": (files) => {
+    const filtered = files.filter((f) => !f.includes("convex/_generated"));
+    if (filtered.length === 0) return [];
+    return [`eslint --fix ${filtered.join(" ")}`, `prettier --write ${filtered.join(" ")}`];
+  },
 
   // Other files - just format
   "**/*.{json,css,scss,md}": ["prettier --write"],
