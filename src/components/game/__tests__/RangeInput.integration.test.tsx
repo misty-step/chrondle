@@ -64,12 +64,12 @@ describe("RangeInput", () => {
       renderRangeInput();
       // Default range spans full timeline which exceeds max, so error should be visible
       const defaultWidth = GAME_CONFIG.MAX_YEAR - GAME_CONFIG.MIN_YEAR + 1;
-      expect(screen.getByText(/range too wide/i)).toBeInTheDocument();
-      // New format shows formatted width and max value: "5,026 years (max 250)"
+      expect(screen.getByText(/exceeds limit/i)).toBeInTheDocument();
+      // New format shows formatted width and max value: "X of 250 years"
       expect(
         screen.getByText(
           new RegExp(
-            `${defaultWidth.toLocaleString()}.*years.*max.*${SCORING_CONSTANTS.W_MAX.toLocaleString()}`,
+            `${defaultWidth.toLocaleString()}.*of.*${SCORING_CONSTANTS.W_MAX.toLocaleString()}.*years`,
           ),
         ),
       ).toBeInTheDocument();

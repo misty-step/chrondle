@@ -687,6 +687,87 @@ html.dark {
   .paper-edge-dramatic {
     filter: url(#paper-edge-filter-dramatic);
   }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+   * LEDGER FORM UTILITIES
+   * Archival paper form aesthetic for inputs and validation
+   * ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Ledger entry line - dotted underline for form fields */
+  .ledger-entry-line {
+    border: none;
+    border-bottom: 2px dotted var(--border);
+    background: transparent;
+    border-radius: 0;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .ledger-entry-line:focus {
+    outline: none;
+    border-bottom-style: solid;
+    border-bottom-color: var(--primary);
+    box-shadow: 0 4px 12px color-mix(in oklch, var(--primary) 20%, transparent);
+  }
+
+  .ledger-entry-line:focus-visible {
+    outline: none;
+  }
+
+  /* Archival stamp effect - rotated badge for validation */
+  .archival-stamp {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transform: rotate(-3deg);
+    border: 2px solid currentColor;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-archival);
+  }
+
+  .archival-stamp-error {
+    color: var(--feedback-error);
+    background: color-mix(in oklch, var(--feedback-error) 10%, transparent);
+  }
+
+  .archival-stamp-valid {
+    color: var(--feedback-success);
+    background: color-mix(in oklch, var(--feedback-success) 10%, transparent);
+  }
+
+  /* Range progress bar - shows proximity to 250-year limit */
+  .range-progress {
+    height: 4px;
+    background: var(--muted);
+    border-radius: var(--radius-archival);
+    overflow: hidden;
+  }
+
+  .range-progress-fill {
+    height: 100%;
+    background: var(--primary);
+    transition: width 0.3s ease;
+    border-radius: var(--radius-archival);
+  }
+
+  .range-progress-fill[data-exceeds="true"] {
+    background: var(--feedback-error);
+  }
+
+  /* Section divider - ruled line for ledger sections */
+  .ledger-divider {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--border) 10%,
+      var(--border) 90%,
+      transparent
+    );
+  }
 }
 
 /* SVG Filters for Paper Edge Effects (defined globally) */
