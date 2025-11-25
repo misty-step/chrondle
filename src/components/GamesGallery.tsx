@@ -83,11 +83,11 @@ export function GamesGallery() {
     <main className="bg-background relative flex h-[100dvh] w-full flex-col overflow-hidden md:flex-row">
       {/* --- Branding Anchor with Theme Toggle --- */}
       <div className="pointer-events-none absolute top-6 right-0 left-0 z-50 flex justify-center">
-        <div className="border-outline-default/10 bg-card/80 shadow-hard-sm pointer-events-auto flex items-center gap-2 rounded-sm border px-5 py-2 backdrop-blur-md">
-          <div className="rounded-sm p-1.5">
-            <Crown className="text-body-primary/80 h-4 w-4" />
+        <div className="border-outline-default/30 bg-card/90 shadow-hard pointer-events-auto flex items-center gap-2 rounded-sm border-2 px-5 py-2 backdrop-blur-md dark:border-[oklch(0.45_0.03_260)] dark:shadow-[0_4px_20px_oklch(0.55_0.2_25/0.3),0_0_30px_oklch(0.65_0.22_25/0.2)]">
+          <div className="bg-primary/10 dark:bg-vermilion/15 rounded-sm p-1.5">
+            <Crown className="text-body-primary h-4 w-4 dark:text-[oklch(0.65_0.22_25)]" />
           </div>
-          <span className="font-heading text-body-primary/90 text-lg font-bold tracking-wide">
+          <span className="font-heading text-body-primary text-lg font-bold tracking-wide dark:text-[oklch(0.92_0.03_75)]">
             CHRONDLE
           </span>
 
@@ -169,14 +169,14 @@ export function GamesGallery() {
               transition={{ duration: 0.4 }}
             />
 
-            {/* Background Texture - Mode specific overlays */}
+            {/* Background Texture - Mode specific overlays with enhanced visibility */}
             <div
-              className="pointer-events-none absolute inset-0 opacity-10 mix-blend-multiply transition-opacity duration-500 dark:mix-blend-normal"
+              className="pointer-events-none absolute inset-0 opacity-30 mix-blend-overlay transition-opacity duration-500 dark:mix-blend-screen"
               style={{
                 backgroundImage:
                   mode.key === "classic"
-                    ? `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                    : `linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)`,
+                    ? `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FFA857' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                    : `linear-gradient(oklch(0.7 0.16 260) 1px, transparent 1px), linear-gradient(90deg, oklch(0.7 0.16 260) 1px, transparent 1px)`,
                 backgroundSize: mode.key === "order" ? "40px 40px" : undefined,
               }}
             />

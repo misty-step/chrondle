@@ -8,7 +8,11 @@
  * @module
  */
 
-import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server";
+import type {
+  ApiFromModules,
+  FilterApi,
+  FunctionReference,
+} from "convex/server";
 import type * as actions_eventGeneration_critic from "../actions/eventGeneration/critic.js";
 import type * as actions_eventGeneration_generator from "../actions/eventGeneration/generator.js";
 import type * as actions_eventGeneration_orchestrator from "../actions/eventGeneration/orchestrator.js";
@@ -110,5 +114,11 @@ declare const fullApi: ApiFromModules<{
   "users/statistics": typeof users_statistics;
   users: typeof users;
 }>;
-export declare const api: FilterApi<typeof fullApi, FunctionReference<any, "public">>;
-export declare const internal: FilterApi<typeof fullApi, FunctionReference<any, "internal">>;
+export declare const api: FilterApi<
+  typeof fullApi,
+  FunctionReference<any, "public">
+>;
+export declare const internal: FilterApi<
+  typeof fullApi,
+  FunctionReference<any, "internal">
+>;
