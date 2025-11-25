@@ -164,20 +164,20 @@
   --status-info: var(--feedback-info);
 }
 
-/* DARK MODE OVERRIDES - ESPRESSO & CREAM
-   High contrast dark theme where cards dramatically float above the void.
-   Inspired by Italian café design, evening aperitivo aesthetics. */
+/* DARK MODE OVERRIDES - ARCHIVAL NIGHT
+   High contrast traditional dark theme with elevated dark cards.
+   Cards are dark but lighter than background for clear hierarchy. */
 html.dark {
-  /* Ink (text) - warm cream, adjusted for lighter card surfaces */
-  --color-ink-900: oklch(0.96 0.03 85); /* Primary text - warm cream */
-  --color-ink-700: oklch(0.82 0.04 85); /* Secondary text */
-  --color-ink-500: oklch(0.7 0.04 85); /* Tertiary - raised for cream surfaces */
+  /* Text: High contrast cream on dark surfaces */
+  --color-ink-900: oklch(0.95 0.02 85); /* Primary text - bright cream */
+  --color-ink-700: oklch(0.8 0.02 85); /* Secondary text */
+  --color-ink-500: oklch(0.65 0.02 85); /* Tertiary text */
 
-  /* Parchment (surfaces) - THE KEY CHANGE: 2.5:1 contrast ratio */
-  --color-parchment-50: oklch(0.14 0.04 50); /* Deep espresso void */
-  --color-parchment-100: oklch(0.35 0.05 55); /* CREAM cards - dramatic float! */
-  --color-parchment-200: oklch(0.38 0.05 55); /* Secondary surfaces */
-  --color-parchment-300: oklch(0.42 0.04 50); /* Strong visible borders */
+  /* Surfaces: Dark cards on darker background */
+  --color-parchment-50: oklch(0.1 0.015 250); /* Near-black void */
+  --color-parchment-100: oklch(0.22 0.02 250); /* Elevated dark cards */
+  --color-parchment-200: oklch(0.18 0.02 250); /* Secondary surfaces */
+  --color-parchment-300: oklch(0.35 0.02 250); /* Strong visible borders */
 
   /* Archival Accents - Dark Mode */
   --color-sepia: oklch(0.55 0.12 60);
@@ -188,58 +188,59 @@ html.dark {
   --background: var(--color-parchment-50);
   --foreground: var(--color-ink-900);
 
+  /* Cards are DARK in dark mode - with LIGHT text */
   --card: var(--color-parchment-100);
   --card-foreground: var(--color-ink-900);
 
   --popover: var(--color-parchment-100);
   --popover-foreground: var(--color-ink-900);
 
-  /* Interactive - vermilion stays bold, white text */
-  --primary: var(--color-vermilion-400);
+  /* Interactive - vermilion stays bold */
+  --primary: var(--color-vermilion-500);
   --primary-foreground: #ffffff;
 
   --secondary: var(--color-parchment-200);
   --secondary-foreground: var(--color-ink-900);
 
-  --muted: var(--color-parchment-200);
-  --muted-foreground: oklch(0.6 0.03 60); /* Raised for cream surfaces */
+  --muted: oklch(0.2 0.015 250); /* Dark muted background */
+  --muted-foreground: oklch(0.7 0.02 85); /* Visible muted text */
 
   --accent: var(--color-parchment-200);
   --accent-foreground: var(--color-ink-900);
 
-  /* Borders - now dramatically visible */
+  /* Borders - visible on dark surfaces */
   --border: var(--color-parchment-300);
-  --input: var(--color-parchment-200);
+  --input: oklch(0.25 0.02 250);
 
   /* MODES */
-  --color-classic-bg: oklch(0.18 0.02 85);
-  --color-classic-text: oklch(0.94 0.03 85);
-  --color-classic-accent: oklch(0.7 0.15 50);
+  --color-classic-bg: oklch(0.12 0.015 250);
+  --color-classic-text: oklch(0.95 0.02 85);
+  --color-classic-accent: oklch(0.65 0.18 25);
 
-  --color-order-bg: oklch(0.18 0.03 240);
-  --color-order-text: oklch(0.93 0.02 240);
-  --color-order-accent: oklch(0.7 0.15 260);
-  --timeline-marker-contrast: oklch(0.88 0.12 260);
+  --color-order-bg: oklch(0.12 0.015 250);
+  --color-order-text: oklch(0.95 0.02 85); /* Light text on dark surfaces */
+  --color-order-accent: oklch(0.65 0.18 260);
+  --timeline-marker-contrast: oklch(0.75 0.15 260);
 
   /* Order Mode Specific Tokens - Dark Mode */
   --timeline-marker: var(--color-order-accent);
-  --timeline-spine: var(--border);
+  --timeline-spine: oklch(0.35 0.02 250);
   --timeline-era-label: var(--color-ink-700);
   --locked-badge: var(--color-vermilion-500);
   --locked-badge-bg: oklch(from var(--locked-badge) l c h / 0.15);
 
-  /* ELEVATION SYSTEM - Dark Mode (Espresso & Cream) */
-  --elevation-navbar-bg: oklch(0.22 0.04 50); /* Floats between espresso and cream */
-  --elevation-navbar-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); /* Strong float shadow */
-  --elevation-navbar-border: var(--color-parchment-300); /* Visible separation */
+  /* ELEVATION SYSTEM - Dark Mode */
+  --elevation-navbar-bg: oklch(0.18 0.02 250); /* Elevated dark navbar */
+  --elevation-navbar-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); /* Strong shadow */
+  --elevation-navbar-border: oklch(0.3 0.02 250); /* Visible border */
 
   /* MATERIALS */
   --material-overlay: linear-gradient(
     to bottom right,
-    rgba(255, 255, 255, 0.03),
-    rgba(0, 0, 0, 0.3)
+    rgba(255, 255, 255, 0.02),
+    rgba(0, 0, 0, 0.15)
   );
-  --card-shadow-color: oklch(0 0 0);
+  --card-shadow-color: oklch(0 0 0 / 0.4);
 
   --chart-1: oklch(0.7137 0.1434 254.624);
   --chart-2: oklch(0.6231 0.188 259.8145);
@@ -247,13 +248,13 @@ html.dark {
   --chart-4: oklch(0.4882 0.2172 264.3763);
   --chart-5: oklch(0.4244 0.1809 265.6377);
 
-  --sidebar: oklch(0.2046 0 0);
-  --sidebar-foreground: oklch(0.9219 0 0);
+  --sidebar: oklch(0.15 0.02 250);
+  --sidebar-foreground: oklch(0.92 0.02 85);
   --sidebar-primary: oklch(0.6231 0.188 259.8145);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.3791 0.1378 265.5222);
   --sidebar-accent-foreground: oklch(0.8823 0.0571 254.1284);
-  --sidebar-border: oklch(0.3715 0 0);
+  --sidebar-border: oklch(0.3 0.02 250);
   --sidebar-ring: oklch(0.6231 0.188 259.8145);
 }
 
@@ -712,5 +713,15 @@ body {
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"),
     /* Warm gradient with subtle vignette */
       radial-gradient(ellipse at center, oklch(0.95 0.02 85) 0%, oklch(0.91 0.02 75) 100%);
+  background-attachment: fixed;
+}
+
+/* Dark Mode: Near-black void with subtle texture */
+html.dark body {
+  background:
+    /* Subtle noise texture */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E"),
+    /* Deep void with subtle vignette */
+      radial-gradient(ellipse at center, oklch(0.12 0.015 250) 0%, oklch(0.08 0.01 250) 100%);
   background-attachment: fixed;
 }

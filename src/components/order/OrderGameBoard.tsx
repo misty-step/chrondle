@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { DocumentHeader } from "@/components/order/DocumentHeader";
 import { HintDisplay } from "@/components/order/HintDisplay";
 import { OrderEventList } from "@/components/order/OrderEventList";
 import { OrderInstructions } from "@/components/order/OrderInstructions";
@@ -147,14 +146,7 @@ export function OrderGameBoard({
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <div className="space-y-4">
-        <OrderInstructions />
-        <DocumentHeader
-          puzzleNumber={puzzle.puzzleNumber}
-          date={puzzle.date}
-          events={puzzle.events}
-        />
-      </div>
+      <OrderInstructions puzzleNumber={puzzle.puzzleNumber} events={puzzle.events} />
 
       <div className="flex flex-col gap-6 lg:flex-row-reverse">
         {/* Sidebar (Hints) */}

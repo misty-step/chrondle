@@ -41,7 +41,14 @@ export function OrderEventList({
 }: OrderEventListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 4 },
+      activationConstraint: {
+        // Increased from 4px - requires more deliberate movement
+        distance: 8,
+        // 150ms delay prevents accidental drag when scrolling on mobile
+        delay: 150,
+        // Allow small movements during delay without canceling
+        tolerance: 5,
+      },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,

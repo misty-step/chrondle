@@ -268,17 +268,17 @@ function MobileHintPanel(props: InternalPanelProps) {
               </div>
 
               {/* Label + Description */}
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 overflow-hidden">
                 <span
                   className={cn(
-                    "block text-base leading-tight font-semibold",
+                    "block truncate text-base leading-tight font-semibold",
                     isUsed ? "text-muted-foreground" : "text-primary",
                   )}
                 >
                   {isUsed && "✓ "}
                   {HINT_COPY[type].label}
                 </span>
-                <span className="text-muted-foreground mt-0.5 block text-sm leading-snug">
+                <span className="text-muted-foreground mt-0.5 line-clamp-2 block text-sm leading-snug">
                   {isUsed ? "Used" : HINT_COPY[type].availableDescription}
                 </span>
               </div>
@@ -393,9 +393,9 @@ function AvailableHintButton({ type, pending, onSelect }: AvailableHintButtonPro
         <p className="text-primary min-w-0 truncate text-sm font-semibold">{copy.label}</p>
       </div>
 
-      {/* Description below with indent */}
-      <div className="min-w-0 pl-8">
-        <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed">
+      {/* Description below */}
+      <div className="w-full min-w-0 overflow-hidden">
+        <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed normal-case">
           {copy.availableDescription}
         </p>
         {pending && (

@@ -54,12 +54,7 @@ export function DraggableEventCard({
   );
 
   return (
-    <motion.li
-      ref={setNodeRef}
-      style={style}
-      className={cardClasses({ isDragging, isLocked })}
-      {...attributes}
-    >
+    <motion.li ref={setNodeRef} style={style} className={cardClasses({ isDragging, isLocked })}>
       <EventCardContent
         event={event}
         index={index}
@@ -67,6 +62,7 @@ export function DraggableEventCard({
         showYear={showYear}
         isLocked={isLocked}
         listeners={listeners}
+        attributes={attributes}
       />
     </motion.li>
   );
@@ -112,6 +108,7 @@ interface EventCardContentProps {
   showYear?: boolean;
   isLocked?: boolean;
   listeners?: DraggableSyntheticListeners;
+  attributes?: React.HTMLAttributes<HTMLElement>;
   mutedHandle?: boolean;
 }
 
@@ -122,12 +119,15 @@ function EventCardContent({
   showYear = false,
   isLocked = false,
   listeners,
+  attributes,
   mutedHandle = false,
 }: EventCardContentProps) {
-  const handleProps = listeners ?? {};
+  // Combine listeners and attributes for handle-only drag
+  const handleProps = { ...(listeners ?? {}), ...(attributes ?? {}) };
 
   return (
     <>
+      {/* DRAG HANDLE - Only this area initiates drag */}
       <div
         className={[
           "flex touch-none items-center justify-center py-3",
@@ -219,7 +219,8 @@ function cardClasses({ isDragging, isLocked }: { isDragging: boolean; isLocked: 
     isDragging
       ? "z-50 shadow-hard-lg ring-2 ring-primary/20 scale-[1.02]"
       : "shadow-hard hover:shadow-hard-lg hover:-translate-y-0.5",
-    isLocked ? "cursor-not-allowed bg-muted/30 opacity-90" : "cursor-grab active:cursor-grabbing",
+    // Drag is handle-only - card body is scrollable
+    isLocked ? "cursor-not-allowed bg-muted/30 opacity-90" : "",
   ].join(" ");
 }
 
