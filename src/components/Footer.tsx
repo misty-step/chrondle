@@ -18,7 +18,7 @@ export function Footer() {
             href="https://mistystep.io"
             target="_blank"
             rel="noopener noreferrer"
-            className="group text-muted-foreground/70 hover:text-primary inline-flex items-baseline gap-1 font-serif text-xs transition-colors"
+            className="group text-muted-foreground/80 hover:text-primary inline-flex items-baseline gap-1 font-serif text-sm transition-colors"
           >
             <span>A Misty Step project</span>
           </a>
@@ -33,10 +33,10 @@ export function Footer() {
               copy();
             }}
             className={cn(
-              "group flex items-center gap-1.5 font-serif text-xs font-medium transition-colors",
+              "group flex items-center gap-1.5 font-serif text-sm font-medium transition-colors",
               hasCopied
                 ? "text-feedback-success"
-                : "text-muted-foreground/70 hover:text-foreground",
+                : "text-muted-foreground/80 hover:text-foreground",
             )}
             aria-label="Copy support email address"
           >
@@ -59,7 +59,7 @@ export function Footer() {
           {/* Legal - Unified opacity */}
           <nav
             aria-label="Legal"
-            className="text-muted-foreground/70 flex items-center gap-4 font-serif text-xs"
+            className="text-muted-foreground/80 flex items-center gap-4 font-serif text-sm"
           >
             <Link
               href="/legal/terms"

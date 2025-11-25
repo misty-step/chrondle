@@ -1,6 +1,12 @@
 export type LoadingIntent = "order" | "classic" | "generic";
 
-export type LoadingStage = "fetching" | "hydrating" | "readying";
+export type LoadingStage =
+  | "fetching"
+  | "hydrating"
+  | "readying"
+  | "authenticating"
+  | "loading_puzzle"
+  | "resolving_year";
 
 export interface LoadingProps {
   message: string;
@@ -45,7 +51,10 @@ export const INTENT_TOKENS: Record<LoadingIntent, IntentTokens> = {
 };
 
 export const STAGE_COPY: Record<LoadingStage, string> = {
-  fetching: "Fetching data",
-  hydrating: "Hydrating interface",
-  readying: "Final touches",
+  fetching: "Consulting the archives",
+  hydrating: "Preparing the ledger",
+  readying: "Ready shortly",
+  authenticating: "Verifying credentials",
+  loading_puzzle: "Retrieving historical record",
+  resolving_year: "Locating date entry",
 };

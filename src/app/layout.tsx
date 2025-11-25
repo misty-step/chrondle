@@ -44,7 +44,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Archivo+Narrow:wght@400;500;600;700&family=Newsreader:ital,wght@0,200..800;1,200..800&family=IM+Fell+English:ital@0;1&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Archivo+Narrow:wght@400;500;600;700&family=Newsreader:ital,wght@0,300..800;1,300..800&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap"
           rel="stylesheet"
         />
       </head>

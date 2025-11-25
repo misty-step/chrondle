@@ -314,7 +314,7 @@ describe("EraToggle", () => {
 
       expect(bcButton.className).toContain("bg-vermilion-500");
       expect(bcButton.className).toContain("text-white");
-      expect(adButton.className).toContain("text-muted-foreground");
+      expect(adButton.className).toContain("text-secondary");
     });
 
     it("switches visual states when value changes", () => {

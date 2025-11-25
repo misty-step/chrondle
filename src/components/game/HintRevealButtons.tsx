@@ -61,7 +61,7 @@ export function HintRevealButtons({
   return (
     <div className={cn("space-y-5", className)}>
       {/* The Puzzle Event - Hero Display */}
-      <div className="border-primary bg-primary/10 rounded-xl border-2 p-5 shadow-md sm:p-6">
+      <div className="border-primary bg-primary/10 rounded-sm border-2 p-5 shadow-md sm:p-6">
         <div className="text-primary mb-2 text-xs font-bold tracking-wider uppercase">
           The Event
         </div>
@@ -74,7 +74,7 @@ export function HintRevealButtons({
           {revealedClues.map((clue, index) => (
             <div
               key={index}
-              className="border-primary/40 bg-primary/5 rounded-lg border p-4 shadow-sm"
+              className="border-primary/40 bg-primary/5 rounded-sm border p-4 shadow-sm"
             >
               <div className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wider uppercase">
                 Clue {index + 2}
@@ -87,7 +87,7 @@ export function HintRevealButtons({
 
       {/* Clue Reveal Section - Only if more clues available */}
       {hasMoreClues && (
-        <div className="rounded-xl border-2 border-amber-500/30 bg-amber-500/5 p-5 shadow-lg">
+        <div className="rounded-sm border-2 border-amber-500/30 bg-amber-500/5 p-5 shadow-lg">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-base font-semibold">Want Another Clue?</span>
             <ClueProgressDots total={totalClues} revealed={hintsRevealed + 1} />

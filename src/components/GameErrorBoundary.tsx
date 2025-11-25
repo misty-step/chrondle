@@ -164,24 +164,24 @@ export class GameErrorBoundary extends Component<Props, State> {
           Developer Details
         </summary>
         <div className="mt-3 space-y-3">
-          <div className="bg-muted/50 rounded-md p-3">
+          <div className="bg-muted/50 rounded-sm p-3">
             <p className="text-muted-foreground mb-1 font-mono text-xs">Error Message:</p>
             <pre className="overflow-auto font-mono text-xs">{this.state.error.message}</pre>
           </div>
 
-          <div className="bg-muted/50 rounded-md p-3">
+          <div className="bg-muted/50 rounded-sm p-3">
             <p className="text-muted-foreground mb-1 font-mono text-xs">Stack Trace:</p>
             <pre className="max-h-32 overflow-auto font-mono text-xs">{this.state.error.stack}</pre>
           </div>
 
-          <div className="bg-muted/50 rounded-md p-3">
+          <div className="bg-muted/50 rounded-sm p-3">
             <p className="text-muted-foreground mb-1 font-mono text-xs">Component Stack:</p>
             <pre className="max-h-32 overflow-auto font-mono text-xs">
               {this.state.errorInfo?.componentStack}
             </pre>
           </div>
 
-          <div className="bg-muted/50 rounded-md p-3">
+          <div className="bg-muted/50 rounded-sm p-3">
             <p className="text-muted-foreground font-mono text-xs">
               Error Count: {this.state.errorCount} | Puzzle: {this.props.puzzleNumber || "daily"}
             </p>
@@ -201,7 +201,7 @@ export class GameErrorBoundary extends Component<Props, State> {
       return (
         <div className="bg-background flex min-h-screen items-center justify-center p-4">
           <div className="w-full max-w-md">
-            <div className="bg-card rounded-lg border p-6 shadow-lg">
+            <div className="bg-card rounded-sm border p-6 shadow-lg">
               <div className="text-center">
                 <div className="bg-destructive/10 mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full">
                   <AlertTriangle className="text-destructive h-6 w-6" />
@@ -222,7 +222,7 @@ export class GameErrorBoundary extends Component<Props, State> {
                   {/* Soft reload - try to recover without losing data */}
                   <button
                     onClick={this.handleSoftReload}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 transition-colors"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded-sm px-4 py-2 transition-colors"
                   >
                     <RotateCw className="h-4 w-4" />
                     Try Again
@@ -230,7 +230,7 @@ export class GameErrorBoundary extends Component<Props, State> {
 
                   {/* Navigate to home */}
                   <Link href="/" className="block">
-                    <button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 transition-colors">
+                    <button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 flex w-full items-center justify-center gap-2 rounded-sm px-4 py-2 transition-colors">
                       <Home className="h-4 w-4" />
                       Go to Today&apos;s Puzzle
                     </button>
@@ -240,7 +240,7 @@ export class GameErrorBoundary extends Component<Props, State> {
                   {this.state.errorCount > 2 && (
                     <button
                       onClick={this.handleHardReload}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full rounded-md px-4 py-2 transition-colors"
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full rounded-sm px-4 py-2 transition-colors"
                     >
                       Clear Data & Reload
                     </button>

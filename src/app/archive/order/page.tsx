@@ -289,9 +289,9 @@ export default function OrderArchivePage({ searchParams }: ArchivePageProps): Re
         fallback={
           <LoadingShell
             intent="order"
-            stage="fetching"
-            message="Loading Order archive…"
-            subMessage="Fetching puzzles and your progress"
+            stage="loading_puzzle"
+            message="Opening the timeline archive"
+            subMessage="Preparing chronological records"
           />
         }
       >

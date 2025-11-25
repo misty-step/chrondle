@@ -30,12 +30,12 @@ export const HistoricalContextCard: React.FC<HistoricalContextCardProps> = ({
   return (
     <div className={`w-full ${className}`}>
       {/* Single Container - Header and expandable content */}
-      <div className="w-full bg-gradient-to-br from-blue-500/5 to-blue-600/10 border border-blue-500/20 rounded-xl overflow-hidden">
+      <div className="w-full overflow-hidden rounded-sm border border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-blue-600/10">
         {/* Header Row - Same structure as other cards */}
         <div className="flex items-center gap-4 px-6 py-4">
           {/* Left Side - Label Only */}
-          <div className="flex flex-col items-start flex-1">
-            <div className="text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wide font-medium">
+          <div className="flex flex-1 flex-col items-start">
+            <div className="text-xs font-medium tracking-wide text-blue-600 uppercase dark:text-blue-400">
               Historical Context
             </div>
           </div>
@@ -46,17 +46,13 @@ export const HistoricalContextCard: React.FC<HistoricalContextCardProps> = ({
               onClick={handleToggle}
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900"
+              className="h-8 w-8 rounded-full p-0 hover:bg-blue-100 dark:hover:bg-blue-900"
               aria-expanded={isExpanded}
               aria-controls="historical-context-content"
-              aria-label={
-                isExpanded
-                  ? "Hide historical context"
-                  : "Show historical context"
-              }
+              aria-label={isExpanded ? "Hide historical context" : "Show historical context"}
             >
               <svg
-                className={`w-4 h-4 text-blue-500 transition-transform ${
+                className={`h-4 w-4 text-blue-500 transition-transform ${
                   isExpanded ? "rotate-180" : ""
                 }`}
                 fill="none"
@@ -87,31 +83,18 @@ export const HistoricalContextCard: React.FC<HistoricalContextCardProps> = ({
             >
               <div className="px-6 pt-1 pb-6">
                 {/* Content */}
-                <div className="prose prose-sm max-w-none dark:prose-invert text-left text-foreground leading-relaxed">
+                <div className="prose prose-sm dark:prose-invert text-foreground max-w-none text-left leading-relaxed">
                   <ReactMarkdown
                     components={{
                       // Ensure paragraphs have proper spacing
-                      p: ({ children }) => (
-                        <p className="mb-3 last:mb-0 text-left">{children}</p>
-                      ),
+                      p: ({ children }) => <p className="mb-3 text-left last:mb-0">{children}</p>,
                       // Style emphasis (italics) appropriately
-                      em: ({ children }) => (
-                        <em className="italic">{children}</em>
-                      ),
+                      em: ({ children }) => <em className="italic">{children}</em>,
                       // Only allow safe elements
                       script: () => null,
                       iframe: () => null,
                     }}
-                    allowedElements={[
-                      "p",
-                      "em",
-                      "strong",
-                      "ul",
-                      "ol",
-                      "li",
-                      "blockquote",
-                      "br",
-                    ]}
+                    allowedElements={["p", "em", "strong", "ul", "ol", "li", "blockquote", "br"]}
                   >
                     {context}
                   </ReactMarkdown>

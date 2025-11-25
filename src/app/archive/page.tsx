@@ -446,10 +446,10 @@ export default function ArchivePage({ searchParams }: ArchivePageProps): React.R
       <React.Suspense
         fallback={
           <LoadingShell
-            intent="generic"
-            stage="fetching"
-            message="Loading archive…"
-            subMessage="Fetching puzzles and progress"
+            intent="classic"
+            stage="loading_puzzle"
+            message="Opening the archive"
+            subMessage="Retrieving historical records"
           />
         }
       >

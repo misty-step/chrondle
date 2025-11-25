@@ -15,6 +15,6 @@ describe("LoadingExperience", () => {
 
   it("shows stage label", () => {
     render(<LoadingExperience intent="generic" stage="hydrating" message="Please wait..." />);
-    expect(screen.getByText(/Hydrating interface/i)).toBeInTheDocument();
+    expect(screen.getByText(/Preparing the ledger/i)).toBeInTheDocument();
   });
 });

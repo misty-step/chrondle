@@ -22,15 +22,21 @@
   --color-parchment-50: oklch(0.96 0.08 85); /* Boosted for visible texture */
   --color-parchment-100: oklch(0.94 0.1 85);
   --color-parchment-200: oklch(0.9 0.12 85);
-  --color-parchment-300: oklch(0.86 0.14 85);
+  --color-parchment-300: oklch(0.88 0.03 85); /* Desaturated warm gray for structure */
 
-  /* Aged Newsprint - Cool gray-beige for body background */
-  --color-newsprint: oklch(0.88 0.015 75); /* Cooler, less saturated than parchment */
+  /* Aged Newsprint - Cool gray-beige (legacy) */
+  --color-newsprint: oklch(0.88 0.015 75);
+
+  /* Warm Stone - Perceptible contrast for card separation */
+  --color-warm-stone: oklch(0.92 0.015 78); /* Warm stone background */
 
   /* Archival Accents - Boosted for visibility */
   --color-sepia: oklch(0.6 0.2 60);
   --color-oxidized: oklch(0.5 0.22 140);
   --color-wax-seal: oklch(0.4 0.24 10);
+
+  /* Structural Accent - Rich golden ochre for visible borders/icons */
+  --color-structure-accent: oklch(0.65 0.15 75);
 
   /* --- SEMANTIC TOKENS (Abstraction Layer) --- */
   /* Surface Tokens - for backgrounds and containers */
@@ -61,11 +67,11 @@
   --material-paper-border: var(--color-parchment-300);
 
   /* --- INTENTS (Semantic Roles) --- */
-  --background: var(--color-newsprint);
-  --foreground: var(--material-paper-fg);
+  --background: var(--color-warm-stone); /* Warm stone for card separation */
+  --foreground: oklch(0.18 0.02 60); /* Warm near-black for excellent contrast */
 
-  --card: oklch(0.97 0.015 85); /* Warmer, higher luminance than background for elevation */
-  --card-foreground: var(--color-ink-900);
+  --card: oklch(0.99 0.005 85); /* Bright white cards */
+  --card-foreground: oklch(0.18 0.02 60); /* Warm near-black text */
 
   --popover: var(--color-parchment-100);
   --popover-foreground: var(--color-ink-900);
@@ -77,7 +83,7 @@
   --secondary-foreground: var(--color-ink-900);
 
   --muted: var(--color-parchment-200);
-  --muted-foreground: var(--color-ink-500);
+  --muted-foreground: oklch(0.45 0.03 60); /* Warm medium gray */
 
   --accent: var(--color-parchment-200);
   --accent-foreground: var(--color-ink-900);
@@ -135,7 +141,7 @@
     rgba(255, 255, 255, 0.5),
     rgba(0, 0, 0, 0.02)
   );
-  --card-shadow-color: var(--color-ink-500);
+  --card-shadow-color: rgba(20, 10, 0, 0.1); /* Warm-tinted shadow */
 
   /* --- LEGACY / COMPATIBILITY --- */
   --chart-1: oklch(0.6231 0.188 259.8145);
@@ -158,87 +164,7 @@
   --status-info: var(--feedback-info);
 }
 
-/* SYSTEM DARK MODE SUPPORT (Fixes Loading Screens) */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-ink-900: oklch(0.98 0.04 85);
-    --color-ink-700: oklch(0.85 0.05 85);
-    --color-ink-500: oklch(0.65 0.06 85);
-
-    --color-parchment-50: oklch(0.15 0.04 50);
-    --color-parchment-100: oklch(0.18 0.05 50);
-    --color-parchment-200: oklch(0.22 0.06 50);
-    --color-parchment-300: oklch(0.3 0.06 50);
-
-    /* Archival Accents - Dark Mode */
-    --color-sepia: oklch(0.55 0.12 60);
-    --color-oxidized: oklch(0.5 0.15 140);
-    --color-wax-seal: oklch(0.45 0.18 10);
-
-    --background: var(--color-parchment-50);
-    --foreground: var(--color-ink-900);
-
-    --card: var(--color-parchment-100);
-    --card-foreground: var(--color-ink-900);
-
-    --popover: var(--color-parchment-100);
-    --popover-foreground: var(--color-ink-900);
-
-    --primary: var(--color-vermilion-400);
-    --primary-foreground: oklch(0.15 0.02 50);
-
-    --secondary: var(--color-parchment-200);
-    --secondary-foreground: var(--color-ink-900);
-
-    --muted: var(--color-parchment-200);
-    --muted-foreground: var(--color-ink-500);
-
-    --accent: var(--color-parchment-200);
-    --accent-foreground: var(--color-ink-900);
-
-    --border: var(--color-parchment-300);
-    --input: var(--color-parchment-200);
-
-    /* MODES */
-    --color-classic-bg: oklch(0.18 0.02 85);
-    --color-classic-text: oklch(0.94 0.03 85);
-    --color-classic-accent: oklch(0.7 0.15 50);
-
-    --color-order-bg: oklch(0.18 0.03 240);
-    --color-order-text: oklch(0.93 0.02 240);
-    --color-order-accent: oklch(0.7 0.15 260);
-
-    /* ELEVATION SYSTEM - Dark Mode */
-    --elevation-navbar-bg: oklch(0.18 0.04 50); /* Elevated above deep background */
-    --elevation-navbar-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); /* Deep shadow for library depth */
-    --elevation-navbar-border: oklch(0.3 0.05 50); /* Visible separation */
-
-    /* MATERIALS */
-    --material-overlay: linear-gradient(
-      to bottom right,
-      rgba(255, 255, 255, 0.03),
-      rgba(0, 0, 0, 0.3)
-    );
-    --card-shadow-color: oklch(0 0 0);
-
-    --chart-1: oklch(0.7137 0.1434 254.624);
-    --chart-2: oklch(0.6231 0.188 259.8145);
-    --chart-3: oklch(0.5461 0.2152 262.8809);
-    --chart-4: oklch(0.4882 0.2172 264.3763);
-    --chart-5: oklch(0.4244 0.1809 265.6377);
-
-    --sidebar: oklch(0.2046 0 0);
-    --sidebar-foreground: oklch(0.9219 0 0);
-    --sidebar-primary: oklch(0.6231 0.188 259.8145);
-    --sidebar-primary-foreground: oklch(1 0 0);
-    --sidebar-accent: oklch(0.3791 0.1378 265.5222);
-    --sidebar-accent-foreground: oklch(0.8823 0.0571 254.1284);
-    --sidebar-border: oklch(0.3715 0 0);
-    --sidebar-ring: oklch(0.6231 0.188 259.8145);
-  }
-}
-
-/* DARK MODE OVERRIDES */
+/* DARK MODE OVERRIDES (Single source of truth for dark theme) */
 html.dark {
   --color-ink-900: oklch(0.98 0.04 85);
   --color-ink-700: oklch(0.85 0.05 85);
@@ -270,7 +196,7 @@ html.dark {
   --secondary-foreground: var(--color-ink-900);
 
   --muted: var(--color-parchment-200);
-  --muted-foreground: var(--color-ink-500);
+  --muted-foreground: oklch(0.45 0.03 60); /* Warm medium gray */
 
   --accent: var(--color-parchment-200);
   --accent-foreground: var(--color-ink-900);
@@ -324,142 +250,83 @@ html.dark {
   --sidebar-ring: oklch(0.6231 0.188 259.8145);
 }
 
-/* EXPLICIT LIGHT MODE OVERRIDES (Forces Light Mode) */
-html.light {
-  --color-vermilion-400: oklch(0.62 0.22 25);
-  --color-vermilion-500: oklch(0.58 0.3 25); /* True Vermilion - red-orange archival ink */
-  --color-vermilion-600: oklch(0.48 0.24 25);
-
-  --color-ink-500: oklch(0.45 0.08 50);
-  --color-ink-700: oklch(0.28 0.1 50);
-  --color-ink-900: oklch(0.15 0.1 50);
-
-  --color-parchment-50: oklch(0.98 0.08 85);
-  --color-parchment-100: oklch(0.96 0.1 85);
-  --color-parchment-200: oklch(0.92 0.12 85);
-  --color-parchment-300: oklch(0.88 0.14 85);
-
-  --material-paper-bg: var(--color-parchment-100);
-  --material-paper-fg: var(--color-ink-900);
-  --material-paper-border: var(--color-parchment-300);
-
-  --background: var(--color-newsprint);
-  --foreground: var(--material-paper-fg);
-
-  --card: var(--color-parchment-100);
-  --card-foreground: var(--color-ink-900);
-
-  --popover: var(--color-parchment-100);
-  --popover-foreground: var(--color-ink-900);
-
-  --primary: var(--color-vermilion-500);
-  --primary-foreground: #ffffff;
-
-  --secondary: var(--color-parchment-200);
-  --secondary-foreground: var(--color-ink-900);
-
-  --muted: var(--color-parchment-200);
-  --muted-foreground: var(--color-ink-500);
-
-  --accent: var(--color-parchment-200);
-  --accent-foreground: var(--color-ink-900);
-
-  --border: var(--material-paper-border);
-  --input: oklch(0.92 0.01 85); /* Cooler, slightly darker for differentiation */
-  --ring: var(--color-vermilion-500);
-
-  --color-classic-bg: oklch(0.94 0.03 85);
-  --color-classic-text: oklch(0.25 0.04 60);
-  --color-classic-accent: oklch(0.5 0.2 30);
-
-  --color-order-bg: oklch(0.93 0.02 240);
-  --color-order-text: oklch(0.28 0.06 250);
-  --color-order-accent: oklch(0.5 0.2 260);
-
-  /* ELEVATION SYSTEM - Light Mode Override */
-  --elevation-navbar-bg: oklch(0.99 0.005 85); /* Bright white editorial header */
-  --elevation-navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); /* Strong editorial shadow */
-  --elevation-navbar-border: oklch(0.92 0.02 85); /* Subtle border for definition */
-
-  --material-overlay: linear-gradient(
-    to bottom right,
-    rgba(255, 255, 255, 0.5),
-    rgba(0, 0, 0, 0.02)
-  );
-  --card-shadow-color: var(--color-ink-500);
-
-  --chart-1: oklch(0.6231 0.188 259.8145);
-  --chart-2: oklch(0.5461 0.2152 262.8809);
-  --chart-3: oklch(0.4882 0.2172 264.3763);
-  --chart-4: oklch(0.4244 0.1809 265.6377);
-  --chart-5: oklch(0.3791 0.1378 265.5222);
-
-  --sidebar: oklch(0.9846 0.0017 247.8389);
-  --sidebar-foreground: oklch(0.3211 0 0);
-  --sidebar-primary: oklch(0.6231 0.188 259.8145);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.9514 0.025 236.8242);
-  --sidebar-accent-foreground: oklch(0.3791 0.1378 265.5222);
-  --sidebar-border: oklch(0.9276 0.0058 264.5313);
-  --sidebar-ring: oklch(0.6231 0.188 259.8145);
-}
-
 /* -----------------------------------------------------------------
    2. TAILWIND V4 THEME CONFIGURATION
    This replaces tailwind.config.mjs for standard tokens
    ----------------------------------------------------------------- */
 @theme {
-  /* Fonts */
-  --font-sans: "Archivo Narrow", -apple-system, sans-serif;
+  /* =================================================================
+     OUSTERHOUT PRINCIPLE: Single source of truth for utility classes.
+     All colors defined with DIRECT values - no var() indirection.
+     Dark mode overrides happen via html.dark CSS custom properties.
+     ================================================================= */
+
+  /* Typography System - Museum Reading Room Aesthetic */
+  --font-display: "Newsreader", "Georgia", serif;
+  --font-heading: "Archivo Narrow", "Helvetica Neue", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
   --font-serif: "Crimson Text", "Georgia", serif;
   --font-mono: "JetBrains Mono", "Courier New", monospace;
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
   --font-accent: "Newsreader", "Georgia", serif;
-  --font-display:
-    "IM Fell English", "Crimson Text", serif; /* Dramatic 17th-century revival for hero moments */
 
-  /* Colors - Core */
+  /* =================================================================
+     PRIMITIVES: Direct OKLch values for utility class generation.
+     These create: bg-vermilion-500, text-ink-900, etc.
+     ================================================================= */
+
+  /* Vermilion Palette (Primary Brand) */
+  --color-vermilion-300: oklch(0.68 0.18 25);
+  --color-vermilion-400: oklch(0.62 0.22 25);
+  --color-vermilion-500: oklch(0.58 0.3 25);
+  --color-vermilion-600: oklch(0.48 0.24 25);
+  --color-vermilion-700: oklch(0.42 0.28 25);
+
+  /* Ink Palette (Text) */
+  --color-ink-500: oklch(0.45 0.08 50);
+  --color-ink-700: oklch(0.28 0.1 50);
+  --color-ink-900: oklch(0.15 0.1 50);
+
+  /* Parchment Palette (Surfaces) */
+  --color-parchment-50: oklch(0.96 0.08 85);
+  --color-parchment-100: oklch(0.94 0.1 85);
+  --color-parchment-200: oklch(0.9 0.12 85);
+  --color-parchment-300: oklch(0.88 0.03 85);
+
+  /* =================================================================
+     SEMANTIC: Reference CSS custom properties from :root/html.dark.
+     These enable runtime theme switching.
+     ================================================================= */
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Note: Primitive colors (--color-ink-*, --color-parchment-*, etc.)
-     are defined in :root and overridden in html.dark.
-     They should NOT be redefined here to avoid overriding theme-specific values. */
-
-  /* Colors - Modes */
+  /* Mode Colors */
   --color-mode-classic-bg: var(--color-classic-bg);
   --color-mode-classic-text: var(--color-classic-text);
   --color-mode-classic-accent: var(--color-classic-accent);
-
   --color-mode-order-bg: var(--color-order-bg);
   --color-mode-order-text: var(--color-order-text);
   --color-mode-order-accent: var(--color-order-accent);
 
-  /* Colors - Feedback */
+  /* Feedback Colors */
   --color-feedback-success: var(--feedback-success);
   --color-feedback-warning: var(--feedback-warning);
   --color-feedback-error: var(--feedback-error);
@@ -468,13 +335,12 @@ html.light {
   --color-feedback-earlier: var(--feedback-earlier);
   --color-feedback-later: var(--feedback-later);
 
-  /* Colors - Legacy */
+  /* Legacy/Chart Colors */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -628,7 +494,10 @@ html.light {
         rgba(0, 0, 0, 0.015) 4px
       );
     border: 1px solid var(--border);
-    box-shadow: 4px 4px 0px var(--card-shadow-color);
+    /* Dual-layer shadow: tight occlusion + soft elevation */
+    box-shadow:
+      0 1px 2px -1px rgba(60, 45, 35, 0.12),
+      0 4px 16px -2px rgba(60, 45, 35, 0.06);
   }
 
   .material-stamp {
@@ -706,6 +575,45 @@ html.light {
     color: var(--primary);
     transform: rotate(-2deg);
     display: inline-block;
+  }
+
+  /* Typography Scale - Museum Reading Room */
+  .text-display {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5vw, 3rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    font-weight: 500;
+  }
+
+  .text-section-title {
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .text-ui {
+    font-family: var(--font-body);
+  }
+
+  /* Enhanced Material Card - Extra elevation for emphasis */
+  .material-card-elevated {
+    background-color: var(--card);
+    background-image:
+      var(--texture-noise), var(--material-overlay),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.015) 2px,
+        rgba(0, 0, 0, 0.015) 4px
+      );
+    border: 1px solid var(--border);
+    box-shadow:
+      0 4px 12px -2px rgba(20, 10, 0, 0.1),
+      0 10px 20px -4px rgba(20, 10, 0, 0.08);
   }
 
   /* Shadow System - Layered with color tint for depth */

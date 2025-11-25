@@ -83,8 +83,8 @@ export function GamesGallery() {
     <main className="bg-background relative flex h-[100dvh] w-full flex-col overflow-hidden md:flex-row">
       {/* --- Branding Anchor with Theme Toggle --- */}
       <div className="pointer-events-none absolute top-6 right-0 left-0 z-50 flex justify-center">
-        <div className="border-outline-default/10 bg-card/80 shadow-hard-sm pointer-events-auto flex items-center gap-2 rounded-full border px-5 py-2 backdrop-blur-md">
-          <div className="rounded-full p-1.5">
+        <div className="border-outline-default/10 bg-card/80 shadow-hard-sm pointer-events-auto flex items-center gap-2 rounded-sm border px-5 py-2 backdrop-blur-md">
+          <div className="rounded-sm p-1.5">
             <Crown className="text-primary/80 h-4 w-4" />
           </div>
           <span className="font-heading text-primary/90 text-lg font-bold tracking-wide">
@@ -187,7 +187,7 @@ export function GamesGallery() {
               <div className="flex items-start justify-between">
                 <div
                   className={cn(
-                    "rounded-full border p-3 transition-colors duration-500",
+                    "rounded-sm border p-3 transition-colors duration-500",
                     isActive
                       ? "border-current bg-white/20 backdrop-blur-sm"
                       : "border-transparent bg-transparent opacity-50",
@@ -199,7 +199,7 @@ export function GamesGallery() {
                 {mode.badge && (
                   <span
                     className={cn(
-                      "rounded-full px-3 py-1 text-xs font-bold tracking-wider uppercase transition-opacity duration-500",
+                      "rounded-sm px-3 py-1 text-xs font-bold tracking-wider uppercase transition-opacity duration-500",
                       mode.theme.badge,
                       isActive ? "opacity-100" : "opacity-0",
                     )}
@@ -279,7 +279,7 @@ export function GamesGallery() {
                         handleSelect(mode.key, mode.route);
                       }}
                       className={cn(
-                        "shadow-hard flex cursor-pointer items-center gap-3 rounded-full px-8 py-4 text-lg font-semibold transition-all duration-300",
+                        "shadow-hard flex cursor-pointer items-center gap-3 rounded-sm px-8 py-4 text-lg font-semibold transition-all duration-300",
                         // Button pulsates/highlights slightly when hovering anywhere on the parent panel
                         "group-hover:shadow-hard-lg group-hover:scale-105",
                         mode.theme.button,

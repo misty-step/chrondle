@@ -8,7 +8,6 @@ import { InlineWarning } from "@/components/ui/InlineWarning";
 import { SCORING_CONSTANTS } from "@/lib/scoring";
 import { GAME_CONFIG } from "@/lib/constants";
 import { convertToInternalYear, convertFromInternalYear, type Era } from "@/lib/eraUtils";
-import { pluralize } from "@/lib/displayFormatting";
 import { cn } from "@/lib/utils";
 
 interface RangeInputProps {
@@ -188,6 +187,18 @@ export function RangeInput({
         </div>
       </div>
 
+      {/* Onboarding message for first-time users */}
+      {!hasBeenModified && !disabled && (
+        <div className="bg-vermilion-50 dark:bg-vermilion-950/30 border-vermilion-200 dark:border-vermilion-800 rounded-sm border px-4 py-3">
+          <p className="text-vermilion-700 dark:text-vermilion-300 flex items-center gap-2 text-sm font-medium">
+            <span className="text-base" aria-hidden="true">
+              💡
+            </span>
+            Adjust the years to narrow your range, then submit your guess
+          </p>
+        </div>
+      )}
+
       {/* Interactive Ruler Card */}
       <div
         className={cn(
@@ -199,30 +210,6 @@ export function RangeInput({
               : "border-outline-default",
         )}
       >
-        {/* Archival Ruler Marks (Top/Bottom) - Varied heights like period measurements */}
-        <div className="pointer-events-none absolute top-0 right-4 left-4 flex h-3 justify-between opacity-50">
-          {[...Array(20)].map((_, i) => (
-            <div
-              key={i}
-              className={cn(
-                "bg-primary w-px",
-                i % 5 === 0 ? "h-full" : i % 2 === 0 ? "h-2/3" : "h-1/2",
-              )}
-            />
-          ))}
-        </div>
-        <div className="pointer-events-none absolute right-4 bottom-0 left-4 flex h-3 justify-between opacity-50">
-          {[...Array(20)].map((_, i) => (
-            <div
-              key={i}
-              className={cn(
-                "bg-primary w-px",
-                i % 5 === 0 ? "h-full" : i % 2 === 0 ? "h-2/3" : "h-1/2",
-              )}
-            />
-          ))}
-        </div>
-
         {/* Input Controls */}
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">
           {/* Start Year Group */}
@@ -240,7 +227,7 @@ export function RangeInput({
                     onBlur={applyStartYear}
                     onKeyDown={(e) => handleInputKeyDown(e, applyStartYear)}
                     disabled={disabled}
-                    className="bg-input border-outline-default focus:border-vermilion-500 focus:ring-vermilion-500/20 text-primary h-12 text-center font-serif text-2xl"
+                    className="bg-surface-elevated border-outline-default focus:border-vermilion-500 focus:ring-vermilion-500/20 text-primary h-12 text-center font-serif text-2xl shadow-sm"
                   />
                 </div>
                 <EraToggle
@@ -271,7 +258,7 @@ export function RangeInput({
                     onBlur={applyEndYear}
                     onKeyDown={(e) => handleInputKeyDown(e, applyEndYear)}
                     disabled={disabled}
-                    className="bg-input border-outline-default focus:border-vermilion-500 focus:ring-vermilion-500/20 text-primary h-12 text-center font-serif text-2xl"
+                    className="bg-surface-elevated border-outline-default focus:border-vermilion-500 focus:ring-vermilion-500/20 text-primary h-12 text-center font-serif text-2xl shadow-sm"
                   />
                 </div>
                 <EraToggle
@@ -286,13 +273,18 @@ export function RangeInput({
         </div>
 
         {/* Validation Message */}
-        <div className="mt-4 flex h-8 items-center justify-center">
+        <div className="mt-4 flex h-8 items-center justify-between px-1">
           {rangeTooWide ? (
-            <InlineWarning variant="error">
-              Range too wide: {pluralize(width, "year")}
-            </InlineWarning>
+            <>
+              <InlineWarning variant="error" className="text-sm font-semibold">
+                Range too wide
+              </InlineWarning>
+              <span className="text-muted-foreground/70 font-mono text-xs">
+                {width.toLocaleString()} years (max {SCORING_CONSTANTS.W_MAX.toLocaleString()})
+              </span>
+            </>
           ) : (
-            <div className="text-tertiary font-mono text-xs">
+            <div className="text-tertiary mx-auto font-mono text-xs">
               Span: {width.toLocaleString()} years
             </div>
           )}
@@ -302,12 +294,11 @@ export function RangeInput({
         <Button
           onClick={handleRangeCommit}
           disabled={commitDisabled}
-          variant={commitDisabled ? "outline" : "default"}
+          variant="default"
           size="lg"
           className={cn(
             "mt-2 h-14 w-full rounded-sm text-lg font-bold tracking-wide transition-all duration-300",
-            !commitDisabled &&
-              "shadow-hard hover:shadow-hard-lg bg-vermilion-500 hover:bg-vermilion-600 border-vermilion-600 border-2 text-white hover:translate-y-[-2px]",
+            "shadow-hard hover:shadow-hard-lg bg-vermilion-500 hover:bg-vermilion-600 border-vermilion-600 border-2 text-white hover:translate-y-[-2px]",
           )}
         >
           {isOneGuessMode ? "Lock In Final Guess" : "Submit Range"}

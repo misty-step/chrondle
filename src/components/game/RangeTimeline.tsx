@@ -77,7 +77,7 @@ export function RangeTimeline({
   const emptyState = ranges.length === 0;
 
   return (
-    <div className={cn("border-border bg-card rounded-lg border p-4 shadow-sm", className)}>
+    <div className={cn("border-border bg-card rounded-sm border p-4 shadow-sm", className)}>
       <div className="text-muted-foreground mb-3 flex items-center justify-between text-sm">
         <span>Timeline</span>
         <span>

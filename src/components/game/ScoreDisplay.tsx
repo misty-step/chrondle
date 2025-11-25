@@ -38,7 +38,7 @@ export function ScoreDisplay({ width, hintsUsed, variant = "full", className }: 
     return (
       <div
         className={cn(
-          "flex flex-col items-center gap-2 rounded-xl border-2 px-5 py-3 shadow-md transition-all sm:px-6 sm:py-4",
+          "flex flex-col items-center gap-2 rounded-sm border-2 px-5 py-3 shadow-md transition-all sm:px-6 sm:py-4",
           isValid
             ? "border-primary/50 from-primary/10 to-primary/5 shadow-primary/20 bg-gradient-to-br"
             : "border-muted bg-muted/30",
@@ -88,7 +88,7 @@ export function ScoreDisplay({ width, hintsUsed, variant = "full", className }: 
   return (
     <div
       className={cn(
-        "rounded-xl border-3 p-8 text-center shadow-lg transition-all",
+        "rounded-sm border-3 p-8 text-center shadow-lg transition-all",
         isValid
           ? "border-primary/50 from-primary/10 to-primary/5 shadow-primary/20 bg-gradient-to-br"
           : "border-muted bg-muted/30",

@@ -103,8 +103,8 @@ export function GameLayout(props: GameLayoutProps) {
       // Simple check using array length would be enough usually, but explicit is better
       setLastGuessStamp(latest);
 
-      // Clear the stamp after animation
-      const timer = setTimeout(() => setLastGuessStamp(null), 2000);
+      // Clear the stamp after animation (reduced from 2000ms for snappier UX)
+      const timer = setTimeout(() => setLastGuessStamp(null), 1200);
       return () => clearTimeout(timer);
     }
   }, [gameState.ranges]); // Dependent on the whole array to catch changes in length or content
@@ -127,14 +127,21 @@ export function GameLayout(props: GameLayoutProps) {
 
       {/* Main game content */}
       <main className="relative flex-1 overflow-auto px-4 py-6 sm:px-6 sm:py-8">
-        {/* Stamp Overlay */}
+        {/* Stamp Overlay - Tap to dismiss */}
         <AnimatePresence>
           {lastGuessStamp && (
-            <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center overflow-hidden">
+            <div
+              className="pointer-events-auto absolute inset-0 z-50 flex cursor-pointer items-center justify-center overflow-hidden"
+              onClick={() => setLastGuessStamp(null)}
+              onKeyDown={(e) => e.key === "Enter" && setLastGuessStamp(null)}
+              role="button"
+              tabIndex={0}
+              aria-label="Dismiss stamp, tap to continue"
+            >
               <motion.div
                 initial={{ scale: 2, opacity: 0, rotate: -15 }}
                 animate={{ scale: 1, opacity: 1, rotate: Math.random() * 4 - 2 }} // Slight random rotation
-                exit={{ opacity: 0, scale: 1.1, transition: { duration: 0.5 } }}
+                exit={{ opacity: 0, scale: 1.1, transition: { duration: 0.3 } }}
                 transition={{
                   type: "spring",
                   stiffness: 300,
@@ -142,9 +149,8 @@ export function GameLayout(props: GameLayoutProps) {
                   mass: 0.5,
                 }}
                 className={cn(
-                  "material-stamp rounded-lg border-4 p-4 text-4xl font-black tracking-widest uppercase mix-blend-multiply backdrop-blur-[1px] dark:mix-blend-normal",
-                  // Color based on accuracy (logic simplified for visual impact)
-                  // Ideally we'd check if the target year is in the range
+                  "material-stamp flex flex-col items-center gap-2 rounded-sm border-4 p-4 text-4xl font-black tracking-widest uppercase mix-blend-multiply backdrop-blur-[1px] dark:mix-blend-normal",
+                  // Color based on accuracy
                   lastGuessStamp.start <= targetYear && lastGuessStamp.end >= targetYear
                     ? "border-feedback-correct text-feedback-correct rotate-[-2deg]"
                     : "border-outline-default text-primary rotate-[2deg]",
@@ -153,6 +159,9 @@ export function GameLayout(props: GameLayoutProps) {
                 {lastGuessStamp.start <= targetYear && lastGuessStamp.end >= targetYear
                   ? "LOCKED IN"
                   : "RECORDED"}
+                <span className="text-secondary text-xs font-medium tracking-normal normal-case opacity-70">
+                  Tap to continue
+                </span>
               </motion.div>
             </div>
           )}

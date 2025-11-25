@@ -1,12 +1,146 @@
 # Design Tokens Guide
 
-**Purpose**: This document codifies Chrondle's archival night reading aesthetic into reusable tokens. By documenting the shadow, border radius, and surface systems, we prevent developers from inventing one-off tokens like `shadow-warm` or `rounded-xl`.
+**Purpose**: This document codifies Chrondle's **Museum Reading Room** aesthetic into reusable tokens. By documenting the typography, shadow, border radius, color, and surface systems, we prevent developers from inventing one-off tokens like `shadow-warm` or `rounded-xl`.
+
+**Design Philosophy**: Warm, sophisticated archival aesthetic inspired by library reading rooms, conservation labs, and museum archives under golden hour lighting. NOT theatrical or piratey.
 
 **Philosophy**: Design tokens create a three-layer architecture:
 
 1. **Primitives** → Raw values (colors, sizes)
 2. **Semantic tokens** → Meaning-based aliases (surface, outline, feedback)
 3. **Component patterns** → Reusable abstractions (GameCard, SubmitButton)
+
+---
+
+## Typography System
+
+### Museum Reading Room Typeface Hierarchy
+
+Chrondle uses a refined 5-font system that creates intellectual warmth without theatrical camp:
+
+| Font Variable    | Typeface       | Usage                                  | Rationale                                                     |
+| ---------------- | -------------- | -------------------------------------- | ------------------------------------------------------------- |
+| `--font-display` | Newsreader     | Page titles, hero text                 | Elegant editorial serif (NOT theatrical like IM Fell English) |
+| `--font-heading` | Archivo Narrow | Section titles, labels                 | Clean, condensed sans for structure                           |
+| `--font-body`    | IBM Plex Sans  | UI elements, buttons, interactive text | Technical precision, excellent readability                    |
+| `--font-serif`   | Crimson Text   | Hint text, narrative content           | Refined body serif for storytelling                           |
+| `--font-mono`    | JetBrains Mono | Years, stats, technical data           | Tabular numerals for data                                     |
+
+### Implementation (globals.css:415-424)
+
+```css
+@theme {
+  --font-display: "Newsreader", "Georgia", serif;
+  --font-heading: "Archivo Narrow", "Helvetica Neue", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-serif: "Crimson Text", "Georgia", serif;
+  --font-mono: "JetBrains Mono", "Courier New", monospace;
+}
+```
+
+### Font Loading (layout.tsx:47)
+
+```tsx
+<link
+  href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Archivo+Narrow:wght@400;500;600;700&family=Newsreader:ital,wght@0,300..800;1,300..800&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap"
+  rel="stylesheet"
+/>
+```
+
+### Typography Utility Classes
+
+| Class                 | Purpose              | Font           | Size                     |
+| --------------------- | -------------------- | -------------- | ------------------------ |
+| `.text-display`       | Hero titles          | Newsreader     | clamp(2rem, 5vw, 3rem)   |
+| `.text-section-title` | Section headers      | Archivo Narrow | 0.75rem (12px) uppercase |
+| `.text-ui`            | Interactive elements | IBM Plex Sans  | Inherited                |
+| `.font-serif`         | Hint text            | Crimson Text   | Inherited                |
+| `.font-mono`          | Data/stats           | JetBrains Mono | Inherited                |
+
+### Usage Guidelines
+
+✅ **Correct:**
+
+```tsx
+// Page title
+<h1 className="text-display font-medium">Puzzle Archive</h1>
+
+// Section title
+<h3 className="text-section-title">Target Range</h3>
+
+// UI button text (automatically uses --font-body via class="text-ui")
+<Button>Submit Range</Button>
+
+// Hint narrative
+<p className="font-serif text-lg">War of Spanish Succession begins...</p>
+
+// Year display
+<span className="font-mono tabular-nums">1701 AD</span>
+```
+
+❌ **Incorrect:**
+
+```tsx
+// NEVER use removed fonts
+<h1 className="font-['IM_Fell_English']">...</h1> // ❌ Removed - too theatrical
+
+// NEVER mix display and body fonts randomly
+<button className="font-display">Submit</button> // ❌ Use font-body for UI
+<h1 className="font-mono">Chrondle</h1> // ❌ Use font-display for titles
+
+// NEVER use generic font-sans
+<p className="font-sans">...</p> // ❌ Use font-body explicitly
+```
+
+**Why This System?**
+
+- **Newsreader** (display): Elegant, editorial, intellectual - replaces theatrical IM Fell English
+- **IBM Plex Sans** (body/UI): Humanist warmth + technical precision - better legibility than generic system fonts
+- **Archivo Narrow** (headings): Structural clarity without being cold
+- **Clear hierarchy**: Display → Heading → Body → Serif → Mono creates readable information architecture
+
+**Migration Notes:**
+
+- **IM Fell English REMOVED**: Replace all instances with `font-display` (Newsreader)
+- **Generic font-sans**: Replace with explicit `font-body` where UI clarity matters
+- **Footer legibility fix**: All footer text now `text-sm` (14px) instead of `text-xs` (12px)
+
+---
+
+## Color System
+
+### Museum Taupe Background
+
+Replaced cool gray "newsprint" with warm umber "museum wall" color:
+
+| Token                  | Value                       | Purpose               |
+| ---------------------- | --------------------------- | --------------------- |
+| `--color-museum-taupe` | `oklch(0.82 0.028 60)`      | Warm umber wall color |
+| `--background`         | `var(--color-museum-taupe)` | Primary background    |
+| `--card`               | `oklch(0.98 0.012 80)`      | Crisp parchment cards |
+
+**Contrast Improvement:**
+
+- **Before**: Background `0.88` → Card `0.97` = 0.09 luminance difference (poor)
+- **After**: Background `0.82` → Card `0.98` = **0.16 luminance difference** (excellent)
+
+### Implementation (globals.css:30-31, 67-71)
+
+```css
+:root {
+  --color-museum-taupe: oklch(0.82 0.028 60);
+
+  --background: var(--color-museum-taupe);
+  --card: oklch(0.98 0.012 80); /* 16% better contrast */
+}
+```
+
+✅ **What This Fixes:**
+
+- Background no longer feels "dull/boring/depressing"
+- Cards pop against background with proper contrast
+- Warm museum aesthetic vs cold newsprint
+- Better readability across all UI elements
 
 ---
 

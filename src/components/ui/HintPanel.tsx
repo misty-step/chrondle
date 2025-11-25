@@ -238,7 +238,7 @@ function MobileHintPanel(props: InternalPanelProps) {
               key={type}
               type="button"
               className={cn(
-                "border-border bg-background flex flex-col items-start rounded-sm border p-2 text-left text-xs transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                "border-border bg-background flex min-w-0 flex-col items-start overflow-hidden rounded-sm border p-2 text-left text-xs transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                 isUsed ? "cursor-not-allowed opacity-40" : "cursor-pointer",
               )}
               onClick={() => props.onRequestHint(type)}
@@ -246,15 +246,15 @@ function MobileHintPanel(props: InternalPanelProps) {
               aria-label={`Take ${HINT_COPY[type].label}`}
             >
               {/* Icon + Title on same row */}
-              <div className="mb-1 flex w-full items-center gap-1.5">
+              <div className="mb-1 flex w-full min-w-0 items-center gap-1.5">
                 <div className="text-primary flex-shrink-0">{getHintIcon(type, "h-4 w-4")}</div>
-                <span className="text-primary text-xs leading-tight font-semibold">
+                <span className="text-primary min-w-0 truncate text-xs leading-tight font-semibold">
                   {isUsed ? "✓ " : ""}
                   {HINT_COPY[type].label.split(" ")[0]}
                 </span>
               </div>
               {/* Description indented below */}
-              <span className="text-muted-foreground pl-5 text-[10px] leading-tight">
+              <span className="text-muted-foreground line-clamp-2 pl-5 text-[10px] leading-tight">
                 {isUsed ? "Used" : HINT_COPY[type].availableDescription}
               </span>
               {props.pendingType === type && <LoadingSpinner className="mt-1 ml-5 size-3" />}
@@ -364,14 +364,16 @@ function AvailableHintButton({ type, pending, onSelect }: AvailableHintButtonPro
       aria-label={`Take ${copy.label}`}
     >
       {/* Icon + Title on same row */}
-      <div className="flex w-full items-center gap-3">
+      <div className="flex w-full min-w-0 items-center gap-3">
         <div className="text-primary flex-shrink-0">{getHintIcon(type, "h-5 w-5")}</div>
-        <p className="text-primary text-sm font-semibold">{copy.label}</p>
+        <p className="text-primary min-w-0 truncate text-sm font-semibold">{copy.label}</p>
       </div>
 
       {/* Description below with indent */}
-      <div className="pl-8">
-        <p className="text-muted-foreground text-xs leading-relaxed">{copy.availableDescription}</p>
+      <div className="min-w-0 pl-8">
+        <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed">
+          {copy.availableDescription}
+        </p>
         {pending && (
           <span className="text-primary mt-2 flex items-center gap-2 text-xs font-medium">
             <LoadingSpinner className="size-3" />
@@ -416,7 +418,7 @@ function UsedHintsList({ events, hints }: UsedHintsListProps) {
                     duration: shouldReduceMotion ? 0 : ANIMATION_DURATIONS.HINT_TRANSITION / 1000,
                   },
                 }}
-                className="border-border bg-muted/30 flex items-start gap-3 rounded-lg border px-3 py-2.5 shadow-sm"
+                className="border-border bg-muted/30 flex items-start gap-3 rounded-sm border px-3 py-2.5 shadow-sm"
               >
                 <div className="flex-shrink-0 pt-0.5" style={{ color: "var(--timeline-marker)" }}>
                   {getHintIcon(hint.type, "h-4 w-4")}

@@ -5,29 +5,31 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 uppercase tracking-wider font-bold",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 uppercase tracking-wider font-bold",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground hover:bg-vermilion-600 border-2 border-primary shadow-sm",
+          "bg-primary text-white hover:bg-vermilion-600 border-2 border-primary shadow-sm disabled:bg-muted disabled:text-muted-foreground disabled:border-muted-foreground/50",
         destructive:
-          "bg-destructive text-white hover:bg-destructive/90 border-2 border-destructive shadow-sm",
-        outline: "border-2 border-primary text-primary bg-transparent hover:bg-primary/5",
+          "bg-destructive text-white hover:bg-destructive/90 border-2 border-destructive shadow-sm disabled:bg-muted disabled:text-muted-foreground disabled:border-muted-foreground/50",
+        outline:
+          "border-2 border-primary text-primary bg-transparent hover:bg-primary/5 disabled:text-muted-foreground disabled:border-muted-foreground/50",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 border-2 border-secondary shadow-sm",
-        ghost: "text-primary hover:bg-primary/10 border-2 border-transparent",
-        link: "text-primary underline-offset-4 hover:underline normal-case tracking-normal",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 border-2 border-secondary shadow-sm disabled:bg-muted disabled:text-muted-foreground disabled:border-muted-foreground/50",
+        ghost:
+          "text-primary hover:bg-primary/10 border-2 border-transparent disabled:text-muted-foreground",
+        link: "text-primary underline-offset-4 hover:underline normal-case tracking-normal disabled:text-muted-foreground",
         // Archival variants
         "ink-bleed":
-          "bg-transparent text-primary border-2 border-primary hover:bg-primary hover:text-background transition-colors duration-300",
+          "bg-transparent text-primary border-2 border-primary hover:bg-primary hover:text-background transition-colors duration-300 disabled:text-muted-foreground disabled:border-muted-foreground/50",
         stamp:
-          "bg-transparent text-primary border-2 border-primary material-stamp hover:scale-105 active:scale-95 transition-transform",
+          "bg-transparent text-primary border-2 border-primary material-stamp hover:scale-105 active:scale-95 transition-transform disabled:text-muted-foreground disabled:border-muted-foreground/50",
       },
       size: {
         default: "h-10 px-6 py-2",
-        sm: "h-8 rounded-md px-4 text-xs",
-        lg: "h-12 rounded-md px-8 text-base",
+        sm: "h-8 rounded-sm px-4 text-xs",
+        lg: "h-12 rounded-sm px-8 text-base",
         icon: "h-10 w-10",
       },
     },

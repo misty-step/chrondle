@@ -33,7 +33,7 @@ function ToastItem({
       exit={{ opacity: 0, x: 100, scale: 0.95 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
       className={cn(
-        "pointer-events-auto relative flex w-full max-w-md items-start gap-3 overflow-hidden rounded-lg border p-4 shadow-lg",
+        "pointer-events-auto relative flex w-full max-w-md items-start gap-3 overflow-hidden rounded-sm border p-4 shadow-lg",
         variant === "destructive"
           ? "border-destructive bg-destructive/10 text-destructive"
           : "border-border bg-card text-card-foreground",
@@ -52,7 +52,7 @@ function ToastItem({
               onDismiss();
             }}
             className={cn(
-              "mt-2 inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+              "mt-2 inline-flex items-center rounded-sm px-3 py-1.5 text-xs font-medium transition-colors",
               variant === "destructive"
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 : "bg-primary text-primary-foreground hover:bg-primary/90",
@@ -65,7 +65,7 @@ function ToastItem({
       <button
         onClick={onDismiss}
         className={cn(
-          "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-opacity hover:opacity-70",
+          "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-sm transition-opacity hover:opacity-70",
           variant === "destructive" ? "text-destructive" : "text-muted-foreground",
         )}
         aria-label="Dismiss notification"

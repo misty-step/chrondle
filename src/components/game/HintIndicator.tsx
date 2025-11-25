@@ -59,7 +59,7 @@ export function HintIndicator({
           size="default"
           onClick={onRevealHint}
           disabled={disabled}
-          className="hover:border-vermilion-500 hover:text-vermilion-500 h-10 rounded-sm border-2 px-4 text-sm font-semibold transition-colors"
+          className="hover:border-vermilion-500 hover:text-vermilion-500 shadow-hard hover:shadow-hard-lg h-10 rounded-sm border-2 px-4 text-sm font-semibold transition-all hover:translate-y-[-2px]"
         >
           Take Hint
         </Button>

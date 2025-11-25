@@ -28,21 +28,21 @@ const toggleContainerVariants = cva(
 );
 
 const toggleButtonVariants = cva(
-  "inline-flex items-center justify-center rounded-sm px-3 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-vermilion-500 disabled:pointer-events-none disabled:opacity-50 flex-1 sm:flex-initial relative z-10",
+  "inline-flex items-center justify-center rounded-sm px-3 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-vermilion-500/50 disabled:pointer-events-none disabled:opacity-50 flex-1 sm:flex-initial relative z-10",
   {
     variants: {
       variant: {
         active: [
           "bg-vermilion-500 text-white",
-          "font-bold tracking-wide",
-          "shadow-hard",
-          "border-2 border-vermilion-600",
+          "font-semibold tracking-wide",
+          "shadow-[0_1px_2px_rgba(60,45,35,0.12)]",
+          "border border-vermilion-600",
         ].join(" "),
         inactive: [
-          "text-muted-foreground hover:text-foreground",
+          "text-secondary",
           "font-medium",
-          "bg-transparent hover:bg-surface-hover",
-          "border-2 border-transparent",
+          "bg-surface-elevated hover:bg-muted",
+          "border border-outline-default",
         ].join(" "),
       },
       size: {

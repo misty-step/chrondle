@@ -236,7 +236,7 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
     >
       {!gameLogic.isLoading && gameLogic.error && (
         <div className="flex flex-1 items-center justify-center p-4">
-          <div className="bg-destructive/10 text-destructive max-w-md rounded-lg p-6 text-center">
+          <div className="bg-destructive/10 text-destructive max-w-md rounded-sm p-6 text-center">
             <h2 className="mb-2 text-xl font-bold">Unable to Load Puzzle</h2>
             <p className="mb-4">{gameLogic.error}</p>
             <button
