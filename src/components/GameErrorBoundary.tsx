@@ -222,7 +222,7 @@ export class GameErrorBoundary extends Component<Props, State> {
                   {/* Soft reload - try to recover without losing data */}
                   <button
                     onClick={this.handleSoftReload}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded-sm px-4 py-2 transition-colors"
+                    className="bg-primary text-body-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded-sm px-4 py-2 transition-colors"
                   >
                     <RotateCw className="h-4 w-4" />
                     Try Again
@@ -230,7 +230,7 @@ export class GameErrorBoundary extends Component<Props, State> {
 
                   {/* Navigate to home */}
                   <Link href="/" className="block">
-                    <button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 flex w-full items-center justify-center gap-2 rounded-sm px-4 py-2 transition-colors">
+                    <button className="bg-secondary text-body-secondary-foreground hover:bg-secondary/90 flex w-full items-center justify-center gap-2 rounded-sm px-4 py-2 transition-colors">
                       <Home className="h-4 w-4" />
                       Go to Today&apos;s Puzzle
                     </button>

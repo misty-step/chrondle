@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 // --- Heading Component ---
 
-const headingVariants = cva("font-serif tracking-tight text-primary", {
+const headingVariants = cva("font-serif tracking-tight text-body-primary", {
   variants: {
     level: {
       1: "text-6xl font-bold leading-tight lg:text-7xl",
@@ -13,9 +13,9 @@ const headingVariants = cva("font-serif tracking-tight text-primary", {
       4: "text-2xl font-semibold leading-snug",
     },
     intent: {
-      default: "text-primary",
-      subtle: "text-secondary",
-      accent: "text-primary italic",
+      default: "text-body-primary",
+      subtle: "text-body-secondary",
+      accent: "text-body-primary italic",
     },
   },
   defaultVariants: {
@@ -42,7 +42,7 @@ Heading.displayName = "Heading";
 
 // --- Prose Component ---
 
-const proseVariants = cva("font-body text-primary leading-relaxed", {
+const proseVariants = cva("font-body text-body-primary leading-relaxed", {
   variants: {
     size: {
       sm: "text-sm",
@@ -50,8 +50,8 @@ const proseVariants = cva("font-body text-primary leading-relaxed", {
       lg: "text-lg",
     },
     intent: {
-      default: "text-primary",
-      subtle: "text-tertiary",
+      default: "text-body-primary",
+      subtle: "text-body-tertiary",
       muted: "text-muted-foreground",
     },
   },
@@ -77,7 +77,7 @@ Prose.displayName = "Prose";
 // --- Handwriting Component ---
 // Used for "notes" or margin comments
 
-const handwritingVariants = cva("font-serif italic text-secondary opacity-90", {
+const handwritingVariants = cva("font-serif italic text-body-secondary opacity-90", {
   variants: {
     size: {
       sm: "text-xs",

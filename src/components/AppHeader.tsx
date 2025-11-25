@@ -62,7 +62,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             {/* Logo/Brand - with integrated mode switcher */}
             <div className="flex h-10 items-baseline gap-2">
               <Link href="/" className="flex items-baseline">
-                <h1 className="font-display text-primary m-0 flex cursor-pointer items-baseline text-2xl transition-opacity hover:opacity-80 md:text-3xl">
+                <h1 className="font-display text-body-primary m-0 flex cursor-pointer items-baseline text-2xl transition-opacity hover:opacity-80 md:text-3xl">
                   <span className="flex h-10 w-10 items-center justify-center sm:hidden">C</span>
                   <span className="hidden sm:inline">CHRONDLE</span>
                 </h1>
@@ -136,7 +136,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 overlayColor="rose"
                 className={cn(showHeartbeat && "animate-heartbeat")}
               >
-                <Heart className="text-primary h-4 w-4 transition-colors group-hover:text-rose-600" />
+                <Heart className="text-body-primary h-4 w-4 transition-colors group-hover:text-rose-600" />
               </NavbarButton>
 
               {/* Theme Toggle */}

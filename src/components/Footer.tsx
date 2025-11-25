@@ -18,7 +18,7 @@ export function Footer() {
             href="https://mistystep.io"
             target="_blank"
             rel="noopener noreferrer"
-            className="group text-muted-foreground/80 hover:text-primary inline-flex items-baseline gap-1 font-serif text-sm transition-colors"
+            className="group text-muted-foreground/80 hover:text-body-primary inline-flex items-baseline gap-1 font-serif text-sm transition-colors"
           >
             <span>A Misty Step project</span>
           </a>

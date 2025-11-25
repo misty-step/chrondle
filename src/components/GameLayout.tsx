@@ -153,13 +153,13 @@ export function GameLayout(props: GameLayoutProps) {
                   // Color based on accuracy
                   lastGuessStamp.start <= targetYear && lastGuessStamp.end >= targetYear
                     ? "border-feedback-correct text-feedback-correct rotate-[-2deg]"
-                    : "border-outline-default text-primary rotate-[2deg]",
+                    : "border-outline-default text-body-primary rotate-[2deg]",
                 )}
               >
                 {lastGuessStamp.start <= targetYear && lastGuessStamp.end >= targetYear
                   ? "LOCKED IN"
                   : "RECORDED"}
-                <span className="text-secondary text-xs font-medium tracking-normal normal-case opacity-70">
+                <span className="text-body-secondary text-xs font-medium tracking-normal normal-case opacity-70">
                   Tap to continue
                 </span>
               </motion.div>
@@ -192,12 +192,12 @@ export function GameLayout(props: GameLayoutProps) {
               <div className="material-card paper-edge group border-primary/20 relative overflow-hidden border-2 p-8 sm:p-10">
                 {/* Removed decorative corner accents - unnecessary visual noise */}
 
-                <div className="text-primary mb-4 flex items-center gap-2 font-sans text-xs font-bold tracking-wider uppercase">
+                <div className="text-body-primary mb-4 flex items-center gap-2 font-sans text-xs font-bold tracking-wider uppercase">
                   <span className="bg-primary/50 h-px w-8" />
                   Primary Clue
                   <span className="bg-primary/50 h-px flex-1" />
                 </div>
-                <div className="text-primary font-display text-3xl leading-tight sm:text-4xl lg:text-5xl">
+                <div className="text-body-primary font-display text-3xl leading-tight sm:text-4xl lg:text-5xl">
                   {gameState.puzzle.events[0]}
                 </div>
               </div>
@@ -210,10 +210,12 @@ export function GameLayout(props: GameLayoutProps) {
                       key={index}
                       className="material-paper paper-edge border-primary/30 relative border-l-4 p-3"
                     >
-                      <div className="text-secondary mb-1 font-sans text-xs font-semibold uppercase">
+                      <div className="text-body-secondary mb-1 font-sans text-xs font-semibold uppercase">
                         Clue {index + 2}
                       </div>
-                      <div className="text-primary font-serif text-base leading-snug">{hint}</div>
+                      <div className="text-body-primary font-serif text-base leading-snug">
+                        {hint}
+                      </div>
                     </div>
                   ))}
                 </div>

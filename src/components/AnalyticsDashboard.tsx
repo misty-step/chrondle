@@ -96,7 +96,7 @@ export function AnalyticsDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between border-b p-4">
           <div className="flex items-center gap-2">
-            <Activity className="text-primary h-5 w-5" />
+            <Activity className="text-body-primary h-5 w-5" />
             <h3 className="font-bold">Analytics Dashboard</h3>
           </div>
           <div className="flex items-center gap-2">
@@ -119,7 +119,7 @@ export function AnalyticsDashboard() {
             icon={<BarChart3 className="h-4 w-4" />}
             label="Total Events"
             value={totalEvents}
-            color="text-primary"
+            color="text-body-primary"
           />
           <MetricCard
             icon={<Users className="h-4 w-4" />}

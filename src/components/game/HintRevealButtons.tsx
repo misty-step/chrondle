@@ -62,7 +62,7 @@ export function HintRevealButtons({
     <div className={cn("space-y-5", className)}>
       {/* The Puzzle Event - Hero Display */}
       <div className="border-primary bg-primary/10 rounded-sm border-2 p-5 shadow-md sm:p-6">
-        <div className="text-primary mb-2 text-xs font-bold tracking-wider uppercase">
+        <div className="text-body-primary mb-2 text-xs font-bold tracking-wider uppercase">
           The Event
         </div>
         <div className="text-foreground text-base leading-relaxed sm:text-lg">{firstEvent}</div>

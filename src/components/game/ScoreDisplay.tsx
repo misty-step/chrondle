@@ -50,7 +50,7 @@ export function ScoreDisplay({ width, hintsUsed, variant = "full", className }: 
           <Trophy
             className={cn(
               "h-6 w-6 sm:h-7 sm:w-7",
-              isValid ? "text-primary" : "text-muted-foreground",
+              isValid ? "text-body-primary" : "text-muted-foreground",
             )}
             aria-hidden="true"
           />
@@ -58,7 +58,7 @@ export function ScoreDisplay({ width, hintsUsed, variant = "full", className }: 
             value={maxPossibleScore}
             className={cn(
               "text-3xl font-bold tabular-nums sm:text-4xl",
-              isValid ? "text-primary" : "text-muted-foreground",
+              isValid ? "text-body-primary" : "text-muted-foreground",
             )}
           />
         </div>
@@ -100,14 +100,14 @@ export function ScoreDisplay({ width, hintsUsed, variant = "full", className }: 
       </div>
       <div className="mt-4 flex items-center justify-center gap-3">
         <Trophy
-          className={cn("h-10 w-10", isValid ? "text-primary" : "text-muted-foreground")}
+          className={cn("h-10 w-10", isValid ? "text-body-primary" : "text-muted-foreground")}
           aria-hidden="true"
         />
         <AnimatedNumber
           value={maxPossibleScore}
           className={cn(
             "text-5xl font-bold tabular-nums",
-            isValid ? "text-primary" : "text-muted-foreground",
+            isValid ? "text-body-primary" : "text-muted-foreground",
           )}
         />
       </div>

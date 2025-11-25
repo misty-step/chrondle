@@ -18,7 +18,7 @@ export const CountdownCard: React.FC<CountdownCardProps> = ({ timeString }) => {
 
         {/* Countdown */}
         <div className="bg-surface-elevated border-border/30 rounded-sm border p-4">
-          <div className="text-primary mb-1 font-mono text-3xl font-bold">{timeString}</div>
+          <div className="text-body-primary mb-1 font-mono text-3xl font-bold">{timeString}</div>
           <p className="text-muted-foreground text-xs tracking-wide uppercase">
             Hours : Minutes : Seconds
           </p>

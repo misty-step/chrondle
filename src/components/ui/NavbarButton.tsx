@@ -53,7 +53,7 @@ export const NavbarButton: React.FC<NavbarButtonProps> = ({
     "flex items-center justify-center group",
     "hover:bg-accent/50 hover:shadow-hard-sm",
     "cursor-pointer",
-    "text-primary",
+    "text-body-primary",
     "border border-transparent hover:border-primary/20",
     className,
   );

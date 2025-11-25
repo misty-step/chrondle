@@ -99,7 +99,7 @@ export const GameInstructions: React.FC<GameInstructionsProps> = ({
             <div className="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase">
               Next puzzle in
             </div>
-            <div className="text-primary font-mono text-2xl font-bold sm:text-3xl">
+            <div className="text-body-primary font-mono text-2xl font-bold sm:text-3xl">
               {timeString || "00:00:00"}
             </div>
           </div>

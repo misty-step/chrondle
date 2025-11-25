@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { currentUser } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { AppHeader } from "@/components/AppHeader";
@@ -47,6 +48,12 @@ async function OrderArchivePageContent({
   const PUZZLES_PER_PAGE = 24 as const;
 
   const client = getConvexClient();
+
+  // If Convex client unavailable (missing env var), let client-side handle it
+  if (!client) {
+    logger.warn("[ArchiveOrderPage] Convex client unavailable - missing NEXT_PUBLIC_CONVEX_URL");
+    notFound();
+  }
 
   let hasRequestContext = false;
   try {
@@ -151,7 +158,7 @@ async function OrderArchivePageContent({
             </Link>
             <Link
               href="/archive/order"
-              className="border-primary text-primary flex items-center gap-2 border-b-2 px-3 py-2 font-semibold"
+              className="border-primary text-body-primary flex items-center gap-2 border-b-2 px-3 py-2 font-semibold"
             >
               <BarChart className="h-4 w-4" /> Order
             </Link>

@@ -35,7 +35,7 @@ const HINT_COPY: Record<
       const eventName = event?.text ?? "Event";
       return (
         <>
-          <span className="text-primary font-semibold">{eventName}</span>
+          <span className="text-body-primary font-semibold">{eventName}</span>
           <span className="text-muted-foreground"> locked at position {hint.position + 1}</span>
         </>
       );
@@ -60,7 +60,7 @@ const HINT_COPY: Record<
       const endYear = formatYear(hint.yearRange[1]);
       return (
         <>
-          <span className="text-primary font-semibold">{eventName}</span>
+          <span className="text-body-primary font-semibold">{eventName}</span>
           <span className="text-muted-foreground">
             : {startYear} – {endYear}
           </span>
@@ -193,7 +193,7 @@ function DesktopHintPanel(props: InternalPanelProps) {
           <Accordion.Header>
             <Accordion.Trigger className="flex w-full items-center justify-between gap-2 text-left text-base font-semibold">
               <div className="flex flex-col">
-                <span id="order-hints-heading" className="text-primary">
+                <span id="order-hints-heading" className="text-body-primary">
                   Hints
                 </span>
                 <span className="text-muted-foreground text-xs font-medium">
@@ -220,10 +220,10 @@ function MobileHintPanel(props: InternalPanelProps) {
       <div className="border-border/50 mb-4 flex items-center justify-between border-b pb-3">
         <div className="flex items-center gap-3">
           <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-sm">
-            <Lightbulb className="text-primary h-4 w-4" aria-hidden="true" />
+            <Lightbulb className="text-body-primary h-4 w-4" aria-hidden="true" />
           </div>
           <div>
-            <h3 id="compact-hints-heading" className="text-primary text-base font-semibold">
+            <h3 id="compact-hints-heading" className="text-body-primary text-base font-semibold">
               {hintsRemaining} Hints Left
             </h3>
             <p className="text-muted-foreground text-sm">{props.hints.length} of 3 used</p>
@@ -261,7 +261,7 @@ function MobileHintPanel(props: InternalPanelProps) {
                 {isPending ? (
                   <LoadingSpinner className="size-5" />
                 ) : (
-                  <div className={isUsed ? "text-muted-foreground" : "text-primary"}>
+                  <div className={isUsed ? "text-muted-foreground" : "text-body-primary"}>
                     {getHintIcon(type, "h-5 w-5")}
                   </div>
                 )}
@@ -272,7 +272,7 @@ function MobileHintPanel(props: InternalPanelProps) {
                 <span
                   className={cn(
                     "block truncate text-base leading-tight font-semibold",
-                    isUsed ? "text-muted-foreground" : "text-primary",
+                    isUsed ? "text-muted-foreground" : "text-body-primary",
                   )}
                 >
                   {isUsed && "✓ "}
@@ -292,7 +292,7 @@ function MobileHintPanel(props: InternalPanelProps) {
         <Accordion.Root type="single" collapsible>
           <Accordion.Item value="hints-history">
             <Accordion.Header>
-              <Accordion.Trigger className="text-muted-foreground hover:text-primary flex w-full items-center justify-between py-2 text-sm font-medium transition-colors">
+              <Accordion.Trigger className="text-muted-foreground hover:text-body-primary flex w-full items-center justify-between py-2 text-sm font-medium transition-colors">
                 <span>View hints used ({props.hints.length})</span>
               </Accordion.Trigger>
             </Accordion.Header>
@@ -389,8 +389,8 @@ function AvailableHintButton({ type, pending, onSelect }: AvailableHintButtonPro
     >
       {/* Icon + Title on same row */}
       <div className="flex w-full min-w-0 items-center gap-3">
-        <div className="text-primary flex-shrink-0">{getHintIcon(type, "h-5 w-5")}</div>
-        <p className="text-primary min-w-0 truncate text-sm font-semibold">{copy.label}</p>
+        <div className="text-body-primary flex-shrink-0">{getHintIcon(type, "h-5 w-5")}</div>
+        <p className="text-body-primary min-w-0 truncate text-sm font-semibold">{copy.label}</p>
       </div>
 
       {/* Description below */}
@@ -399,7 +399,7 @@ function AvailableHintButton({ type, pending, onSelect }: AvailableHintButtonPro
           {copy.availableDescription}
         </p>
         {pending && (
-          <span className="text-primary mt-2 flex items-center gap-2 text-xs font-medium">
+          <span className="text-body-primary mt-2 flex items-center gap-2 text-xs font-medium">
             <LoadingSpinner className="size-3" />
             Preparing hint…
           </span>
@@ -448,7 +448,7 @@ function UsedHintsList({ events, hints }: UsedHintsListProps) {
                   {getHintIcon(hint.type, "h-4 w-4")}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-primary text-sm leading-relaxed">{description}</p>
+                  <p className="text-body-primary text-sm leading-relaxed">{description}</p>
                 </div>
               </motion.li>
             );

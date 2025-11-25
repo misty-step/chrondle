@@ -439,14 +439,14 @@ html.dark {
     background-color: var(--surface-overlay);
   }
 
-  /* Text colors */
-  .text-primary {
+  /* Text colors - renamed to text-body-* to avoid collision with Tailwind's brand color utilities */
+  .text-body-primary {
     color: var(--text-primary);
   }
-  .text-secondary {
+  .text-body-secondary {
     color: var(--text-secondary);
   }
-  .text-tertiary {
+  .text-body-tertiary {
     color: var(--text-tertiary);
   }
   .text-inverse {

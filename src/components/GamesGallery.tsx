@@ -85,9 +85,9 @@ export function GamesGallery() {
       <div className="pointer-events-none absolute top-6 right-0 left-0 z-50 flex justify-center">
         <div className="border-outline-default/10 bg-card/80 shadow-hard-sm pointer-events-auto flex items-center gap-2 rounded-sm border px-5 py-2 backdrop-blur-md">
           <div className="rounded-sm p-1.5">
-            <Crown className="text-primary/80 h-4 w-4" />
+            <Crown className="text-body-primary/80 h-4 w-4" />
           </div>
-          <span className="font-heading text-primary/90 text-lg font-bold tracking-wide">
+          <span className="font-heading text-body-primary/90 text-lg font-bold tracking-wide">
             CHRONDLE
           </span>
 
@@ -108,11 +108,11 @@ export function GamesGallery() {
               transition={{ type: "spring", stiffness: 200, damping: 20 }}
             >
               {!isMounted ? (
-                <Sun className="text-secondary h-4 w-4" />
+                <Sun className="text-body-secondary h-4 w-4" />
               ) : currentTheme === "dark" ? (
-                <Moon className="text-secondary h-4 w-4" />
+                <Moon className="text-body-secondary h-4 w-4" />
               ) : (
-                <Sun className="text-secondary h-4 w-4" />
+                <Sun className="text-body-secondary h-4 w-4" />
               )}
             </motion.div>
           </motion.button>

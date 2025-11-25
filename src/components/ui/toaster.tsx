@@ -55,7 +55,7 @@ function ToastItem({
               "mt-2 inline-flex items-center rounded-sm px-3 py-1.5 text-xs font-medium transition-colors",
               variant === "destructive"
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                : "bg-primary text-primary-foreground hover:bg-primary/90",
+                : "bg-primary text-body-primary-foreground hover:bg-primary/90",
             )}
           >
             {actionLabel}

@@ -138,7 +138,7 @@ export function OrderReveal({
               type="button"
               onClick={handleShareClick}
               disabled={isShared}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-hard-lg flex w-full cursor-pointer items-center justify-center gap-2 rounded-sm px-8 py-3 text-base font-semibold transition-all hover:scale-105 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto"
+              className="bg-primary text-body-primary-foreground hover:bg-primary/90 shadow-hard-lg flex w-full cursor-pointer items-center justify-center gap-2 rounded-sm px-8 py-3 text-base font-semibold transition-all hover:scale-105 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto"
               whileTap={
                 prefersReducedMotion || isShared
                   ? undefined

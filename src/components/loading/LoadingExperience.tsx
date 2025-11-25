@@ -36,8 +36,10 @@ export function LoadingExperience({
         <InlineSpinner intentAccent={tokens.accent} />
         <div className="space-y-1 text-center">
           <p className="text-base font-semibold">{message}</p>
-          {subMessage && <p className="text-secondary text-sm">{subMessage}</p>}
-          <p className="text-secondary text-xs tracking-[0.16em] uppercase">{STAGE_COPY[stage]}</p>
+          {subMessage && <p className="text-body-secondary text-sm">{subMessage}</p>}
+          <p className="text-body-secondary text-xs tracking-[0.16em] uppercase">
+            {STAGE_COPY[stage]}
+          </p>
         </div>
         <ProgressBar
           progress={clampedProgress}

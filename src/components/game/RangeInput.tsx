@@ -210,7 +210,7 @@ export function RangeInput({
       >
         {/* Section Header */}
         <div className="mb-6">
-          <h3 className="text-section-title text-secondary">Your Guess</h3>
+          <h3 className="text-section-title text-body-secondary">Your Guess</h3>
           <div className="ledger-divider mt-2" />
         </div>
 
@@ -220,7 +220,7 @@ export function RangeInput({
             <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
               Range
             </span>
-            <span className="text-primary font-mono text-sm font-semibold tabular-nums">
+            <span className="text-body-primary font-mono text-sm font-semibold tabular-nums">
               {formatYearDisplay(range[0])}
               <span className="text-muted-foreground mx-2">→</span>
               {formatYearDisplay(range[1])}
@@ -251,7 +251,7 @@ export function RangeInput({
                   disabled={disabled}
                   className={cn(
                     "ledger-entry-line w-full px-2 pt-1 pb-2 text-center font-mono text-3xl font-semibold tabular-nums",
-                    "text-primary placeholder:text-muted-foreground/50",
+                    "text-body-primary placeholder:text-muted-foreground/50",
                     "disabled:cursor-not-allowed disabled:opacity-50",
                   )}
                   aria-label="Start year"
@@ -292,7 +292,7 @@ export function RangeInput({
                   disabled={disabled}
                   className={cn(
                     "ledger-entry-line w-full px-2 pt-1 pb-2 text-center font-mono text-3xl font-semibold tabular-nums",
-                    "text-primary placeholder:text-muted-foreground/50",
+                    "text-body-primary placeholder:text-muted-foreground/50",
                     "disabled:cursor-not-allowed disabled:opacity-50",
                   )}
                   aria-label="End year"

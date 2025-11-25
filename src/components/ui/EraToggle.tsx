@@ -39,7 +39,7 @@ const toggleButtonVariants = cva(
           "border border-vermilion-600",
         ].join(" "),
         inactive: [
-          "text-secondary",
+          "text-body-secondary",
           "font-medium",
           "bg-surface-elevated hover:bg-muted",
           "border border-outline-default",

@@ -80,14 +80,14 @@ export function ClassicArchivePuzzleClient({
 
   // Show error toast in effect to avoid calling during render
   useEffect(() => {
-    if (hasError) {
+    if (hasError && gameState.status === "error") {
       toast({
         title: "Failed to load puzzle",
         description: gameState.error,
         variant: "destructive",
       });
     }
-  }, [hasError, gameState.error, toast]);
+  }, [hasError, gameState, toast]);
 
   const handleNavigate = useCallback(
     (direction: "prev" | "next") => {
@@ -102,7 +102,7 @@ export function ClassicArchivePuzzleClient({
   if (isLoading || gameState.status !== "ready") {
     return (
       <div className="bg-background flex min-h-screen items-center justify-center">
-        <div className="text-secondary text-sm">Loading puzzle…</div>
+        <div className="text-body-secondary text-sm">Loading puzzle…</div>
       </div>
     );
   }
@@ -147,14 +147,14 @@ export function ClassicArchivePuzzleClient({
                   <button
                     onClick={() => handleNavigate("prev")}
                     disabled={totalPuzzles ? puzzleNumber <= 1 : true}
-                    className="text-primary/80 hover:text-primary text-sm disabled:opacity-40"
+                    className="text-body-primary/80 hover:text-body-primary text-sm disabled:opacity-40"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => handleNavigate("next")}
                     disabled={totalPuzzles ? puzzleNumber >= totalPuzzles : true}
-                    className="text-primary/80 hover:text-primary text-sm disabled:opacity-40"
+                    className="text-body-primary/80 hover:text-body-primary text-sm disabled:opacity-40"
                   >
                     Next
                   </button>

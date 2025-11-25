@@ -91,7 +91,7 @@ export function ArchiveOrderPuzzleClient({
             <div className="mb-4">
               <Link
                 href="/archive/order"
-                className="text-muted-foreground hover:text-primary text-sm"
+                className="text-muted-foreground hover:text-body-primary text-sm"
               >
                 ← Back to Order Archive
               </Link>
@@ -128,7 +128,7 @@ export function ArchiveOrderPuzzleClient({
             <div className="mb-4">
               <Link
                 href="/archive/order"
-                className="text-muted-foreground hover:text-primary text-sm"
+                className="text-muted-foreground hover:text-body-primary text-sm"
               >
                 ← Back to Order Archive
               </Link>

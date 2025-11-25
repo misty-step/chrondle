@@ -32,14 +32,14 @@ export function ArchiveErrorBoundary({ children, year }: ArchiveErrorBoundaryPro
 
               <div className="space-y-3">
                 <Link href="/archive" className="block">
-                  <button className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded-sm px-4 py-2 transition-colors">
+                  <button className="bg-primary text-body-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded-sm px-4 py-2 transition-colors">
                     <Archive className="h-4 w-4" />
                     Return to Archive
                   </button>
                 </Link>
 
                 <Link href="/" className="block">
-                  <button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 flex w-full items-center justify-center gap-2 rounded-sm px-4 py-2 transition-colors">
+                  <button className="bg-secondary text-body-secondary-foreground hover:bg-secondary/90 flex w-full items-center justify-center gap-2 rounded-sm px-4 py-2 transition-colors">
                     <Home className="h-4 w-4" />
                     Go to Today&apos;s Puzzle
                   </button>

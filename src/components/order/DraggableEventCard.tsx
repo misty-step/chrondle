@@ -167,7 +167,7 @@ function EventCardContent({
 
         <div className="min-w-0 flex-1">
           {/* Event Text - Larger, more readable serif typography */}
-          <p className="font-event text-primary line-clamp-3 text-xl leading-relaxed">
+          <p className="font-event text-body-primary line-clamp-3 text-xl leading-relaxed">
             {event.text}
           </p>
 
@@ -259,7 +259,7 @@ function describeHints(
               label: (
                 <span className="inline-flex flex-wrap items-center gap-1">
                   <span className="text-muted-foreground italic">happens before</span>
-                  <span className="text-primary font-semibold">{truncate(laterName, 25)}</span>
+                  <span className="text-body-primary font-semibold">{truncate(laterName, 25)}</span>
                 </span>
               ),
             };
@@ -273,7 +273,9 @@ function describeHints(
               label: (
                 <span className="inline-flex flex-wrap items-center gap-1">
                   <span className="text-muted-foreground italic">happens after</span>
-                  <span className="text-primary font-semibold">{truncate(earlierName, 25)}</span>
+                  <span className="text-body-primary font-semibold">
+                    {truncate(earlierName, 25)}
+                  </span>
                 </span>
               ),
             };

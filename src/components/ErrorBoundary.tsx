@@ -128,7 +128,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="space-y-3">
                 <button
                   onClick={this.handleReload}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-sm px-4 py-2 transition-colors"
+                  className="bg-primary text-body-primary-foreground hover:bg-primary/90 w-full rounded-sm px-4 py-2 transition-colors"
                 >
                   Reload Game
                 </button>

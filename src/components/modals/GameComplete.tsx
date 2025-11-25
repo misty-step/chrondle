@@ -229,7 +229,7 @@ export function GameComplete({
             <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
               Total Score
             </p>
-            <p className="text-primary text-3xl leading-tight font-black">
+            <p className="text-body-primary text-3xl leading-tight font-black">
               {totalScore.toLocaleString()} pts
             </p>
             <p className="text-muted-foreground text-xs">
@@ -362,7 +362,7 @@ export function GameComplete({
                   <Award className="size-5" aria-hidden="true" />
                   <span className="font-semibold tracking-wide uppercase">Final Score</span>
                 </div>
-                <span className="text-primary font-mono text-lg font-bold">
+                <span className="text-body-primary font-mono text-lg font-bold">
                   {displayedFinalScore} pts
                 </span>
               </div>

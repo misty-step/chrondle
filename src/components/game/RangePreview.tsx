@@ -47,7 +47,7 @@ export function RangePreview({ start, end, width, hintsUsed, className }: RangeP
       {isValid ? (
         <div className="bg-primary/10 border-primary/30 flex items-center justify-between rounded-sm border px-4 py-3">
           <span className="text-muted-foreground text-sm font-medium">Potential Score</span>
-          <span className="text-primary text-xl font-bold tabular-nums">
+          <span className="text-body-primary text-xl font-bold tabular-nums">
             {maxPossibleScore} pts
           </span>
         </div>

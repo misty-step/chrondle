@@ -2,13 +2,12 @@ import { SignUp } from "@clerk/nextjs";
 
 export default function SignUpPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="bg-background flex min-h-screen items-center justify-center">
       <SignUp
         appearance={{
           elements: {
-            formButtonPrimary:
-              "bg-primary text-primary-foreground hover:bg-primary/90",
-            footerActionLink: "text-primary hover:text-primary/90",
+            formButtonPrimary: "bg-primary text-body-primary-foreground hover:bg-primary/90",
+            footerActionLink: "text-body-primary hover:text-body-primary/90",
           },
         }}
         routing="path"

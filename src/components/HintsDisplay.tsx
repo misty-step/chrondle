@@ -279,8 +279,8 @@ export const HintsDisplay: React.FC<HintsDisplayProps> = React.memo((props) => {
         <div className="mb-3 text-4xl" aria-hidden="true">
           📜
         </div>
-        <p className="text-primary mb-1 font-medium">Preparing your puzzle...</p>
-        <p className="text-secondary text-sm">Historical events are being loaded</p>
+        <p className="text-body-primary mb-1 font-medium">Preparing your puzzle...</p>
+        <p className="text-body-secondary text-sm">Historical events are being loaded</p>
         <div className="mt-4 flex items-center justify-center">
           <LoadingSpinner size="sm" />
         </div>

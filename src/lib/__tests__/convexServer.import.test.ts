@@ -7,10 +7,10 @@ describe("convexServer helpers", () => {
     expect(api).toBeDefined();
   });
 
-  it("throws clear error when convex URL missing", () => {
+  it("returns null when convex URL missing", () => {
     const original = process.env.NEXT_PUBLIC_CONVEX_URL;
     delete process.env.NEXT_PUBLIC_CONVEX_URL;
-    expect(() => getConvexClient()).toThrow(/NEXT_PUBLIC_CONVEX_URL/);
+    expect(getConvexClient()).toBeNull();
     if (original) process.env.NEXT_PUBLIC_CONVEX_URL = original;
   });
 });

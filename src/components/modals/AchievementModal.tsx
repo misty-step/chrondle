@@ -43,7 +43,7 @@ export const AchievementModal: React.FC<AchievementModalProps> = ({
           <div className="space-y-6 p-4 text-center">
             <div className="mb-4 animate-bounce text-6xl">🏆</div>
             <h2 className="text-foreground mb-2 text-2xl font-bold">Achievement Unlocked!</h2>
-            <p className="text-primary mb-6 text-lg font-medium">{achievement}</p>
+            <p className="text-body-primary mb-6 text-lg font-medium">{achievement}</p>
             <Button
               onClick={onClose}
               className="px-6 py-3 font-medium transition-all duration-200 hover:scale-105"

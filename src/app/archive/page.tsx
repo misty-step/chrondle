@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { api, getConvexClient } from "@/lib/convexServer";
 import { currentUser } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
@@ -60,6 +61,12 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
 
   // Initialize Convex client
   const client = getConvexClient();
+
+  // If Convex client unavailable (missing env var), let client-side handle it
+  if (!client) {
+    logger.warn("[ArchiveClassicPage] Convex client unavailable - missing NEXT_PUBLIC_CONVEX_URL");
+    notFound();
+  }
 
   // Performance timing
 
@@ -274,7 +281,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
           <div className="mb-6 flex gap-2 border-b">
             <Link
               href="/archive"
-              className="border-primary text-primary flex items-center gap-2 border-b-2 px-3 py-2 font-semibold"
+              className="border-primary text-body-primary flex items-center gap-2 border-b-2 px-3 py-2 font-semibold"
             >
               <History className="h-4 w-4" /> Classic
             </Link>
