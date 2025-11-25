@@ -216,59 +216,83 @@ function MobileHintPanel(props: InternalPanelProps) {
 
   return (
     <GameCard as="section" padding="compact" aria-labelledby="compact-hints-heading">
-      {/* Hints Header */}
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Lightbulb className="text-primary h-4 w-4" aria-hidden="true" />
+      {/* Header - Museum placard style */}
+      <div className="border-border/50 mb-4 flex items-center justify-between border-b pb-3">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-sm">
+            <Lightbulb className="text-primary h-4 w-4" aria-hidden="true" />
+          </div>
           <div>
-            <h3 id="compact-hints-heading" className="text-primary text-sm font-semibold">
+            <h3 id="compact-hints-heading" className="text-primary text-base font-semibold">
               {hintsRemaining} Hints Left
             </h3>
-            <p className="text-muted-foreground text-xs">{props.hints.length} of 3 used</p>
+            <p className="text-muted-foreground text-sm">{props.hints.length} of 3 used</p>
           </div>
         </div>
       </div>
 
-      {/* Hint Buttons - Compact grid */}
-      <div className="mb-3 grid grid-cols-3 gap-2">
+      {/* Hint Buttons - Single column with generous touch targets */}
+      <div className="mb-4 flex flex-col gap-3">
         {(Object.keys(HINT_COPY) as HintType[]).map((type) => {
           const isUsed = props.disabledTypes?.[type];
+          const isPending = props.pendingType === type;
           return (
             <button
               key={type}
               type="button"
               className={cn(
-                "border-border bg-background flex min-w-0 flex-col items-start overflow-hidden rounded-sm border p-2 text-left text-xs transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-                isUsed ? "cursor-not-allowed opacity-40" : "cursor-pointer",
+                "border-border bg-background flex min-h-[56px] w-full items-center gap-4 rounded-sm border-2 px-4 py-3 text-left transition-all",
+                "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                isUsed
+                  ? "cursor-not-allowed opacity-50"
+                  : "hover:border-primary/30 hover:bg-muted/30 cursor-pointer",
               )}
               onClick={() => props.onRequestHint(type)}
-              disabled={isUsed || props.pendingType === type}
+              disabled={isUsed || isPending}
               aria-label={`Take ${HINT_COPY[type].label}`}
             >
-              {/* Icon + Title on same row */}
-              <div className="mb-1 flex w-full min-w-0 items-center gap-1.5">
-                <div className="text-primary flex-shrink-0">{getHintIcon(type, "h-4 w-4")}</div>
-                <span className="text-primary min-w-0 truncate text-xs leading-tight font-semibold">
-                  {isUsed ? "✓ " : ""}
-                  {HINT_COPY[type].label.split(" ")[0]}
+              {/* Icon container */}
+              <div
+                className={cn(
+                  "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-sm",
+                  isUsed ? "bg-muted" : "bg-primary/10",
+                )}
+              >
+                {isPending ? (
+                  <LoadingSpinner className="size-5" />
+                ) : (
+                  <div className={isUsed ? "text-muted-foreground" : "text-primary"}>
+                    {getHintIcon(type, "h-5 w-5")}
+                  </div>
+                )}
+              </div>
+
+              {/* Label + Description */}
+              <div className="min-w-0 flex-1">
+                <span
+                  className={cn(
+                    "block text-base leading-tight font-semibold",
+                    isUsed ? "text-muted-foreground" : "text-primary",
+                  )}
+                >
+                  {isUsed && "✓ "}
+                  {HINT_COPY[type].label}
+                </span>
+                <span className="text-muted-foreground mt-0.5 block text-sm leading-snug">
+                  {isUsed ? "Used" : HINT_COPY[type].availableDescription}
                 </span>
               </div>
-              {/* Description indented below */}
-              <span className="text-muted-foreground line-clamp-2 pl-5 text-[10px] leading-tight">
-                {isUsed ? "Used" : HINT_COPY[type].availableDescription}
-              </span>
-              {props.pendingType === type && <LoadingSpinner className="mt-1 ml-5 size-3" />}
             </button>
           );
         })}
       </div>
 
-      {/* Hints History - Collapsed */}
+      {/* Hints History - Collapsed accordion */}
       {props.hints.length > 0 && (
         <Accordion.Root type="single" collapsible>
           <Accordion.Item value="hints-history">
             <Accordion.Header>
-              <Accordion.Trigger className="flex w-full items-center justify-between text-xs font-medium">
+              <Accordion.Trigger className="text-muted-foreground hover:text-primary flex w-full items-center justify-between py-2 text-sm font-medium transition-colors">
                 <span>View hints used ({props.hints.length})</span>
               </Accordion.Trigger>
             </Accordion.Header>
@@ -280,7 +304,7 @@ function MobileHintPanel(props: InternalPanelProps) {
       )}
 
       {props.error && (
-        <p role="status" className="text-destructive mt-2 text-xs">
+        <p role="status" className="text-destructive mt-3 text-sm font-medium">
           {props.error}
         </p>
       )}

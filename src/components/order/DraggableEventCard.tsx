@@ -130,27 +130,27 @@ function EventCardContent({
     <>
       <div
         className={[
-          "flex touch-none items-center justify-center py-2",
-          isLocked ? "cursor-not-allowed" : "cursor-grab",
+          "flex touch-none items-center justify-center py-3",
+          isLocked ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing",
           "bg-muted/20 border-border/30 rounded-t-sm border-b", // Subtle separation
         ].join(" ")}
         {...handleProps}
       >
         <div
           className={[
-            "flex gap-1 transition-opacity", // Horizontal dots instead of vertical lines
-            isLocked || mutedHandle ? "opacity-20" : "opacity-40 hover:opacity-70",
+            "flex gap-1.5 transition-opacity", // Horizontal dots - larger for mobile touch
+            isLocked || mutedHandle ? "opacity-20" : "opacity-50 hover:opacity-80",
           ].join(" ")}
         >
-          {/* Simple Grip Dots */}
-          <div className="bg-foreground h-1 w-1 rounded-full" />
-          <div className="bg-foreground h-1 w-1 rounded-full" />
-          <div className="bg-foreground h-1 w-1 rounded-full" />
-          <div className="bg-foreground h-1 w-1 rounded-full" />
+          {/* Grip Dots - larger for mobile touch clarity */}
+          <div className="bg-foreground h-1.5 w-1.5 rounded-full" />
+          <div className="bg-foreground h-1.5 w-1.5 rounded-full" />
+          <div className="bg-foreground h-1.5 w-1.5 rounded-full" />
+          <div className="bg-foreground h-1.5 w-1.5 rounded-full" />
         </div>
       </div>
 
-      <div className="flex flex-1 items-start gap-4 px-5 py-4">
+      <div className="flex flex-1 items-start gap-4 px-4 py-4 sm:px-5">
         {/* Year Tab - Only shown in results view */}
         {showYear && (
           <div className="absolute top-3 -left-3 flex items-center">
@@ -160,8 +160,8 @@ function EventCardContent({
           </div>
         )}
 
-        {/* Position Indicator - Vermilion badge */}
-        <div className="flex min-w-[32px] flex-shrink-0 items-center justify-center">
+        {/* Position Indicator - Vermilion badge, larger on mobile */}
+        <div className="flex min-w-[36px] flex-shrink-0 items-center justify-center sm:min-w-[32px]">
           <div className="number-badge">{index + 1}</div>
         </div>
 

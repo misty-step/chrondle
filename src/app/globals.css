@@ -164,22 +164,27 @@
   --status-info: var(--feedback-info);
 }
 
-/* DARK MODE OVERRIDES (Single source of truth for dark theme) */
+/* DARK MODE OVERRIDES - ESPRESSO & CREAM
+   High contrast dark theme where cards dramatically float above the void.
+   Inspired by Italian café design, evening aperitivo aesthetics. */
 html.dark {
-  --color-ink-900: oklch(0.98 0.04 85);
-  --color-ink-700: oklch(0.85 0.05 85);
-  --color-ink-500: oklch(0.82 0.05 85);
+  /* Ink (text) - warm cream, adjusted for lighter card surfaces */
+  --color-ink-900: oklch(0.96 0.03 85); /* Primary text - warm cream */
+  --color-ink-700: oklch(0.82 0.04 85); /* Secondary text */
+  --color-ink-500: oklch(0.7 0.04 85); /* Tertiary - raised for cream surfaces */
 
-  --color-parchment-50: oklch(0.12 0.03 50); /* Deep library shadows - darker void */
-  --color-parchment-100: oklch(0.24 0.06 55); /* Warm candlelit parchment - 2:1 contrast */
-  --color-parchment-200: oklch(0.28 0.06 55); /* Slightly lighter surfaces */
-  --color-parchment-300: oklch(0.35 0.06 50); /* Visible borders - shelf edges */
+  /* Parchment (surfaces) - THE KEY CHANGE: 2.5:1 contrast ratio */
+  --color-parchment-50: oklch(0.14 0.04 50); /* Deep espresso void */
+  --color-parchment-100: oklch(0.35 0.05 55); /* CREAM cards - dramatic float! */
+  --color-parchment-200: oklch(0.38 0.05 55); /* Secondary surfaces */
+  --color-parchment-300: oklch(0.42 0.04 50); /* Strong visible borders */
 
   /* Archival Accents - Dark Mode */
   --color-sepia: oklch(0.55 0.12 60);
   --color-oxidized: oklch(0.5 0.15 140);
   --color-wax-seal: oklch(0.45 0.18 10);
 
+  /* Surface assignments */
   --background: var(--color-parchment-50);
   --foreground: var(--color-ink-900);
 
@@ -189,18 +194,20 @@ html.dark {
   --popover: var(--color-parchment-100);
   --popover-foreground: var(--color-ink-900);
 
+  /* Interactive - vermilion stays bold, white text */
   --primary: var(--color-vermilion-400);
-  --primary-foreground: oklch(0.15 0.02 50);
+  --primary-foreground: #ffffff;
 
   --secondary: var(--color-parchment-200);
   --secondary-foreground: var(--color-ink-900);
 
   --muted: var(--color-parchment-200);
-  --muted-foreground: oklch(0.45 0.03 60); /* Warm medium gray */
+  --muted-foreground: oklch(0.6 0.03 60); /* Raised for cream surfaces */
 
   --accent: var(--color-parchment-200);
   --accent-foreground: var(--color-ink-900);
 
+  /* Borders - now dramatically visible */
   --border: var(--color-parchment-300);
   --input: var(--color-parchment-200);
 
@@ -221,10 +228,10 @@ html.dark {
   --locked-badge: var(--color-vermilion-500);
   --locked-badge-bg: oklch(from var(--locked-badge) l c h / 0.15);
 
-  /* ELEVATION SYSTEM - Dark Mode */
-  --elevation-navbar-bg: oklch(0.18 0.04 50); /* Elevated above deep background */
-  --elevation-navbar-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); /* Deep shadow for library depth */
-  --elevation-navbar-border: oklch(0.3 0.05 50); /* Visible separation */
+  /* ELEVATION SYSTEM - Dark Mode (Espresso & Cream) */
+  --elevation-navbar-bg: oklch(0.22 0.04 50); /* Floats between espresso and cream */
+  --elevation-navbar-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); /* Strong float shadow */
+  --elevation-navbar-border: var(--color-parchment-300); /* Visible separation */
 
   /* MATERIALS */
   --material-overlay: linear-gradient(
