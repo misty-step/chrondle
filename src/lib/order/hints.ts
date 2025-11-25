@@ -84,8 +84,6 @@ export type BracketHintOptions = {
   span?: number;
 };
 
-// ... existing exports ...
-
 /**
  * Returns a bracket hint describing an event's year range.
  * Selects an event deterministically from those not excluded.

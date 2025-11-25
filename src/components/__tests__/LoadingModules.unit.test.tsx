@@ -2,7 +2,8 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import { LoadingScreen } from "../LoadingScreen";
-import { LoadingShell as LoadingExperience, LoadingShell } from "../LoadingShell";
+import { LoadingExperience } from "../loading/LoadingExperience";
+import { LoadingShell } from "../LoadingShell";
 
 describe("Loading modules", () => {
   it("LoadingExperience renders minimal loader and progress bar", () => {

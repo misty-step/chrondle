@@ -11,7 +11,7 @@ interface PageProps {
 export default async function ArchiveClassicPuzzlePage(props: PageProps) {
   const params = await props.params;
   const puzzleNumber = Number(params.id);
-  if (!Number.isFinite(puzzleNumber) || puzzleNumber < 1) {
+  if (!Number.isInteger(puzzleNumber) || puzzleNumber < 1) {
     notFound();
   }
 
