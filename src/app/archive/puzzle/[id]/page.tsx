@@ -16,6 +16,15 @@ export default async function ArchiveClassicPuzzlePage(props: PageProps) {
   }
 
   const client = getConvexClient();
+
+  // If Convex client unavailable (missing env var), let client-side handle it
+  if (!client) {
+    logger.warn(
+      "[ArchiveClassicPuzzlePage] Convex client unavailable - missing NEXT_PUBLIC_CONVEX_URL",
+    );
+    notFound();
+  }
+
   const puzzle = await fetchClassicPuzzleByNumber(client, puzzleNumber);
   if (!puzzle) {
     logger.warn("[ArchiveClassicPuzzlePage] Puzzle not found", { puzzleNumber });

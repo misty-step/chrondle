@@ -16,6 +16,15 @@ export default async function ArchiveOrderPuzzlePage(props: ArchiveOrderPuzzlePa
   }
 
   const client = getConvexClient();
+
+  // If Convex client unavailable (missing env var), let client-side handle it
+  if (!client) {
+    logger.warn(
+      "[ArchiveOrderPuzzlePage] Convex client unavailable - missing NEXT_PUBLIC_CONVEX_URL",
+    );
+    notFound();
+  }
+
   const convexPuzzle = await fetchOrderPuzzleByNumber(client, parsedNumber);
 
   if (!convexPuzzle) {

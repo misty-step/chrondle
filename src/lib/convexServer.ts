@@ -6,10 +6,11 @@ import type { Puzzle } from "@/types/puzzle";
 
 export { api };
 
-export function getConvexClient(): ConvexHttpClient {
+export function getConvexClient(): ConvexHttpClient | null {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
   if (!url) {
-    throw new Error("NEXT_PUBLIC_CONVEX_URL is not set");
+    // Return null instead of throwing - allows pages to handle missing env var gracefully
+    return null;
   }
   return new ConvexHttpClient(url);
 }

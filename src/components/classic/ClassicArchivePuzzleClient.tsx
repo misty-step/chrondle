@@ -78,6 +78,17 @@ export function ClassicArchivePuzzleClient({
     }
   }, [gameState, targetYear, showSuccess]);
 
+  // Show error toast in effect to avoid calling during render
+  useEffect(() => {
+    if (hasError) {
+      toast({
+        title: "Failed to load puzzle",
+        description: gameState.error,
+        variant: "destructive",
+      });
+    }
+  }, [hasError, gameState.error, toast]);
+
   const handleNavigate = useCallback(
     (direction: "prev" | "next") => {
       if (!totalPuzzles) return;
@@ -87,11 +98,6 @@ export function ClassicArchivePuzzleClient({
     },
     [puzzleNumber, totalPuzzles, router],
   );
-
-  // Error boundary should catch, but graceful UI:
-  if (hasError) {
-    toast({ title: "Failed to load puzzle", description: gameState.error, variant: "destructive" });
-  }
 
   if (isLoading || gameState.status !== "ready") {
     return (
