@@ -239,7 +239,7 @@
 
 **Context:** Replace simple work selector with sophisticated coverage planner that prioritizes high-demand eras (modern history for Classic mode, spread across eras for Order mode) while ensuring 90% coverage target.
 
-- [ ] **Define CoverageStrategy interface** (`convex/lib/coverageOrchestrator.ts`)
+- [~] **Define CoverageStrategy interface** (`convex/lib/coverageOrchestrator.ts`)
 
   - Fields: `targetYears: number[]` (years to generate), `priority: "missing" | "low_quality" | "strategic"`, `eraBalance: {ancient: number, medieval: number, modern: number}`, `estimatedCost: number`
   - Success criteria: Type-safe coverage planning with clear prioritization
