@@ -209,7 +209,7 @@
 
 **Context:** Current sequential processing (3 years/day) is bottleneck for coverage expansion. Parallel generation with rate limiting enables 10 years/day without overwhelming OpenRouter.
 
-- [ ] **Create RateLimiter utility class** (`convex/lib/rateLimiter.ts`)
+- [x] **Create RateLimiter utility class** (`convex/lib/rateLimiter.ts`)
 
   - Implement token bucket algorithm: 10 requests/second, burst capacity 20
   - Method: `execute<T>(fn: () => Promise<T>): Promise<T>` - wraps async function with rate limiting
