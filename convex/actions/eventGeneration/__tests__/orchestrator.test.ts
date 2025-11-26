@@ -60,12 +60,18 @@ describe("runGenerationPipeline", () => {
     const generatorResult: GeneratorActionResult = {
       year: { value: 1969, era: "CE", digits: 4 },
       candidates,
-      llm: { requestId: "gen", model: "model", usage: mockUsage() },
+      llm: { requestId: "gen", model: "model", usage: mockUsage(), costUsd: 0.02, cacheHit: false },
     };
 
     const criticResult: CriticActionResult = {
       results: candidates.map((candidate) => mockCritiqueResult(candidate)),
-      llm: { requestId: "crit", model: "model", usage: mockUsage() },
+      llm: {
+        requestId: "crit",
+        model: "model",
+        usage: mockUsage(),
+        costUsd: 0.01,
+        cacheHit: false,
+      },
       deterministicFailures: 0,
     };
 
@@ -88,7 +94,7 @@ describe("runGenerationPipeline", () => {
     const generator = vi.fn().mockResolvedValue({
       year: { value: 1200, era: "CE", digits: 4 },
       candidates,
-      llm: { requestId: "gen", model: "model", usage: mockUsage() },
+      llm: { requestId: "gen", model: "model", usage: mockUsage(), costUsd: 0.02, cacheHit: false },
     } satisfies GeneratorActionResult);
 
     const failingResults = candidates.map((candidate, index) =>
@@ -106,18 +112,36 @@ describe("runGenerationPipeline", () => {
       .fn()
       .mockResolvedValueOnce({
         results: failingResults,
-        llm: { requestId: "crit1", model: "model", usage: mockUsage({ totalTokens: 200 }) },
+        llm: {
+          requestId: "crit1",
+          model: "model",
+          usage: mockUsage({ totalTokens: 200 }),
+          costUsd: 0.01,
+          cacheHit: false,
+        },
         deterministicFailures: 2,
       } satisfies CriticActionResult)
       .mockResolvedValueOnce({
         results: passingResults,
-        llm: { requestId: "crit2", model: "model", usage: mockUsage({ totalTokens: 220 }) },
+        llm: {
+          requestId: "crit2",
+          model: "model",
+          usage: mockUsage({ totalTokens: 220 }),
+          costUsd: 0.01,
+          cacheHit: false,
+        },
         deterministicFailures: 0,
       } satisfies CriticActionResult);
 
     const reviserOutput: ReviserActionResult = {
       rewrites: candidates,
-      llm: { requestId: "rev", model: "model", usage: mockUsage({ totalTokens: 150 }) },
+      llm: {
+        requestId: "rev",
+        model: "model",
+        usage: mockUsage({ totalTokens: 150 }),
+        costUsd: 0.01,
+        cacheHit: false,
+      },
     };
 
     const reviser = vi.fn().mockResolvedValue(reviserOutput);
@@ -142,20 +166,26 @@ describe("runGenerationPipeline", () => {
     const generator = vi.fn().mockResolvedValue({
       year: { value: 500, era: "CE", digits: 3 },
       candidates,
-      llm: { requestId: "gen", model: "model", usage: mockUsage() },
+      llm: { requestId: "gen", model: "model", usage: mockUsage(), costUsd: 0.02, cacheHit: false },
     } satisfies GeneratorActionResult);
 
     const critic = vi.fn().mockResolvedValue({
       results: candidates.map((candidate, index) =>
         mockCritiqueResult(candidate, { passed: index < 4 }),
       ),
-      llm: { requestId: "crit", model: "model", usage: mockUsage() },
+      llm: {
+        requestId: "crit",
+        model: "model",
+        usage: mockUsage(),
+        costUsd: 0.01,
+        cacheHit: false,
+      },
       deterministicFailures: 0,
     } satisfies CriticActionResult);
 
     const reviser = vi.fn().mockResolvedValue({
       rewrites: candidates,
-      llm: { requestId: "rev", model: "model", usage: mockUsage() },
+      llm: { requestId: "rev", model: "model", usage: mockUsage(), costUsd: 0.01, cacheHit: false },
     } satisfies ReviserActionResult);
 
     const result = (await runGenerationPipeline(500, {

@@ -40,7 +40,7 @@ describe("eventGeneration integration", () => {
     const generator: GeneratorActionResult = {
       year: { value: 1969, era: "CE", digits: 4 },
       candidates: generatorCandidates,
-      llm: { requestId: "gen", model: "model", usage: BASE_USAGE },
+      llm: { requestId: "gen", model: "model", usage: BASE_USAGE, costUsd: 0.02, cacheHit: false },
     };
 
     const failingCritique: CriticActionResult = {
@@ -58,7 +58,13 @@ describe("eventGeneration integration", () => {
         rewrite_hints: ["Fix leak"],
       })),
       deterministicFailures: 1,
-      llm: { requestId: "crit1", model: "model", usage: BASE_USAGE },
+      llm: {
+        requestId: "crit1",
+        model: "model",
+        usage: BASE_USAGE,
+        costUsd: 0.02,
+        cacheHit: false,
+      },
     };
 
     const passingCritique: CriticActionResult = {
@@ -76,14 +82,20 @@ describe("eventGeneration integration", () => {
         rewrite_hints: [],
       })),
       deterministicFailures: 0,
-      llm: { requestId: "crit2", model: "model", usage: BASE_USAGE },
+      llm: {
+        requestId: "crit2",
+        model: "model",
+        usage: BASE_USAGE,
+        costUsd: 0.02,
+        cacheHit: false,
+      },
     };
 
     const reviserOutput: ReviserActionResult = {
       rewrites: generatorCandidates.map((candidate, index) =>
         index < 4 ? mockCandidate(index, { event_text: `Revised clue ${index}` }) : candidate,
       ),
-      llm: { requestId: "rev", model: "model", usage: BASE_USAGE },
+      llm: { requestId: "rev", model: "model", usage: BASE_USAGE, costUsd: 0.02, cacheHit: false },
     };
 
     const deps = {

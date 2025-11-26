@@ -1,25 +1,35 @@
 import { describe, it, expect, vi } from "vitest";
-import type { LLMClient } from "../../../lib/llmClient";
+import type { Gemini3Client } from "../../../lib/gemini3Client";
 import type { GeneratorOutput } from "../schemas";
 import { GeneratorOutputSchema } from "../schemas";
 import { generateCandidatesForYear, type GeneratorActionResult } from "../generator";
 
-function createMockClient(data: GeneratorOutput): LLMClient {
+function createMockClient(data: GeneratorOutput): Gemini3Client {
   return {
     generate: vi.fn().mockResolvedValue({
       data,
       rawText: JSON.stringify(data),
-      model: "openai/gpt-4o-mini",
       usage: {
         inputTokens: 500,
         outputTokens: 400,
         reasoningTokens: 0,
         totalTokens: 900,
-        costUsd: 0.02,
       },
-      requestId: "req_test",
+      cost: {
+        inputUsd: 0.01,
+        outputUsd: 0.01,
+        reasoningUsd: 0,
+        cacheSavingsUsd: 0,
+        totalUsd: 0.02,
+      },
+      metadata: {
+        model: "google/gemini-3-pro-preview",
+        latencyMs: 1500,
+        cacheHit: false,
+        requestId: "req_test",
+      },
     }),
-  } as unknown as LLMClient;
+  } as unknown as Gemini3Client;
 }
 
 describe("generateCandidatesForYear", () => {
@@ -55,7 +65,7 @@ describe("generateCandidatesForYear", () => {
     expect(result.year).toEqual({ value: 1969, era: "CE", digits: 4 });
     expect(result.candidates[0].canonical_title).toBe("Apollo 11 Moon Landing");
     expect(result.candidates[0].geo).toBe("Moon");
-    expect(result.llm.model).toBe("openai/gpt-4o-mini");
+    expect(result.llm.model).toBe("google/gemini-3-pro-preview");
     expect(result.llm.usage.totalTokens).toBe(900);
   });
 

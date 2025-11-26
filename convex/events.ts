@@ -114,6 +114,27 @@ export const getAvailableYears = internalQuery({
   },
 });
 
+// Fetch events missing metadata (used by backfill script)
+export const getEventsMissingMetadata = internalQuery({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit }) => {
+    const max = Math.max(1, Math.min(limit ?? 500, 2000));
+    const events = await ctx.db
+      .query("events")
+      .filter((q) => q.eq(q.field("metadata"), undefined))
+      .take(max);
+
+    return events.map((event) => ({
+      _id: event._id,
+      year: event.year,
+      event: event.event,
+      updatedAt: event.updatedAt,
+    }));
+  },
+});
+
 // Mark events as used by a puzzle
 export const assignEventsToPuzzle = internalMutation({
   args: {
@@ -129,6 +150,27 @@ export const assignEventsToPuzzle = internalMutation({
     }
 
     return { assigned: eventIds.length };
+  },
+});
+
+export const updateEventMetadata = internalMutation({
+  args: {
+    eventId: v.id("events"),
+    metadata: v.object({
+      difficulty: v.optional(v.number()),
+      category: v.optional(v.array(v.string())),
+      era: v.optional(v.string()),
+      fame_level: v.optional(v.number()),
+      tags: v.optional(v.array(v.string())),
+    }),
+  },
+  handler: async (ctx, { eventId, metadata }) => {
+    await ctx.db.patch(eventId, {
+      metadata,
+      updatedAt: Date.now(),
+    });
+
+    return { eventId };
   },
 });
 

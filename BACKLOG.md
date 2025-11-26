@@ -1,7 +1,9 @@
 # BACKLOG
 
-Last groomed: 2025-11-18
+Last groomed: 2025-11-25
 Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-guardian, security-sentinel, performance-pathfinder, maintainability-maven, user-experience-advocate, product-visionary, design-systems-architect)
+
+**Recent Addition (2025-11-25):** Event & Puzzle Generation System Modernization deferred items added to "Soon" and "Later" sections. See TODO.md for approved Phase 1-3 implementation tasks (120 hours, 6 weeks).
 
 ---
 
@@ -956,6 +958,80 @@ fg: "text-[#3E3428] dark:text-[#EBE7DE]",
 
 ## Soon (Exploring, 3-6 months)
 
+### [EVENT GEN] Phase 4-5: Advanced LLM Features (Deferred from Modernization Plan)
+
+**Context**: Part of approved event generation modernization plan (Phases 1-3 = 120 hours). These Phase 4-5 features (80 hours) deferred pending Phase 1-3 success validation.
+**Dependencies**: Must complete Gemini 3 migration + quality validator + observability first
+**Timeline**: Revisit after Week 6 (Phase 1-3 completion)
+
+---
+
+#### [EVENT GEN] Historical Knowledge Base for Factual Validation
+
+**File**: `convex/lib/historicalKnowledgeBase.ts` (new)
+**Problem**: Current quality validation can't detect historically impossible events or temporal disambiguation issues
+**Implementation**:
+
+- Build database of 10K+ major historical events with embeddings
+- Implement temporal disambiguation: "Which 'Battle of X' does this refer to?"
+- Add year-event alignment scoring: Query "Did event Y really happen in year Z?"
+- Enable knowledge base queries in qualityValidator for factual checks
+
+**Benefits**:
+
+- Catches historically impossible events (90%+ accuracy)
+- Resolves ambiguous event descriptions
+- Improves player trust in event accuracy
+
+**Effort**: 40h | **Cost**: ~$50 to generate embeddings for 10K events (Gemini 3 text-embedding-004)
+**Value**: 8/10 - Factual quality improvement
+
+---
+
+#### [EVENT GEN] ML-Based Quality Predictor
+
+**File**: `convex/lib/qualityPredictor.ts` (new)
+**Problem**: Expensive LLM Critic stage runs on all candidates, including obvious low-quality ones
+**Implementation**:
+
+- Collect 6 months of generation data (events + quality scores) as training set
+- Train lightweight classifier (logistic regression or small neural net)
+- Features: Event length, proper noun count, word diversity, metadata completeness
+- Integrate as pre-filter: Only send high-confidence candidates to Critic
+
+**Benefits**:
+
+- Reduces Critic API calls by 30% without increasing false negatives
+- Saves ~$30/year in LLM costs (30% of $108)
+- Faster generation pipeline (skip Critic for obvious failures)
+
+**Dependencies**: Need 6 months of Gemini 3 generation data first (wait until September 2025)
+**Effort**: 20h | **Value**: 7/10 - Cost optimization
+
+---
+
+#### [EVENT GEN] Self-Improvement Loops
+
+**Files**: `convex/lib/promptEvolution.ts`, `convex/lib/adaptiveThresholds.ts` (new)
+**Problem**: System requires manual tuning when model behavior changes or quality degrades
+**Implementation**:
+
+- **Prompt Evolution Engine**: A/B test prompt variations, track quality/cost, auto-adopt better prompts
+- **Adaptive Quality Thresholds**: Monitor score distributions, adjust thresholds to maintain target failure rate
+- **Automated Retraining**: Quality predictor retrains monthly on new high-quality events
+- **Drift Detection**: Alert when model behavior changes significantly (degradation or improvement)
+
+**Benefits**:
+
+- System improves quality by 10% over 6 months without manual intervention
+- Prompts evolve to handle edge cases discovered in production
+- Adaptive thresholds maintain stable failure rate despite model drift
+
+**Dependencies**: Requires ML predictor + 12 months of operational data
+**Effort**: 20h | **Value**: 6/10 - Long-term quality optimization
+
+---
+
 ### [PRODUCT] Social Leaderboards & Competition System
 
 **Current State**: Zero social features - completely single-player
@@ -1064,6 +1140,95 @@ fg: "text-[#3E3428] dark:text-[#EBE7DE]",
 ---
 
 ## Later (Someday/Maybe, 6+ months)
+
+### Future Game Modes (Enabled by Event Metadata)
+
+**Context**: Event metadata (difficulty, category, fame_level, tags) added in Phase 1 enables these modes without schema changes.
+
+#### [PRODUCT] Timeline Mode
+
+**Implementation**: Select 10 events with 1,000+ year spread, use difficulty/fame_level for progressive challenge
+**Effort**: 8h | **Value**: New game mode for advanced players
+
+#### [PRODUCT] Category Mode
+
+**Implementation**: Themed puzzles (Science Week, War Month), filter by category metadata
+**Effort**: 8h | **Value**: Educational appeal, content marketing
+
+#### [PRODUCT] Multiplayer Mode
+
+**Implementation**: Competitive play on same event set, skill-based matchmaking using fame_level
+**Effort**: 12h | **Value**: Social engagement, leaderboards
+
+---
+
+### Infrastructure Enhancements (Event Generation System)
+
+#### [INFRA] Advanced Caching Strategy
+
+**Implementation**: Cache Critic responses for similar events, Redis layer for cross-request caching
+**Benefit**: Additional 10-15% cost reduction (~$50/year)
+**Effort**: 6h
+
+#### [INFRA] Multi-Region Deployment
+
+**Implementation**: Deploy Convex to US, EU, Asia regions, replicate event pool
+**Benefit**: p95 latency reduction from 500ms → 200ms for international users
+**Effort**: 12h
+
+#### [INFRA] GraphQL API for Events
+
+**Implementation**: Add GraphQL schema for events/puzzles/plays with rate limiting + auth
+**Use Cases**: Third-party apps, data science research, content partnerships
+**Effort**: 8h
+
+---
+
+### Quality Enhancements (Event Generation System)
+
+#### [QUALITY] Historical Fact Checker Integration
+
+**Implementation**: Integrate Wikipedia API for event verification, flag inaccuracies
+**Benefit**: Reduces historical inaccuracies from 5% → <1%
+**Effort**: 10h
+
+#### [QUALITY] Collaborative Filtering for Event Quality
+
+**Implementation**: Track events where players consistently fail, flag for review
+**Benefit**: Player-driven quality improvement, reduces frustration
+**Effort**: 6h
+
+#### [QUALITY] Event Diversity Scoring
+
+**Implementation**: Ensure puzzles have ≥4 categories, ≥3 regions (global representation)
+**Benefit**: More interesting puzzles, educational value
+**Effort**: 4h
+
+---
+
+### Operational Improvements (Event Generation System)
+
+#### [INFRA] PagerDuty Integration
+
+**Implementation**: Critical alerts → PagerDuty, warnings → Slack only
+**Benefit**: Zero missed critical alerts, faster incident response
+**Effort**: 3h
+
+#### [INFRA] Cost Anomaly Detection
+
+**Implementation**: Statistical anomaly detection (Z-score), auto-throttle on spikes
+**Benefit**: Prevent budget overruns, automatic cost control
+**Effort**: 4h
+
+#### [INFRA] A/B Testing Framework
+
+**Implementation**: Experiment config, traffic splitting, metrics comparison, auto-rollout
+**Benefit**: Data-driven decisions, safe experimentation
+**Effort**: 8h
+
+---
+
+### General Product Evolution
 
 - **[PRODUCT] Educational B2B Platform** - Topic collections, teacher dashboard, student progress tracking
 - **[PRODUCT] Public API** - REST API for puzzle data, OAuth, Zapier integration

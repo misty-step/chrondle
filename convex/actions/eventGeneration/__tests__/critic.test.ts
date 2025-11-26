@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { LLMClient } from "../../../lib/llmClient";
+import type { Gemini3Client } from "../../../lib/gemini3Client";
 import type { CandidateEvent, CritiqueResult } from "../schemas";
 import { critiqueCandidatesForYear } from "../critic";
 
@@ -36,22 +36,32 @@ function mockCritique(overrides: Partial<CritiqueResult> = {}): CritiqueResult {
   };
 }
 
-function createMockClient(returnValue: CritiqueResult[]): LLMClient {
+function createMockClient(returnValue: CritiqueResult[]): Gemini3Client {
   return {
     generate: vi.fn().mockResolvedValue({
       data: returnValue,
       rawText: JSON.stringify(returnValue),
-      model: "openai/gpt-4o-mini",
       usage: {
         inputTokens: 400,
         outputTokens: 350,
         reasoningTokens: 0,
         totalTokens: 750,
-        costUsd: 0.015,
       },
-      requestId: "req_critic_test",
+      cost: {
+        inputUsd: 0.008,
+        outputUsd: 0.007,
+        reasoningUsd: 0,
+        cacheSavingsUsd: 0,
+        totalUsd: 0.015,
+      },
+      metadata: {
+        model: "google/gemini-3-flash-preview",
+        latencyMs: 1200,
+        cacheHit: false,
+        requestId: "req_critic_test",
+      },
     }),
-  } as unknown as LLMClient;
+  } as unknown as Gemini3Client;
 }
 
 describe("critiqueCandidatesForYear", () => {

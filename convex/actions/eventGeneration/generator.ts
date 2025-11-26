@@ -2,11 +2,7 @@
 
 import { v } from "convex/values";
 import { internalAction } from "../../_generated/server";
-import {
-  createResponsesClient,
-  type ResponsesClient,
-  type TokenUsage,
-} from "../../lib/responsesClient";
+import { createGemini3Client, type Gemini3Client, type TokenUsage } from "../../lib/gemini3Client";
 import type { CandidateEvent } from "./schemas";
 import { GeneratorOutputSchema, parseEra, type Era } from "./schemas";
 import { logStageError, logStageSuccess } from "../../lib/logging";
@@ -34,26 +30,20 @@ DIVERSITY GUIDANCE:
 Balance your event selection across different spheres of human activity and different parts of the world.
 If the year has limited documented events, focus on what IS known rather than forcing artificial diversity.`;
 
-let cachedGeneratorClient: ResponsesClient | null = null;
+let cachedGeneratorClient: Gemini3Client | null = null;
 
-function getGeneratorClient(): ResponsesClient {
+function getGeneratorClient(): Gemini3Client {
   if (!cachedGeneratorClient) {
-    cachedGeneratorClient = createResponsesClient({
+    cachedGeneratorClient = createGemini3Client({
       temperature: 0.8,
       maxOutputTokens: 32_000, // Generous for 12-18 events
-      reasoning: {
-        effort: "medium", // Quality reasoning for historical accuracy
-      },
-      text: {
-        verbosity: "medium", // Natural, detailed JSON output
-      },
-      pricing: {
-        "openai/gpt-5-mini": {
-          inputCostPer1K: 0.15,
-          outputCostPer1K: 0.6,
-          reasoningCostPer1K: 0.15,
-        },
-      },
+      thinking_level: "high", // Creativity + reasoning
+      cache_system_prompt: true,
+      cache_ttl_seconds: 86_400,
+      structured_outputs: true,
+      model: "google/gemini-3-pro-preview",
+      fallbackModel: "openai/gpt-5-mini",
+      stage: "generator",
     });
   }
   return cachedGeneratorClient;
@@ -72,13 +62,16 @@ export interface GeneratorActionResult {
     requestId: string;
     model: string;
     usage: TokenUsage;
+    costUsd: number;
+    cacheHit: boolean;
+    fallbackFrom?: string;
   };
 }
 
 interface GenerateCandidatesParams {
   year: number;
   era: Era;
-  llmClient?: ResponsesClient;
+  llmClient?: Gemini3Client;
 }
 
 export const generateCandidates = internalAction({
@@ -104,15 +97,22 @@ export async function generateCandidatesForYear(
   };
 
   const response = await client.generate({
-    prompt: {
-      system: GENERATOR_SYSTEM_PROMPT,
-      user: buildGeneratorUserPrompt(year, era),
-    },
+    system: GENERATOR_SYSTEM_PROMPT,
+    user: buildGeneratorUserPrompt(year, era),
     schema: GeneratorOutputSchema,
     metadata: {
       stage: "generator",
       year,
       era,
+    },
+    options: {
+      thinking_level: "high",
+      cache_system_prompt: true,
+      cache_ttl_seconds: 86_400,
+      maxOutputTokens: 32_000,
+      temperature: 0.8,
+      structured_outputs: true,
+      model: "google/gemini-3-pro-preview",
     },
   });
 
@@ -121,12 +121,12 @@ export async function generateCandidatesForYear(
     year,
     response.data.year.era,
     era,
-    response.requestId,
+    response.metadata.requestId,
   );
 
   logStageSuccess("Generator", "LLM call succeeded", {
-    requestId: response.requestId,
-    model: response.model,
+    requestId: response.metadata.requestId,
+    model: response.metadata.model,
     tokens: response.usage.totalTokens,
     year,
   });
@@ -137,9 +137,12 @@ export async function generateCandidatesForYear(
     year: yearSummary,
     candidates,
     llm: {
-      requestId: response.requestId,
-      model: response.model,
+      requestId: response.metadata.requestId,
+      model: response.metadata.model,
       usage: response.usage,
+      costUsd: response.cost.totalUsd,
+      cacheHit: response.metadata.cacheHit,
+      fallbackFrom: response.metadata.fallbackFrom,
     },
   };
 }
@@ -160,6 +163,12 @@ Requirements:
 - Topical diversity (mix politics, science, culture, technology, sports, economy, war, religion, exploration)
 - Geographic diversity (multiple regions - not all Western)
 - Difficulty range: mix of obscure (1-2) and recognizable (4-5)
+- For each event, estimate metadata:
+  - difficulty (1-5)
+  - category array (e.g., ["war", "politics", "science", "culture", "technology", "religion", "economy", "sports", "exploration", "arts"])
+  - era bucket: "ancient" (<500 CE), "medieval" (500-1500 CE), "modern" (1500+ CE)
+  - fame_level (1-5) how well-known the event is
+  - tags: free-form strings (2-5 short tags)
 
 Return JSON in this EXACT format:
 {
@@ -179,6 +188,13 @@ Return JSON in this EXACT format:
         "has_digits": false,
         "has_century_terms": false,
         "has_spelled_year": false
+      },
+      "metadata": {
+        "difficulty": 3,
+        "category": ["politics", "science"],
+        "era": "modern",
+        "fame_level": 4,
+        "tags": ["industrial", "europe"]
       }
     }
   ]

@@ -3,7 +3,7 @@
 import { v } from "convex/values";
 import { action, internalAction, type ActionCtx } from "../../_generated/server";
 import { internal } from "../../_generated/api";
-import type { TokenUsage } from "../../lib/llmClient";
+import type { TokenUsage } from "../../lib/gemini3Client";
 import { generateCandidatesForYear } from "./generator";
 import { critiqueCandidatesForYear } from "./critic";
 import type { CritiqueResult } from "./schemas";
@@ -83,6 +83,9 @@ export interface TokenUsageTotals {
   reasoningTokens: number;
   totalTokens: number;
   costUsd: number;
+  cacheHits: number;
+  cacheMisses: number;
+  fallbacks: number;
 }
 
 export interface UsageSummary {
@@ -144,7 +147,10 @@ export async function runGenerationPipeline(
     attempts += 1;
 
     const generation = await deps.generator({ year, era });
-    recordUsage(usage.generator, usage.total, generation.llm.usage);
+    recordUsage(usage.generator, usage.total, generation.llm.usage, generation.llm.costUsd, {
+      cacheHit: generation.llm.cacheHit,
+      fallbackFrom: generation.llm.fallbackFrom,
+    });
 
     let candidates = generation.candidates;
     let cycles = 0;
@@ -154,7 +160,10 @@ export async function runGenerationPipeline(
       totalCycles += 1;
 
       const critique = await deps.critic({ year, era, candidates });
-      recordUsage(usage.critic, usage.total, critique.llm.usage);
+      recordUsage(usage.critic, usage.total, critique.llm.usage, critique.llm.costUsd, {
+        cacheHit: critique.llm.cacheHit,
+        fallbackFrom: critique.llm.fallbackFrom,
+      });
       totalDeterministicFailures += critique.deterministicFailures;
 
       const passingResults = critique.results.filter((result) => result.passed);
@@ -183,7 +192,10 @@ export async function runGenerationPipeline(
       }
 
       const revision = await deps.reviser({ failing: failingResults, year, era });
-      recordUsage(usage.reviser, usage.total, revision.llm.usage);
+      recordUsage(usage.reviser, usage.total, revision.llm.usage, revision.llm.costUsd, {
+        cacheHit: revision.llm.cacheHit,
+        fallbackFrom: revision.llm.fallbackFrom,
+      });
       totalRevisions += 1;
 
       candidates = rebuildCandidateSet(critique.results, revision.rewrites);
@@ -259,6 +271,9 @@ function emptyUsageTotals(): TokenUsageTotals {
     reasoningTokens: 0,
     totalTokens: 0,
     costUsd: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    fallbacks: 0,
   };
 }
 
@@ -266,17 +281,32 @@ function recordUsage(
   stageTotals: TokenUsageTotals,
   overall: TokenUsageTotals,
   usage: TokenUsage,
+  costUsd: number,
+  metadata: { cacheHit: boolean; fallbackFrom?: string | null | undefined },
 ): void {
-  addUsage(stageTotals, usage);
-  addUsage(overall, usage);
+  addUsage(stageTotals, usage, costUsd, metadata);
+  addUsage(overall, usage, costUsd, metadata);
 }
 
-function addUsage(target: TokenUsageTotals, usage: TokenUsage): void {
+function addUsage(
+  target: TokenUsageTotals,
+  usage: TokenUsage,
+  costUsd: number,
+  metadata: { cacheHit: boolean; fallbackFrom?: string | null | undefined },
+): void {
   target.inputTokens += usage.inputTokens;
   target.outputTokens += usage.outputTokens;
   target.reasoningTokens += usage.reasoningTokens;
   target.totalTokens += usage.totalTokens;
-  target.costUsd += usage.costUsd ?? 0;
+  target.costUsd += costUsd;
+  if (metadata.cacheHit) {
+    target.cacheHits += 1;
+  } else {
+    target.cacheMisses += 1;
+  }
+  if (metadata.fallbackFrom) {
+    target.fallbacks += 1;
+  }
 }
 
 async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<YearGenerationResult> {
@@ -297,9 +327,13 @@ async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<Year
     token_usage: {
       input: result.usage.total.inputTokens,
       output: result.usage.total.outputTokens,
+      reasoning: result.usage.total.reasoningTokens,
       total: result.usage.total.totalTokens,
     },
     cost_usd: result.usage.total.costUsd,
+    cache_hits: result.usage.total.cacheHits,
+    cache_misses: result.usage.total.cacheMisses,
+    fallback_count: result.usage.total.fallbacks,
     error_message: result.status === "failed" ? result.reason : undefined,
   });
 

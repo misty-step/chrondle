@@ -13,4 +13,13 @@ export const CandidateEventValue = v.object({
     has_century_terms: v.boolean(),
     has_spelled_year: v.boolean(),
   }),
+  metadata: v.optional(
+    v.object({
+      difficulty: v.optional(v.number()),
+      category: v.optional(v.array(v.string())),
+      era: v.optional(v.string()),
+      fame_level: v.optional(v.number()),
+      tags: v.optional(v.array(v.string())),
+    }),
+  ),
 });

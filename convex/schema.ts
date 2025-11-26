@@ -8,6 +8,15 @@ export default defineSchema({
     event: v.string(), // "Neil Armstrong walks on the moon"
     puzzleId: v.optional(v.id("puzzles")), // null if unused, links to puzzle if used
     updatedAt: v.number(), // Manual timestamp (Convex provides _creationTime)
+    metadata: v.optional(
+      v.object({
+        difficulty: v.optional(v.number()), // 1-5
+        category: v.optional(v.array(v.string())),
+        era: v.optional(v.string()), // "ancient" | "medieval" | "modern"
+        fame_level: v.optional(v.number()), // 1-5
+        tags: v.optional(v.array(v.string())),
+      }),
+    ),
   })
     .index("by_year", ["year"])
     .index("by_puzzle", ["puzzleId"])
@@ -104,9 +113,13 @@ export default defineSchema({
     token_usage: v.object({
       input: v.number(),
       output: v.number(),
+      reasoning: v.optional(v.number()),
       total: v.number(),
     }),
     cost_usd: v.number(),
+    cache_hits: v.optional(v.number()),
+    cache_misses: v.optional(v.number()),
+    fallback_count: v.optional(v.number()),
     error_message: v.optional(v.string()),
     timestamp: v.number(),
   })

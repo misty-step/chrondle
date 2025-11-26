@@ -11,7 +11,7 @@ describe("generationLogs helpers", () => {
         status: "success",
         attempt_count: 2,
         events_generated: 8,
-        token_usage: { input: 1000, output: 800, total: 1800 },
+        token_usage: { input: 1000, output: 800, reasoning: 200, total: 2000 },
         cost_usd: 0.35,
         error_message: undefined,
         timestamp: Date.now(),
@@ -22,7 +22,7 @@ describe("generationLogs helpers", () => {
         status: "failed",
         attempt_count: 4,
         events_generated: 0,
-        token_usage: { input: 800, output: 400, total: 1200 },
+        token_usage: { input: 800, output: 400, reasoning: 100, total: 1300 },
         cost_usd: 0.2,
         error_message: "Leakage detected",
         timestamp: Date.now(),
@@ -36,7 +36,7 @@ describe("generationLogs helpers", () => {
     expect(stats.failedYears).toBe(1);
     expect(stats.eventsGenerated).toBe(8);
     expect(stats.totalCost).toBeCloseTo(0.55, 5);
-    expect(stats.avgTokensPerYear).toBeCloseTo(1500, 5);
+    expect(stats.avgTokensPerYear).toBeCloseTo(1650, 5);
   });
 
   it("calculates event pool health across eras", () => {
