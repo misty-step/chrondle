@@ -244,7 +244,7 @@
   - Fields: `targetYears: number[]` (years to generate), `priority: "missing" | "low_quality" | "strategic"`, `eraBalance: {ancient: number, medieval: number, modern: number}`, `estimatedCost: number`
   - Success criteria: Type-safe coverage planning with clear prioritization
 
-- [~] **Implement gap analysis function** (`analyzeCoverageGaps`)
+- [x] **Implement gap analysis function** (`analyzeCoverageGaps`)
 
   - Query all years in range [-776, 2008] and count events per year
   - Categorize: missing (0 events), insufficient (<6 events), low_quality (>40% events flagged by Critic)
