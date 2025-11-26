@@ -171,6 +171,13 @@ export async function critiqueCandidatesForYear(params: CriticParams): Promise<C
     }),
   );
 
+  // Learn from rejected events with high semantic leakage
+  for (const result of merged) {
+    if (!result.passed && result.scores.leak_risk > 0.6) {
+      qualityValidator.learnFromRejected(result.event.event_text, [year, year]);
+    }
+  }
+
   const deterministicFailures = deterministic.filter((item) => item.issues.length > 0).length;
 
   return {
