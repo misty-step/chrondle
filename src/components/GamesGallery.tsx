@@ -169,14 +169,24 @@ export function GamesGallery() {
               transition={{ duration: 0.4 }}
             />
 
-            {/* Background Texture - Mode specific overlays with enhanced visibility */}
+            {/* Background Texture - Mode-aware colors for light/dark visibility */}
             <div
-              className="pointer-events-none absolute inset-0 opacity-30 mix-blend-overlay transition-opacity duration-500 dark:mix-blend-screen"
+              className={cn(
+                "pointer-events-none absolute inset-0 transition-opacity duration-500",
+                // Light mode: black texture, multiply blend, subtle opacity
+                "opacity-15 mix-blend-multiply",
+                // Dark mode: orange texture, screen blend, higher opacity
+                "dark:opacity-30 dark:mix-blend-screen",
+              )}
               style={{
                 backgroundImage:
                   mode.key === "classic"
-                    ? `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FFA857' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                    : `linear-gradient(oklch(0.7 0.16 260) 1px, transparent 1px), linear-gradient(90deg, oklch(0.7 0.16 260) 1px, transparent 1px)`,
+                    ? currentTheme === "dark"
+                      ? `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FFA857' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                      : `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                    : currentTheme === "dark"
+                      ? `linear-gradient(oklch(0.7 0.16 260) 1px, transparent 1px), linear-gradient(90deg, oklch(0.7 0.16 260) 1px, transparent 1px)`
+                      : `linear-gradient(oklch(0.3 0.02 260) 1px, transparent 1px), linear-gradient(90deg, oklch(0.3 0.02 260) 1px, transparent 1px)`,
                 backgroundSize: mode.key === "order" ? "40px 40px" : undefined,
               }}
             />
