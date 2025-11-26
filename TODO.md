@@ -184,7 +184,7 @@
   - Store as JSON: `[{phrase, yearRange, embedding}]`
   - Success criteria: Database covers major 20th century events, <$0.10 cost to generate embeddings
 
-- [~] **Implement feedback loop to learn from rejected events**
+- [x] **Implement feedback loop to learn from rejected events**
 
   - When Critic rejects event due to leakage, extract key phrase and add to leaky phrases database
   - Generate embedding for new phrase
