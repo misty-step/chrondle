@@ -89,18 +89,18 @@ export default function SupportModal({ open, onOpenChange }: SupportModalProps) 
           </p>
 
           {addressError ? (
-            <div className="bg-muted/30 rounded-lg p-4">
+            <div className="bg-muted/30 rounded-sm p-4">
               <p className="text-muted-foreground text-center text-sm">
                 Bitcoin donations are temporarily unavailable. Please check back later.
               </p>
             </div>
           ) : address ? (
-            <div className="bg-muted/30 rounded-lg p-4">
+            <div className="bg-muted/30 rounded-sm p-4">
               <p className="text-muted-foreground mb-3 text-center text-xs">Support via Bitcoin</p>
 
               {qrDataUrl && (
                 <div className="mb-4 flex justify-center">
-                  <img src={qrDataUrl} alt="Bitcoin QR code" className="h-48 w-48 rounded-lg" />
+                  <img src={qrDataUrl} alt="Bitcoin QR code" className="h-48 w-48 rounded-sm" />
                 </div>
               )}
 
@@ -117,7 +117,7 @@ export default function SupportModal({ open, onOpenChange }: SupportModalProps) 
               </div>
             </div>
           ) : (
-            <div className="bg-muted/30 rounded-lg p-4">
+            <div className="bg-muted/30 rounded-sm p-4">
               <p className="text-muted-foreground text-center text-sm">
                 Loading donation information...
               </p>

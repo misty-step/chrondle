@@ -1,7 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "../../../../convex/_generated/api";
+import { notFound } from "next/navigation";
 import { currentUser } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { AppHeader } from "@/components/AppHeader";
@@ -11,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Check, ChevronLeft, ChevronRight, History, BarChart } from "lucide-react";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { UserCreationHandler } from "@/components/UserCreationHandler";
+import { LoadingShell } from "@/components/LoadingShell";
 import { logger } from "@/lib/logger";
+import { api, getConvexClient } from "@/lib/convexServer";
 
 interface PuzzleCardData {
   index: number;
@@ -46,11 +47,13 @@ async function OrderArchivePageContent({
   const currentPage = validatePageParam(params.page);
   const PUZZLES_PER_PAGE = 24 as const;
 
-  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-  if (!convexUrl) {
-    throw new Error("NEXT_PUBLIC_CONVEX_URL environment variable is not set");
+  const client = getConvexClient();
+
+  // If Convex client unavailable (missing env var), let client-side handle it
+  if (!client) {
+    logger.warn("[ArchiveOrderPage] Convex client unavailable - missing NEXT_PUBLIC_CONVEX_URL");
+    notFound();
   }
-  const client = new ConvexHttpClient(convexUrl);
 
   let hasRequestContext = false;
   try {
@@ -155,7 +158,7 @@ async function OrderArchivePageContent({
             </Link>
             <Link
               href="/archive/order"
-              className="border-primary text-primary flex items-center gap-2 border-b-2 px-3 py-2 font-semibold"
+              className="border-primary text-body-primary flex items-center gap-2 border-b-2 px-3 py-2 font-semibold"
             >
               <BarChart className="h-4 w-4" /> Order
             </Link>
@@ -174,7 +177,7 @@ async function OrderArchivePageContent({
                       {totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}%
                     </span>
                   </div>
-                  <div className="bg-muted h-3 w-full overflow-hidden rounded-full">
+                  <div className="bg-muted border-outline-default/30 h-3 w-full overflow-hidden rounded-sm border">
                     <div
                       className="h-full bg-green-600 transition-all duration-300 ease-out"
                       style={{
@@ -187,10 +190,10 @@ async function OrderArchivePageContent({
                 // Show skeleton loader while user data loads
                 <div className="animate-pulse">
                   <div className="mb-2 flex items-center justify-between">
-                    <div className="bg-muted h-5 w-32 rounded" />
-                    <div className="bg-muted h-4 w-12 rounded" />
+                    <div className="bg-muted h-5 w-32 rounded-sm" />
+                    <div className="bg-muted h-4 w-12 rounded-sm" />
                   </div>
-                  <div className="bg-muted h-2 w-full rounded-full" />
+                  <div className="bg-muted border-outline-default/30 h-2 w-full rounded-sm border" />
                 </div>
               )}
             </div>
@@ -291,9 +294,12 @@ export default function OrderArchivePage({ searchParams }: ArchivePageProps): Re
     <ArchiveErrorBoundary>
       <React.Suspense
         fallback={
-          <div className="flex min-h-screen items-center justify-center">
-            <div className="text-muted-foreground animate-pulse">Loading Order archive...</div>
-          </div>
+          <LoadingShell
+            intent="order"
+            stage="loading_puzzle"
+            message="Opening the timeline archive"
+            subMessage="Preparing chronological records"
+          />
         }
       >
         <OrderArchivePageContent searchParams={searchParams} />

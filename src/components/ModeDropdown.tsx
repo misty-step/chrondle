@@ -61,7 +61,7 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
   // Derive current mode from pathname (information hiding - caller doesn't need to know)
   const currentMode: ModeKey = useMemo(() => {
     if (!pathname) return "classic";
-    if (pathname.startsWith("/order")) return "order";
+    if (pathname.startsWith("/order") || pathname.startsWith("/archive/order")) return "order";
     return "classic";
   }, [pathname]);
 
@@ -78,28 +78,21 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
     <Select value={currentMode} onValueChange={handleModeChange}>
       <SelectTrigger
         className={cn(
-          // Override default height and shape
-          "h-8 rounded-full",
-          // Warm archival colors - override defaults
-          "border-timeline-spine/30 bg-locked-badge-bg",
-          "hover:bg-locked-badge-bg/80 hover:border-timeline-spine/50",
-          // Typography - warm brown text
-          "text-sm font-medium",
-          // Enhanced shadow on hover
-          "hover:shadow-md",
-          // Custom focus ring - warm amber
-          "focus-visible:ring-locked-badge/20",
-          // Tighter padding for pill shape
+          // Override default height and shape - archival angular aesthetic
+          "h-8 rounded-sm",
+          // Solid, confident colors - no translucency
+          "bg-surface-elevated border-outline-default border-2",
+          "hover:border-primary/50 hover:shadow-hard-sm",
+          // Typography - clear, readable (theme-adaptive)
+          "text-foreground text-sm font-semibold",
+          // Custom focus ring
+          "focus-visible:ring-primary/20",
+          // Padding for archival badge
           "px-3 py-1.5",
-          // Custom styling for chevron icon color
-          "[&_svg]:!text-timeline-marker [&_svg]:!opacity-60",
           // Cursor pointer for better affordance
           "cursor-pointer",
           className,
         )}
-        style={{
-          color: "var(--timeline-marker)",
-        }}
         size="sm"
         aria-label="Select game mode"
       >
@@ -108,12 +101,12 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
 
       <SelectContent
         className={cn(
-          // Card-like dropdown - override default rounded-md
-          "rounded-xl",
-          // Warm borders and shadows
-          "border-timeline-spine/30 shadow-warm-lg",
+          // Archival dropdown - consistent with trigger
+          "rounded-sm",
+          // Solid borders and shadows
+          "border-outline-default shadow-hard border-2",
           // Background
-          "bg-card",
+          "bg-surface-elevated",
         )}
         position="popper"
         sideOffset={8}
@@ -123,21 +116,16 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
             key={mode}
             value={mode}
             className={cn(
-              // Rounded items to match card aesthetic
-              "rounded-lg",
+              // Archival items - consistent angular aesthetic
+              "rounded-sm",
               // Better padding
               "px-3 py-2",
-              // Typography
-              "text-sm",
+              // Typography (theme-adaptive)
+              "text-foreground text-sm",
               mode === currentMode && "font-semibold",
-              // Hover state - warm amber highlight
-              "hover:bg-locked-badge-bg focus:bg-locked-badge-bg",
+              // Hover state - clear highlight
+              "hover:bg-muted focus:bg-muted",
             )}
-            style={
-              mode === currentMode
-                ? { color: "var(--locked-badge)" }
-                : { color: "var(--foreground)" }
-            }
           >
             {MODE_CONFIG[mode].label}
           </SelectItem>

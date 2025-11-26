@@ -54,12 +54,7 @@ export function DraggableEventCard({
   );
 
   return (
-    <motion.li
-      ref={setNodeRef}
-      style={style}
-      className={cardClasses({ isDragging, isLocked })}
-      {...attributes}
-    >
+    <motion.li ref={setNodeRef} style={style} className={cardClasses({ isDragging, isLocked })}>
       <EventCardContent
         event={event}
         index={index}
@@ -67,6 +62,7 @@ export function DraggableEventCard({
         showYear={showYear}
         isLocked={isLocked}
         listeners={listeners}
+        attributes={attributes}
       />
     </motion.li>
   );
@@ -112,6 +108,7 @@ interface EventCardContentProps {
   showYear?: boolean;
   isLocked?: boolean;
   listeners?: DraggableSyntheticListeners;
+  attributes?: React.HTMLAttributes<HTMLElement>;
   mutedHandle?: boolean;
 }
 
@@ -122,33 +119,38 @@ function EventCardContent({
   showYear = false,
   isLocked = false,
   listeners,
+  attributes,
   mutedHandle = false,
 }: EventCardContentProps) {
-  const handleProps = listeners ?? {};
+  // Combine listeners and attributes for handle-only drag
+  const handleProps = { ...(listeners ?? {}), ...(attributes ?? {}) };
 
   return (
     <>
+      {/* DRAG HANDLE - Only this area initiates drag */}
       <div
         className={[
-          "flex touch-none items-center justify-center border-b py-3",
-          isLocked ? "border-transparent" : "border-border/50",
+          "flex touch-none items-center justify-center py-3",
+          isLocked ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing",
+          "bg-muted/20 border-border/30 rounded-t-sm border-b", // Subtle separation
         ].join(" ")}
         {...handleProps}
       >
         <div
           className={[
-            "flex flex-col gap-[3px] transition-opacity",
-            isLocked || mutedHandle ? "opacity-30" : "opacity-50 hover:opacity-100",
+            "flex gap-1.5 transition-opacity", // Horizontal dots - larger for mobile touch
+            isLocked || mutedHandle ? "opacity-20" : "opacity-50 hover:opacity-80",
           ].join(" ")}
-          style={{ color: "var(--timeline-marker)" }}
         >
-          <div className="h-[2px] w-6 rounded-full bg-current" />
-          <div className="h-[2px] w-6 rounded-full bg-current" />
-          <div className="h-[2px] w-6 rounded-full bg-current" />
+          {/* Grip Dots - larger for mobile touch clarity */}
+          <div className="bg-foreground h-1.5 w-1.5 rounded-full" />
+          <div className="bg-foreground h-1.5 w-1.5 rounded-full" />
+          <div className="bg-foreground h-1.5 w-1.5 rounded-full" />
+          <div className="bg-foreground h-1.5 w-1.5 rounded-full" />
         </div>
       </div>
 
-      <div className="flex flex-1 items-start gap-4 px-5 py-4">
+      <div className="flex flex-1 items-start gap-4 px-4 py-4 sm:px-5">
         {/* Year Tab - Only shown in results view */}
         {showYear && (
           <div className="absolute top-3 -left-3 flex items-center">
@@ -158,14 +160,14 @@ function EventCardContent({
           </div>
         )}
 
-        {/* Position Indicator - Larger and bolder */}
-        <div className="flex min-w-[32px] flex-shrink-0 items-center justify-center">
-          <div className="font-year text-timeline-marker text-lg font-bold">{index + 1}</div>
+        {/* Position Indicator - Vermilion badge, larger on mobile */}
+        <div className="flex min-w-[36px] flex-shrink-0 items-center justify-center sm:min-w-[32px]">
+          <div className="number-badge">{index + 1}</div>
         </div>
 
         <div className="min-w-0 flex-1">
           {/* Event Text - Larger, more readable serif typography */}
-          <p className="font-event text-foreground line-clamp-3 text-xl leading-relaxed">
+          <p className="font-event text-body-primary line-clamp-3 text-xl leading-relaxed">
             {event.text}
           </p>
 
@@ -212,9 +214,13 @@ function LockedBadge() {
 
 function cardClasses({ isDragging, isLocked }: { isDragging: boolean; isLocked: boolean }) {
   return [
-    "border-border bg-card relative flex min-h-[100px] flex-col rounded-xl border text-left shadow-warm will-change-transform",
-    isDragging ? "border-timeline-spine z-20 scale-105 shadow-warm-lg" : "hover:shadow-md",
-    isLocked ? "cursor-not-allowed bg-locked-badge-bg/30" : "cursor-grab active:cursor-grabbing",
+    "relative flex min-h-[100px] flex-col rounded-sm text-left will-change-transform transition-all duration-200",
+    "bg-card border-2 border-border", // Angular archival border
+    isDragging
+      ? "z-50 shadow-hard-lg ring-2 ring-primary/20 scale-[1.02]"
+      : "shadow-hard hover:shadow-hard-lg hover:-translate-y-0.5",
+    // Drag is handle-only - card body is scrollable
+    isLocked ? "cursor-not-allowed bg-muted/30 opacity-90" : "",
   ].join(" ");
 }
 
@@ -253,7 +259,7 @@ function describeHints(
               label: (
                 <span className="inline-flex flex-wrap items-center gap-1">
                   <span className="text-muted-foreground italic">happens before</span>
-                  <span className="text-primary font-semibold">{truncate(laterName, 25)}</span>
+                  <span className="text-body-primary font-semibold">{truncate(laterName, 25)}</span>
                 </span>
               ),
             };
@@ -267,7 +273,9 @@ function describeHints(
               label: (
                 <span className="inline-flex flex-wrap items-center gap-1">
                   <span className="text-muted-foreground italic">happens after</span>
-                  <span className="text-primary font-semibold">{truncate(earlierName, 25)}</span>
+                  <span className="text-body-primary font-semibold">
+                    {truncate(earlierName, 25)}
+                  </span>
                 </span>
               ),
             };

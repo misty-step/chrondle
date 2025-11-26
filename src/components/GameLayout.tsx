@@ -7,6 +7,8 @@ import { HintIndicator } from "@/components/game/HintIndicator";
 import { Confetti, ConfettiRef } from "@/components/magicui/confetti";
 import { GameComplete } from "@/components/modals/GameComplete";
 import { validateGameLayoutProps } from "@/lib/propValidation";
+import { motion, AnimatePresence } from "motion/react";
+import { cn } from "@/lib/utils";
 import type { RangeGuess } from "@/types/range";
 
 export interface GameLayoutProps {
@@ -84,10 +86,28 @@ export function GameLayout(props: GameLayoutProps) {
   // Starts at 0 (first hint is free and always shown)
   const [hintsRevealed, setHintsRevealed] = useState(0);
 
+  // Track the latest guess to trigger the stamp animation
+  const [lastGuessStamp, setLastGuessStamp] = useState<RangeGuess | null>(null);
+
   // Reset hints when game completes or puzzle changes
   useEffect(() => {
     setHintsRevealed(0);
+    setLastGuessStamp(null);
   }, [gameState.puzzle?.year, isGameComplete]);
+
+  // Watch for new guesses to trigger stamp animation
+  useEffect(() => {
+    if (gameState.ranges.length > 0) {
+      const latest = gameState.ranges[gameState.ranges.length - 1];
+      // Only stamp if this is a new guess we haven't stamped yet
+      // Simple check using array length would be enough usually, but explicit is better
+      setLastGuessStamp(latest);
+
+      // Clear the stamp after animation (reduced from 2000ms for snappier UX)
+      const timer = setTimeout(() => setLastGuessStamp(null), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.ranges]); // Dependent on the whole array to catch changes in length or content
 
   const targetYear = gameState.puzzle?.year ?? 0;
   const totalScore = gameState.totalScore ?? 0;
@@ -106,7 +126,47 @@ export function GameLayout(props: GameLayoutProps) {
       {headerContent && <div>{headerContent}</div>}
 
       {/* Main game content */}
-      <main className="flex-1 overflow-auto px-4 py-6 sm:px-6 sm:py-8">
+      <main className="relative flex-1 overflow-auto px-4 py-6 sm:px-6 sm:py-8">
+        {/* Stamp Overlay - Tap to dismiss */}
+        <AnimatePresence>
+          {lastGuessStamp && (
+            <div
+              className="pointer-events-auto absolute inset-0 z-50 flex cursor-pointer items-center justify-center overflow-hidden"
+              onClick={() => setLastGuessStamp(null)}
+              onKeyDown={(e) => e.key === "Enter" && setLastGuessStamp(null)}
+              role="button"
+              tabIndex={0}
+              aria-label="Dismiss stamp, tap to continue"
+            >
+              <motion.div
+                initial={{ scale: 2, opacity: 0, rotate: -15 }}
+                animate={{ scale: 1, opacity: 1, rotate: Math.random() * 4 - 2 }} // Slight random rotation
+                exit={{ opacity: 0, scale: 1.1, transition: { duration: 0.3 } }}
+                transition={{
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 15,
+                  mass: 0.5,
+                }}
+                className={cn(
+                  "material-stamp flex flex-col items-center gap-2 rounded-sm border-4 p-4 text-4xl font-black tracking-widest uppercase mix-blend-multiply backdrop-blur-[1px] dark:mix-blend-normal",
+                  // Color based on accuracy
+                  lastGuessStamp.start <= targetYear && lastGuessStamp.end >= targetYear
+                    ? "border-feedback-correct text-feedback-correct rotate-[-2deg]"
+                    : "border-outline-default text-body-primary rotate-[2deg]",
+                )}
+              >
+                {lastGuessStamp.start <= targetYear && lastGuessStamp.end >= targetYear
+                  ? "LOCKED IN"
+                  : "RECORDED"}
+                <span className="text-body-secondary text-xs font-medium tracking-normal normal-case opacity-70">
+                  Tap to continue
+                </span>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         <div className="mx-auto w-full max-w-2xl space-y-10 sm:space-y-12">
           {/* Active Game: Header */}
           {!isGameComplete && (
@@ -129,27 +189,33 @@ export function GameLayout(props: GameLayoutProps) {
           {!isGameComplete && gameState.puzzle && (
             <div className="space-y-5">
               {/* The Puzzle Event - Hero Display */}
-              <div className="border-primary bg-primary/10 rounded-xl border-2 p-5 shadow-md sm:p-6">
-                <div className="text-primary mb-2 text-xs font-bold tracking-wider uppercase">
-                  The Event
+              <div className="material-card paper-edge group border-primary/20 relative overflow-hidden border-2 p-8 sm:p-10">
+                {/* Removed decorative corner accents - unnecessary visual noise */}
+
+                <div className="text-body-primary mb-4 flex items-center gap-2 font-sans text-xs font-bold tracking-wider uppercase">
+                  <span className="bg-primary/50 h-px w-8" />
+                  Primary Clue
+                  <span className="bg-primary/50 h-px flex-1" />
                 </div>
-                <div className="text-foreground text-base leading-relaxed sm:text-lg">
+                <div className="text-body-primary font-display text-3xl leading-tight sm:text-4xl lg:text-5xl">
                   {gameState.puzzle.events[0]}
                 </div>
               </div>
 
               {/* Additional Revealed Hints */}
               {hintsRevealed > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {gameState.puzzle.events.slice(1, hintsRevealed + 1).map((hint, index) => (
                     <div
                       key={index}
-                      className="border-primary/40 bg-primary/5 rounded-lg border p-4 shadow-sm"
+                      className="material-paper paper-edge border-primary/30 relative border-l-4 p-3"
                     >
-                      <div className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wider uppercase">
+                      <div className="text-body-secondary mb-1 font-sans text-xs font-semibold uppercase">
                         Clue {index + 2}
                       </div>
-                      <div className="text-sm">{hint}</div>
+                      <div className="text-body-primary font-serif text-base leading-snug">
+                        {hint}
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -43,11 +43,13 @@ describe("CurrentHintCard", () => {
   it("renders hint counter", () => {
     render(<CurrentHintCard {...baseProps} />);
 
-    const hintText = screen.getByText("Hint 1 of 6");
+    // Current Clue badge and counter
+    expect(screen.getByText("Current Clue")).toBeTruthy();
+    const hintText = screen.getByText("1 of 6");
     expect(hintText).toBeTruthy();
     // The aria-label includes both hint number and guesses remaining
-    const container = screen.getByLabelText("Hint 1 of 6. 6 guesses remaining");
-    expect(container).toBeTruthy();
+    const counter = screen.getByLabelText("Hint 1 of 6. 6 guesses remaining");
+    expect(counter).toBeTruthy();
   });
 
   it("announces hint text in a polite live region", () => {

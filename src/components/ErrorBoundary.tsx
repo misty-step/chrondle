@@ -116,7 +116,7 @@ export class ErrorBoundary extends Component<Props, State> {
       // Default error UI
       return (
         <div className="bg-background flex min-h-screen items-center justify-center">
-          <div className="bg-card mx-4 w-full max-w-md rounded-lg border p-6 shadow-lg">
+          <div className="bg-card mx-4 w-full max-w-md rounded-sm border p-6 shadow-lg">
             <div className="text-center">
               <div className="mb-4 text-4xl">🚨</div>
               <h1 className="text-foreground mb-2 text-xl font-bold">Something went wrong</h1>
@@ -128,14 +128,14 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="space-y-3">
                 <button
                   onClick={this.handleReload}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-md px-4 py-2 transition-colors"
+                  className="bg-primary text-body-primary-foreground hover:bg-primary/90 w-full rounded-sm px-4 py-2 transition-colors"
                 >
                   Reload Game
                 </button>
 
                 <button
                   onClick={this.handleClearStorage}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full rounded-md px-4 py-2 transition-colors"
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full rounded-sm px-4 py-2 transition-colors"
                 >
                   Clear Data & Reload
                 </button>

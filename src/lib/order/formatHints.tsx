@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import React, { type ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import type { OrderEvent, OrderHint } from "@/types/orderGameState";
 
@@ -24,13 +24,13 @@ export function formatRelativeHintText(
 
   return (
     <span className="inline-flex flex-wrap items-center gap-1">
-      <span className="text-primary font-semibold">{earlierName}</span>
+      <span className="text-body-primary font-semibold">{earlierName}</span>
       <span className="text-muted-foreground inline-flex items-center gap-1 italic">
         <ArrowRight className="h-3 w-3" aria-hidden="true" />
         happens before
         <ArrowRight className="h-3 w-3" aria-hidden="true" />
       </span>
-      <span className="text-primary font-semibold">{laterName}</span>
+      <span className="text-body-primary font-semibold">{laterName}</span>
     </span>
   );
 }

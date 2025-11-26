@@ -181,7 +181,7 @@ export const SmartTooltip: React.FC<SmartTooltipProps> = ({
       {isVisible && (
         <div
           className={cn(
-            "text-foreground bg-muted border-border absolute z-50 rounded-lg border px-3 py-2 text-sm shadow-lg transition-opacity duration-200",
+            "text-foreground bg-muted border-border absolute z-50 rounded-sm border px-3 py-2 text-sm shadow-lg transition-opacity duration-200",
             "max-w-sm whitespace-normal",
             getPositionClasses(),
             className,

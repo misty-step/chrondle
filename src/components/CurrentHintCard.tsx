@@ -73,13 +73,16 @@ export const CurrentHintCard: React.FC<CurrentHintCardProps> = React.memo(
         }}
         className="w-full"
       >
-        <div className="border-border/70 bg-muted/30 shadow-primary/5 hover:shadow-primary/10 rounded-lg border px-4 py-3 shadow-md transition-shadow duration-200 hover:shadow-lg">
-          <div className="mb-2">
+        <div className="material-card border-l-vermilion-500 bg-vermilion-50/30 dark:bg-vermilion-950/20 border-l-4 px-4 py-3">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="bg-vermilion-500 rounded-sm px-2 py-0.5 text-xs font-bold tracking-wide text-white uppercase">
+              Current Clue
+            </span>
             <span
-              className="text-muted-foreground font-accent text-xs tracking-wide uppercase"
+              className="text-muted-foreground font-accent text-xs tracking-wide"
               aria-label={`Hint ${hintNumber} of ${totalHints}. ${totalHints - hintNumber + 1} guesses remaining`}
             >
-              Hint {hintNumber} of {totalHints}
+              {hintNumber} of {totalHints}
             </span>
           </div>
 

@@ -106,7 +106,7 @@ const PastHint: React.FC<PastHintProps & { isNewest?: boolean }> = React.memo(
             // No delay for layout shifts - prevents delays when hints move positions
           },
         }}
-        className={`rounded-lg border-2 px-4 py-3 ${backgroundClass} shadow-primary/5 hover:shadow-primary/10 opacity-90 shadow-md transition-all duration-200 hover:opacity-100 hover:shadow-lg`}
+        className={`rounded-sm border-2 px-4 py-3 ${backgroundClass} shadow-primary/5 hover:shadow-primary/10 opacity-90 shadow-md transition-all duration-200 hover:opacity-100 hover:shadow-lg`}
       >
         {/* Enhanced header with proximity indicator */}
         <div className="mb-2 flex items-center gap-3">
@@ -162,7 +162,7 @@ const FutureHint: React.FC<FutureHintProps> = React.memo(
           damping: 25,
           delay: 0.1,
         }}
-        className="bg-muted/5 rounded-lg px-3 py-2 opacity-60"
+        className="bg-muted/5 rounded-sm px-3 py-2 opacity-60"
       >
         {/* Header for unused hints */}
         <div className="mb-2 flex items-center gap-3">
@@ -256,7 +256,7 @@ export const HintsDisplay: React.FC<HintsDisplayProps> = React.memo((props) => {
   if (error) {
     return (
       <div
-        className={`${className} bg-destructive/5 border-destructive/50 rounded-lg border p-6 text-center`}
+        className={`${className} bg-destructive/5 border-destructive/50 rounded-sm border p-6 text-center`}
       >
         <div className="mb-3">
           <div className="bg-destructive/20 mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full">
@@ -271,10 +271,18 @@ export const HintsDisplay: React.FC<HintsDisplayProps> = React.memo((props) => {
 
   if (!events || events.length === 0) {
     return (
-      <div className={`${className} p-6 text-center`}>
-        <div className="flex items-center justify-center gap-3">
-          <LoadingSpinner size="md" />
-          <p className="text-muted-foreground">Loading puzzle events...</p>
+      <div
+        className={`${className} border-outline-default rounded-sm border border-dashed p-8 text-center`}
+        role="status"
+        aria-live="polite"
+      >
+        <div className="mb-3 text-4xl" aria-hidden="true">
+          📜
+        </div>
+        <p className="text-body-primary mb-1 font-medium">Preparing your puzzle...</p>
+        <p className="text-body-secondary text-sm">Historical events are being loaded</p>
+        <div className="mt-4 flex items-center justify-center">
+          <LoadingSpinner size="sm" />
         </div>
       </div>
     );

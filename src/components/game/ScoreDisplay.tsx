@@ -38,7 +38,7 @@ export function ScoreDisplay({ width, hintsUsed, variant = "full", className }: 
     return (
       <div
         className={cn(
-          "flex flex-col items-center gap-2 rounded-xl border-2 px-5 py-3 shadow-md transition-all sm:px-6 sm:py-4",
+          "flex flex-col items-center gap-2 rounded-sm border-2 px-5 py-3 shadow-md transition-all sm:px-6 sm:py-4",
           isValid
             ? "border-primary/50 from-primary/10 to-primary/5 shadow-primary/20 bg-gradient-to-br"
             : "border-muted bg-muted/30",
@@ -50,7 +50,7 @@ export function ScoreDisplay({ width, hintsUsed, variant = "full", className }: 
           <Trophy
             className={cn(
               "h-6 w-6 sm:h-7 sm:w-7",
-              isValid ? "text-primary" : "text-muted-foreground",
+              isValid ? "text-body-primary" : "text-muted-foreground",
             )}
             aria-hidden="true"
           />
@@ -58,7 +58,7 @@ export function ScoreDisplay({ width, hintsUsed, variant = "full", className }: 
             value={maxPossibleScore}
             className={cn(
               "text-3xl font-bold tabular-nums sm:text-4xl",
-              isValid ? "text-primary" : "text-muted-foreground",
+              isValid ? "text-body-primary" : "text-muted-foreground",
             )}
           />
         </div>
@@ -88,7 +88,7 @@ export function ScoreDisplay({ width, hintsUsed, variant = "full", className }: 
   return (
     <div
       className={cn(
-        "rounded-xl border-3 p-8 text-center shadow-lg transition-all",
+        "rounded-sm border-3 p-8 text-center shadow-lg transition-all",
         isValid
           ? "border-primary/50 from-primary/10 to-primary/5 shadow-primary/20 bg-gradient-to-br"
           : "border-muted bg-muted/30",
@@ -100,14 +100,14 @@ export function ScoreDisplay({ width, hintsUsed, variant = "full", className }: 
       </div>
       <div className="mt-4 flex items-center justify-center gap-3">
         <Trophy
-          className={cn("h-10 w-10", isValid ? "text-primary" : "text-muted-foreground")}
+          className={cn("h-10 w-10", isValid ? "text-body-primary" : "text-muted-foreground")}
           aria-hidden="true"
         />
         <AnimatedNumber
           value={maxPossibleScore}
           className={cn(
             "text-5xl font-bold tabular-nums",
-            isValid ? "text-primary" : "text-muted-foreground",
+            isValid ? "text-body-primary" : "text-muted-foreground",
           )}
         />
       </div>

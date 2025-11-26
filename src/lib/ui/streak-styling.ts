@@ -38,7 +38,7 @@ export interface StreakColorClasses {
  *
  * @example
  * getStreakColorClasses(100);
- * // { textColor: "text-primary", borderColor: "border-muted", milestone: "Century club! 👑" }
+ * // { textColor: "text-body-primary", borderColor: "border-muted", milestone: "Century club! 👑" }
  */
 export function getStreakColorClasses(streak: number): StreakColorClasses {
   if (streak <= 0) {
@@ -94,7 +94,7 @@ export function getStreakColorClasses(streak: number): StreakColorClasses {
 
   // 100+ days - Elite status
   return {
-    textColor: "text-primary",
+    textColor: "text-body-primary",
     borderColor: "border-muted",
     milestone: streak === 100 ? "Century club! 👑" : undefined,
   };

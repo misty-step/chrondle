@@ -3,16 +3,7 @@
 // This is the main client-side island that contains all game interactivity
 // It receives preloaded puzzle data from the server and handles all client-side state
 
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useMemo,
-  useDeferredValue,
-  lazy,
-  Suspense,
-} from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, useDeferredValue, lazy } from "react";
 import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useRangeGame } from "@/hooks/useRangeGame";
@@ -24,15 +15,9 @@ import { useScreenReaderAnnouncements } from "@/hooks/useScreenReaderAnnouncemen
 import { logger } from "@/lib/logger";
 import { GAME_CONFIG } from "@/lib/constants";
 import { AchievementModal, LazyModalWrapper } from "@/components/LazyModals";
-import {
-  GameLayout,
-  AppHeader,
-  Footer,
-  LiveAnnouncer,
-  BackgroundAnimation,
-} from "@/components/LazyComponents";
+import { GameLayout, LiveAnnouncer, BackgroundAnimation } from "@/components/LazyComponents";
 import { ConfettiRef } from "@/components/magicui/confetti";
-import { GameErrorBoundary } from "@/components/GameErrorBoundary";
+import { GameModeLayout } from "@/components/GameModeLayout";
 
 // Lazy load AnalyticsDashboard for development/debug mode only
 const AnalyticsDashboard = lazy(() =>
@@ -48,9 +33,6 @@ interface GameIslandProps {
 export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
   // Use the preloaded puzzle data - this seamlessly hydrates and subscribes to updates
   const puzzle = usePreloadedQuery(preloadedPuzzle);
-
-  // Hydration state for progressive enhancement (not for hiding UI)
-  const [hydrated, setHydrated] = useState(false);
 
   // Debug state
   const [debugMode, setDebugMode] = useState(false);
@@ -186,11 +168,17 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
     handleGameOver,
   ]);
 
+  // Track client-side mount state for confetti
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Victory confetti effect
   useVictoryConfetti(confettiRef, {
     hasWon: gameLogic.hasWon,
     isGameComplete: gameLogic.isGameComplete,
-    isMounted: hydrated,
+    isMounted,
     guessCount: gameLogic.gameState.ranges.length,
   });
 
@@ -207,11 +195,8 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
   // Swipe navigation would need proper props - disabling for now
   // TODO: Implement proper swipe navigation if needed
 
-  // Handle client-side hydration and debug mode setup
+  // Check for debug mode on mount
   useEffect(() => {
-    setHydrated(true);
-
-    // Check for debug mode
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       const debug = urlParams.get("debug") === "true";
@@ -223,63 +208,21 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
     }
   }, []);
 
-  // NOTE: No longer returning null here - let SSR content remain visible!
-  // We'll use the hydrated state for progressive enhancement only
-
   return (
-    <GameErrorBoundary>
-      <div
-        className={`bg-background text-foreground flex min-h-screen flex-col ${hydrated ? "hydrated" : "ssr"}`}
-      >
-        <Suspense fallback={null}>
-          <BackgroundAnimation
-            guesses={gameLogic.gameState.guesses}
-            targetYear={gameLogic.gameState.puzzle?.year || new Date().getFullYear()}
-            isGameOver={gameLogic.isGameComplete}
-          />
-        </Suspense>
-
-        <AppHeader
-          currentStreak={streakData.currentStreak}
-          isDebugMode={debugMode}
-          puzzleNumber={puzzleNumber}
+    <GameModeLayout
+      mode="classic"
+      puzzleNumber={puzzleNumber}
+      currentStreak={streakData.currentStreak}
+      isDebugMode={debugMode}
+      backgroundAnimation={
+        <BackgroundAnimation
+          guesses={gameLogic.gameState.guesses}
+          targetYear={gameLogic.gameState.puzzle?.year || new Date().getFullYear()}
+          isGameOver={gameLogic.isGameComplete}
         />
-
-        <main className="flex flex-1 flex-col">
-          {!gameLogic.isLoading && gameLogic.error && (
-            <div className="flex flex-1 items-center justify-center p-4">
-              <div className="bg-destructive/10 text-destructive max-w-md rounded-lg p-6 text-center">
-                <h2 className="mb-2 text-xl font-bold">Unable to Load Puzzle</h2>
-                <p className="mb-4">{gameLogic.error}</p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded px-4 py-2 transition-colors"
-                >
-                  Reload Page
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!gameLogic.error && (
-            <GameLayout
-              gameState={gameLogic.gameState}
-              isGameComplete={gameLogic.isGameComplete}
-              hasWon={gameLogic.hasWon}
-              isLoading={gameLogic.isLoading}
-              error={gameLogic.error}
-              onRangeCommit={gameLogic.submitRange}
-              remainingAttempts={gameLogic.remainingAttempts}
-              countdown={countdown}
-              confettiRef={confettiRef}
-              onValidationError={setValidationError}
-            />
-          )}
-        </main>
-
-        <Footer />
-
-        {/* Modals with Suspense boundaries */}
+      }
+      _confettiRef={confettiRef}
+      modals={
         <LazyModalWrapper>
           <AchievementModal
             isOpen={hasNewAchievement}
@@ -287,17 +230,39 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
             achievement={newAchievement || ""}
           />
         </LazyModalWrapper>
+      }
+      screenReaderAnnouncements={<LiveAnnouncer message={announcement} />}
+      debugContent={<AnalyticsDashboard />}
+    >
+      {!gameLogic.isLoading && gameLogic.error && (
+        <div className="flex flex-1 items-center justify-center p-4">
+          <div className="bg-destructive/10 text-destructive max-w-md rounded-sm p-6 text-center">
+            <h2 className="mb-2 text-xl font-bold">Unable to Load Puzzle</h2>
+            <p className="mb-4">{gameLogic.error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded px-4 py-2 transition-colors"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      )}
 
-        {/* Screen reader announcements */}
-        <LiveAnnouncer message={announcement} />
-
-        {/* Debug Dashboard - Lazy loaded for better performance */}
-        {debugMode && (
-          <Suspense fallback={null}>
-            <AnalyticsDashboard />
-          </Suspense>
-        )}
-      </div>
-    </GameErrorBoundary>
+      {!gameLogic.error && (
+        <GameLayout
+          gameState={gameLogic.gameState}
+          isGameComplete={gameLogic.isGameComplete}
+          hasWon={gameLogic.hasWon}
+          isLoading={gameLogic.isLoading}
+          error={gameLogic.error}
+          onRangeCommit={gameLogic.submitRange}
+          remainingAttempts={gameLogic.remainingAttempts}
+          countdown={countdown}
+          confettiRef={confettiRef}
+          onValidationError={setValidationError}
+        />
+      )}
+    </GameModeLayout>
   );
 }

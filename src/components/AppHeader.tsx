@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Flame, Archive, Heart } from "lucide-react";
 
 import { AuthButtons } from "@/components/AuthButtons";
+import { LayoutContainer } from "@/components/LayoutContainer";
 import SupportModal from "@/components/SupportModal";
 import { ModeDropdown } from "@/components/ModeDropdown";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -23,6 +23,7 @@ interface AppHeaderProps {
   isDebugMode?: boolean;
   puzzleNumber?: number;
   isArchive?: boolean;
+  mode?: "classic" | "order";
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -30,8 +31,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   isDebugMode = false,
   puzzleNumber,
   isArchive = false,
+  mode = "classic",
 }) => {
-  const pathname = usePathname();
   const [showSupport, setShowSupport] = useState(false);
   const [showHeartbeat, setShowHeartbeat] = useState(false);
 
@@ -48,34 +49,33 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   }, []);
 
   const streakColors = currentStreak ? getStreakColorClasses(currentStreak) : null;
+  const archiveHref = mode === "order" ? "/archive/order" : "/archive";
 
-  // Adaptive navbar width based on game mode
-  const isOrderMode = pathname?.startsWith("/order");
-  const maxWidthClass = isOrderMode ? "max-w-4xl" : "max-w-2xl";
   return (
     <>
-      <header className="border-border bg-card w-full border-b py-4">
-        <div
-          className={cn("mx-auto px-6 transition-all duration-200 ease-out sm:px-0", maxWidthClass)}
-        >
+      <header
+        className="w-full border-b border-[var(--elevation-navbar-border)] bg-[var(--elevation-navbar-bg)] py-4"
+        style={{ boxShadow: "var(--elevation-navbar-shadow)" }}
+      >
+        <LayoutContainer className="transition-all duration-200 ease-out">
           <div className="flex min-h-[40px] items-center justify-between">
             {/* Logo/Brand - with integrated mode switcher */}
             <div className="flex h-10 items-baseline gap-2">
               <Link href="/" className="flex items-baseline">
-                <h1 className="font-heading text-primary m-0 flex cursor-pointer items-baseline text-2xl font-bold transition-opacity hover:opacity-80 md:text-3xl">
+                <h1 className="font-display text-body-primary m-0 flex cursor-pointer items-baseline text-2xl transition-opacity hover:opacity-80 md:text-3xl">
                   <span className="flex h-10 w-10 items-center justify-center sm:hidden">C</span>
                   <span className="hidden sm:inline">CHRONDLE</span>
                 </h1>
               </Link>
 
               {/* Mode Dropdown inline with brand */}
-              <span className="text-muted-foreground hidden text-xl sm:inline">·</span>
+              <span className="bg-border hidden h-4 w-px sm:inline" aria-hidden="true" />
               <ModeDropdown className="hidden sm:inline-flex" />
 
               {/* Puzzle Number */}
               {puzzleNumber && (
                 <>
-                  <span className="text-muted-foreground hidden text-xl sm:inline">·</span>
+                  <span className="bg-border hidden h-4 w-px sm:inline" aria-hidden="true" />
                   <span
                     className={cn(
                       "font-mono text-xs sm:text-sm",
@@ -98,10 +98,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
             {/* Action Buttons with Streak Counter */}
             <div className="flex h-10 items-center gap-3">
-              {/* Streak Counter - Horizontal Badge */}
+              {/* Streak Counter - Archival Badge */}
               {currentStreak !== undefined && currentStreak > 0 && streakColors && (
                 <div
-                  className={`flex items-center gap-2 rounded-full border px-3 py-2 ${streakColors.borderColor} h-10 shadow-sm`}
+                  className={`material-paper flex items-center gap-2 rounded-sm border-2 px-3 py-2 ${streakColors.borderColor} shadow-hard h-10`}
                   title={streakColors.milestone || `${currentStreak} day streak`}
                   aria-label={`Current streak: ${currentStreak} day streak`}
                 >
@@ -120,7 +120,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
               {/* Archive Button */}
               <NavbarButton
-                href={isOrderMode ? "/archive/order" : "/archive"}
+                href={archiveHref}
                 title="Browse puzzle archive"
                 aria-label="Browse puzzle archive"
                 overlayColor="primary"
@@ -136,7 +136,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 overlayColor="rose"
                 className={cn(showHeartbeat && "animate-heartbeat")}
               >
-                <Heart className="text-foreground h-4 w-4 transition-colors group-hover:text-rose-600" />
+                <Heart className="text-body-primary h-4 w-4 transition-colors group-hover:text-rose-600" />
               </NavbarButton>
 
               {/* Theme Toggle */}
@@ -146,7 +146,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <AuthButtons />
             </div>
           </div>
-        </div>
+        </LayoutContainer>
       </header>
 
       <SupportModal open={showSupport} onOpenChange={setShowSupport} />

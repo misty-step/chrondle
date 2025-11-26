@@ -33,5 +33,41 @@ fi
 
 echo "✅ No secrets detected in staged files"
 
+# Design system enforcement - prevent primitive token usage
+echo "🎨 Checking for primitive token usage in staged files..."
+
+# Get staged TypeScript/TSX files (exclude docs and test files from enforcement)
+STAGED_TS_FILES=$(git diff --cached --name-only --diff-filter=ACM | \
+  grep -E '\.(ts|tsx)$' | \
+  grep -v -E '(globals\.css|\.md$|__tests__|\.test\.)' || true)
+
+if [ -n "$STAGED_TS_FILES" ]; then
+  # Check for primitive token patterns in ADDED lines only (not removals)
+  # This allows migration commits that remove primitive tokens
+  PRIMITIVE_TOKENS=$(echo "$STAGED_TS_FILES" | xargs -I {} git diff --cached {} | \
+    grep '^+' | \
+    grep -E '\b(text|bg|border)-(ink|parchment)-[0-9]+\b' | \
+    grep -v 'mode-' || true)
+
+  if [ -n "$PRIMITIVE_TOKENS" ]; then
+    echo "❌ DESIGN SYSTEM VIOLATION: Primitive tokens detected!"
+    echo ""
+    echo "Found the following primitive token usage:"
+    echo "$PRIMITIVE_TOKENS" | head -10
+    echo ""
+    echo "Use semantic tokens instead:"
+    echo "  - text-ink-900 → text-primary"
+    echo "  - text-ink-700 → text-secondary"
+    echo "  - text-ink-500 → text-tertiary"
+    echo "  - bg-parchment-50 → bg-surface-elevated"
+    echo "  - border-parchment-300 → border-outline-default"
+    echo ""
+    echo "See DESIGN_SYSTEM.md for full token reference."
+    exit 1
+  fi
+fi
+
+echo "✅ No primitive tokens detected in staged files"
+
 # Run lint-staged as before
 npx lint-staged

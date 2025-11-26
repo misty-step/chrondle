@@ -72,17 +72,42 @@ export function generateRelativeHint(
   };
 }
 
+export type BracketHintOptions = {
+  seed?: number;
+  /**
+   * Prevent revealing events that already received a bracket hint.
+   */
+  excludeEventIds?: string[];
+  /**
+   * The year span (+/-) for the bracket. Defaults to 25.
+   */
+  span?: number;
+};
+
 /**
- * Returns a bracket hint describing the event's year range.
+ * Returns a bracket hint describing an event's year range.
+ * Selects an event deterministically from those not excluded.
  */
-export function generateBracketHint(event: OrderEvent, span: number = 25): OrderHint {
+export function generateBracketHint(
+  events: OrderEvent[],
+  options: BracketHintOptions = {},
+): OrderHint {
+  const excluded = new Set(options.excludeEventIds ?? []);
+  const candidates = events.filter((e) => !excluded.has(e.id));
+
+  // Fallback: if all excluded, pick from all (shouldn't happen in normal play)
+  const pool = candidates.length ? candidates : events;
+
+  const selectedEvent = pickDeterministic(pool, options.seed, "bracket");
+
+  const span = options.span ?? 25;
   const normalizedSpan = Math.max(0, span);
-  const lower = event.year - normalizedSpan;
-  const upper = event.year + normalizedSpan;
+  const lower = selectedEvent.year - normalizedSpan;
+  const upper = selectedEvent.year + normalizedSpan;
 
   return {
     type: "bracket",
-    eventId: event.id,
+    eventId: selectedEvent.id,
     yearRange: [Math.min(lower, upper), Math.max(lower, upper)],
   };
 }

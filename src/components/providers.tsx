@@ -31,14 +31,14 @@ function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
   return (
     <div className="bg-background flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-2xl">
-        <div className="bg-destructive/10 border-destructive rounded-lg border-2 p-6">
+        <div className="bg-destructive/10 border-destructive rounded-sm border-2 p-6">
           <h1 className="text-destructive mb-4 text-2xl font-bold">Configuration Error</h1>
 
           <p className="text-foreground mb-6">{getEnvErrorMessage(variables)}</p>
 
           {!isProd && (
             <>
-              <div className="bg-background mb-6 rounded-md p-4">
+              <div className="bg-background mb-6 rounded-sm p-4">
                 <p className="mb-2 font-semibold">Missing variables:</p>
                 <ul className="list-inside list-disc space-y-1">
                   {variables.map((varName) => (
@@ -73,7 +73,7 @@ function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
                 </div>
               </div>
 
-              <div className="bg-muted mt-6 rounded-md p-4">
+              <div className="bg-muted mt-6 rounded-sm p-4">
                 <p className="text-sm">
                   <strong>Note:</strong> Environment variables starting with{" "}
                   <code className="bg-background rounded px-1 py-0.5">NEXT_PUBLIC_</code> are

@@ -1,7 +1,7 @@
 // Server component: renders the Classic Chrondle experience.
 
 import { preloadQuery } from "convex/nextjs";
-import { api } from "../../../convex/_generated/api";
+import { api } from "@/lib/convexServer";
 import { GameIsland } from "@/components/GameIsland";
 
 export default async function ClassicPage() {

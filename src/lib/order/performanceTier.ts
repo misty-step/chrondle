@@ -66,7 +66,7 @@ export function getTierColorClass(tier: PerformanceTier["tier"]): string {
     case "perfect":
       return "text-feedback-success";
     case "excellent":
-      return "text-primary";
+      return "text-body-primary";
     case "good":
       return "text-foreground";
     case "fair":

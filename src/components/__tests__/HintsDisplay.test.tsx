@@ -117,7 +117,7 @@ describe("HintsDisplay Component Interface", () => {
 
       render(<HintsDisplay {...props} />);
 
-      expect(screen.getByText("Loading puzzle events...")).toBeTruthy();
+      expect(screen.getByText("Preparing your puzzle...")).toBeTruthy();
     });
 
     it("shows error message when error is present", () => {
@@ -186,8 +186,8 @@ describe("HintsDisplay Component Interface", () => {
 
       render(<HintsDisplay {...props} />);
 
-      // Empty events show loading state
-      expect(screen.getByText("Loading puzzle events...")).toBeTruthy();
+      // Empty events show loading state with archival messaging
+      expect(screen.getByText("Preparing your puzzle...")).toBeTruthy();
     });
 
     it("handles wrong number of events (len=2)", () => {

@@ -90,7 +90,7 @@ export function OrderReveal({
     <div className="space-y-6">
       {/* Performance Banner Card - Matches Classic win/loss banner pattern */}
       <motion.div
-        className={`flex w-full items-center gap-4 rounded-xl border ${tierStyles.border} ${tierStyles.background} p-6`}
+        className={`flex w-full items-center gap-4 rounded-sm border-2 ${tierStyles.border} ${tierStyles.background} shadow-hard p-6`}
         initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
         animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         transition={{
@@ -118,7 +118,7 @@ export function OrderReveal({
 
       {/* Stats + Share Card - Matches Classic countdown/share card pattern */}
       <motion.div
-        className="border-primary/20 from-primary/5 to-primary/10 flex w-full flex-col gap-6 rounded-xl border bg-gradient-to-br p-6"
+        className="border-primary/20 from-primary/5 to-primary/10 shadow-hard flex w-full flex-col gap-6 rounded-sm border-2 bg-gradient-to-br p-6"
         initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
         animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         transition={{
@@ -138,7 +138,7 @@ export function OrderReveal({
               type="button"
               onClick={handleShareClick}
               disabled={isShared}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-8 py-3 text-base font-semibold shadow-lg transition-all hover:scale-105 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto"
+              className="bg-primary text-body-primary-foreground hover:bg-primary/90 shadow-hard-lg flex w-full cursor-pointer items-center justify-center gap-2 rounded-sm px-8 py-3 text-base font-semibold transition-all hover:scale-105 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto"
               whileTap={
                 prefersReducedMotion || isShared
                   ? undefined
@@ -165,7 +165,7 @@ export function OrderReveal({
 
       {/* Event Comparison Card */}
       <motion.div
-        className="border-border bg-card rounded-xl border p-6"
+        className="border-border bg-surface-elevated shadow-hard rounded-sm border-2 p-6"
         initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
         animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         transition={{

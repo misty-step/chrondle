@@ -687,6 +687,273 @@ fg: "text-[#3E3428] dark:text-[#EBE7DE]",
 
 ---
 
+### PR #61 Design System Feedback (CodeRabbit Review - 88 comments)
+
+**Review Date**: 2025-11-25
+**PR**: #61 "feat: comprehensive archival design system with Tailwind v4"
+**Categorization**: 18 high-priority alignment issues, 28 code quality improvements, 40 low-priority items
+**P0 Issues Fixed**: HintIndicator crash guard, bg-surface-hover missing class
+
+#### [DESIGN] HIGH - Semantic Token Migration Completion
+
+**Files**: 8 components with remaining hardcoded colors
+**Source**: PR #61 CodeRabbit review
+**Problem**: Design system migration incomplete - hardcoded colors/inline styles bypass token system
+**Impact**: Inconsistent dark mode support, harder to maintain theme
+
+**Affected Components**:
+
+1. `src/components/magicui/ripple-button.tsx (13)` - Hardcoded `#ffffff` default
+2. `src/components/ui/StreakIndicator.tsx (27-59)` - Inline styles + hardcoded `"white"`
+3. `src/components/game/RangeTimeline.tsx (70, 115, 143)` - SVG hex colors won't adapt to dark mode
+4. `src/components/ui/EventsCard.tsx (11-45)` - Timeline dot `to-blue-600` primitive
+5. `src/components/modals/GameComplete.tsx (379-386)` - `bg-amber-100` hardcoded
+6. `src/components/ui/Badge.tsx (10-18)` - `earlier`/`later` variants need semantic tokens
+7. `src/components/modals/GameComplete.tsx (117-132)` - Feedback status colors hardcoded
+8. `src/components/magicui/ripple-button.tsx (49-53)` - Missing semantic border color
+
+**Fix**: Replace all with CSS custom properties/semantic Tailwind tokens
+**Effort**: 4h | **Benefit**: Complete design system consistency
+**Acceptance**: No hardcoded colors in components, SVGs use `currentColor` or CSS vars
+
+---
+
+#### [QUALITY] MEDIUM - Type Safety Improvements
+
+**Files**: 3 files using `any` or loose typing
+**Source**: PR #61 CodeRabbit review
+
+1. **useOrderPuzzleData.ts (7, 106-119)** - Replace `any` with union type for puzzle shapes
+
+   - **Fix**: Create `ConvexPuzzle | NormalizedPuzzle` union type
+   - **Effort**: 30m
+
+2. **convexServer.ts (17-38)** - Tighten `convexPuzzle.events` typing
+
+   - **Fix**: Add proper event type instead of implicit `any[]`
+   - **Effort**: 20m
+
+3. **formatHints.tsx (1)** - Remove unnecessary React runtime import
+   - **Fix**: Change to type-only import: `import type { ReactNode } from "react"`
+   - **Effort**: 5m
+
+**Total Effort**: 1h | **Benefit**: Catch schema drift at compile time
+
+---
+
+#### [QUALITY] MEDIUM - Component Cleanup
+
+**Files**: 7 files with unused code or TODOs
+**Source**: PR #61 CodeRabbit review
+
+1. **Card.tsx (5-67)** - Remove empty string in `cn("")` call (cosmetic)
+2. **OrderReveal.tsx (119-128)** - Reorder Tailwind classes for consistency
+3. **DebugBanner.tsx (12-28)** - Migrate inline styles to semantic tokens
+4. **OrderGameBoard.tsx (132-145)** - Remove unused destructured variable
+5. **OrderGameBoard.tsx (247-262)** - Address TODO for bracket hint generation
+6. **LoadingExperience.tsx (10-24)** - Remove unused `delayMs` prop
+7. **GameModeLayout.tsx (17-25)** - Remove unused `_confettiRef` prop
+
+**Effort**: 2h | **Benefit**: Cleaner codebase, addressed TODOs
+
+---
+
+#### [TESTS] HIGH - Test Coverage Expansion
+
+**Files**: 9 test files with gaps identified
+**Source**: PR #61 CodeRabbit review
+
+1. **typography.tsx (1-106)** - Add unit tests for new typography components
+
+   - **Coverage**: Variant rendering, polymorphic `as` prop, ref forwarding
+   - **Effort**: 2h
+
+2. **LoadingExperience.unit.test.tsx (6-20)** - Expand coverage
+
+   - **Missing**: `progress`, `subMessage`, `intent`, `prefersReducedMotion`, `delayMs`
+   - **Effort**: 1h
+
+3. **convexServer.import.test.ts (5-16)** - Add fetch helper tests
+
+   - **Missing**: `fetchOrderPuzzleByNumber`, `fetchClassicPuzzleByNumber`
+   - **Effort**: 1h
+
+4. **LoadingModules.unit.test.tsx (19-21)** - Use role/testid instead of CSS class selector
+
+   - **Fix**: Replace `.querySelector(".h-1\\.5")` with `role="progressbar"`
+   - **Effort**: 15m
+
+5. **AppHeader.test.tsx (43-53)** - More robust test selectors
+
+   - **Fix**: Add `data-testid="archive-button"` or use `getByRole("link", { name: /archive/i })`
+   - **Effort**: 30m
+
+6. **SubmitButton.test.tsx (14-30, 33-75, 133-149)** - Various improvements
+
+   - **Issues**: Brittle class assertions, no-assertion test, tight coupling
+   - **Effort**: 2h
+
+7. **HintPanel.test.tsx (222-276)** - Fix conditional assertions that may hide failures
+
+   - **Effort**: 1h
+
+8. **GameModeLayout.test.tsx (324-343, 345-364)** - Improve hydration tests, review documentary tests
+   - **Effort**: 1.5h
+
+**Total Effort**: 9.5h | **Benefit**: Catch regressions in new components
+
+---
+
+#### [ACCESSIBILITY] MEDIUM - A11y Refinements
+
+**Files**: 8 components with accessibility improvements
+**Source**: PR #61 CodeRabbit review
+
+1. **InlineWarning.tsx (28-51)** - Fix `role="alert"` + `aria-live="polite"` conflict
+
+   - **Fix**: Use `role="status"` for polite, reserve `role="alert"` for assertive
+   - **Effort**: 30m
+
+2. **GuessHistory.tsx (21-61)** - Add `role="listitem"` to GuessRow
+
+   - **Current**: Parent has `role="list"` but children don't have `role="listitem"`
+   - **Effort**: 15m
+
+3. **GameLayout.tsx (89-91)** - Minor stamp overlay a11y tweak
+
+   - **Effort**: 20m
+
+4. **ThemeToggle.tsx (50-95)** - Expose pressed state for a11y
+
+   - **Fix**: Add `aria-pressed` attribute
+   - **Effort**: 15m
+
+5. **GameComplete.tsx (214-407)** - Progressive breakdown a11y nits
+
+   - **Effort**: 1h
+
+6. **RangeInput.tsx (169-170)** - Tighten reduced-motion + keyboard UX
+
+   - **Effort**: 30m
+
+7. **LoadingScreen.tsx (10-15)** - Clarify null-coalescing intent (add comment)
+
+   - **Effort**: 5m
+
+8. **OrderGameIsland.tsx (46-55)** - Use dedicated error component instead of LoadingScreen
+   - **Fix**: Create proper error state component
+   - **Effort**: 1h
+
+**Total Effort**: 4h | **Benefit**: WCAG AA compliance, better screen reader UX
+
+---
+
+#### [DOCS] MEDIUM - Documentation Additions
+
+**Files**: 5 files needing documentation
+**Source**: PR #61 CodeRabbit review
+
+1. **hashHintContext.ts (1-13)** - Document non-crypto intent
+
+   - **Fix**: Add JSDoc clarifying FNV-1a is for bucketing, not security
+   - **Effort**: 10m
+
+2. **DESIGN_SYSTEM.md (9-15)** - Fix markdownlint warnings
+
+   - **Issues**: Missing code fence languages, bare URLs
+   - **Effort**: 15m
+
+3. **.lintstagedrc.js (3-8)** - Quote file paths for spaces
+
+   - **Fix**: Wrap filenames in quotes or use xargs for robustness
+   - **Effort**: 10m
+
+4. **HintPanel.tsx (187-188)** - Extract magic number constant
+   - **Current**: Hardcoded `3` for maximum hints
+   - **Fix**: `const MAX_ORDER_HINTS = 3`
+   - **Effort**: 5m
+
+**Total Effort**: 40m | **Benefit**: Better maintainability
+
+---
+
+#### [ARCHITECTURE] MEDIUM - Architecture Concerns
+
+**Files**: 6 files with architectural issues
+**Source**: PR #61 CodeRabbit review
+
+1. **GameIsland.tsx (237-250)** - Error UI rendered outside ErrorBoundary scope
+
+   - **Risk**: Errors in error UI itself won't be caught
+   - **Effort**: 1h
+
+2. **ClassicArchivePuzzleClient.tsx (49-55)** - Render explicit error state instead of perpetual loading
+
+   - **Current**: Error shows loading spinner forever
+   - **Effort**: 30m
+
+3. **globals.css (673-682)** - Paper-edge SVG filters remain non-functional
+
+   - **Status**: Known issue, may be intentional
+   - **Effort**: 2h (if fixing)
+
+4. **ripple-button.tsx (60-71)** - Clarify canonical ripple color source
+
+   - **Issue**: Confusion between class-based and inline style colors
+   - **Effort**: 30m
+
+5. **RangeInput.tsx (62-90)** - Confirm `hasBeenModified` gating is intentional
+   - **Current**: Validation only runs after first modification
+   - **Effort**: Review + document intent (20m)
+
+**Total Effort**: 4.5h | **Benefit**: Clearer architecture, fewer edge cases
+
+---
+
+#### [PRAISE] Acknowledged Positive Feedback (No Action Required)
+
+**Source**: PR #61 CodeRabbit review - 40 comments
+
+**Categories**:
+
+- ✅ Test alignment and quality (7 comments)
+- ✅ Component logic soundness (5 comments)
+- ✅ Deep module pattern implementation (3 comments)
+- ✅ Consistent styling updates (10 comments)
+- ✅ Proper type usage (8 comments)
+- ✅ Good foundations for testing/infrastructure (7 comments)
+
+**Items Explicitly Praised**:
+
+- RangeInput test alignment with new copy/scoring
+- Deep module pattern in HintPanel/GameCard
+- Consistent vermilion token wiring
+- Extended mode detection for `/archive/order`
+- Deterministic hash implementation
+- Solid ARIA semantics in InlineWarning
+- Archive shell composition
+- Loss state styling with semantic tokens
+
+**Total**: 40 items requiring no action, documented for context
+
+---
+
+**PR #61 Summary**:
+
+- **Fixed Immediately (P0)**: 2 critical issues (HintIndicator crash, missing utility class)
+- **High Priority (P1)**: 18 items → 11.5h effort (semantic tokens, type safety, cleanup)
+- **Medium Priority (P2)**: 28 items → 18.5h effort (tests, a11y, docs, architecture)
+- **Acknowledged**: 40 items of positive feedback
+
+**Recommended Next Steps**:
+
+1. Complete semantic token migration (4h) - finish design system goals
+2. Address type safety improvements (1h) - prevent runtime errors
+3. Expand test coverage (9.5h) - protect new components
+4. Accessibility refinements (4h) - WCAG AA compliance
+
+---
+
 ## Soon (Exploring, 3-6 months)
 
 ### [PRODUCT] Social Leaderboards & Competition System

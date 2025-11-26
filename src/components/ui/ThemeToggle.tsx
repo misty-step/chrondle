@@ -47,9 +47,9 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = "", size =
       whileHover={{ scale: 1.05 }}
       onClick={handleClick}
       className={cn(
-        // Base button styles - fully rounded ghost button
+        // Base button styles - angular archival aesthetic
         buttonSize,
-        "rounded-full",
+        "rounded-sm",
         "focus:ring-ring focus:ring-2 focus:ring-offset-2 focus:outline-none",
         "transition-colors duration-200",
         "flex items-center justify-center",
@@ -81,17 +81,17 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = "", size =
         {/* Always render Sun icon initially to prevent hydration mismatch */}
         {/* The animation and appearance will update after mount */}
         {!isMounted ? (
-          <Sun className={cn(iconSize, "text-foreground")} />
+          <Sun className={cn(iconSize, "text-body-primary")} />
         ) : currentTheme === "dark" ? (
-          <Moon className={cn(iconSize, "text-foreground")} />
+          <Moon className={cn(iconSize, "text-body-primary")} />
         ) : (
-          <Sun className={cn(iconSize, "text-foreground")} />
+          <Sun className={cn(iconSize, "text-body-primary")} />
         )}
       </motion.div>
 
-      {/* Subtle hover effect overlay - perfect circle */}
+      {/* Subtle hover effect overlay - angular archival */}
       <motion.div
-        className="bg-primary/10 absolute inset-0 rounded-full opacity-0"
+        className="bg-primary/10 absolute inset-0 rounded-sm opacity-0"
         whileHover={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
         aria-hidden="true"

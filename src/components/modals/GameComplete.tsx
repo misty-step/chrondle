@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 
 import { formatYear, pluralize } from "@/lib/displayFormatting";
 import { SCORING_CONSTANTS } from "@/lib/scoring";
@@ -9,7 +9,7 @@ import type { RangeGuess } from "@/types/range";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/Separator";
-import { Target, Ruler, Lightbulb, Award } from "lucide-react";
+import { Target, Ruler, Lightbulb, Award, ChevronDown } from "lucide-react";
 import { RangeProximity } from "@/components/game/RangeProximity";
 
 interface GameCompleteProps {
@@ -114,7 +114,7 @@ function RangeSummary({ range, index }: { range: RangeGuess; index: number }) {
   const contained = range.score > 0;
 
   return (
-    <div className="border-border/40 bg-background/80 rounded-xl border p-3">
+    <div className="border-border/40 bg-surface-elevated rounded-sm border p-3">
       <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs font-medium tracking-wide uppercase">
         <span>Range {index + 1}</span>
         <span className={contained ? "text-green-600" : "text-rose-500"}>
@@ -211,27 +211,25 @@ export function GameComplete({
 
   const windowYears = primaryRange ? primaryRange.end - primaryRange.start + 1 : 0;
 
+  // Progressive disclosure - details collapsed by default
+  const [showDetails, setShowDetails] = useState(false);
+
   return (
-    <section
-      className={cn(
-        "border-border/60 bg-card/80 rounded-2xl border p-5 shadow-lg backdrop-blur",
-        className,
-      )}
-    >
+    <section className={cn("border-border/60 bg-card rounded-sm border p-5 shadow-lg", className)}>
       <div className="mb-5 flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] sm:items-stretch">
-          <div className="border-border/40 bg-background/70 rounded-xl border p-4 shadow-inner">
+          <div className="border-border/40 bg-surface-elevated rounded-sm border p-4 shadow-inner">
             <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
               Game Summary
             </p>
             <h3 className="text-foreground text-2xl font-bold">{outcomeCopy.title}</h3>
           </div>
 
-          <div className="border-border/40 bg-primary/5 rounded-xl border p-4 text-right shadow-sm">
+          <div className="border-border/40 bg-primary/5 rounded-sm border p-4 text-right shadow-sm">
             <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
               Total Score
             </p>
-            <p className="text-primary text-3xl leading-tight font-black">
+            <p className="text-body-primary text-3xl leading-tight font-black">
               {totalScore.toLocaleString()} pts
             </p>
             <p className="text-muted-foreground text-xs">
@@ -284,112 +282,129 @@ export function GameComplete({
         </RangeProximity>
       )}
 
-      <div className="border-border/40 bg-background/70 mt-4 rounded-xl border p-4">
-        <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
-          Score breakdown
-        </p>
+      {/* Progressive disclosure toggle */}
+      <button
+        onClick={() => setShowDetails(!showDetails)}
+        className="text-muted-foreground hover:text-foreground mt-4 flex w-full items-center justify-center gap-2 py-2 text-sm font-medium transition-colors"
+        aria-expanded={showDetails}
+      >
+        <span>{showDetails ? "Hide details" : "Show score breakdown"}</span>
+        <ChevronDown
+          className={cn("size-4 transition-transform duration-200", showDetails && "rotate-180")}
+          aria-hidden="true"
+        />
+      </button>
 
-        <div className="space-y-3 text-sm">
-          {/* Base potential */}
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Base potential</span>
-            <span className="font-mono">{BASE_POTENTIAL} pts</span>
-          </div>
+      {showDetails && (
+        <>
+          <div className="border-border/40 bg-surface-elevated mt-2 rounded-sm border p-4">
+            <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+              Score breakdown
+            </p>
 
-          <Separator />
-
-          {/* Hints with subtotal */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Lightbulb className="text-muted-foreground size-4" aria-hidden="true" />
-                <span className="text-muted-foreground">Hints revealed ({hintsUsed})</span>
+            <div className="space-y-3 text-sm">
+              {/* Base potential */}
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Base potential</span>
+                <span className="font-mono">{BASE_POTENTIAL} pts</span>
               </div>
-              <span className="font-mono">-{hintPenalty} pts</span>
-            </div>
-            <div className="flex items-center justify-end pl-6">
-              <span className="text-muted-foreground text-xs">Subtotal: </span>
-              <span className="ml-2 font-mono text-xs">{cappedScore} pts</span>
-            </div>
-          </div>
 
-          <Separator />
+              <Separator />
 
-          {/* Width calculation */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Ruler className="text-muted-foreground size-4" aria-hidden="true" />
-              <span className="text-muted-foreground">
-                Range width ({widthStats.width ? pluralize(widthStats.width, "year") : "—"})
-              </span>
-            </div>
-            <span className="font-mono">
-              {cappedScore} × {widthFactor.toFixed(2)} = {widthScore}
-            </span>
-          </div>
+              {/* Hints with subtotal */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="text-muted-foreground size-4" aria-hidden="true" />
+                    <span className="text-muted-foreground">Hints revealed ({hintsUsed})</span>
+                  </div>
+                  <span className="font-mono">-{hintPenalty} pts</span>
+                </div>
+                <div className="flex items-center justify-end pl-6">
+                  <span className="text-muted-foreground text-xs">Subtotal: </span>
+                  <span className="ml-2 font-mono text-xs">{cappedScore} pts</span>
+                </div>
+              </div>
 
-          <Separator />
+              <Separator />
 
-          {/* Containment */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Target className="text-muted-foreground size-4" aria-hidden="true" />
-              <span className="text-muted-foreground">Containment</span>
-            </div>
-            <span className={cn("font-medium", hasWon ? "text-emerald-600" : "text-rose-500")}>
-              {hasWon ? "Contained" : "Missed ×0"}
-            </span>
-          </div>
-
-          <Separator className="border-t-2" />
-
-          {/* Final score */}
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-2">
-              <Award className="size-5" aria-hidden="true" />
-              <span className="font-semibold tracking-wide uppercase">Final Score</span>
-            </div>
-            <span className="text-primary font-mono text-lg font-bold">
-              {displayedFinalScore} pts
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Puzzle Hints Section */}
-      {events && events.length > 0 && (
-        <div className="border-border/40 bg-background/70 mt-4 rounded-xl border p-4">
-          <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
-            Puzzle Hints
-          </p>
-          <ol className="space-y-2">
-            {events.map((event, index) => (
-              <li key={index} className="flex items-start gap-3 text-sm">
-                <span className="text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-medium dark:bg-amber-900/30">
-                  {index + 1}
+              {/* Width calculation */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Ruler className="text-muted-foreground size-4" aria-hidden="true" />
+                  <span className="text-muted-foreground">
+                    Range width ({widthStats.width ? pluralize(widthStats.width, "year") : "—"})
+                  </span>
+                </div>
+                <span className="font-mono">
+                  {cappedScore} × {widthFactor.toFixed(2)} = {widthScore}
                 </span>
-                <span className="text-foreground">{event}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
+              </div>
 
-      {earlierRanges.length > 0 && (
-        <div className="border-border/40 bg-background/60 mt-4 rounded-xl border p-4">
-          <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            Previous windows
-          </p>
-          <div className="mt-3 space-y-2">
-            {earlierRanges.map((range, index) => (
-              <RangeSummary
-                key={`${range.start}-${range.timestamp ?? index}`}
-                range={range}
-                index={index}
-              />
-            ))}
+              <Separator />
+
+              {/* Containment */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Target className="text-muted-foreground size-4" aria-hidden="true" />
+                  <span className="text-muted-foreground">Containment</span>
+                </div>
+                <span className={cn("font-medium", hasWon ? "text-emerald-600" : "text-rose-500")}>
+                  {hasWon ? "Contained" : "Missed ×0"}
+                </span>
+              </div>
+
+              <Separator className="border-t-2" />
+
+              {/* Final score */}
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center gap-2">
+                  <Award className="size-5" aria-hidden="true" />
+                  <span className="font-semibold tracking-wide uppercase">Final Score</span>
+                </div>
+                <span className="text-body-primary font-mono text-lg font-bold">
+                  {displayedFinalScore} pts
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
+
+          {/* Puzzle Hints Section */}
+          {events && events.length > 0 && (
+            <div className="border-border/40 bg-surface-elevated mt-4 rounded-sm border p-4">
+              <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+                Puzzle Hints
+              </p>
+              <ol className="space-y-2">
+                {events.map((event, index) => (
+                  <li key={index} className="flex items-start gap-3 text-sm">
+                    <span className="text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-medium dark:bg-amber-900/30">
+                      {index + 1}
+                    </span>
+                    <span className="text-foreground">{event}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {earlierRanges.length > 0 && (
+            <div className="border-border/40 bg-surface-elevated mt-4 rounded-sm border p-4">
+              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                Previous windows
+              </p>
+              <div className="mt-3 space-y-2">
+                {earlierRanges.map((range, index) => (
+                  <RangeSummary
+                    key={`${range.start}-${range.timestamp ?? index}`}
+                    range={range}
+                    index={index}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
