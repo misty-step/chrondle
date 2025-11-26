@@ -96,7 +96,7 @@ export function GamesGallery() {
             onClick={toggle}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
-            className="hover:bg-surface-hover cursor-pointer rounded-full p-1.5 transition-colors"
+            className="hover:bg-accent/10 cursor-pointer rounded-full p-1.5 transition-colors"
             aria-label={
               isMounted
                 ? `Switch to ${currentTheme === "dark" ? "light" : "dark"} mode`

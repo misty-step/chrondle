@@ -14,7 +14,7 @@ interface HintIndicatorProps {
  * Archival hint progress indicator with stamp marks and document unlock button.
  *
  * Shows filled stamps for revealed hints and empty frames for remaining hints.
- * Only displays the "Unlock Hint" button when more hints are available.
+ * Only displays the "Take Hint" button when more hints are available.
  *
  * Note: The first event is the puzzle itself (not a hint), so we show
  * totalHints - 1 marks (5 marks for 6 total events).
@@ -26,9 +26,10 @@ export function HintIndicator({
   disabled = false,
   className,
 }: HintIndicatorProps) {
-  // First event is always shown and doesn't count as a hint
-  const numberOfHintCircles = totalHints - 1;
-  const hasMoreHints = hintsRevealed < numberOfHintCircles;
+  // First event is always shown and doesn't count as a hint.
+  // Clamp to avoid negative counts if totalHints is misconfigured.
+  const numberOfHintMarks = Math.max(0, totalHints - 1);
+  const hasMoreHints = hintsRevealed < numberOfHintMarks;
 
   return (
     <div className={cn("flex items-center justify-end gap-4", className)}>
@@ -36,9 +37,9 @@ export function HintIndicator({
       <div
         className="flex gap-2"
         role="img"
-        aria-label={`${hintsRevealed} of ${numberOfHintCircles} hints revealed`}
+        aria-label={`${hintsRevealed} of ${numberOfHintMarks} hints revealed`}
       >
-        {Array.from({ length: numberOfHintCircles }).map((_, i) => (
+        {Array.from({ length: numberOfHintMarks }).map((_, i) => (
           <div
             key={i}
             className={cn(
