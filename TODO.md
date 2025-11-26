@@ -230,7 +230,7 @@
   - Log aggregate results: `{successCount, failureCount, failedYears, totalCost, totalDuration}`
   - Success criteria: Partial failures don't block other work, full observability into batch results
 
-- [~] **Update cron job to generate 10 years/day** (`convex/crons.ts`)
+- [x] **Update cron job to generate 10 years/day** (`convex/crons.ts`)
   - Change `targetCount` parameter from 3 to 10 in `generateDailyBatch`
   - Monitor generation_logs for increased throughput validation
   - Success criteria: Cron successfully generates 10 years within 2 AM UTC window (1 hour timeout)
