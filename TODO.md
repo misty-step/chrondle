@@ -216,7 +216,7 @@
   - Queue requests when rate limit exceeded, process in order
   - Success criteria: Never exceeds OpenRouter rate limits (60 req/min), smooth request distribution
 
-- [~] **Add batch processing to Orchestrator** (`convex/actions/eventGeneration/orchestrator.ts`)
+- [x] **Add batch processing to Orchestrator** (`convex/actions/eventGeneration/orchestrator.ts`)
 
   - Replace sequential `for (const year of years)` loop with `Promise.all(years.map(...))`
   - Wrap each generation in `rateLimiter.execute()`
