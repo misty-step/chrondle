@@ -12,11 +12,16 @@ import type { CandidateEvent, Era } from "./schemas";
 import { chooseWorkYears } from "../../lib/workSelector";
 import { logStageError, logStageSuccess } from "../../lib/logging";
 import { runAlertChecks } from "../../lib/alerts";
+import { RateLimiter } from "../../lib/rateLimiter";
 
 const MAX_TOTAL_ATTEMPTS = 4;
 const MAX_CRITIC_CYCLES = 2;
 const MIN_REQUIRED_EVENTS = 6;
 const MAX_SELECTED_EVENTS = 10;
+
+// Rate limiter for batch processing: 10 req/sec sustained, 20 burst capacity
+// Prevents overwhelming OpenRouter API (60 req/min limit)
+const rateLimiter = new RateLimiter({ tokensPerSecond: 10, burstCapacity: 20 });
 
 export const generateYearEvents = internalAction({
   args: {
@@ -41,38 +46,59 @@ export const generateDailyBatch = internalAction({
     targetCount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { years } = await chooseWorkYears(ctx, args.targetCount ?? 3);
-    const results = [] as Array<{ year: number; result: YearGenerationResult }>;
+    const { years } = await chooseWorkYears(ctx, args.targetCount ?? 10);
+    const startTime = Date.now();
 
-    for (const year of years) {
-      try {
-        const result = await executeYearGeneration(ctx, year);
-        results.push({ year, result });
-      } catch (error) {
-        logStageError("Orchestrator", error, { year });
-        results.push({
-          year,
-          result: {
-            status: "failed",
-            reason: "insufficient_quality",
-            metadata: {
-              attempts: 0,
-              criticCycles: 0,
-              revisions: 0,
-              deterministicFailures: 0,
+    // Process years in parallel with rate limiting
+    const results = await Promise.all(
+      years.map(async (year) => {
+        try {
+          // Wrap each generation in rate limiter to respect API limits
+          const result = await rateLimiter.execute(async () => executeYearGeneration(ctx, year));
+          return { year, result };
+        } catch (error) {
+          logStageError("Orchestrator", error, { year });
+          return {
+            year,
+            result: {
+              status: "failed" as const,
+              reason: "insufficient_quality" as const,
+              metadata: {
+                attempts: 0,
+                criticCycles: 0,
+                revisions: 0,
+                deterministicFailures: 0,
+              },
+              usage: createUsageSummary(),
             },
-            usage: createUsageSummary(),
-          },
-        });
-      }
-    }
+          };
+        }
+      }),
+    );
+
+    const duration = Date.now() - startTime;
 
     await runAlertChecks(ctx);
 
+    const successes = results.filter((entry) => entry.result.status === "success");
+    const failures = results.filter((entry) => entry.result.status === "failed");
+    const totalCost = results.reduce((sum, entry) => sum + entry.result.usage.total.costUsd, 0);
+
+    logStageSuccess("Orchestrator", "Batch completed", {
+      attemptedYears: years.length,
+      successCount: successes.length,
+      failureCount: failures.length,
+      totalCostUsd: totalCost,
+      durationMs: duration,
+      avgTimePerYear: Math.round(duration / years.length),
+    });
+
     return {
       attemptedYears: results.map((entry) => entry.year),
-      successes: results.filter((entry) => entry.result.status === "success").length,
-      failures: results.filter((entry) => entry.result.status === "failed").length,
+      successes: successes.length,
+      failures: failures.length,
+      totalCostUsd: totalCost,
+      durationMs: duration,
     };
   },
 });
