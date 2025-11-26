@@ -88,6 +88,7 @@ export const generateDailyBatch = internalAction({
       attemptedYears: years.length,
       successCount: successes.length,
       failureCount: failures.length,
+      failedYears: failures.map((f) => f.year),
       totalCostUsd: totalCost,
       durationMs: duration,
       avgTimePerYear: Math.round(duration / years.length),
