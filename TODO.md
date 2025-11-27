@@ -287,7 +287,7 @@
 
 **Context:** Current passive logging (generation_logs table) requires manual queries. New system provides real-time aggregation, windowing, and query interface for dashboards/alerts.
 
-- [ ] **Define unified Metrics interface** (`convex/lib/observability/metricsCollector.ts`)
+- [x] **Define unified Metrics interface** (`convex/lib/observability/metricsCollector.ts`)
 
   - Pool health: `{unusedEvents: number, daysUntilDepletion: number, coverageByEra: {...}, yearsReady: number}`
   - Cost tracking: `{costToday: number, cost7DayAvg: number, cost30Day: number, costPerEvent: number}`
