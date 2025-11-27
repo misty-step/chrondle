@@ -147,12 +147,80 @@ export async function generateCandidatesForYear(
   };
 }
 
+/**
+ * Builds enhanced prompt guidance for sparse years (ancient, BC, obscure modern).
+ * Provides historical context to improve generation success rate.
+ *
+ * @param year - Target year (negative for BCE)
+ * @param era - Era classification ("BCE" or "CE")
+ * @param digits - Number of digits in the year (1-4)
+ * @returns Additional context string or empty if not needed
+ */
+function buildEnhancedPrompt(year: number, era: Era, digits: number): string {
+  const absoluteYear = Math.abs(year);
+
+  // Ancient years (1-2 digits): Add historical context primer
+  if (digits <= 2 && era === "CE") {
+    const contexts = [
+      "Context: Early Roman Empire period. Focus on emperors, dynasties, and major figures.",
+      "Possible figures: Emperors (Augustus, Tiberius, Nero, Vespasian, Trajan), philosophers, military leaders.",
+      "Cultural movements: Early Christianity, Roman architecture, Silk Road trade.",
+      "Prefer figure-centric events: 'Emperor X ascends throne' rather than 'Rome experiences change'.",
+    ];
+    return "\n\n" + contexts.join("\n");
+  }
+
+  // BCE years: Enforce figure-centric approach
+  if (era === "BCE") {
+    const bcContexts = [
+      "Context: Ancient world - emphasize specific figures and dynasties.",
+      "Structure events around people: 'Caesar conquers Gaul' NOT 'Rome expands territory'.",
+      "Key civilizations: Egypt (pharaohs, dynasties), Greece (philosophers, city-states), Rome (consuls, generals), Persia (kings), China (dynasties, emperors).",
+      "Avoid passive constructions - use active voice with named individuals.",
+    ];
+
+    // Add specific dynasty/ruler context for different BCE periods
+    // Note: In BCE, larger numbers = earlier times (300 BCE is earlier than 30 BCE)
+    if (absoluteYear >= 30 && absoluteYear <= 300) {
+      bcContexts.push(
+        "Hellenistic period: Alexander's successors, Ptolemies, Seleucids, Roman Republic expansion.",
+      );
+    } else if (absoluteYear > 300 && absoluteYear <= 500) {
+      bcContexts.push(
+        "Classical period: Greek city-states, Persian Empire, Roman Republic early phase, Warring States (China).",
+      );
+    } else if (absoluteYear > 500) {
+      bcContexts.push(
+        "Early civilizations: Bronze Age, early dynasties, formation of major cultural centers.",
+      );
+    }
+
+    return "\n\n" + bcContexts.join("\n");
+  }
+
+  // Obscure modern years (sparse documentation periods): Provide decade context
+  // Years 1500-1700 CE tend to have sparse documentation outside major European events
+  if (era === "CE" && year >= 1500 && year <= 1700 && digits === 4) {
+    const decadeContexts = [
+      "Context: Early modern period - Renaissance, Reformation, Age of Exploration.",
+      "Major contemporaries: Consider events in Europe, Ottoman Empire, Ming/Qing China, Mughal India, Aztec/Inca empires.",
+      "Topics: Religious conflicts, voyages of exploration, scientific discoveries, artistic movements, dynastic changes.",
+      "If documentation is limited, prioritize known figures and major political changes over mundane events.",
+    ];
+    return "\n\n" + decadeContexts.join("\n");
+  }
+
+  // No enhancement needed for well-documented modern years (1700+)
+  return "";
+}
+
 function buildGeneratorUserPrompt(year: number, era: Era): string {
   const absoluteYear = Math.abs(year);
   const yearLabel = era === "BCE" ? absoluteYear : year;
   const digitCount = Math.min(4, Math.max(1, getDigitCount(year)));
+  const enhancedContext = buildEnhancedPrompt(year, era, digitCount);
 
-  return `Target year: ${yearLabel} (${era})
+  return `Target year: ${yearLabel} (${era})${enhancedContext}
 
 Generate 12-18 historical events that occurred in ${yearLabel} ${era}.
 
