@@ -117,17 +117,17 @@ export async function analyzeCoverageGaps(ctx: ActionCtx): Promise<CoverageGaps>
  * @returns Puzzle demand analysis
  */
 export async function analyzePuzzleDemand(ctx: ActionCtx): Promise<PuzzleDemand> {
-  const puzzles = await ctx.runQuery(api.puzzles.getAllPuzzles, {});
+  const puzzles = await ctx.runQuery(api.puzzles.queries.getAllPuzzles, {});
 
   const selectionFrequency = puzzles.reduce(
-    (acc, p) => acc.set(p.targetYear, (acc.get(p.targetYear) || 0) + 1),
+    (acc: Map<number, number>, p) => acc.set(p.targetYear, (acc.get(p.targetYear) || 0) + 1),
     new Map<number, number>(),
   );
 
   const highDemandYears = Array.from(selectionFrequency.entries())
-    .filter(([_, count]) => count > 1)
-    .sort(([_, countA], [__, countB]) => countB - countA)
-    .map(([year, _]) => year);
+    .filter(([_, count]: [number, number]) => count > 1)
+    .sort(([_, countA]: [number, number], [__, countB]: [number, number]) => countB - countA)
+    .map(([year, _]: [number, number]) => year);
 
   const demandByEra = puzzles.reduce(
     (acc, p) => {
