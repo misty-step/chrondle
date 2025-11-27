@@ -295,7 +295,7 @@
   - Generation latency: `{p50: number, p95: number, p99: number, avgDuration: number}`
   - Success criteria: Comprehensive observability covering all critical dimensions
 
-- [ ] **Implement MetricsCollector class**
+- [x] **Implement MetricsCollector class**
 
   - Method: `recordGeneration(result: GenerationResult): Promise<void>` - inserts into generation_logs, updates aggregates
   - Method: `recordPuzzleCreation(puzzle: Puzzle): Promise<void>` - tracks puzzle generation success
