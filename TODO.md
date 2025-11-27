@@ -252,7 +252,7 @@
   - Return: `{missingYears: number[], insufficientYears: number[], lowQualityYears: number[], coverageByEra: {...}}`
   - Success criteria: Accurately identifies 1,826 year gap, shows 24% coverage baseline
 
-- [ ] **Implement demand analysis function** (`analyzePuzzleDemand`)
+- [~] **Implement demand analysis function** (`analyzePuzzleDemand`)
 
   - Query puzzles table, count usage by year: `SELECT targetYear, COUNT(*) FROM puzzles GROUP BY targetYear`
   - Identify high-demand eras (years frequently selected for puzzles)

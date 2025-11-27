@@ -32,6 +32,20 @@ export interface CoverageGaps {
   coverageByEra: Record<EraBucket, number>;
 }
 
+/**
+ * Puzzle demand analysis result
+ */
+export interface PuzzleDemand {
+  /** Years used more than once in puzzles (sorted by frequency descending) */
+  highDemandYears: number[];
+
+  /** Total puzzle count by era */
+  demandByEra: Record<EraBucket, number>;
+
+  /** Map of year → number of puzzles using that year */
+  selectionFrequency: Map<number, number>;
+}
+
 // Year range for puzzle generation
 const YEAR_RANGE = { start: -776, end: 2008 };
 const MIN_EVENTS_PER_YEAR = 6;
@@ -91,4 +105,37 @@ export async function analyzeCoverageGaps(ctx: ActionCtx): Promise<CoverageGaps>
     insufficientYears,
     coverageByEra,
   };
+}
+
+/**
+ * Analyze puzzle demand patterns to identify high-value years.
+ *
+ * Queries historical puzzle usage and identifies which years are most
+ * frequently selected, broken down by era, to guide strategic work selection.
+ *
+ * @param ctx - Action context for running queries
+ * @returns Puzzle demand analysis
+ */
+export async function analyzePuzzleDemand(ctx: ActionCtx): Promise<PuzzleDemand> {
+  const puzzles = await ctx.runQuery(api.puzzles.getAllPuzzles, {});
+
+  const selectionFrequency = puzzles.reduce(
+    (acc, p) => acc.set(p.targetYear, (acc.get(p.targetYear) || 0) + 1),
+    new Map<number, number>(),
+  );
+
+  const highDemandYears = Array.from(selectionFrequency.entries())
+    .filter(([_, count]) => count > 1)
+    .sort(([_, countA], [__, countB]) => countB - countA)
+    .map(([year, _]) => year);
+
+  const demandByEra = puzzles.reduce(
+    (acc, p) => {
+      acc[getEraBucket(p.targetYear)]++;
+      return acc;
+    },
+    { ancient: 0, medieval: 0, modern: 0 } as Record<EraBucket, number>,
+  );
+
+  return { highDemandYears, demandByEra, selectionFrequency };
 }
