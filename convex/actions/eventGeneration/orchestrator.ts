@@ -9,7 +9,7 @@ import { critiqueCandidatesForYear } from "./critic";
 import type { CritiqueResult } from "./schemas";
 import { reviseCandidatesForYear } from "./reviser";
 import type { CandidateEvent, Era } from "./schemas";
-import { chooseWorkYears } from "../../lib/workSelector";
+import { selectWork } from "../../lib/coverageOrchestrator";
 import { logStageError, logStageSuccess } from "../../lib/logging";
 import { runAlertChecks } from "../../lib/alerts";
 import { RateLimiter } from "../../lib/rateLimiter";
@@ -46,12 +46,20 @@ export const generateDailyBatch = internalAction({
     targetCount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { years } = await chooseWorkYears(ctx, args.targetCount ?? 10);
+    const strategy = await selectWork(ctx, args.targetCount ?? 10);
     const startTime = Date.now();
+
+    // Log strategy used
+    logStageSuccess("Orchestrator", "Coverage strategy selected", {
+      yearsSelected: strategy.targetYears.length,
+      selectedYears: strategy.targetYears,
+      priority: strategy.priority,
+      eraBalance: strategy.eraBalance,
+    });
 
     // Process years in parallel with rate limiting
     const results = await Promise.all(
-      years.map(async (year) => {
+      strategy.targetYears.map(async (year) => {
         try {
           // Wrap each generation in rate limiter to respect API limits
           const result = await rateLimiter.execute(async () => executeYearGeneration(ctx, year));
@@ -85,13 +93,13 @@ export const generateDailyBatch = internalAction({
     const totalCost = results.reduce((sum, entry) => sum + entry.result.usage.total.costUsd, 0);
 
     logStageSuccess("Orchestrator", "Batch completed", {
-      attemptedYears: years.length,
+      attemptedYears: strategy.targetYears.length,
       successCount: successes.length,
       failureCount: failures.length,
       failedYears: failures.map((f) => f.year),
       totalCostUsd: totalCost,
       durationMs: duration,
-      avgTimePerYear: Math.round(duration / years.length),
+      avgTimePerYear: Math.round(duration / strategy.targetYears.length),
     });
 
     return {
