@@ -259,7 +259,7 @@
   - Return: `{highDemandYears: number[], demandByEra: {...}, selectionFrequency: Map<number, number>}`
   - Success criteria: Reveals modern years (1900-2000) have highest puzzle demand
 
-- [ ] **Implement demand-aware work selection function** (`selectWork`)
+- [x] **Implement demand-aware work selection function** (`selectWork`)
 
   - Accept: `count: number` (how many years to select)
   - Allocate: 80% to high-demand missing/insufficient years, 20% to strategic coverage (ensure all eras represented)
