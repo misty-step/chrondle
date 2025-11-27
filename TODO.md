@@ -273,7 +273,7 @@
   - Log strategy used: which years selected, why, expected cost
   - Success criteria: Daily generation focuses on high-value years, 90% coverage achieved in 6 months
 
-- [ ] **Add enhanced prompts for sparse years** (`buildEnhancedPrompt` function)
+- [x] **Add enhanced prompts for sparse years** (`buildEnhancedPrompt` function)
   - For ancient years (1-2 digit): Add historical context primer (dynasties, rulers, major figures)
   - For BC years: Enforce figure-centric approach ("Caesar [action]" vs "Rome experiences [event]")
   - For obscure modern years: Provide decade context and major global events nearby
