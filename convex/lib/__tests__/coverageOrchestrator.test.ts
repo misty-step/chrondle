@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import { analyzeCoverageGaps, analyzePuzzleDemand } from "../coverageOrchestrator";
+import { analyzeCoverageGaps, analyzePuzzleDemand, selectWork } from "../coverageOrchestrator";
 import type { ActionCtx } from "../../_generated/server";
 
 // Mock ActionCtx with runQuery
@@ -332,6 +332,237 @@ describe("analyzePuzzleDemand", () => {
       expect(result.demandByEra.modern).toBeGreaterThan(result.demandByEra.medieval);
       expect(result.demandByEra.modern).toBeGreaterThan(result.demandByEra.ancient);
       expect(result.demandByEra.modern).toBeGreaterThan(10);
+    });
+  });
+});
+
+describe("selectWork", () => {
+  let mockCtx: ActionCtx;
+  let mockRunQuery: Mock;
+
+  beforeEach(() => {
+    mockCtx = createMockCtx();
+    mockRunQuery = mockCtx.runQuery as Mock;
+  });
+
+  describe("80/20 allocation strategy", () => {
+    it("allocates 80% to high-demand gaps when available", async () => {
+      // Arrange: 10 missing years, 5 are high-demand
+      mockRunQuery
+        .mockResolvedValueOnce([
+          // getAllYearsWithStats - only 5 years with events
+          { year: 100, total: 10, used: 0, available: 10 },
+          { year: 200, total: 10, used: 0, available: 10 },
+          { year: 300, total: 10, used: 0, available: 10 },
+          { year: 400, total: 10, used: 0, available: 10 },
+          { year: 500, total: 10, used: 0, available: 10 },
+        ])
+        .mockResolvedValueOnce([
+          // getAllPuzzles - high demand for specific years
+          { targetYear: 1000 },
+          { targetYear: 1000 }, // 1000 used 3x
+          { targetYear: 1000 },
+          { targetYear: 1500 },
+          { targetYear: 1500 }, // 1500 used 2x
+          { targetYear: 2000 }, // 2000 used 1x (not high-demand)
+        ]);
+
+      // Act: Request 10 years
+      const result = await selectWork(mockCtx, 10);
+
+      // Assert: Should allocate 8 to high-demand (80%), 2 to strategic (20%)
+      // High-demand gaps: years that are missing AND in high-demand list
+      const highDemandInGaps = result.targetYears.filter((y) => y === 1000 || y === 1500);
+      expect(highDemandInGaps.length).toBeGreaterThanOrEqual(2); // At least the 2 high-demand gaps
+    });
+
+    it("selects exactly count years when sufficient candidates", async () => {
+      // Arrange: Many missing years
+      mockRunQuery
+        .mockResolvedValueOnce([]) // No events yet
+        .mockResolvedValueOnce([{ targetYear: 1900 }, { targetYear: 1900 }]); // Some demand
+
+      // Act
+      const result = await selectWork(mockCtx, 5);
+
+      // Assert
+      expect(result.targetYears).toHaveLength(5);
+    });
+  });
+
+  describe("Era diversity", () => {
+    it("ensures at least 1 year from each era when possible", async () => {
+      // Arrange: Missing years in all eras
+      mockRunQuery
+        .mockResolvedValueOnce([]) // No events - all years missing
+        .mockResolvedValueOnce([]); // No puzzles yet
+
+      // Act: Request 5 years
+      const result = await selectWork(mockCtx, 5);
+
+      // Assert: Should have representation from all 3 eras
+      expect(result.eraBalance.ancient).toBeGreaterThanOrEqual(1);
+      expect(result.eraBalance.medieval).toBeGreaterThanOrEqual(1);
+      expect(result.eraBalance.modern).toBeGreaterThanOrEqual(1);
+    });
+
+    it("fills from lowest-coverage era first", async () => {
+      // Arrange: Ancient era has 0% coverage, modern has 50%
+      const modernYears = [];
+      for (let year = 1500; year <= 1750; year++) {
+        modernYears.push({ year, total: 10, used: 0, available: 10 });
+      }
+
+      mockRunQuery
+        .mockResolvedValueOnce(modernYears) // Modern era well-covered
+        .mockResolvedValueOnce([]); // No puzzle demand
+
+      // Act: Request 10 years
+      const result = await selectWork(mockCtx, 10);
+
+      // Assert: Ancient should get priority (lowest coverage)
+      expect(result.eraBalance.ancient).toBeGreaterThan(result.eraBalance.modern);
+    });
+  });
+
+  describe("Priority determination", () => {
+    it("returns missing priority when high-demand gaps exist", async () => {
+      // Arrange: High-demand year is missing
+      mockRunQuery
+        .mockResolvedValueOnce([]) // All years missing
+        .mockResolvedValueOnce([
+          { targetYear: 1969 },
+          { targetYear: 1969 }, // High-demand year
+        ]);
+
+      // Act
+      const result = await selectWork(mockCtx, 3);
+
+      // Assert
+      expect(result.priority).toBe("missing");
+    });
+
+    it("returns low_quality priority when no high-demand gaps", async () => {
+      // Arrange: All high-demand years already have events
+      mockRunQuery
+        .mockResolvedValueOnce([
+          { year: 1969, total: 10, used: 0, available: 10 }, // High-demand exists
+        ])
+        .mockResolvedValueOnce([
+          { targetYear: 1969 },
+          { targetYear: 1969 }, // High-demand
+        ]);
+
+      // Act
+      const result = await selectWork(mockCtx, 3);
+
+      // Assert
+      expect(result.priority).toBe("low_quality");
+    });
+  });
+
+  describe("Edge cases", () => {
+    it("handles count of 1", async () => {
+      // Arrange
+      mockRunQuery
+        .mockResolvedValueOnce([]) // All missing
+        .mockResolvedValueOnce([]);
+
+      // Act
+      const result = await selectWork(mockCtx, 1);
+
+      // Assert
+      expect(result.targetYears).toHaveLength(1);
+    });
+
+    it("handles fewer candidates than requested count", async () => {
+      // Arrange: Only 2 insufficient years, all others have sufficient events
+      const allYears = [];
+      for (let year = -776; year <= 2008; year++) {
+        if (year === 1000 || year === 2000) {
+          allYears.push({ year, total: 3, used: 0, available: 3 }); // Insufficient
+        } else {
+          allYears.push({ year, total: 10, used: 0, available: 10 }); // Sufficient
+        }
+      }
+
+      mockRunQuery.mockResolvedValueOnce(allYears).mockResolvedValueOnce([]);
+
+      // Act: Request 10 years
+      const result = await selectWork(mockCtx, 10);
+
+      // Assert: Can only select the 2 insufficient years
+      expect(result.targetYears.length).toBe(2);
+      expect(result.targetYears).toContain(1000);
+      expect(result.targetYears).toContain(2000);
+    });
+
+    it("returns valid era balance", async () => {
+      // Arrange
+      mockRunQuery
+        .mockResolvedValueOnce([]) // All missing
+        .mockResolvedValueOnce([]);
+
+      // Act
+      const result = await selectWork(mockCtx, 5);
+
+      // Assert: Era balance should sum to total years
+      const totalInBalance =
+        result.eraBalance.ancient + result.eraBalance.medieval + result.eraBalance.modern;
+      expect(totalInBalance).toBe(result.targetYears.length);
+    });
+  });
+
+  describe("Integration: Success criteria", () => {
+    it("prioritizes modern year gaps when they have high demand", async () => {
+      // Arrange: Modern years are missing but high-demand
+      const medievalYears = [];
+      for (let year = 1000; year <= 1200; year++) {
+        medievalYears.push({ year, total: 10, used: 0, available: 10 });
+      }
+
+      mockRunQuery
+        .mockResolvedValueOnce(medievalYears) // Medieval covered, modern missing
+        .mockResolvedValueOnce([
+          // High demand for modern years
+          { targetYear: 1900 },
+          { targetYear: 1900 },
+          { targetYear: 1945 },
+          { targetYear: 1945 },
+          { targetYear: 2000 },
+          { targetYear: 2000 },
+        ]);
+
+      // Act
+      const result = await selectWork(mockCtx, 10);
+
+      // Assert: 80% (8 years) should be high-demand modern, 20% (2 years) strategic (ancient + medieval for era balance)
+      // So we expect at least 8 modern years from high-demand allocation
+      const modernYears = result.targetYears.filter((y) => y >= 1500);
+      expect(modernYears).toContain(1900);
+      expect(modernYears).toContain(1945);
+      expect(modernYears).toContain(2000);
+      expect(modernYears.length).toBeGreaterThanOrEqual(3); // At least the 3 high-demand modern years
+    });
+
+    it("maintains era diversity even with high modern demand", async () => {
+      // Arrange: All eras have missing years, modern has highest demand
+      mockRunQuery
+        .mockResolvedValueOnce([]) // All missing
+        .mockResolvedValueOnce([
+          // Modern demand
+          { targetYear: 1900 },
+          { targetYear: 1900 },
+          { targetYear: 2000 },
+          { targetYear: 2000 },
+        ]);
+
+      // Act
+      const result = await selectWork(mockCtx, 10);
+
+      // Assert: Strategic allocation ensures diversity
+      expect(result.eraBalance.ancient).toBeGreaterThanOrEqual(1);
+      expect(result.eraBalance.medieval).toBeGreaterThanOrEqual(1);
     });
   });
 });
