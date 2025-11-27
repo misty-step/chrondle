@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 
 import { ConvexHttpClient } from "convex/browser";
-import { internal } from "../convex/_generated/api.js";
+import { api } from "../convex/_generated/api.js";
 import dotenv from "dotenv";
 import { z } from "zod";
 import fs from "fs/promises";
@@ -74,7 +74,7 @@ async function backfill() {
     cache_system_prompt: true,
   });
 
-  const missing = await convex.query(internal.events.getEventsMissingMetadata, {
+  const missing = await convex.query(api.events.getEventsMissingMetadataPublic, {
     limit: 1000,
   });
 
@@ -110,7 +110,7 @@ async function backfill() {
     for (let j = 0; j < batch.length; j += 1) {
       const meta = items[j];
       const event = batch[j];
-      await convex.mutation(internal.events.updateEventMetadata, {
+      await convex.mutation(api.events.updateEventMetadataPublic, {
         eventId: event._id,
         metadata: meta,
       });
