@@ -267,7 +267,7 @@
   - Return: `CoverageStrategy` with selected years and rationale
   - Success criteria: Prioritizes filling modern year gaps first, maintains era diversity
 
-- [ ] **Replace workSelector with coverageOrchestrator in Orchestrator**
+- [x] **Replace workSelector with coverageOrchestrator in Orchestrator**
 
   - Update `generateDailyBatch` to call `coverageOrchestrator.selectWork(10)`
   - Log strategy used: which years selected, why, expected cost
