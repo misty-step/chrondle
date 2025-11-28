@@ -9,8 +9,9 @@ import { OrderGameBoard } from "@/components/order/OrderGameBoard";
 import { GameModeLayout } from "@/components/GameModeLayout";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { copyOrderShareTextToClipboard, type OrderShareResult } from "@/lib/order/shareCard";
+import { copyGolfShareTextToClipboard } from "@/lib/order/shareCard";
 import { logger } from "@/lib/logger";
+import type { ReadyState } from "@/types/orderGameState";
 
 interface OrderGameIslandProps {
   preloadedPuzzle: Preloaded<typeof api.orderPuzzles.getDailyOrderPuzzle>;
@@ -18,7 +19,7 @@ interface OrderGameIslandProps {
 
 export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
   const puzzle = usePreloadedQuery(preloadedPuzzle);
-  const { gameState, reorderEvents, takeHint, commitOrdering } = useOrderGame(undefined, puzzle);
+  const { gameState, reorderEvents, submitAttempt } = useOrderGame(undefined, puzzle);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   if (gameState.status === "loading-puzzle") {
@@ -38,7 +39,7 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
         intent="order"
         stage="hydrating"
         message="Preparing your Order session…"
-        subMessage="Securing your streak and restoring hints"
+        subMessage="Restoring your progress"
       />
     );
   }
@@ -57,15 +58,10 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
   if (gameState.status === "completed") {
     const handleShare = async () => {
       try {
-        const results: OrderShareResult[] = gameState.correctOrder.map((id, idx) =>
-          gameState.finalOrder[idx] === id ? "correct" : "incorrect",
-        );
-
-        await copyOrderShareTextToClipboard({
-          dateLabel: gameState.puzzle.date,
+        await copyGolfShareTextToClipboard({
           puzzleNumber: gameState.puzzle.puzzleNumber,
-          results,
           score: gameState.score,
+          attempts: gameState.attempts,
         });
 
         setShareFeedback("Copied to clipboard!");
@@ -100,10 +96,9 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
     <GameModeLayout mode="order" puzzleNumber={gameState.puzzle.puzzleNumber} isArchive={false}>
       <LayoutContainer className="flex w-full max-w-4xl flex-col gap-6">
         <OrderGameBoard
-          gameState={gameState as import("@/types/orderGameState").ReadyState}
+          gameState={gameState as ReadyState}
           reorderEvents={reorderEvents}
-          takeHint={takeHint}
-          commitOrdering={commitOrdering}
+          submitAttempt={submitAttempt}
         />
       </LayoutContainer>
     </GameModeLayout>

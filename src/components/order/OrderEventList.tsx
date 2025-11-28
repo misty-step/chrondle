@@ -21,32 +21,28 @@ import {
   sortableKeyboardCoordinates,
   arrayMove,
 } from "@dnd-kit/sortable";
-import type { OrderEvent, OrderHint } from "@/types/orderGameState";
+import type { OrderEvent, PositionFeedback } from "@/types/orderGameState";
 import { DraggableEventCard, OrderEventCardOverlay } from "@/components/order/DraggableEventCard";
 
 interface OrderEventListProps {
   events: OrderEvent[];
   ordering: string[];
   onOrderingChange: (ordering: string[], movedId?: string) => void;
-  lockedPositions?: Map<string, number>;
-  hintsByEvent?: Record<string, OrderHint[]>;
+  /** Optional per-position feedback from last attempt */
+  feedback?: PositionFeedback[];
 }
 
 export function OrderEventList({
   events,
   ordering,
   onOrderingChange,
-  lockedPositions = new Map(),
-  hintsByEvent = {},
+  feedback,
 }: OrderEventListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        // Increased from 4px - requires more deliberate movement
         distance: 8,
-        // 150ms delay prevents accidental drag when scrolling on mobile
         delay: 150,
-        // Allow small movements during delay without canceling
         tolerance: 5,
       },
     }),
@@ -89,7 +85,7 @@ export function OrderEventList({
       return;
     }
 
-    setLocalOrder((prev) => reorder(prev, String(active.id), String(over.id), lockedPositions));
+    setLocalOrder((prev) => reorder(prev, String(active.id), String(over.id)));
   };
 
   const handleDragCancel = (_event: DragCancelEvent) => {
@@ -124,8 +120,6 @@ export function OrderEventList({
 
   const activeEvent = activeId ? eventMap.get(activeId) : null;
   const activeIndex = activeId ? localOrder.indexOf(activeId) : -1;
-  const activeHints = activeEvent ? (hintsByEvent[activeEvent.id] ?? []) : [];
-  const activeLocked = activeEvent ? lockedPositions.has(activeEvent.id) : false;
 
   return (
     <div className="relative">
@@ -151,9 +145,7 @@ export function OrderEventList({
                   key={event.id}
                   event={event}
                   index={index}
-                  isLocked={lockedPositions.has(event.id)}
-                  activeHints={hintsByEvent[event.id] ?? []}
-                  allEvents={events}
+                  feedback={feedback?.[index]}
                 />
               );
             })}
@@ -164,9 +156,6 @@ export function OrderEventList({
             <OrderEventCardOverlay
               event={activeEvent}
               index={activeIndex === -1 ? 0 : activeIndex}
-              activeHints={activeHints}
-              allEvents={events}
-              isLocked={activeLocked}
             />
           ) : null}
         </DragOverlay>
@@ -178,52 +167,13 @@ export function OrderEventList({
   );
 }
 
-function reorder(
-  items: string[],
-  activeId: string,
-  overId: string,
-  lockedPositions?: Map<string, number>,
-): string[] {
+function reorder(items: string[], activeId: string, overId: string): string[] {
   const oldIndex = items.indexOf(activeId);
   const newIndex = items.indexOf(overId);
   if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
     return items;
   }
-
-  // Prevent dragging locked events (defensive check - already disabled in UI)
-  if (lockedPositions && lockedPositions.has(activeId)) {
-    return items;
-  }
-
-  // Perform the move
-  let result = arrayMove(items, oldIndex, newIndex);
-
-  // Restore all locked items to their locked positions
-  if (lockedPositions && lockedPositions.size > 0) {
-    result = restoreLockedPositions(result, lockedPositions);
-  }
-
-  return result;
-}
-
-function restoreLockedPositions(items: string[], lockedPositions: Map<string, number>): string[] {
-  // eslint-disable-next-line prefer-const -- mutated via splice operations
-  let result = [...items];
-
-  // Sort locked positions to process them in order (prevents cascading shifts)
-  const locks = Array.from(lockedPositions.entries()).sort(([, posA], [, posB]) => posA - posB);
-
-  for (const [eventId, lockedPosition] of locks) {
-    const currentIndex = result.indexOf(eventId);
-    if (currentIndex !== -1 && currentIndex !== lockedPosition) {
-      // Remove from current position
-      const [movedEvent] = result.splice(currentIndex, 1);
-      // Insert at locked position
-      result.splice(lockedPosition, 0, movedEvent);
-    }
-  }
-
-  return result;
+  return arrayMove(items, oldIndex, newIndex);
 }
 
 function ordersMatch(a: string[], b: string[]): boolean {

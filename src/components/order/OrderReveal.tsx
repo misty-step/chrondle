@@ -4,55 +4,119 @@ import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Check, Share2 } from "lucide-react";
 import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
-import { getPerformanceTier } from "@/lib/order/performanceTier";
-import { ScoreTooltip } from "./ScoreTooltip";
+import { getGolfTerm, getGolfEmoji, type GolfScore, type OrderEvent } from "@/types/orderGameState";
 import { ComparisonGrid } from "./ComparisonGrid";
-import type { OrderEvent, OrderScore } from "../../types/orderGameState";
 
 interface OrderRevealProps {
   events: OrderEvent[];
   finalOrder: string[];
   correctOrder: string[];
-  score: OrderScore;
+  score: GolfScore;
   puzzleNumber: number;
   onShare?: () => void;
 }
 
 /**
- * Get gradient classes for performance tier banner (matches Classic mode pattern)
+ * Golf-style terminology display.
  */
-function getTierGradientClasses(tier: "perfect" | "excellent" | "good" | "fair" | "challenging") {
-  switch (tier) {
-    case "perfect":
+function getScoreDisplay(score: GolfScore): {
+  title: string;
+  message: string;
+  emoji: string;
+} {
+  const term = getGolfTerm(score.relativeToPar);
+  const emoji = getGolfEmoji(term);
+
+  switch (term) {
+    case "hole-in-one":
       return {
-        background: "bg-gradient-to-br from-green-500/5 to-green-600/10",
-        border: "border-green-500/20",
-        textColor: "text-green-700 dark:text-green-300",
-        labelColor: "text-green-600 dark:text-green-400",
+        title: "Hole in One!",
+        message: "Perfect chronological intuition!",
+        emoji,
       };
-    case "excellent":
+    case "eagle":
       return {
-        background: "bg-gradient-to-br from-amber-500/5 to-amber-600/10",
-        border: "border-amber-500/20",
-        textColor: "text-amber-700 dark:text-amber-300",
-        labelColor: "text-amber-600 dark:text-amber-400",
+        title: "Eagle!",
+        message: "Exceptional historical knowledge!",
+        emoji,
       };
-    case "good":
+    case "birdie":
       return {
-        background: "bg-gradient-to-br from-blue-500/5 to-blue-600/10",
-        border: "border-blue-500/20",
-        textColor: "text-blue-700 dark:text-blue-300",
-        labelColor: "text-blue-600 dark:text-blue-400",
+        title: "Birdie!",
+        message: "Great chronological sense!",
+        emoji,
       };
-    case "fair":
-    case "challenging":
+    case "par":
       return {
-        background: "bg-gradient-to-br from-red-500/5 to-red-600/10",
-        border: "border-red-500/20",
-        textColor: "text-red-700 dark:text-red-300",
-        labelColor: "text-red-600 dark:text-red-400",
+        title: "Par",
+        message: "Solid timeline ordering!",
+        emoji,
+      };
+    case "bogey":
+      return {
+        title: "Bogey",
+        message: "Close to par - nice work!",
+        emoji,
+      };
+    case "double-bogey":
+      return {
+        title: "Double Bogey",
+        message: "A challenging puzzle!",
+        emoji,
+      };
+    case "triple-bogey":
+      return {
+        title: "Triple Bogey",
+        message: "This one was tricky!",
+        emoji,
+      };
+    case "over-par":
+      return {
+        title: `+${score.relativeToPar}`,
+        message: "A real challenge - but you solved it!",
+        emoji,
       };
   }
+}
+
+/**
+ * Get gradient classes for golf score tier.
+ */
+function getScoreGradientClasses(relativeToPar: number) {
+  if (relativeToPar <= -2) {
+    // Eagle or better - gold/yellow
+    return {
+      background: "bg-gradient-to-br from-yellow-500/5 to-amber-600/10",
+      border: "border-yellow-500/20",
+      textColor: "text-yellow-700 dark:text-yellow-300",
+      labelColor: "text-yellow-600 dark:text-yellow-400",
+    };
+  }
+  if (relativeToPar <= 0) {
+    // Birdie or par - green
+    return {
+      background: "bg-gradient-to-br from-green-500/5 to-green-600/10",
+      border: "border-green-500/20",
+      textColor: "text-green-700 dark:text-green-300",
+      labelColor: "text-green-600 dark:text-green-400",
+    };
+  }
+  if (relativeToPar <= 2) {
+    // Bogey/double bogey - blue
+    return {
+      background: "bg-gradient-to-br from-blue-500/5 to-blue-600/10",
+      border: "border-blue-500/20",
+      textColor: "text-blue-700 dark:text-blue-300",
+      labelColor: "text-blue-600 dark:text-blue-400",
+    };
+  }
+  // Over par - red
+  return {
+    background: "bg-gradient-to-br from-red-500/5 to-red-600/10",
+    border: "border-red-500/20",
+    textColor: "text-red-700 dark:text-red-300",
+    labelColor: "text-red-600 dark:text-red-400",
+  };
 }
 
 export function OrderReveal({
@@ -66,13 +130,8 @@ export function OrderReveal({
   const prefersReducedMotion = useReducedMotion();
   const [isShared, setIsShared] = useState(false);
 
-  const accuracyPercent = useMemo(
-    () => Math.round((score.correctPairs / score.totalPairs) * 100),
-    [score.correctPairs, score.totalPairs],
-  );
-
-  const performanceTier = useMemo(() => getPerformanceTier(accuracyPercent), [accuracyPercent]);
-  const tierStyles = getTierGradientClasses(performanceTier.tier);
+  const scoreDisplay = useMemo(() => getScoreDisplay(score), [score]);
+  const tierStyles = getScoreGradientClasses(score.relativeToPar);
 
   const handleShareClick = async () => {
     if (isShared || !onShare) return;
@@ -80,7 +139,6 @@ export function OrderReveal({
     await onShare();
     setIsShared(true);
 
-    // Reset after 2 seconds
     setTimeout(() => {
       setIsShared(false);
     }, 2000);
@@ -88,7 +146,7 @@ export function OrderReveal({
 
   return (
     <div className="space-y-6">
-      {/* Performance Banner Card - Matches Classic win/loss banner pattern */}
+      {/* Performance Banner Card */}
       <motion.div
         className={`flex w-full items-center gap-4 rounded-sm border-2 ${tierStyles.border} ${tierStyles.background} shadow-hard p-6`}
         initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
@@ -97,26 +155,27 @@ export function OrderReveal({
           duration: msToSeconds(ANIMATION_DURATIONS.HINT_TRANSITION),
         }}
       >
-        {/* Left side: Performance message */}
+        {/* Left side: Score message */}
         <div className="flex flex-1 flex-col items-start">
           <div
             className={`mb-1 text-xs font-medium tracking-wide uppercase ${tierStyles.labelColor}`}
           >
-            Performance
+            {score.strokes} {score.strokes === 1 ? "Stroke" : "Strokes"} · Par {score.par}
           </div>
-          <div className={`text-2xl font-bold sm:text-3xl ${tierStyles.textColor}`}>
-            {performanceTier.title}
+          <div
+            className={`flex items-center gap-2 text-2xl font-bold sm:text-3xl ${tierStyles.textColor}`}
+          >
+            <span>{scoreDisplay.emoji}</span>
+            <span>{scoreDisplay.title}</span>
           </div>
-          <div className={`mt-1 text-sm ${tierStyles.labelColor}/80`}>
-            {performanceTier.message}
-          </div>
+          <div className={`mt-1 text-sm ${tierStyles.labelColor}/80`}>{scoreDisplay.message}</div>
         </div>
 
-        {/* Right side: Puzzle number badge */}
+        {/* Right side: Puzzle number */}
         <div className={`text-sm font-medium ${tierStyles.labelColor}`}>#{puzzleNumber}</div>
       </motion.div>
 
-      {/* Stats + Share Card - Matches Classic countdown/share card pattern */}
+      {/* Share Card */}
       <motion.div
         className="border-primary/20 from-primary/5 to-primary/10 shadow-hard flex w-full flex-col gap-6 rounded-sm border-2 bg-gradient-to-br p-6"
         initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
@@ -126,12 +185,15 @@ export function OrderReveal({
           delay: msToSeconds(ANIMATION_DURATIONS.PROXIMITY_DELAY),
         }}
       >
-        {/* Stats - Full width on top */}
-        <div>
-          <ScoreTooltip score={score} />
+        {/* Score breakdown */}
+        <div className="text-foreground">
+          <div className="text-muted-foreground text-sm">
+            Solved in <span className="font-semibold">{score.strokes}</span>{" "}
+            {score.strokes === 1 ? "attempt" : "attempts"}
+          </div>
         </div>
 
-        {/* Share button - Left-aligned below stats */}
+        {/* Share button */}
         {onShare && (
           <div className="flex justify-start">
             <motion.button

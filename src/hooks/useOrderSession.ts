@@ -2,14 +2,27 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Id } from "convex/_generated/dataModel";
-import type { OrderHint, OrderScore } from "@/types/orderGameState";
-import type { OrderSessionState } from "@/lib/deriveOrderGameState";
+import type { GolfScore, OrderAttempt } from "@/types/orderGameState";
 import { logger } from "@/lib/logger";
-import { serializeHint } from "@/lib/order/hintMerging";
 
-const ORDER_SESSION_PREFIX = "chrondle_order_session_";
+const ORDER_SESSION_PREFIX = "chrondle_order_session_v2_";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 const WRITE_DEBOUNCE_MS = 300;
+
+// =============================================================================
+// Session State Types
+// =============================================================================
+
+/**
+ * Client-side session state for Order game (golf mode).
+ * Stored in localStorage for anonymous users.
+ */
+export interface OrderSessionState {
+  ordering: string[];
+  attempts: OrderAttempt[];
+  completedAt: number | null;
+  score: GolfScore | null;
+}
 
 interface StoredOrderSession extends OrderSessionState {
   updatedAt: number;
@@ -18,17 +31,25 @@ interface StoredOrderSession extends OrderSessionState {
 interface UseOrderSessionReturn {
   state: OrderSessionState;
   setOrdering: (ordering: string[]) => void;
-  addHint: (hint: OrderHint) => void;
+  addAttempt: (attempt: OrderAttempt) => void;
+  markCompleted: (score: GolfScore) => void;
   resetSession: (ordering: string[]) => void;
-  markCommitted: (score: OrderScore) => void;
 }
+
+// =============================================================================
+// Default State
+// =============================================================================
 
 const DEFAULT_STATE: OrderSessionState = {
   ordering: [],
-  hints: [],
-  committedAt: null,
+  attempts: [],
+  completedAt: null,
   score: null,
 };
+
+// =============================================================================
+// Hook Implementation
+// =============================================================================
 
 export function useOrderSession(
   puzzleId: Id<"orderPuzzles"> | null,
@@ -109,20 +130,23 @@ export function useOrderSession(
     [updateState],
   );
 
-  const addHint = useCallback(
-    (hint: OrderHint) => {
-      updateState((prev) => {
-        const exists = prev.hints.some(
-          (existing) => serializeHint(existing) === serializeHint(hint),
-        );
-        if (exists) {
-          return prev;
-        }
-        return {
-          ...prev,
-          hints: prev.hints.concat(hint),
-        };
-      });
+  const addAttempt = useCallback(
+    (attempt: OrderAttempt) => {
+      updateState((prev) => ({
+        ...prev,
+        attempts: [...prev.attempts, attempt],
+      }));
+    },
+    [updateState],
+  );
+
+  const markCompleted = useCallback(
+    (score: GolfScore) => {
+      updateState((prev) => ({
+        ...prev,
+        completedAt: Date.now(),
+        score,
+      }));
     },
     [updateState],
   );
@@ -131,8 +155,8 @@ export function useOrderSession(
     (ordering: string[]) => {
       const resetState: OrderSessionState = {
         ordering,
-        hints: [],
-        committedAt: null,
+        attempts: [],
+        completedAt: null,
         score: null,
       };
       setState(resetState);
@@ -141,28 +165,21 @@ export function useOrderSession(
     [schedulePersist],
   );
 
-  const markCommitted = useCallback(
-    (score: OrderScore) => {
-      updateState((prev) => ({
-        ...prev,
-        committedAt: Date.now(),
-        score,
-      }));
-    },
-    [updateState],
-  );
-
   return useMemo(
     () => ({
       state,
       setOrdering,
-      addHint,
+      addAttempt,
+      markCompleted,
       resetSession,
-      markCommitted,
     }),
-    [state, setOrdering, addHint, resetSession, markCommitted],
+    [state, setOrdering, addAttempt, markCompleted, resetSession],
   );
 }
+
+// =============================================================================
+// Storage Helpers
+// =============================================================================
 
 function getStorageKey(puzzleId: Id<"orderPuzzles">): string {
   return `${ORDER_SESSION_PREFIX}${puzzleId}`;
@@ -189,8 +206,8 @@ function readSession(
 
     return {
       ordering: normalizeOrdering(parsed.ordering ?? [], baselineOrder),
-      hints: Array.isArray(parsed.hints) ? (parsed.hints as OrderHint[]) : [],
-      committedAt: typeof parsed.committedAt === "number" ? parsed.committedAt : null,
+      attempts: Array.isArray(parsed.attempts) ? parsed.attempts : [],
+      completedAt: typeof parsed.completedAt === "number" ? parsed.completedAt : null,
       score: parsed.score ?? null,
     };
   } catch (error) {

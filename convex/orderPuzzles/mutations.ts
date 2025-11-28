@@ -2,7 +2,6 @@ import { v } from "convex/values";
 import { internalMutation, mutation } from "../_generated/server";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
-import { scoreOrderSubmission } from "../lib/orderScoring";
 import {
   type OrderEventCandidate,
   type SelectionConfig,
@@ -73,20 +72,26 @@ import { withObservability } from "../lib/observability";
 import type { Id } from "../_generated/dataModel";
 
 /**
- * Validates a player's submission, recalculates the score server-side,
- * and persists the play for authenticated users.
+ * Golf mode: Persists a completed Order play with attempts and score.
  */
 export const submitOrderPlay = mutation({
   args: {
     puzzleId: v.id("orderPuzzles"),
     userId: v.id("users"),
     ordering: v.array(v.string()),
-    hints: v.array(v.string()),
-    clientScore: v.object({
-      totalScore: v.number(),
-      correctPairs: v.number(),
-      totalPairs: v.number(),
-      hintMultiplier: v.number(),
+    attempts: v.array(
+      v.object({
+        ordering: v.array(v.string()),
+        feedback: v.array(v.string()),
+        pairsCorrect: v.number(),
+        totalPairs: v.number(),
+        timestamp: v.number(),
+      }),
+    ),
+    score: v.object({
+      strokes: v.number(),
+      par: v.number(),
+      relativeToPar: v.number(),
     }),
   },
   handler: withObservability(
@@ -96,12 +101,17 @@ export const submitOrderPlay = mutation({
         puzzleId: Id<"orderPuzzles">;
         userId: Id<"users">;
         ordering: string[];
-        hints: string[];
-        clientScore: {
-          totalScore: number;
-          correctPairs: number;
+        attempts: Array<{
+          ordering: string[];
+          feedback: string[];
+          pairsCorrect: number;
           totalPairs: number;
-          hintMultiplier: number;
+          timestamp: number;
+        }>;
+        score: {
+          strokes: number;
+          par: number;
+          relativeToPar: number;
         };
       },
     ) => {
@@ -123,9 +133,9 @@ export const submitOrderPlay = mutation({
         throw new Error("Order puzzle not found");
       }
 
-      const verifiedScore = scoreOrderSubmission(args.ordering, puzzle.events, args.hints.length);
-      if (Math.abs(verifiedScore.totalScore - args.clientScore.totalScore) > 1) {
-        throw new Error("Score verification failed");
+      // Verify the score matches the number of attempts
+      if (args.score.strokes !== args.attempts.length) {
+        throw new Error("Score verification failed: strokes don't match attempts");
       }
 
       const existingPlay = await ctx.db
@@ -137,7 +147,8 @@ export const submitOrderPlay = mutation({
 
       const payload = {
         ordering: args.ordering,
-        hints: args.hints,
+        attempts: args.attempts,
+        score: args.score,
         completedAt: Date.now(),
         updatedAt: Date.now(),
       };
@@ -154,7 +165,7 @@ export const submitOrderPlay = mutation({
 
       return {
         status: "recorded" as const,
-        score: verifiedScore,
+        score: args.score,
       };
     },
     { name: "submitOrderPlay" },

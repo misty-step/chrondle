@@ -8,9 +8,16 @@ import type { OrderEvent } from "@/types/orderGameState";
 interface OrderInstructionsProps {
   puzzleNumber: number;
   events: OrderEvent[];
+  par?: number;
+  strokes?: number;
 }
 
-export function OrderInstructions({ puzzleNumber, events }: OrderInstructionsProps) {
+export function OrderInstructions({
+  puzzleNumber,
+  events,
+  par,
+  strokes = 0,
+}: OrderInstructionsProps) {
   const yearSpan = useMemo(() => {
     if (events.length === 0) return "0 years";
 
@@ -36,19 +43,37 @@ export function OrderInstructions({ puzzleNumber, events }: OrderInstructionsPro
     return Math.max(...events.map((e) => e.year));
   }, [events]);
 
+  const subtitle =
+    strokes === 0 ? "Arrange events from earliest to latest" : "Adjust and check again";
+
   return (
-    <ModeHero
-      title="Order Mode"
-      subtitle="Arrange events from earliest to latest"
-      eyebrow={`Daily puzzle · №${puzzleNumber}`}
-    >
-      {/* Minimal context badge showing timeline span */}
-      <div className="border-border/50 bg-muted/30 mt-2 inline-flex items-center gap-2 rounded-sm border px-3 py-1.5">
-        <span className="font-year text-muted-foreground text-xs">{formatYear(earliestYear)}</span>
-        <span className="text-muted-foreground/50">→</span>
-        <span className="font-year text-muted-foreground text-xs">{formatYear(latestYear)}</span>
-        <span className="text-muted-foreground/30">·</span>
-        <span className="text-muted-foreground text-xs italic">{yearSpan}</span>
+    <ModeHero title="Order Mode" subtitle={subtitle} eyebrow={`Daily puzzle · №${puzzleNumber}`}>
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+        {/* Timeline span badge */}
+        <div className="border-border/50 bg-muted/30 inline-flex items-center gap-2 rounded-sm border px-3 py-1.5">
+          <span className="font-year text-muted-foreground text-xs">
+            {formatYear(earliestYear)}
+          </span>
+          <span className="text-muted-foreground/50">→</span>
+          <span className="font-year text-muted-foreground text-xs">{formatYear(latestYear)}</span>
+          <span className="text-muted-foreground/30">·</span>
+          <span className="text-muted-foreground text-xs italic">{yearSpan}</span>
+        </div>
+
+        {/* Golf scoring badge */}
+        {par !== undefined && (
+          <div className="border-primary/30 bg-primary/5 inline-flex items-center gap-2 rounded-sm border px-3 py-1.5">
+            <span className="text-primary text-xs font-medium">Par {par}</span>
+            {strokes > 0 && (
+              <>
+                <span className="text-primary/30">·</span>
+                <span className="text-primary text-xs">
+                  {strokes} {strokes === 1 ? "stroke" : "strokes"}
+                </span>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </ModeHero>
   );

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import type { OrderPuzzle } from "@/types/orderGameState";
+import type { OrderPuzzle, ReadyState } from "@/types/orderGameState";
 import { useOrderGame } from "@/hooks/useOrderGame";
 import { OrderReveal } from "@/components/order/OrderReveal";
 import { OrderGameBoard } from "@/components/order/OrderGameBoard";
@@ -10,7 +10,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Footer } from "@/components/Footer";
-import { copyOrderShareTextToClipboard, type OrderShareResult } from "@/lib/order/shareCard";
+import { copyGolfShareTextToClipboard } from "@/lib/order/shareCard";
 import { logger } from "@/lib/logger";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 
@@ -23,10 +23,7 @@ export function ArchiveOrderPuzzleClient({
   puzzleNumber,
   initialPuzzle,
 }: ArchiveOrderPuzzleClientProps): React.ReactElement {
-  const { gameState, reorderEvents, takeHint, commitOrdering } = useOrderGame(
-    puzzleNumber,
-    initialPuzzle,
-  );
+  const { gameState, reorderEvents, submitAttempt } = useOrderGame(puzzleNumber, initialPuzzle);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   if (gameState.status === "loading-puzzle") {
@@ -46,7 +43,7 @@ export function ArchiveOrderPuzzleClient({
         intent="order"
         stage="hydrating"
         message="Preparing your Order session…"
-        subMessage="Restoring hints and streaks"
+        subMessage="Restoring your progress"
       />
     );
   }
@@ -65,15 +62,10 @@ export function ArchiveOrderPuzzleClient({
   if (gameState.status === "completed") {
     const handleShare = async () => {
       try {
-        const results: OrderShareResult[] = gameState.correctOrder.map((id, idx) =>
-          gameState.finalOrder[idx] === id ? "correct" : "incorrect",
-        );
-
-        await copyOrderShareTextToClipboard({
-          dateLabel: gameState.puzzle.date,
+        await copyGolfShareTextToClipboard({
           puzzleNumber: gameState.puzzle.puzzleNumber,
-          results,
           score: gameState.score,
+          attempts: gameState.attempts,
         });
 
         setShareFeedback("Copied to clipboard!");
@@ -134,10 +126,9 @@ export function ArchiveOrderPuzzleClient({
               </Link>
             </div>
             <OrderGameBoard
-              gameState={gameState as import("@/types/orderGameState").ReadyState}
+              gameState={gameState as ReadyState}
               reorderEvents={reorderEvents}
-              takeHint={takeHint}
-              commitOrdering={commitOrdering}
+              submitAttempt={submitAttempt}
             />
           </LayoutContainer>
         </main>

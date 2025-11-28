@@ -1,11 +1,14 @@
 import { logger } from "@/lib/logger";
-import { initializeOrderState, selectOrdering } from "@/lib/order/engine";
-import { calculateOrderScore } from "@/lib/order/scoring";
-import { mergeHints } from "@/lib/order/hintMerging";
-import type { OrderGameState, OrderHint, OrderPuzzle, OrderScore } from "@/types/orderGameState";
+import { calculateGolfScore, DEFAULT_PAR, getCorrectOrder } from "@/lib/order/golfScoring";
+import type { GolfScore, OrderAttempt, OrderGameState, OrderPuzzle } from "@/types/orderGameState";
+
+// =============================================================================
+// Data Source Types
+// =============================================================================
 
 /**
  * Orthogonal data sources required to derive the Order game state.
+ * Each source is independent and can be loaded/updated separately.
  */
 export interface OrderDataSources {
   puzzle: {
@@ -26,34 +29,43 @@ export interface OrderDataSources {
 }
 
 /**
- * Authenticated user progress stored on the server.
+ * Authenticated user progress stored on the server (golf mode).
  */
 export interface OrderProgressData {
   ordering: string[];
-  hints: OrderHint[];
+  attempts: OrderAttempt[];
   completedAt: number | null;
-  score: OrderScore | null;
+  score: GolfScore | null;
 }
 
 /**
- * Anonymous/local session state stored in localStorage.
+ * Anonymous/local session state stored in localStorage (golf mode).
  */
 export interface OrderSessionState {
   ordering: string[];
-  hints: OrderHint[];
-  committedAt: number | null;
-  score: OrderScore | null;
+  attempts: OrderAttempt[];
+  completedAt: number | null;
+  score: GolfScore | null;
 }
+
+// =============================================================================
+// State Derivation
+// =============================================================================
 
 /**
  * Pure function that derives the Order game state from orthogonal data sources.
- * Mirrors the Classic deriveGameState implementation while accounting for
- * ordering-specific behaviors.
+ *
+ * Golf Mode Rules:
+ * - Players submit ordering attempts
+ * - Each attempt shows feedback (correct/incorrect per position)
+ * - Game completes when all 6 positions are correct
+ * - Score = number of attempts (strokes)
  */
 export function deriveOrderGameState(sources: OrderDataSources): OrderGameState {
   try {
     const { puzzle, auth, progress, session } = sources;
 
+    // Loading sequence: puzzle -> auth -> progress
     if (puzzle.isLoading) {
       return { status: "loading-puzzle" };
     }
@@ -79,59 +91,34 @@ export function deriveOrderGameState(sources: OrderDataSources): OrderGameState 
 
     const orderPuzzle = puzzle.puzzle;
     const baselineOrder = orderPuzzle.events.map((event) => event.id);
+    const correctOrder = getCorrectOrder(orderPuzzle.events);
+    const par = DEFAULT_PAR;
 
-    const serverHints = auth.isAuthenticated && progress.progress ? progress.progress.hints : [];
-    const hints = mergeHints(serverHints, session.hints);
+    // Merge server + session state (prefer server for authenticated users)
+    const resolvedState = resolveState(auth, progress.progress, session, baselineOrder);
 
-    const serverOrdering =
-      auth.isAuthenticated && progress.progress ? progress.progress.ordering : null;
-    const currentOrder = resolveOrderingWithHints(
-      serverOrdering,
-      session.ordering,
-      baselineOrder,
-      hints,
-    );
+    // Check completion status
+    const isComplete = resolvedState.completedAt !== null;
 
-    const isServerComplete =
-      auth.isAuthenticated && Boolean(progress.progress?.completedAt ?? null);
-    const isSessionComplete = Boolean(session.committedAt);
-
-    if (isServerComplete || isSessionComplete) {
-      const preferServer = isServerComplete && serverOrdering?.length;
-      const preferredOrdering = preferServer ? serverOrdering : null;
-      const fallbackOrdering = preferServer ? session.ordering : session.ordering;
-
-      const finalOrder = resolveOrderingWithHints(
-        preferredOrdering,
-        fallbackOrdering,
-        baselineOrder,
-        hints,
-      );
-
-      const correctOrder = [...orderPuzzle.events]
-        .sort((a, b) => a.year - b.year)
-        .map((event) => event.id);
-
-      const score =
-        (isServerComplete ? progress.progress?.score : null) ??
-        session.score ??
-        calculateOrderScore(finalOrder, orderPuzzle.events, hints.length);
+    if (isComplete) {
+      const score = resolvedState.score ?? calculateGolfScore(resolvedState.attempts, par);
 
       return {
         status: "completed",
         puzzle: orderPuzzle,
-        finalOrder,
+        finalOrder: resolvedState.ordering,
         correctOrder,
+        attempts: resolvedState.attempts,
         score,
-        hints,
       };
     }
 
     return {
       status: "ready",
       puzzle: orderPuzzle,
-      currentOrder,
-      hints,
+      currentOrder: resolvedState.ordering,
+      attempts: resolvedState.attempts,
+      par,
     };
   } catch (error) {
     logger.error("Error deriving Order game state:", error);
@@ -145,14 +132,73 @@ export function deriveOrderGameState(sources: OrderDataSources): OrderGameState 
   }
 }
 
-function resolveOrderingWithHints(
-  preferred: string[] | null,
-  fallback: string[],
-  baseline: string[],
-  hints: OrderHint[],
-): string[] {
-  const context = { baseline };
-  const baseOrdering = preferred && preferred.length ? preferred : fallback;
-  const state = initializeOrderState(context, baseOrdering ?? baseline, hints);
-  return selectOrdering(state);
+// =============================================================================
+// State Resolution
+// =============================================================================
+
+interface ResolvedState {
+  ordering: string[];
+  attempts: OrderAttempt[];
+  completedAt: number | null;
+  score: GolfScore | null;
+}
+
+/**
+ * Resolves the canonical state from server + session sources.
+ * Server takes precedence for authenticated users.
+ */
+function resolveState(
+  auth: OrderDataSources["auth"],
+  serverProgress: OrderProgressData | null,
+  session: OrderSessionState,
+  baselineOrder: string[],
+): ResolvedState {
+  // For authenticated users with server progress, prefer server
+  if (auth.isAuthenticated && serverProgress) {
+    return {
+      ordering: normalizeOrdering(serverProgress.ordering, baselineOrder),
+      attempts: serverProgress.attempts,
+      completedAt: serverProgress.completedAt,
+      score: serverProgress.score,
+    };
+  }
+
+  // Fall back to session state
+  return {
+    ordering: normalizeOrdering(session.ordering, baselineOrder),
+    attempts: session.attempts,
+    completedAt: session.completedAt,
+    score: session.score,
+  };
+}
+
+/**
+ * Ensures ordering contains exactly the baseline event IDs.
+ */
+function normalizeOrdering(ordering: string[], baseline: string[]): string[] {
+  if (!ordering.length) {
+    return baseline;
+  }
+
+  const baselineSet = new Set(baseline);
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  // Add valid IDs in order
+  for (const id of ordering) {
+    if (!seen.has(id) && baselineSet.has(id)) {
+      normalized.push(id);
+      seen.add(id);
+    }
+  }
+
+  // Add any missing IDs
+  for (const id of baseline) {
+    if (!seen.has(id)) {
+      normalized.push(id);
+      seen.add(id);
+    }
+  }
+
+  return normalized;
 }
