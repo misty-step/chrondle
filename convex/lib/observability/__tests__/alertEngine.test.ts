@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { STANDARD_ALERT_RULES } from "../alertEngine";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { STANDARD_ALERT_RULES, AlertEngine } from "../alertEngine";
+import type { AlertNotification, Notifier, AlertChannel } from "../alertEngine";
 import type { Metrics } from "../metricsCollector";
 
 describe("STANDARD_ALERT_RULES", () => {
@@ -278,6 +279,381 @@ describe("STANDARD_ALERT_RULES", () => {
       STANDARD_ALERT_RULES.forEach((rule) => {
         expect(rule.cooldown).toBeGreaterThan(0);
       });
+    });
+  });
+});
+
+describe("AlertEngine", () => {
+  const createMockMetrics = (overrides?: Partial<Metrics>): Metrics => ({
+    poolHealth: {
+      unusedEvents: 200,
+      daysUntilDepletion: 33,
+      coverageByEra: { ancient: 20, medieval: 60, modern: 120 },
+      yearsReady: 100,
+    },
+    cost: {
+      costToday: 0.5,
+      cost7DayAvg: 0.45,
+      cost30Day: 12.0,
+      costPerEvent: 0.02,
+    },
+    quality: {
+      avgQualityScore: 0.85,
+      failureRate: 0.1,
+      topFailureReasons: [],
+      qualityTrend: [0.8, 0.82, 0.85, 0.87, 0.85, 0.83, 0.85],
+    },
+    latency: {
+      p50: 0,
+      p95: 0,
+      p99: 0,
+      avgDuration: 0,
+    },
+    timestamp: Date.now(),
+    ...overrides,
+  });
+
+  let sentryNotifier: Notifier;
+  let emailNotifier: Notifier;
+  let notifiers: Map<AlertChannel, Notifier>;
+
+  beforeEach(() => {
+    sentryNotifier = vi.fn().mockResolvedValue(undefined);
+    emailNotifier = vi.fn().mockResolvedValue(undefined);
+    notifiers = new Map<AlertChannel, Notifier>([
+      ["sentry", sentryNotifier],
+      ["email", emailNotifier],
+    ]);
+  });
+
+  describe("checkAlerts", () => {
+    it("should fire alert when condition is met", async () => {
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+      const metrics = createMockMetrics({
+        poolHealth: {
+          unusedEvents: 150,
+          daysUntilDepletion: 25, // Triggers "Pool Depletion Imminent"
+          coverageByEra: { ancient: 10, medieval: 30, modern: 110 },
+          yearsReady: 75,
+        },
+      });
+
+      const firedAlerts = await engine.checkAlerts(metrics);
+
+      expect(firedAlerts).toContain("Pool Depletion Imminent");
+      expect(sentryNotifier).toHaveBeenCalledTimes(1);
+      expect(emailNotifier).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not fire alert when condition is not met", async () => {
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+      const metrics = createMockMetrics({
+        poolHealth: {
+          unusedEvents: 200,
+          daysUntilDepletion: 33, // Does not trigger
+          coverageByEra: { ancient: 20, medieval: 60, modern: 120 },
+          yearsReady: 100,
+        },
+      });
+
+      const firedAlerts = await engine.checkAlerts(metrics);
+
+      expect(firedAlerts).toHaveLength(0);
+      expect(sentryNotifier).not.toHaveBeenCalled();
+      expect(emailNotifier).not.toHaveBeenCalled();
+    });
+
+    it("should respect cooldown periods", async () => {
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+      const metrics = createMockMetrics({
+        poolHealth: {
+          unusedEvents: 150,
+          daysUntilDepletion: 25,
+          coverageByEra: { ancient: 10, medieval: 30, modern: 110 },
+          yearsReady: 75,
+        },
+      });
+
+      // First check - should fire
+      const firstFired = await engine.checkAlerts(metrics);
+      expect(firstFired).toContain("Pool Depletion Imminent");
+      expect(sentryNotifier).toHaveBeenCalledTimes(1);
+
+      // Second check immediately after - should not fire (cooldown)
+      const secondFired = await engine.checkAlerts(metrics);
+      expect(secondFired).toHaveLength(0);
+      expect(sentryNotifier).toHaveBeenCalledTimes(1); // Still 1, not 2
+    });
+
+    it("should fire multiple alerts when multiple conditions are met", async () => {
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+      const metrics = createMockMetrics({
+        poolHealth: {
+          unusedEvents: 150,
+          daysUntilDepletion: 25, // Triggers "Pool Depletion Imminent"
+          coverageByEra: { ancient: 10, medieval: 30, modern: 110 },
+          yearsReady: 75,
+        },
+        quality: {
+          avgQualityScore: 0.4, // Also triggers "Quality Degradation" (< 0.7)
+          failureRate: 0.6, // Triggers "Generation Failure Spike"
+          topFailureReasons: [{ reason: "Error", count: 5 }],
+          qualityTrend: [0.5, 0.45, 0.4, 0.35, 0.4, 0.38, 0.4],
+        },
+      });
+
+      const firedAlerts = await engine.checkAlerts(metrics);
+
+      expect(firedAlerts).toHaveLength(3);
+      expect(firedAlerts).toContain("Pool Depletion Imminent");
+      expect(firedAlerts).toContain("Quality Degradation");
+      expect(firedAlerts).toContain("Generation Failure Spike");
+      expect(sentryNotifier).toHaveBeenCalledTimes(3);
+      expect(emailNotifier).toHaveBeenCalledTimes(2); // Only critical alerts
+    });
+
+    it("should route alerts to correct channels", async () => {
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+      const metrics = createMockMetrics({
+        cost: {
+          costToday: 2.0, // Triggers "Cost Spike Detected" (sentry only)
+          cost7DayAvg: 0.5,
+          cost30Day: 15.0,
+          costPerEvent: 0.03,
+        },
+      });
+
+      const firedAlerts = await engine.checkAlerts(metrics);
+
+      expect(firedAlerts).toContain("Cost Spike Detected");
+      expect(sentryNotifier).toHaveBeenCalledTimes(1);
+      expect(emailNotifier).not.toHaveBeenCalled(); // Cost spike only goes to sentry
+    });
+
+    it("should include correct metrics in notification", async () => {
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+      const metrics = createMockMetrics({
+        poolHealth: {
+          unusedEvents: 150,
+          daysUntilDepletion: 25,
+          coverageByEra: { ancient: 10, medieval: 30, modern: 110 },
+          yearsReady: 75,
+        },
+      });
+
+      await engine.checkAlerts(metrics);
+
+      expect(sentryNotifier).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metrics: expect.objectContaining({
+            poolHealth: expect.objectContaining({
+              daysUntilDepletion: 25,
+              unusedEvents: 150,
+            }),
+          }),
+          rule: expect.objectContaining({
+            name: "Pool Depletion Imminent",
+          }),
+        }),
+      );
+    });
+
+    it("should handle missing notifiers gracefully", async () => {
+      const partialNotifiers = new Map<AlertChannel, Notifier>([["sentry", sentryNotifier]]);
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, partialNotifiers);
+      const metrics = createMockMetrics({
+        poolHealth: {
+          unusedEvents: 150,
+          daysUntilDepletion: 25, // Triggers alert with both sentry and email
+          coverageByEra: { ancient: 10, medieval: 30, modern: 110 },
+          yearsReady: 75,
+        },
+      });
+
+      // Should not throw even though email notifier is missing
+      const firedAlerts = await engine.checkAlerts(metrics);
+
+      expect(firedAlerts).toContain("Pool Depletion Imminent");
+      expect(sentryNotifier).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("resetCooldown", () => {
+    it("should allow alert to fire again after cooldown reset", async () => {
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+      const metrics = createMockMetrics({
+        poolHealth: {
+          unusedEvents: 150,
+          daysUntilDepletion: 25,
+          coverageByEra: { ancient: 10, medieval: 30, modern: 110 },
+          yearsReady: 75,
+        },
+      });
+
+      // First check - should fire
+      await engine.checkAlerts(metrics);
+      expect(sentryNotifier).toHaveBeenCalledTimes(1);
+
+      // Second check - should not fire (cooldown)
+      await engine.checkAlerts(metrics);
+      expect(sentryNotifier).toHaveBeenCalledTimes(1);
+
+      // Reset cooldown
+      engine.resetCooldown("Pool Depletion Imminent");
+
+      // Third check - should fire again
+      await engine.checkAlerts(metrics);
+      expect(sentryNotifier).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("resetAllCooldowns", () => {
+    it("should allow all alerts to fire again after reset", async () => {
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+      const metrics = createMockMetrics({
+        poolHealth: {
+          unusedEvents: 150,
+          daysUntilDepletion: 25, // Triggers "Pool Depletion Imminent"
+          coverageByEra: { ancient: 10, medieval: 30, modern: 110 },
+          yearsReady: 75,
+        },
+        quality: {
+          avgQualityScore: 0.4, // Also triggers "Quality Degradation" (< 0.7)
+          failureRate: 0.6, // Triggers "Generation Failure Spike"
+          topFailureReasons: [{ reason: "Error", count: 5 }],
+          qualityTrend: [0.5, 0.45, 0.4, 0.35, 0.4, 0.38, 0.4],
+        },
+      });
+
+      // First check - all three should fire
+      await engine.checkAlerts(metrics);
+      expect(sentryNotifier).toHaveBeenCalledTimes(3);
+
+      // Second check - none should fire (cooldown)
+      await engine.checkAlerts(metrics);
+      expect(sentryNotifier).toHaveBeenCalledTimes(3);
+
+      // Reset all cooldowns
+      engine.resetAllCooldowns();
+
+      // Third check - all three should fire again
+      await engine.checkAlerts(metrics);
+      expect(sentryNotifier).toHaveBeenCalledTimes(6);
+    });
+  });
+
+  describe("generateAlertMessage", () => {
+    it("should generate message for Pool Depletion alert", async () => {
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+      const metrics = createMockMetrics({
+        poolHealth: {
+          unusedEvents: 150,
+          daysUntilDepletion: 25,
+          coverageByEra: { ancient: 10, medieval: 30, modern: 110 },
+          yearsReady: 75,
+        },
+      });
+
+      await engine.checkAlerts(metrics);
+
+      expect(sentryNotifier).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("Pool Depletion Imminent"),
+        }),
+      );
+      expect(sentryNotifier).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("Days until depletion: 25"),
+        }),
+      );
+      expect(sentryNotifier).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("Unused events: 150"),
+        }),
+      );
+    });
+
+    it("should generate message for Cost Spike alert", async () => {
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+      const metrics = createMockMetrics({
+        cost: {
+          costToday: 2.0,
+          cost7DayAvg: 0.5,
+          cost30Day: 15.0,
+          costPerEvent: 0.03,
+        },
+      });
+
+      await engine.checkAlerts(metrics);
+
+      expect(sentryNotifier).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("Cost Spike Detected"),
+        }),
+      );
+      expect(sentryNotifier).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("Today's cost: $2.00"),
+        }),
+      );
+    });
+
+    it("should generate message for Quality Degradation alert", async () => {
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+      const metrics = createMockMetrics({
+        quality: {
+          avgQualityScore: 0.65,
+          failureRate: 0.2,
+          topFailureReasons: [],
+          qualityTrend: [0.6, 0.62, 0.65, 0.67, 0.65, 0.63, 0.65],
+        },
+      });
+
+      await engine.checkAlerts(metrics);
+
+      expect(sentryNotifier).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("Quality Degradation"),
+        }),
+      );
+      expect(sentryNotifier).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("Avg quality score: 65.0%"),
+        }),
+      );
+    });
+
+    it("should generate message for Failure Spike alert", async () => {
+      const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+      const metrics = createMockMetrics({
+        quality: {
+          avgQualityScore: 0.4,
+          failureRate: 0.6,
+          topFailureReasons: [
+            { reason: "Year too obscure", count: 5 },
+            { reason: "Insufficient events", count: 3 },
+          ],
+          qualityTrend: [0.5, 0.45, 0.4, 0.35, 0.4, 0.38, 0.4],
+        },
+      });
+
+      await engine.checkAlerts(metrics);
+
+      expect(sentryNotifier).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("Generation Failure Spike"),
+        }),
+      );
+      expect(sentryNotifier).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("Failure rate: 60.0%"),
+        }),
+      );
+      expect(sentryNotifier).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("Year too obscure"),
+        }),
+      );
     });
   });
 });
