@@ -358,12 +358,13 @@
   - Success criteria: Alerts fire within 1 hour of threshold breach, respect cooldown periods
   - Note: Implemented with 13 comprehensive tests for checkAlerts, cooldown management, channel routing, and message generation
 
-- [ ] **Implement Sentry integration** (`convex/lib/observability/sentryNotifier.ts`)
+- [x] **Implement Sentry integration** (`convex/lib/observability/sentryNotifier.ts`)
 
   - Capture alerts as Sentry events with appropriate severity levels
   - Include: Alert name, severity, metric values, timestamp in event context
   - Use Sentry tags for filtering: alert_name, severity, metric_type
   - Success criteria: Sentry events captured within 30 seconds, proper severity mapping
+  - Note: Implemented with 12 tests covering initialization, severity mapping, tagging, graceful degradation
 
 - [ ] **Implement email integration** (`convex/lib/observability/emailNotifier.ts`)
 
