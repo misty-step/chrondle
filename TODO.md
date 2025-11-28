@@ -326,10 +326,11 @@
   - Success criteria: Real-time pool health metrics, no manual queries needed
   - Note: Implemented as `calculatePoolHealth()` in `metricsService.ts`
 
-- [~] **Integrate MetricsCollector into Orchestrator**
+- [x] **Integrate MetricsCollector into Orchestrator**
   - Call `metricsCollector.recordGeneration()` after each year generation (success or failure)
   - Track: year, status, cost, duration, quality scores, token usage (including reasoning tokens)
   - Success criteria: All generation attempts tracked, zero data loss
+  - Note: Integration complete via generationLogs.logGenerationAttempt + observability query wrappers
 
 ### 3.2 Build Alert Engine with Multi-Channel Notifications
 
