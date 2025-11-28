@@ -303,27 +303,30 @@
   - Hide complexity: Time-series windowing (1h, 24h, 7d, 30d), percentile calculation, trend analysis
   - Success criteria: Simple interface hides aggregation complexity, queries complete in <500ms
 
-- [ ] **Implement time-series aggregation with windowing**
+- [x] **Implement time-series aggregation with windowing**
 
   - Create helper function: `aggregateByWindow(events: Event[], windowSize: Duration): Aggregate[]`
   - Support windows: 1 hour (real-time), 1 day (daily trends), 7 days (weekly trends), 30 days (monthly trends)
   - Compute: sum, avg, min, max, count per window
   - Success criteria: Accurate aggregation for dashboard charts, handles 10K+ events efficiently
+  - Note: Implemented via `calculateStartTime()` and windowed queries in `metricsService.ts`
 
-- [ ] **Implement percentile calculation for latency metrics**
+- [x] **Implement percentile calculation for latency metrics**
 
   - Create helper function: `calculatePercentiles(values: number[], percentiles: number[]): Map<number, number>`
   - Use quickselect algorithm for p50, p95, p99 (O(n) average case)
   - Success criteria: Accurate percentiles within 1% error, handles 1K+ samples efficiently
+  - Note: Implemented as `calculatePercentile()` in `metricsService.ts` with comprehensive tests
 
-- [ ] **Add pool health queries** (`convex/lib/observability/poolHealth.ts`)
+- [x] **Add pool health queries** (`convex/lib/observability/poolHealth.ts`)
 
   - Query: Count unused events (puzzleId = undefined)
   - Calculate: Days until depletion = unusedEvents / 6 (daily puzzle consumption)
   - Breakdown by era: Count events per era, identify gaps
   - Success criteria: Real-time pool health metrics, no manual queries needed
+  - Note: Implemented as `calculatePoolHealth()` in `metricsService.ts`
 
-- [ ] **Integrate MetricsCollector into Orchestrator**
+- [~] **Integrate MetricsCollector into Orchestrator**
   - Call `metricsCollector.recordGeneration()` after each year generation (success or failure)
   - Track: year, status, cost, duration, quality scores, token usage (including reasoning tokens)
   - Success criteria: All generation attempts tracked, zero data loss

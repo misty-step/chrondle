@@ -71,24 +71,13 @@ export async function recordPuzzleCreation(
 /**
  * Retrieves aggregated metrics for the specified time range.
  *
- * @param ctx - Convex query context
+ * @param ctx - Convex query context (any query context with db access)
  * @param timeRange - Time window for metrics aggregation
  * @returns Unified metrics across all dimensions
  */
 export async function getMetrics(
-  ctx: {
-    db: {
-      query: (table: string) => {
-        collect: () => Promise<Doc<"events">[]>;
-        withIndex: (
-          name: string,
-          filter: (q: { gte: (field: string, value: number) => unknown }) => unknown,
-        ) => {
-          collect: () => Promise<Doc<"generation_logs">[]>;
-        };
-      };
-    };
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
   timeRange: TimeRange,
 ): Promise<Metrics> {
   const now = Date.now();
@@ -97,7 +86,8 @@ export async function getMetrics(
   // Fetch generation logs for the time range
   const logs = await ctx.db
     .query("generation_logs")
-    .withIndex("by_timestamp", (q) => q.gte("timestamp", startTime))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_timestamp", (q: any) => q.gte("timestamp", startTime))
     .collect();
 
   // Fetch all events for pool health
