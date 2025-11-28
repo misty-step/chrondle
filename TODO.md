@@ -336,18 +336,19 @@
 
 **Context:** Proactive issue detection to prevent silent failures (pool depletion, cost spikes, quality degradation). Slack primary channel, email fallback.
 
-- [~] **Define AlertRule interface** (`convex/lib/observability/alertEngine.ts`)
+- [x] **Define AlertRule interface** (`convex/lib/observability/alertEngine.ts`)
 
   - Fields: `name: string`, `condition: (metrics: Metrics) => boolean`, `severity: "critical" | "warning" | "info"`, `channels: AlertChannel[]`, `cooldown: number` (milliseconds between alerts)
   - Success criteria: Declarative rule definition, easy to add new alerts
 
-- [ ] **Implement standard alert rules array**
+- [x] **Implement standard alert rules array**
 
   - Rule: "Pool Depletion Imminent" - fires when `daysUntilDepletion < 30`, severity critical, cooldown 24h
   - Rule: "Cost Spike Detected" - fires when `costToday > cost7DayAvg * 2`, severity warning, cooldown 6h
   - Rule: "Quality Degradation" - fires when `avgQualityScore < 0.7`, severity warning, cooldown 12h
   - Rule: "Generation Failure Spike" - fires when `failureRate > 0.5`, severity critical, cooldown 1h
   - Success criteria: Comprehensive coverage of critical failure modes, conservative thresholds to avoid alert fatigue
+  - Note: Implemented in STANDARD_ALERT_RULES with 22 tests
 
 - [ ] **Implement AlertEngine class**
 
