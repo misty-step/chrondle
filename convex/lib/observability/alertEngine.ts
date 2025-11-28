@@ -16,7 +16,7 @@ import type { Metrics } from "./metricsCollector";
 /**
  * Alert notification channel types.
  */
-export type AlertChannel = "slack" | "email";
+export type AlertChannel = "sentry" | "email";
 
 /**
  * Alert severity levels.
@@ -83,7 +83,7 @@ export const STANDARD_ALERT_RULES: AlertRule[] = [
     description: "Event pool running low - less than 30 days of puzzles remaining",
     condition: (metrics) => metrics.poolHealth.daysUntilDepletion < 30,
     severity: "critical",
-    channels: ["slack", "email"],
+    channels: ["sentry", "email"],
     cooldown: 24 * 60 * 60 * 1000, // 24 hours
   },
   {
@@ -91,7 +91,7 @@ export const STANDARD_ALERT_RULES: AlertRule[] = [
     description: "Today's cost exceeds 7-day average by 2x",
     condition: (metrics) => metrics.cost.costToday > metrics.cost.cost7DayAvg * 2,
     severity: "warning",
-    channels: ["slack"],
+    channels: ["sentry"],
     cooldown: 6 * 60 * 60 * 1000, // 6 hours
   },
   {
@@ -99,7 +99,7 @@ export const STANDARD_ALERT_RULES: AlertRule[] = [
     description: "Average quality score below acceptable threshold (0.7)",
     condition: (metrics) => metrics.quality.avgQualityScore < 0.7,
     severity: "warning",
-    channels: ["slack"],
+    channels: ["sentry"],
     cooldown: 12 * 60 * 60 * 1000, // 12 hours
   },
   {
@@ -107,7 +107,7 @@ export const STANDARD_ALERT_RULES: AlertRule[] = [
     description: "More than 50% of generation attempts failing",
     condition: (metrics) => metrics.quality.failureRate > 0.5,
     severity: "critical",
-    channels: ["slack", "email"],
+    channels: ["sentry", "email"],
     cooldown: 1 * 60 * 60 * 1000, // 1 hour
   },
 ];

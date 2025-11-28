@@ -334,7 +334,7 @@
 
 ### 3.2 Build Alert Engine with Multi-Channel Notifications
 
-**Context:** Proactive issue detection to prevent silent failures (pool depletion, cost spikes, quality degradation). Slack primary channel, email fallback.
+**Context:** Proactive issue detection to prevent silent failures (pool depletion, cost spikes, quality degradation). Sentry for error tracking, email for notifications.
 
 - [x] **Define AlertRule interface** (`convex/lib/observability/alertEngine.ts`)
 
@@ -357,19 +357,19 @@
   - Hide complexity: Cooldown state management, channel routing by severity
   - Success criteria: Alerts fire within 1 hour of threshold breach, respect cooldown periods
 
-- [ ] **Implement Slack integration** (`convex/lib/observability/slackNotifier.ts`)
+- [ ] **Implement Sentry integration** (`convex/lib/observability/sentryNotifier.ts`)
 
-  - Use incoming webhook (configured via SLACK_WEBHOOK_URL env var)
-  - Format: Rich message with color coding (red = critical, yellow = warning, blue = info)
-  - Include: Alert name, severity, metric values, timestamp, link to admin dashboard
-  - Success criteria: Slack messages delivered within 30 seconds, actionable information provided
+  - Capture alerts as Sentry events with appropriate severity levels
+  - Include: Alert name, severity, metric values, timestamp in event context
+  - Use Sentry tags for filtering: alert_name, severity, metric_type
+  - Success criteria: Sentry events captured within 30 seconds, proper severity mapping
 
 - [ ] **Implement email integration** (`convex/lib/observability/emailNotifier.ts`)
 
-  - Use SendGrid/Resend for transactional email (configured via EMAIL_API_KEY env var)
+  - Use Resend for transactional email (configured via RESEND_API_KEY env var)
   - Send to: Configured admin email addresses (comma-separated EMAIL_RECIPIENTS env var)
-  - Format: HTML email with same information as Slack message
-  - Success criteria: Email delivered within 2 minutes, fallback when Slack fails
+  - Format: HTML email with alert details, metric values, timestamp
+  - Success criteria: Email delivered within 2 minutes, actionable information provided
 
 - [ ] **Add alert checking to Orchestrator post-batch hook**
   - After daily batch completes, fetch current metrics: `metricsCollector.getMetrics("24h")`

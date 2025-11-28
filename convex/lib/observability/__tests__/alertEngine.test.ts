@@ -38,7 +38,7 @@ describe("STANDARD_ALERT_RULES", () => {
     it("should exist and have correct configuration", () => {
       expect(rule).toBeDefined();
       expect(rule?.severity).toBe("critical");
-      expect(rule?.channels).toContain("slack");
+      expect(rule?.channels).toContain("sentry");
       expect(rule?.channels).toContain("email");
       expect(rule?.cooldown).toBe(24 * 60 * 60 * 1000); // 24 hours
     });
@@ -89,7 +89,7 @@ describe("STANDARD_ALERT_RULES", () => {
     it("should exist and have correct configuration", () => {
       expect(rule).toBeDefined();
       expect(rule?.severity).toBe("warning");
-      expect(rule?.channels).toContain("slack");
+      expect(rule?.channels).toContain("sentry");
       expect(rule?.cooldown).toBe(6 * 60 * 60 * 1000); // 6 hours
     });
 
@@ -139,7 +139,7 @@ describe("STANDARD_ALERT_RULES", () => {
     it("should exist and have correct configuration", () => {
       expect(rule).toBeDefined();
       expect(rule?.severity).toBe("warning");
-      expect(rule?.channels).toContain("slack");
+      expect(rule?.channels).toContain("sentry");
       expect(rule?.cooldown).toBe(12 * 60 * 60 * 1000); // 12 hours
     });
 
@@ -189,7 +189,7 @@ describe("STANDARD_ALERT_RULES", () => {
     it("should exist and have correct configuration", () => {
       expect(rule).toBeDefined();
       expect(rule?.severity).toBe("critical");
-      expect(rule?.channels).toContain("slack");
+      expect(rule?.channels).toContain("sentry");
       expect(rule?.channels).toContain("email");
       expect(rule?.cooldown).toBe(1 * 60 * 60 * 1000); // 1 hour
     });
