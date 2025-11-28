@@ -336,7 +336,7 @@
 
 **Context:** Proactive issue detection to prevent silent failures (pool depletion, cost spikes, quality degradation). Slack primary channel, email fallback.
 
-- [ ] **Define AlertRule interface** (`convex/lib/observability/alertEngine.ts`)
+- [~] **Define AlertRule interface** (`convex/lib/observability/alertEngine.ts`)
 
   - Fields: `name: string`, `condition: (metrics: Metrics) => boolean`, `severity: "critical" | "warning" | "info"`, `channels: AlertChannel[]`, `cooldown: number` (milliseconds between alerts)
   - Success criteria: Declarative rule definition, easy to add new alerts
