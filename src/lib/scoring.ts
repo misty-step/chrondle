@@ -95,10 +95,16 @@ export function scoreRangeDetailed(
 
   // New flat deduction scoring system:
   // 1. Get max possible score based on hints used
-  // 2. Scale by range width (narrower = better)
+  // 2. Scale by range width (narrower = better), ensuring a minimum floor (5%)
   // 3. Round down to integer
   const maxScoreForHints = MAX_SCORES_BY_HINTS[hintsUsed];
-  const widthFactor = (SCORING_CONSTANTS.W_MAX - width + 1) / SCORING_CONSTANTS.W_MAX;
+
+  const minFloor = 0.05;
+  // Progress from 0.0 (width 1) to 1.0 (width 250)
+  const progress = (width - 1) / (SCORING_CONSTANTS.W_MAX - 1);
+  // Linearly interpolate between 1.0 (width 1) and 0.05 (width 250)
+  const widthFactor = 1 - progress * (1 - minFloor);
+
   const baseScore = maxScoreForHints * widthFactor;
   const score = Math.floor(baseScore);
 

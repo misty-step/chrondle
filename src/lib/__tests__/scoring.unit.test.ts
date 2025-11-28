@@ -61,6 +61,26 @@ describe("scoreRange", () => {
   it("rejects hint levels above six", () => {
     expect(() => scoreRange(1950, 1950, 1950, 0, 7 as never)).toThrow(/between 0 and 6 inclusive/i);
   });
+
+  it("ensures a minimum score floor for maximum width ranges (0 hints)", () => {
+    // Width 250, 0 hints.
+    // Old logic: 0 pts. New logic (5% floor): ~5 pts.
+    const start = 1000;
+    const end = 1249; // Width 250
+    const answer = 1100;
+    const score = scoreRange(start, end, answer, 0, 0);
+    expect(score).toBe(5);
+  });
+
+  it("ensures a minimum score floor for maximum width ranges (6 hints)", () => {
+    // Width 250, 6 hints.
+    // Old logic: 0 pts. New logic (5% floor): 1 pt.
+    const start = 1000;
+    const end = 1249; // Width 250
+    const answer = 1100;
+    const score = scoreRange(start, end, answer, 0, 6);
+    expect(score).toBe(1);
+  });
 });
 
 describe("scoreRangeDetailed", () => {
