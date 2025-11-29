@@ -126,10 +126,36 @@ function calculateStartTime(now: number, timeRange: TimeRange): number {
 }
 
 /**
- * Calculates pool health metrics from events.
+ * Game mode filter for pool health queries.
  */
-function calculatePoolHealth(events: readonly Doc<"events">[]): PoolHealthMetrics {
-  const unusedEvents = events.filter((e) => e.puzzleId === undefined);
+export type PoolHealthMode = "classic" | "order" | "all";
+
+/**
+ * Calculates pool health metrics from events.
+ *
+ * @param events - All events from the database
+ * @param mode - Filter by game mode:
+ *   - "classic": Events unused in Classic mode (classicPuzzleId === undefined)
+ *   - "order": Events unused in Order mode (orderPuzzleId === undefined)
+ *   - "all": Events unused in BOTH modes (default, backward compatible)
+ */
+export function calculatePoolHealth(
+  events: readonly Doc<"events">[],
+  mode: PoolHealthMode = "all",
+): PoolHealthMetrics {
+  // Filter events based on mode
+  const unusedEvents = events.filter((e) => {
+    switch (mode) {
+      case "classic":
+        return e.classicPuzzleId === undefined;
+      case "order":
+        return e.orderPuzzleId === undefined;
+      case "all":
+      default:
+        // Unused in both modes = truly unused
+        return e.classicPuzzleId === undefined && e.orderPuzzleId === undefined;
+    }
+  });
 
   const coverageByEra = {
     ancient: 0,
@@ -151,9 +177,14 @@ function calculatePoolHealth(events: readonly Doc<"events">[]): PoolHealthMetric
     }
   }
 
+  // Days until depletion varies by mode
+  // Classic uses 6 events/day, Order uses 6 events/day (varies but assume 6)
+  const eventsPerDay = 6;
+
   return {
     unusedEvents: unusedEvents.length,
-    daysUntilDepletion: unusedEvents.length > 0 ? Math.floor(unusedEvents.length / 6) : 0,
+    daysUntilDepletion:
+      unusedEvents.length > 0 ? Math.floor(unusedEvents.length / eventsPerDay) : 0,
     coverageByEra,
     yearsReady: yearsSet.size,
   };

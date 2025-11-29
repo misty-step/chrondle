@@ -435,6 +435,348 @@
 
 ---
 
+## Phase 4: Admin Command Center & Per-Mode Event Tracking
+
+**Strategic Goal:** Transform admin dashboard from observability-only view into full command center for content management. Fix fundamental data model flaw where event usage only tracks Classic mode - Order mode events are invisible to pool health metrics.
+
+**Principles:**
+
+- Ousterhout: Each tab is a deep module with simple interface hiding query/mutation complexity
+- Carmack: Direct implementation. Two explicit fields (`classicPuzzleId`, `orderPuzzleId`) instead of clever nested structures
+- Torvalds: The code is the truth. Fix the schema first, UI follows naturally
+
+**Current State:** Dashboard shows 3563 "unused" events but this only counts Classic. Order mode samples from entire 4217-event pool without tracking. Admin has no way to browse/edit events or view puzzles.
+
+**Target State:** Per-mode usage tracking, Events Browser with search/filter/edit, Puzzles Manager for both modes, pool health metrics per mode.
+
+---
+
+### 4.1 Schema Migration - Per-Mode Event Usage Tracking
+
+**Context:** Current `events.puzzleId` only links to Classic `puzzles` table. Order mode reads all events without marking them used. This creates incorrect pool health metrics and prevents per-mode filtering.
+
+- [x] **Add `classicPuzzleId` field to events schema** (`convex/schema.ts`)
+
+  - Add field: `classicPuzzleId: v.optional(v.id("puzzles"))` after existing `puzzleId` field
+  - Add index: `.index("by_classic_puzzle", ["classicPuzzleId"])` for efficient puzzle-to-event lookup
+  - Add compound index: `.index("by_year_classic_available", ["year", "classicPuzzleId"])` for unused event queries by year
+  - Keep existing `puzzleId` field temporarily for backward compatibility during migration
+  - Success criteria: Schema validates, `npx convex dev` succeeds, existing queries still work
+
+- [x] **Add `orderPuzzleId` field to events schema** (`convex/schema.ts`)
+
+  - Add field: `orderPuzzleId: v.optional(v.id("orderPuzzles"))` after `classicPuzzleId`
+  - Add index: `.index("by_order_puzzle", ["orderPuzzleId"])` for Order puzzle-to-event lookup
+  - Add compound index: `.index("by_year_order_available", ["year", "orderPuzzleId"])` for Order mode pool queries
+  - Success criteria: Events can be independently tracked for both game modes
+
+- [x] **Write backfill migration to copy `puzzleId` → `classicPuzzleId`** (`convex/migrations/migrateEventUsageTracking.ts`)
+
+  - Create internal mutation `backfillClassicPuzzleId` that queries events with `puzzleId !== undefined`
+  - Batch process 100 events per mutation call to avoid timeout (654 events to migrate based on prod data)
+  - For each event: `ctx.db.patch(event._id, { classicPuzzleId: event.puzzleId })`
+  - Add progress logging: "Migrated X/Y events"
+  - Success criteria: All 654 used events have `classicPuzzleId` set, verify with `SELECT COUNT(*) WHERE classicPuzzleId IS NOT NULL`
+
+- [x] **Run migration against production Convex** (`fleet-goldfish-183`)
+
+  - Execute: `npx convex run migrations/migrateEventUsageTracking:backfillClassicPuzzleId --prod`
+  - Verify: Query events where `classicPuzzleId !== undefined` returns 654 (same as `puzzleId !== undefined`)
+  - Verify: No events have `classicPuzzleId !== puzzleId` (data integrity check)
+  - Success criteria: Zero data loss, production unaffected, rollback plan ready if issues
+
+---
+
+### 4.2 Update Generation Flows to Use New Fields
+
+**Context:** After schema migration, update both Classic and Order generation to use the new per-mode fields. Classic switches from `puzzleId` to `classicPuzzleId`. Order starts tracking usage (currently doesn't mark events at all).
+
+- [x] **Update Classic puzzle generation to use `classicPuzzleId`** (`convex/puzzles/generation.ts:72-77`)
+
+  - Change: `await ctx.db.patch(event._id, { puzzleId, updatedAt: Date.now() })`
+  - To: `await ctx.db.patch(event._id, { classicPuzzleId: puzzleId, updatedAt: Date.now() })`
+  - Also update `ensureTodaysPuzzle` mutation (lines 159-163) with same change
+  - Success criteria: New Classic puzzles set `classicPuzzleId` instead of `puzzleId`
+
+- [x] **Update `selectYearForPuzzle` to query `classicPuzzleId`** (`convex/lib/puzzleHelpers.ts`)
+
+  - Find query: `ctx.db.query("events").withIndex("by_year_available", ...)`
+  - Update to use new index: `.withIndex("by_year_classic_available", (q) => q.eq("year", year).eq("classicPuzzleId", undefined))`
+  - Update filter logic: `event.classicPuzzleId === undefined` instead of `event.puzzleId === undefined`
+  - Success criteria: Classic mode only selects events unused in Classic (can still be used in Order)
+
+- [x] **Add Order puzzle event tracking to generation** (`convex/orderPuzzles/mutations.ts:199-205`)
+
+  - After line 205 (`const puzzleId = await ctx.db.insert("orderPuzzles", ...)`), add event marking loop:
+
+  ```typescript
+  // Mark selected events as used in Order mode
+  for (const event of selection) {
+    await ctx.db.patch(event._id as Id<"events">, {
+      orderPuzzleId: puzzleId,
+      updatedAt: Date.now(),
+    });
+  }
+  ```
+
+  - Success criteria: New Order puzzles mark their events with `orderPuzzleId`
+
+- [x] **Update Order event selection to filter already-used events** (`convex/orderPuzzles/mutations.ts:240-246`)
+
+  - Change `loadEventCandidates` to filter out events already used in Order mode:
+
+  ```typescript
+  async function loadEventCandidates(ctx: MutationCtx): Promise<OrderEventCandidate[]> {
+    const events = await ctx.db.query("events").collect();
+    return events
+      .filter((event) => event.orderPuzzleId === undefined) // Only unused in Order
+      .map((event) => ({
+        _id: event._id,
+        year: event.year,
+        event: event.event,
+      }));
+  }
+  ```
+
+  - Success criteria: Order mode has independent pool depletion from Classic
+
+- [ ] **Write integration test for dual-mode event usage** (`convex/__tests__/dualModeEventUsage.test.ts`)
+
+  - Test: Generate Classic puzzle for year 1969, verify events have `classicPuzzleId` set
+  - Test: Generate Order puzzle, verify events have `orderPuzzleId` set
+  - Test: Same event can have both `classicPuzzleId` AND `orderPuzzleId` set (used in both modes)
+  - Test: Pool health query returns correct counts per mode
+  - Success criteria: Both modes track independently, events reusable across modes
+
+---
+
+### 4.3 Admin Dashboard Architecture - Tab Navigation
+
+**Context:** Transform single-page dashboard into tabbed interface. Each tab is a deep module - simple interface (tab click) hides complex data fetching and UI rendering.
+
+- [ ] **Create AdminTabs component with URL-based routing** (`src/app/admin/dashboard/components/AdminTabs.tsx`)
+
+  - Use `useSearchParams` for tab state: `?tab=overview|events|puzzles`
+  - Tab buttons: Overview (default), Events, Puzzles
+  - Each tab renders its own component lazily (code splitting)
+  - Style: Underline active tab, hover states, keyboard navigation
+  - Success criteria: Tab switches update URL, browser back works, deep linking works
+
+- [ ] **Extract current dashboard content to OverviewTab** (`src/app/admin/dashboard/components/OverviewTab.tsx`)
+
+  - Move: PoolHealthCard, CostTrendsChart, QualityMetricsGrid, RecentGenerationsTable
+  - Keep existing Convex query hooks
+  - Add mode filter prop for future per-mode filtering
+  - Success criteria: Overview tab renders identical to current dashboard
+
+- [ ] **Update dashboard page to render tab router** (`src/app/admin/dashboard/page.tsx`)
+
+  - Keep server component auth check (Clerk admin role)
+  - Render AdminTabs client component after auth
+  - Pass any server-fetched data as props
+  - Success criteria: Dashboard loads with tabs, auth still enforced
+
+- [ ] **Create shared ModeFilter component** (`src/app/admin/dashboard/components/shared/ModeFilter.tsx`)
+
+  - Toggle between: "All", "Classic", "Order"
+  - Use URL search param: `?mode=all|classic|order`
+  - Emit selected mode via callback or URL update
+  - Style: Segmented control or radio group
+  - Success criteria: Filter persists across tab navigation, affects all queries
+
+---
+
+### 4.4 Events Browser Tab
+
+**Context:** Admin needs to browse, search, filter, and edit the 4217-event pool. Must support filtering by year, era, text search, and usage status per mode.
+
+- [ ] **Create admin events query with search and filters** (`convex/admin/events.ts`)
+
+  - Export `searchEvents` query with args:
+    - `search: v.optional(v.string())` - fuzzy text search on event text
+    - `yearMin: v.optional(v.number())`, `yearMax: v.optional(v.number())` - year range filter
+    - `era: v.optional(v.union(v.literal("ancient"), v.literal("medieval"), v.literal("modern")))`
+    - `usageFilter: v.optional(v.union(v.literal("unused_classic"), v.literal("unused_order"), v.literal("unused_both"), v.literal("used_classic"), v.literal("used_order"))))`
+    - `limit: v.optional(v.number())` - pagination (default 50)
+    - `cursor: v.optional(v.string())` - cursor-based pagination
+  - Return: `{ events: Event[], nextCursor: string | null, totalCount: number }`
+  - Filter logic:
+    - `unused_classic`: `classicPuzzleId === undefined`
+    - `unused_order`: `orderPuzzleId === undefined`
+    - `unused_both`: `classicPuzzleId === undefined AND orderPuzzleId === undefined`
+    - `used_classic`: `classicPuzzleId !== undefined`
+    - `used_order`: `orderPuzzleId !== undefined`
+  - Text search: Case-insensitive substring match on event text (use `.filter()` after index query)
+  - Success criteria: Query returns <500ms for any filter combination
+
+- [ ] **Create admin event mutation for text updates** (`convex/admin/events.ts`)
+
+  - Export `updateEventText` mutation with args:
+    - `eventId: v.id("events")`
+    - `text: v.string()`
+  - Validate: Text not empty, text not identical to current
+  - Update: `ctx.db.patch(eventId, { event: text, updatedAt: Date.now() })`
+  - Success criteria: Admin can fix typos, improve clarity without affecting puzzle associations
+
+- [ ] **Create admin event mutation for deletion** (`convex/admin/events.ts`)
+
+  - Export `deleteEvent` mutation with args: `eventId: v.id("events")`
+  - Validate: Event not currently used in any puzzle (`classicPuzzleId === undefined AND orderPuzzleId === undefined`)
+  - If used, throw: `ConvexError("Cannot delete event used in puzzle. Remove from puzzle first.")`
+  - Delete: `ctx.db.delete(eventId)`
+  - Success criteria: Only unused events deletable, clear error for used events
+
+- [ ] **Build EventsTab component with search and filters** (`src/app/admin/dashboard/components/EventsTab.tsx`)
+
+  - Search input: Debounced (300ms) text input for event text search
+  - Filter row: Year range inputs, Era dropdown, Usage status dropdown
+  - Results: DataTable with columns (Year, Event Text, Era, Classic Status, Order Status, Actions)
+  - Pagination: "Load more" button or infinite scroll using cursor
+  - Empty state: "No events match filters"
+  - Success criteria: Admin can find any event in <3 clicks
+
+- [ ] **Build inline event editing in EventsTab**
+
+  - Click event text → Inline textarea appears
+  - Save button + Cancel button
+  - Optimistic UI: Show new text immediately, revert on error
+  - Success feedback: Brief checkmark animation
+  - Success criteria: Edit flow is <5 seconds for typo fix
+
+- [ ] **Build event deletion with confirmation in EventsTab**
+
+  - Delete button (trash icon) in Actions column
+  - Click → Confirmation dialog: "Delete this event? This cannot be undone."
+  - If event is used: Button disabled with tooltip "Event used in puzzle #X"
+  - Success criteria: No accidental deletions, clear feedback on why deletion blocked
+
+- [ ] **Add event statistics summary to EventsTab header**
+
+  - Display: Total events (4217), Unused in Classic (3563), Unused in Order (TBD), Unused in Both
+  - Calculate from query or separate stats query
+  - Success criteria: At-a-glance pool health visible while browsing
+
+---
+
+### 4.5 Puzzles Manager Tab
+
+**Context:** Admin needs to view puzzle history for both Classic and Order modes, see player engagement, and drill into puzzle details.
+
+- [ ] **Create admin puzzles query for listing** (`convex/admin/puzzles.ts`)
+
+  - Export `listPuzzles` query with args:
+    - `mode: v.union(v.literal("classic"), v.literal("order"))`
+    - `limit: v.optional(v.number())` - default 20
+    - `cursor: v.optional(v.string())` - cursor-based pagination
+  - Query appropriate table based on mode: `puzzles` or `orderPuzzles`
+  - Return: `{ puzzles: Puzzle[], nextCursor: string | null }`
+  - Include: puzzleNumber, date, targetYear (Classic only), playCount, avgGuesses/avgScore
+  - Order: Descending by puzzleNumber (newest first)
+  - Success criteria: Unified interface for both puzzle types
+
+- [ ] **Create admin puzzle detail query** (`convex/admin/puzzles.ts`)
+
+  - Export `getPuzzleDetail` query with args:
+    - `mode: v.union(v.literal("classic"), v.literal("order"))`
+    - `puzzleNumber: v.number()`
+  - Return full puzzle data plus:
+    - All events (for Classic: denormalized strings, for Order: objects with year)
+    - Play count and completion stats
+    - Historical context (Classic only, if generated)
+  - Success criteria: All puzzle info available in single query
+
+- [ ] **Build PuzzlesTab component with mode toggle** (`src/app/admin/dashboard/components/PuzzlesTab.tsx`)
+
+  - Mode toggle: "Classic" / "Order" (uses ModeFilter component)
+  - Results: DataTable with columns varying by mode
+    - Classic: #, Date, Target Year, Plays, Avg Guesses, Status
+    - Order: #, Date, Event Span, Plays, Avg Score, Status
+  - Status: "Active" (today), "Completed" (past), "Future" (if pre-generated)
+  - Row click → Opens detail modal
+  - Success criteria: Admin can browse puzzle history for either mode
+
+- [ ] **Build PuzzleDetailModal component** (`src/app/admin/dashboard/components/PuzzleDetailModal.tsx`)
+
+  - Modal triggered by row click in PuzzlesTab
+  - Header: Puzzle #{number} - {date}
+  - Content varies by mode:
+    - Classic: Target year, 6 events list, historical context preview, player stats
+    - Order: Events with years (in correct order), event span, player stats
+  - Player stats: Total plays, completion rate, average score/guesses
+  - Close button + click outside to dismiss
+  - Success criteria: Full puzzle context visible without leaving dashboard
+
+- [ ] **Add "Today's Puzzles" card to OverviewTab** (`src/app/admin/dashboard/components/OverviewTab.tsx`)
+
+  - New card showing today's Classic and Order puzzles side by side
+  - Each shows: Puzzle #, target year/event span, play count so far
+  - Click → Opens PuzzleDetailModal for that puzzle
+  - Success criteria: Daily ops visibility - is today's content live and correct?
+
+---
+
+### 4.6 Enhanced Overview Tab with Per-Mode Metrics
+
+**Context:** After schema migration, pool health and other metrics should support per-mode filtering.
+
+- [ ] **Update pool health query to support mode filter** (`convex/lib/observability/metricsService.ts`)
+
+  - Update `calculatePoolHealth` function signature: `(events, mode?: "classic" | "order" | "all")`
+  - Filter logic:
+    - `"classic"`: Count events where `classicPuzzleId === undefined`
+    - `"order"`: Count events where `orderPuzzleId === undefined`
+    - `"all"` (default): Count events where BOTH are undefined
+  - Update depletion calculation: 6 events/day for Classic, varies for Order (based on selection algorithm)
+  - Success criteria: Pool health accurately reflects per-mode availability
+
+- [ ] **Update PoolHealthCard to accept mode prop** (`src/components/admin/PoolHealthCard.tsx`)
+
+  - Add prop: `mode: "classic" | "order" | "all"`
+  - Pass mode to Convex query
+  - Update labels: "Unused Events (Classic)" or "Unused Events (Order)"
+  - Success criteria: Card accurately shows mode-specific pool health
+
+- [ ] **Wire ModeFilter to OverviewTab metrics**
+
+  - OverviewTab receives selected mode from AdminTabs
+  - Pass mode to: PoolHealthCard, CostTrendsChart (if mode-specific costs tracked), QualityMetricsGrid
+  - Success criteria: All overview metrics respect mode filter
+
+---
+
+### 4.7 Cleanup - Deprecate Old `puzzleId` Field
+
+**Context:** After migration verified and all queries updated, remove deprecated `puzzleId` field to clean up schema.
+
+- [ ] **Audit all `puzzleId` references in codebase**
+
+  - Search: `grep -rn "puzzleId" convex/ src/ --include="*.ts" --include="*.tsx"`
+  - Categorize: Which still reference old field vs new `classicPuzzleId`/`orderPuzzleId`
+  - Document: List of files needing updates
+  - Success criteria: Complete inventory of old field usage
+
+- [ ] **Update remaining queries to use `classicPuzzleId`**
+
+  - Update `convex/generationLogs.ts:165`: Change `puzzleId === undefined` to `classicPuzzleId === undefined`
+  - Update any other files found in audit
+  - Success criteria: No runtime references to old `puzzleId` field
+
+- [ ] **Remove deprecated `puzzleId` field from schema** (`convex/schema.ts`)
+
+  - Remove: `puzzleId: v.optional(v.id("puzzles"))`
+  - Remove: `.index("by_puzzle", ["puzzleId"])`
+  - Remove: `.index("by_year_available", ["year", "puzzleId"])`
+  - Run: `npx convex dev` to verify schema validates
+  - Success criteria: Clean schema with only new per-mode fields
+
+- [ ] **Write migration to drop `puzzleId` values from documents**
+
+  - Optional cleanup: Set `puzzleId: undefined` on all events to free storage
+  - Or let Convex handle orphaned fields naturally
+  - Success criteria: No references to deprecated field anywhere
+
+---
+
 ## Testing & Quality Assurance
 
 ### Integration Tests

@@ -103,10 +103,10 @@ export async function selectYearForPuzzle(ctx: QueryCtx): Promise<{
   events: Doc<"events">[];
   availableEvents: number;
 }> {
-  // Get all unused events from pool
+  // Get all unused events from Classic mode pool
   const unusedEvents = await ctx.db
     .query("events")
-    .filter((q) => q.eq(q.field("puzzleId"), undefined))
+    .filter((q) => q.eq(q.field("classicPuzzleId"), undefined))
     .collect();
 
   // Group by year and count available events per year
@@ -129,11 +129,11 @@ export async function selectYearForPuzzle(ctx: QueryCtx): Promise<{
   // Randomly select one eligible year
   const randomYear = availableYears[Math.floor(Math.random() * availableYears.length)];
 
-  // Get all unused events for the selected year
+  // Get all unused events for the selected year (Classic mode)
   const yearEvents = await ctx.db
     .query("events")
     .withIndex("by_year", (q) => q.eq("year", randomYear.year))
-    .filter((q) => q.eq(q.field("puzzleId"), undefined))
+    .filter((q) => q.eq(q.field("classicPuzzleId"), undefined))
     .collect();
 
   // Randomly select 6 events from the year's available events

@@ -17,7 +17,8 @@ import { Card } from "@/components/ui/Card";
  * Auto-refreshes via Convex subscription.
  */
 export function PoolHealthCard() {
-  const poolHealth = useQuery(api.observability.getPoolHealthQuery);
+  // Default to "all" mode - shows events unused in both Classic and Order
+  const poolHealth = useQuery(api.observability.getPoolHealthQuery, { mode: "all" });
 
   if (!poolHealth) {
     return (

@@ -204,6 +204,14 @@ async function generateOrderPuzzleForDate(
     updatedAt: Date.now(),
   });
 
+  // Mark selected events as used in Order mode
+  for (const event of selection) {
+    await ctx.db.patch(event._id as Id<"events">, {
+      orderPuzzleId: puzzleId,
+      updatedAt: Date.now(),
+    });
+  }
+
   const span = calculateSpan(selection);
   console.info(
     `[generateDailyOrderPuzzle] Created Order puzzle #${nextPuzzleNumber} for ${targetDate}`,
@@ -238,12 +246,15 @@ async function _lookupClassicYear(ctx: MutationCtx, targetDate: string): Promise
 }
 
 async function loadEventCandidates(ctx: MutationCtx): Promise<OrderEventCandidate[]> {
+  // Load events unused in Order mode (orderPuzzleId === undefined)
   const events = await ctx.db.query("events").collect();
-  return events.map((event) => ({
-    _id: event._id,
-    year: event.year,
-    event: event.event,
-  }));
+  return events
+    .filter((event) => event.orderPuzzleId === undefined)
+    .map((event) => ({
+      _id: event._id,
+      year: event.year,
+      event: event.event,
+    }));
 }
 
 type SelectionOutcome = {

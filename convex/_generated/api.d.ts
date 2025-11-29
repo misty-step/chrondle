@@ -48,6 +48,7 @@ import type * as lib_streakHelpers from "../lib/streakHelpers.js";
 import type * as lib_workSelector from "../lib/workSelector.js";
 import type * as migration_anonymous from "../migration/anonymous.js";
 import type * as migrations_generateMissingContext from "../migrations/generateMissingContext.js";
+import type * as migrations_migrateEventUsageTracking from "../migrations/migrateEventUsageTracking.js";
 import type * as migrations_migrateEvents from "../migrations/migrateEvents.js";
 import type * as migrations_regenerateHistoricalContextGPT5 from "../migrations/regenerateHistoricalContextGPT5.js";
 import type * as observability from "../observability.js";
@@ -113,6 +114,7 @@ declare const fullApi: ApiFromModules<{
   "lib/workSelector": typeof lib_workSelector;
   "migration/anonymous": typeof migration_anonymous;
   "migrations/generateMissingContext": typeof migrations_generateMissingContext;
+  "migrations/migrateEventUsageTracking": typeof migrations_migrateEventUsageTracking;
   "migrations/migrateEvents": typeof migrations_migrateEvents;
   "migrations/regenerateHistoricalContextGPT5": typeof migrations_regenerateHistoricalContextGPT5;
   observability: typeof observability;

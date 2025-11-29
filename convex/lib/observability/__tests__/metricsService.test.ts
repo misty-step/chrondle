@@ -97,7 +97,9 @@ describe("getMetrics", () => {
         _creationTime: now,
         year: 1969,
         event: "Moon landing",
-        puzzleId: undefined, // Unused
+        puzzleId: undefined,
+        classicPuzzleId: undefined, // Unused in both modes
+        orderPuzzleId: undefined,
         updatedAt: now,
       },
       {
@@ -105,7 +107,9 @@ describe("getMetrics", () => {
         _creationTime: now,
         year: 1969,
         event: "Woodstock",
-        puzzleId: "puzzle1" as Doc<"puzzles">["_id"], // Used
+        puzzleId: "puzzle1" as Doc<"puzzles">["_id"],
+        classicPuzzleId: "puzzle1" as Doc<"puzzles">["_id"], // Used in Classic
+        orderPuzzleId: undefined,
         updatedAt: now,
       },
       {
@@ -113,7 +117,9 @@ describe("getMetrics", () => {
         _creationTime: now,
         year: 1500,
         event: "Discovery",
-        puzzleId: undefined, // Unused
+        puzzleId: undefined,
+        classicPuzzleId: undefined, // Unused in both modes
+        orderPuzzleId: undefined,
         updatedAt: now,
       },
       {
@@ -121,7 +127,9 @@ describe("getMetrics", () => {
         _creationTime: now,
         year: 400,
         event: "Ancient event",
-        puzzleId: undefined, // Unused
+        puzzleId: undefined,
+        classicPuzzleId: undefined, // Unused in both modes
+        orderPuzzleId: undefined,
         updatedAt: now,
       },
     ] as Doc<"events">[];

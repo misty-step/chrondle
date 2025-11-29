@@ -12,8 +12,12 @@
 
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { getMetrics } from "./lib/observability/metricsService";
-import type { Metrics, TimeRange } from "./lib/observability/metricsCollector";
+import {
+  getMetrics,
+  calculatePoolHealth,
+  type PoolHealthMode,
+} from "./lib/observability/metricsService";
+import type { Metrics, TimeRange, PoolHealthMetrics } from "./lib/observability/metricsCollector";
 
 /**
  * Query aggregated metrics for specified time range.
@@ -34,11 +38,41 @@ export const getMetricsQuery = query({
 /**
  * Query for pool health metrics only.
  * Optimized for lightweight dashboard cards that only need event pool status.
+ *
+ * @param mode - Optional filter: "classic" | "order" | "all" (default: "all")
  */
 export const getPoolHealthQuery = query({
-  handler: async (ctx) => {
-    const metrics = await getMetrics(ctx, "1h"); // Recent snapshot
-    return metrics.poolHealth;
+  args: {
+    mode: v.optional(v.union(v.literal("classic"), v.literal("order"), v.literal("all"))),
+  },
+  handler: async (ctx, args): Promise<PoolHealthMetrics> => {
+    const mode = (args.mode ?? "all") as PoolHealthMode;
+    const events = await ctx.db.query("events").collect();
+    return calculatePoolHealth(events, mode);
+  },
+});
+
+/**
+ * Query for pool health metrics across ALL modes at once.
+ * Returns separate metrics for Classic, Order, and Both unused.
+ * Useful for dashboard overview showing all modes simultaneously.
+ */
+export const getPoolHealthByModeQuery = query({
+  handler: async (
+    ctx,
+  ): Promise<{
+    classic: PoolHealthMetrics;
+    order: PoolHealthMetrics;
+    all: PoolHealthMetrics;
+    totalEvents: number;
+  }> => {
+    const events = await ctx.db.query("events").collect();
+    return {
+      classic: calculatePoolHealth(events, "classic"),
+      order: calculatePoolHealth(events, "order"),
+      all: calculatePoolHealth(events, "all"),
+      totalEvents: events.length,
+    };
   },
 });
 
