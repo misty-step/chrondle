@@ -61,6 +61,40 @@ describe("scoreRange", () => {
   it("rejects hint levels above six", () => {
     expect(() => scoreRange(1950, 1950, 1950, 0, 7 as never)).toThrow(/between 0 and 6 inclusive/i);
   });
+
+  it("ensures a minimum score floor for maximum width ranges (0 hints)", () => {
+    // Width W_MAX, 0 hints.
+    // Old logic: 0 pts. New logic (5% floor): MIN_WIDTH_FACTOR_FLOOR * MAX_SCORES_BY_HINTS[0]
+    const start = 1000;
+    const width = SCORING_CONSTANTS.W_MAX;
+    const end = start + width - 1; // Width 250
+    const answer = 1100;
+    const hintsUsed = 0;
+
+    const score = scoreRange(start, end, answer, 0, hintsUsed);
+    const expectedScore = Math.floor(
+      SCORING_CONSTANTS.MIN_WIDTH_FACTOR_FLOOR * SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[hintsUsed],
+    );
+
+    expect(score).toBe(expectedScore); // 5 pts = Math.floor(0.05 * 100)
+  });
+
+  it("ensures a minimum score floor for maximum width ranges (6 hints)", () => {
+    // Width W_MAX, 6 hints.
+    // Old logic: 0 pts. New logic (5% floor): MIN_WIDTH_FACTOR_FLOOR * MAX_SCORES_BY_HINTS[6]
+    const start = 1000;
+    const width = SCORING_CONSTANTS.W_MAX;
+    const end = start + width - 1; // Width 250
+    const answer = 1100;
+    const hintsUsed = 6;
+
+    const score = scoreRange(start, end, answer, 0, hintsUsed);
+    const expectedScore = Math.floor(
+      SCORING_CONSTANTS.MIN_WIDTH_FACTOR_FLOOR * SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[hintsUsed],
+    );
+
+    expect(score).toBe(expectedScore); // 1 pt = Math.floor(0.05 * 25)
+  });
 });
 
 describe("scoreRangeDetailed", () => {
