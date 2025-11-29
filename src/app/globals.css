@@ -426,6 +426,41 @@ html.dark {
       transform: rotate(360deg);
     }
   }
+
+  /* Share button stamp confirmation */
+  @keyframes stamp-confirm {
+    0% {
+      transform: scale(1);
+    }
+    30% {
+      transform: scale(0.97);
+    }
+    60% {
+      transform: scale(1.02);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* Checkmark icon entrance */
+  @keyframes check-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.5) rotate(-10deg);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.1) rotate(5deg);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+  }
+
+  --animate-stamp-confirm: stamp-confirm 200ms ease-out;
+  --animate-check-in: check-in 250ms ease-out forwards;
 }
 
 /* -----------------------------------------------------------------

@@ -18,7 +18,8 @@ describe("generateOrderShareText - division guard", () => {
     expect(() => generateOrderShareText(edgeCasePayload)).not.toThrow();
 
     const shareText = generateOrderShareText(edgeCasePayload);
-    expect(shareText).toContain("0% Accuracy"); // Should show 0%, not NaN%
+    // NYT-style format: header shows 0/0
+    expect(shareText).toContain("Chrondle Order #247 0/0");
   });
 
   it("generates correct share text for normal case", () => {
@@ -37,12 +38,11 @@ describe("generateOrderShareText - division guard", () => {
 
     const shareText = generateOrderShareText(normalPayload);
 
-    expect(shareText).toContain("CHRONDLE ORDER #247 · 28 Nov 2025");
-    expect(shareText).toContain("✓ ✓ ✗"); // Emoji line
-    expect(shareText).toContain("80% Accuracy"); // 12/15 = 80%
-    expect(shareText).toContain("12/15 pairs");
-    expect(shareText).toContain("💡 1/3 hints");
-    expect(shareText).toContain("https://chrondle.app");
+    // NYT-style format
+    expect(shareText).toContain("Chrondle Order #247 12/15");
+    expect(shareText).toContain("✓ ✓ ✗"); // Results line
+    expect(shareText).toContain("💡⬜⬜"); // 1 hint used
+    expect(shareText).toContain("chrondle.app"); // URL without protocol
   });
 
   it("generates correct share text with perfect accuracy", () => {
@@ -60,9 +60,9 @@ describe("generateOrderShareText - division guard", () => {
 
     const shareText = generateOrderShareText(perfectPayload);
 
-    expect(shareText).toContain("100% Accuracy");
-    expect(shareText).toContain("15/15 pairs");
-    expect(shareText).toContain("💡 0/3 hints");
+    expect(shareText).toContain("Chrondle Order #247 15/15");
+    expect(shareText).toContain("✓ ✓ ✓");
+    expect(shareText).toContain("⬜⬜⬜"); // 0 hints used
   });
 
   it("uses default URL when not provided", () => {
@@ -80,6 +80,7 @@ describe("generateOrderShareText - division guard", () => {
 
     const shareText = generateOrderShareText(payloadWithoutUrl);
 
-    expect(shareText).toContain("https://www.chrondle.app");
+    // NYT-style uses clean URL without protocol
+    expect(shareText).toContain("chrondle.app");
   });
 });

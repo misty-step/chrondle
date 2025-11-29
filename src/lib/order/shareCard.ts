@@ -1,3 +1,8 @@
+/**
+ * Order Mode Share Text Generator
+ * Generates formatted text for sharing Order puzzle results (NYT Games style)
+ */
+
 import type { AttemptScore, OrderAttempt } from "@/types/orderGameState";
 
 // =============================================================================
@@ -75,23 +80,42 @@ export interface OrderSharePayload {
   url?: string;
 }
 
-export function generateOrderShareText(payload: OrderSharePayload): string {
-  const { dateLabel, puzzleNumber, results, score, url } = payload;
-
-  const emojiLine = results.map((r) => (r === "correct" ? "✓" : "✗")).join(" ");
-  // Defensive guard: Graceful degradation if totalPairs is 0 (legacy backwards compatibility)
-  const accuracyPercent =
-    score.totalPairs === 0 ? 0 : Math.round((score.correctPairs / score.totalPairs) * 100);
-
-  let shareText = `CHRONDLE ORDER #${puzzleNumber} · ${dateLabel}\n`;
-  shareText += `${emojiLine}\n\n`;
-  shareText += `🎯 ${accuracyPercent}% Accuracy\n`;
-  shareText += `🔗 ${score.correctPairs}/${score.totalPairs} pairs · 💡 ${score.hintsUsed}/3 hints\n\n`;
-  shareText += url || "https://www.chrondle.app";
-
-  return shareText;
+/**
+ * Generate hints visualization: 💡💡⬜ (Order has max 3 hints)
+ */
+function generateHintsBar(hintsUsed: number): string {
+  const maxHints = 3;
+  const used = Math.min(Math.max(0, hintsUsed), maxHints);
+  return "💡".repeat(used) + "⬜".repeat(maxHints - used);
 }
 
+/**
+ * Generates text-based share content in NYT Games style
+ * @param payload - Share payload with results and score
+ * @returns Formatted text ready for clipboard
+ */
+export function generateOrderShareText(payload: OrderSharePayload): string {
+  const { puzzleNumber, results, score, url } = payload;
+
+  // Header: Chrondle Order #96 5/6
+  const header = `Chrondle Order #${puzzleNumber} ${score.correctPairs}/${score.totalPairs}`;
+
+  // Results: ✓ ✗ ✓ ✓ ✗ ✓
+  const resultLine = results.map((r) => (r === "correct" ? "✓" : "✗")).join(" ");
+
+  // Hints: 💡💡⬜
+  const hints = generateHintsBar(score.hintsUsed);
+
+  // Build share text
+  const cleanUrl = url?.replace(/^https?:\/\/(www\.)?/, "") || "chrondle.app";
+
+  return `${header}\n\n${resultLine}\n${hints}\n\n${cleanUrl}`;
+}
+
+/**
+ * Copies text-based share content to clipboard
+ * @param payload - Share payload with results and score
+ */
 export async function copyOrderShareTextToClipboard(payload: OrderSharePayload): Promise<void> {
   const shareText = generateOrderShareText(payload);
 
