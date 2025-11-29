@@ -1,24 +1,20 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { currentUser } from "@clerk/nextjs/server";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
-import { PoolHealthCard } from "@/components/admin/PoolHealthCard";
-import { CostTrendsChart } from "@/components/admin/CostTrendsChart";
-import { QualityMetricsGrid } from "@/components/admin/QualityMetricsGrid";
-import { RecentGenerationsTable } from "@/components/admin/RecentGenerationsTable";
+import { AdminTabs } from "./components/AdminTabs";
 
 /**
- * Admin Dashboard - Event Generation Observability
+ * Admin Dashboard - Event Generation Command Center
  *
- * Provides real-time monitoring of:
- * - Event pool health (unused events, depletion timeline, era coverage)
- * - Cost trends (daily spending, 7-day averages, cost per event)
- * - Quality metrics (scores, failure rates, trends)
- * - Recent generation attempts (debug view)
+ * Provides real-time monitoring and management of:
+ * - Overview: Pool health, cost trends, quality metrics, recent generations
+ * - Events: Browse, search, filter, edit the event pool
+ * - Puzzles: View puzzle history for Classic and Order modes
  *
  * Access: Restricted to users with admin role in Clerk metadata
- * Auto-refresh: 30 seconds (client-side Convex subscriptions)
+ * Auto-refresh: Real-time via Convex subscriptions
  */
 export default async function AdminDashboardPage() {
   // Auth check: Only allow admin users
@@ -51,32 +47,21 @@ export default async function AdminDashboardPage() {
               Admin Dashboard
             </h1>
             <p className="text-text-secondary mt-2 text-sm">
-              Event generation observability and monitoring
+              Event generation observability and content management
             </p>
           </div>
 
-          {/* 4-Panel Grid */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Pool Health */}
-            <div className="lg:col-span-1">
-              <PoolHealthCard />
-            </div>
-
-            {/* Cost Trends */}
-            <div className="lg:col-span-1">
-              <CostTrendsChart />
-            </div>
-
-            {/* Quality Metrics */}
-            <div className="lg:col-span-1">
-              <QualityMetricsGrid />
-            </div>
-
-            {/* Recent Generations - Full Width */}
-            <div className="lg:col-span-2">
-              <RecentGenerationsTable />
-            </div>
-          </div>
+          {/* Tab Navigation + Content */}
+          <Suspense
+            fallback={
+              <div className="animate-pulse space-y-4">
+                <div className="bg-surface-secondary h-10 w-64 rounded" />
+                <div className="bg-surface-secondary h-64 rounded-lg" />
+              </div>
+            }
+          >
+            <AdminTabs />
+          </Suspense>
         </div>
       </main>
 

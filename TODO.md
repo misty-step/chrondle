@@ -554,7 +554,7 @@
 
 **Context:** Transform single-page dashboard into tabbed interface. Each tab is a deep module - simple interface (tab click) hides complex data fetching and UI rendering.
 
-- [ ] **Create AdminTabs component with URL-based routing** (`src/app/admin/dashboard/components/AdminTabs.tsx`)
+- [x] **Create AdminTabs component with URL-based routing** (`src/app/admin/dashboard/components/AdminTabs.tsx`)
 
   - Use `useSearchParams` for tab state: `?tab=overview|events|puzzles`
   - Tab buttons: Overview (default), Events, Puzzles
@@ -562,21 +562,21 @@
   - Style: Underline active tab, hover states, keyboard navigation
   - Success criteria: Tab switches update URL, browser back works, deep linking works
 
-- [ ] **Extract current dashboard content to OverviewTab** (`src/app/admin/dashboard/components/OverviewTab.tsx`)
+- [x] **Extract current dashboard content to OverviewTab** (`src/app/admin/dashboard/components/OverviewTab.tsx`)
 
   - Move: PoolHealthCard, CostTrendsChart, QualityMetricsGrid, RecentGenerationsTable
   - Keep existing Convex query hooks
   - Add mode filter prop for future per-mode filtering
   - Success criteria: Overview tab renders identical to current dashboard
 
-- [ ] **Update dashboard page to render tab router** (`src/app/admin/dashboard/page.tsx`)
+- [x] **Update dashboard page to render tab router** (`src/app/admin/dashboard/page.tsx`)
 
   - Keep server component auth check (Clerk admin role)
   - Render AdminTabs client component after auth
   - Pass any server-fetched data as props
   - Success criteria: Dashboard loads with tabs, auth still enforced
 
-- [ ] **Create shared ModeFilter component** (`src/app/admin/dashboard/components/shared/ModeFilter.tsx`)
+- [x] **Create shared ModeFilter component** (`src/app/admin/dashboard/components/shared/ModeFilter.tsx`)
 
   - Toggle between: "All", "Classic", "Order"
   - Use URL search param: `?mode=all|classic|order`
