@@ -31,6 +31,7 @@ import type * as lib_logging from "../lib/logging.js";
 import type * as lib_migrationHelpers from "../lib/migrationHelpers.js";
 import type * as lib_observability from "../lib/observability.js";
 import type * as lib_orderScoring from "../lib/orderScoring.js";
+import type * as lib_orderValidation from "../lib/orderValidation.js";
 import type * as lib_puzzleHelpers from "../lib/puzzleHelpers.js";
 import type * as lib_puzzleType from "../lib/puzzleType.js";
 import type * as lib_responsesClient from "../lib/responsesClient.js";
@@ -86,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   "lib/migrationHelpers": typeof lib_migrationHelpers;
   "lib/observability": typeof lib_observability;
   "lib/orderScoring": typeof lib_orderScoring;
+  "lib/orderValidation": typeof lib_orderValidation;
   "lib/puzzleHelpers": typeof lib_puzzleHelpers;
   "lib/puzzleType": typeof lib_puzzleType;
   "lib/responsesClient": typeof lib_responsesClient;

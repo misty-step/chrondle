@@ -53,13 +53,6 @@ export function OrderInstructions({ puzzleNumber, events, attempts = 0 }: OrderI
           <span className="text-muted-foreground/30">·</span>
           <span className="text-muted-foreground text-xs italic">{yearSpan}</span>
         </div>
-
-        {/* Arrangement count badge */}
-        {attempts > 0 && (
-          <div className="border-primary/30 bg-primary/5 inline-flex items-center gap-2 rounded-sm border px-3 py-1.5">
-            <span className="font-year text-primary text-xs font-medium">Attempt {attempts}</span>
-          </div>
-        )}
       </div>
     </ModeHero>
   );
