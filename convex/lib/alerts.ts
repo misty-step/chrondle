@@ -1,62 +1,56 @@
-import { internal } from "../_generated/api";
+/**
+ * Alert orchestration for event generation system.
+ *
+ * Integrates AlertEngine with metrics collection and multi-channel notifications.
+ * Called post-batch to detect pool depletion, cost spikes, quality degradation.
+ *
+ * Deep module pattern: Simple runAlertChecks() interface hides:
+ * - Metrics aggregation from multiple sources
+ * - AlertEngine initialization and rule evaluation
+ * - Notifier setup and channel routing
+ * - Logging and error handling
+ */
+
 import type { ActionCtx } from "../_generated/server";
-import { summarizeGenerationLogs } from "../generationLogs";
+import { getMetrics } from "./observability/metricsService";
+import { AlertEngine, STANDARD_ALERT_RULES } from "./observability/alertEngine";
+import { sendToSentry } from "./observability/sentryNotifier";
+import { sendEmail } from "./observability/emailNotifier";
+import type { AlertChannel, Notifier } from "./observability/alertEngine";
 
-const DAYS_FOR_ALERTS = 2;
-
+/**
+ * Run alert checks after batch generation completes.
+ *
+ * Aggregates metrics from last 24 hours, evaluates alert rules,
+ * and sends notifications via configured channels (Sentry, email).
+ *
+ * @param ctx - Action context with database access
+ */
 export async function runAlertChecks(ctx: ActionCtx): Promise<void> {
-  await Promise.all([checkZeroEvents(ctx), checkCostSpike(ctx), checkPassRate(ctx)]);
-}
+  try {
+    // Aggregate metrics from last 24 hours
+    const metrics = await getMetrics(ctx, "24h");
 
-async function checkZeroEvents(ctx: ActionCtx): Promise<void> {
-  const { start, end: _end } = dayRange(-1);
-  const yesterday = await ctx.runQuery(internal.generationLogs.getDailyGenerationStats, {
-    date: new Date(start).toISOString().slice(0, 10),
-  });
-  const today = await ctx.runQuery(internal.generationLogs.getDailyGenerationStats, {});
+    // Set up notifiers for each channel
+    const notifiers = new Map<AlertChannel, Notifier>([
+      ["sentry", sendToSentry],
+      ["email", sendEmail],
+    ]);
 
-  if (yesterday.eventsGenerated === 0 && today.eventsGenerated === 0) {
-    alert("Zero events generated for 2 consecutive days");
+    // Create AlertEngine with standard rules and notifiers
+    const alertEngine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+
+    // Evaluate all rules and fire alerts
+    const firedAlerts = await alertEngine.checkAlerts(metrics);
+
+    // Log results
+    if (firedAlerts.length > 0) {
+      console.log(`[Alerts] Fired ${firedAlerts.length} alert(s):`, firedAlerts);
+    } else {
+      console.log("[Alerts] All metrics within acceptable thresholds");
+    }
+  } catch (error) {
+    console.error("[Alerts] Failed to run alert checks:", error);
+    // Don't throw - graceful degradation, batch should complete even if alerts fail
   }
-}
-
-async function checkCostSpike(ctx: ActionCtx): Promise<void> {
-  const logs = [];
-  for (let i = DAYS_FOR_ALERTS; i >= 0; i -= 1) {
-    const { start } = dayRange(-i);
-    const dateString = new Date(start).toISOString().slice(0, 10);
-    const stats = await ctx.runQuery(internal.generationLogs.getDailyGenerationStats, {
-      date: dateString,
-    });
-    logs.push(stats);
-  }
-
-  if (logs.length < 3) return;
-  const last = logs.at(-1)!;
-  const previous = logs.slice(0, -1);
-  const avg = previous.reduce((sum, stat) => sum + stat.totalCost, 0) / previous.length;
-  if (avg > 0 && last.totalCost > avg * 2) {
-    alert(`Daily cost spike detected: ${last.totalCost.toFixed(2)} > 2x avg ${avg.toFixed(2)}`);
-  }
-}
-
-async function checkPassRate(ctx: ActionCtx): Promise<void> {
-  const { start: _start } = dayRange(0);
-  const recentLogs = await ctx.runQuery(internal.generationLogs.getFailedYears, { limit: 100 });
-  const logs = summarizeGenerationLogs(recentLogs);
-  if (logs.failedYears > logs.successfulYears) {
-    alert("Validation pass rate dropped below 50% over recent failures");
-  }
-}
-
-function alert(message: string): void {
-  console.warn(`[ALERT] ${message}`);
-}
-
-function dayRange(offset: number) {
-  const base = new Date();
-  base.setUTCDate(base.getUTCDate() + offset);
-  const start = Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate());
-  const end = start + 24 * 60 * 60 * 1000;
-  return { start, end };
 }

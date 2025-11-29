@@ -374,11 +374,12 @@
   - Success criteria: Email delivered within 2 minutes, actionable information provided
   - Note: Implemented with 18 tests covering HTML generation, recipient parsing, error handling, graceful degradation
 
-- [ ] **Add alert checking to Orchestrator post-batch hook**
+- [x] **Add alert checking to Orchestrator post-batch hook**
   - After daily batch completes, fetch current metrics: `metricsCollector.getMetrics("24h")`
   - Call: `alertEngine.checkAlerts(metrics)`
   - Log: Alert check results (which rules evaluated, which fired)
   - Success criteria: Alerts checked after every batch, zero missed checks
+  - Note: Replaced old console.warn alerts with AlertEngine integration, connects metrics → rules → notifiers (Sentry + email)
 
 ### 3.3 Build Admin Dashboard UI
 
