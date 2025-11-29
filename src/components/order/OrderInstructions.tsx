@@ -42,7 +42,7 @@ export function OrderInstructions({ puzzleNumber, events, attempts = 0 }: OrderI
 
   return (
     <ModeHero title="Order Mode" subtitle={subtitle} eyebrow={`Daily puzzle · №${puzzleNumber}`}>
-      <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+      <div className="mt-2 flex flex-wrap items-center justify-start gap-3">
         {/* Timeline span badge */}
         <div className="border-border/50 bg-muted/30 inline-flex items-center gap-2 rounded-sm border px-3 py-1.5">
           <span className="font-year text-muted-foreground text-xs">

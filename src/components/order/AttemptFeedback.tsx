@@ -84,71 +84,14 @@ interface AttemptHistoryProps {
 }
 
 /**
- * Shows the history of all attempts with a summary header.
+ * Shows the feedback from the last attempt.
  */
 export function AttemptHistory({ attempts }: AttemptHistoryProps) {
-  const prefersReducedMotion = useReducedMotion();
-
   if (attempts.length === 0) {
     return null;
   }
 
   const lastAttempt = attempts[attempts.length - 1];
-  const attemptLabel = attempts.length === 1 ? "attempt" : "attempts";
 
-  return (
-    <motion.div
-      className="space-y-3"
-      initial={prefersReducedMotion ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-    >
-      {/* Summary header */}
-      <div className="flex items-center justify-between">
-        <div className="font-year text-foreground text-sm font-medium">
-          {attempts.length} {attemptLabel}
-        </div>
-        <ProgressDots attempts={attempts} />
-      </div>
-
-      {/* Last attempt feedback */}
-      <AttemptFeedback attempt={lastAttempt} attemptNumber={attempts.length} />
-    </motion.div>
-  );
-}
-
-interface ProgressDotsProps {
-  attempts: OrderAttempt[];
-}
-
-/**
- * Compact visual representation of attempt history.
- */
-function ProgressDots({ attempts }: ProgressDotsProps) {
-  return (
-    <div className="flex gap-1">
-      {attempts.map((attempt, idx) => {
-        const correctCount = getCorrectPositionCount(attempt);
-        const total = attempt.feedback.length;
-        const ratio = correctCount / total;
-
-        // Color based on how close to perfect
-        let colorClass: string;
-        if (ratio === 1) {
-          colorClass = "bg-feedback-success";
-        } else if (ratio >= 0.5) {
-          colorClass = "bg-feedback-warning";
-        } else {
-          colorClass = "bg-destructive";
-        }
-
-        return (
-          <div
-            key={idx}
-            className={`h-2 w-2 rounded-full ${colorClass}`}
-            title={`Attempt ${idx + 1}: ${correctCount}/${total}`}
-          />
-        );
-      })}
-    </div>
-  );
+  return <AttemptFeedback attempt={lastAttempt} attemptNumber={attempts.length} />;
 }

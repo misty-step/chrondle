@@ -16,28 +16,25 @@ export interface ArchivalSharePayload {
 // =============================================================================
 
 /**
- * Generates archival-style share text.
+ * Generates share text for Order mode.
  *
  * Example:
- * CHRONDLE ORDER #247
- * 📋 3 attempts
+ * Chrondle: Order #247
  * ⬜🟩⬜🟩⬜⬜
  * ⬜🟩🟩🟩⬜🟩
  * 🟩🟩🟩🟩🟩🟩
+ *
  * https://www.chrondle.app
  */
 export function generateArchivalShareText(payload: ArchivalSharePayload): string {
-  const { puzzleNumber, score, attempts, url } = payload;
-
-  const attemptLabel = score.attempts === 1 ? "attempt" : "attempts";
+  const { puzzleNumber, attempts, url } = payload;
 
   // Build attempt progression - each attempt on its own row
   const progressLines = attempts
     .map((attempt) => attempt.feedback.map((f) => (f === "correct" ? "🟩" : "⬜")).join(""))
     .join("\n");
 
-  let shareText = `CHRONDLE ORDER #${puzzleNumber}\n`;
-  shareText += `📋 ${score.attempts} ${attemptLabel}\n`;
+  let shareText = `Chrondle: Order #${puzzleNumber}\n`;
   shareText += `${progressLines}\n\n`;
   shareText += url || "https://www.chrondle.app";
 
