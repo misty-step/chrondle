@@ -385,47 +385,53 @@
 
 **Context:** Web-based dashboard for non-technical stakeholders to monitor pool health, cost trends, quality metrics without querying database directly.
 
-- [ ] **Create admin dashboard route** (`src/app/admin/dashboard/page.tsx`)
+- [x] **Create admin dashboard route** (`src/app/admin/dashboard/page.tsx`)
 
   - Add Clerk auth check: Only allow users with admin role
   - Layout: 4-panel grid (Pool Health, Cost Trends, Quality Metrics, Recent Generations)
   - Use Convex queries: `useQuery(api.generationLogs.getEventPoolHealth)`, etc.
   - Success criteria: Dashboard loads in <2 seconds, auto-refreshes every 30 seconds
+  - Note: Uses Convex subscriptions for auto-refresh, Clerk publicMetadata for role check
 
-- [ ] **Build PoolHealthCard component** (`src/components/admin/PoolHealthCard.tsx`)
+- [x] **Build PoolHealthCard component** (`src/components/admin/PoolHealthCard.tsx`)
 
   - Display: Unused events count (large number), days until depletion (with color coding: green >90, yellow 30-90, red <30)
   - Breakdown: Coverage by era (ancient/medieval/modern) as progress bars
   - Chart: Year coverage over time (line chart, last 30 days)
   - Success criteria: At-a-glance pool health status, clear visual indicators
+  - Note: Uses getPoolHealthQuery, color-coded depletion warnings implemented
 
-- [ ] **Build CostTrendsChart component** (`src/components/admin/CostTrendsChart.tsx`)
+- [x] **Build CostTrendsChart component** (`src/components/admin/CostTrendsChart.tsx`)
 
   - Display: Daily cost for last 7 days (bar chart)
   - Show: 7-day average as horizontal line for comparison
   - Breakdown: Cost by stage (Generator, Critic, Reviser) as stacked bars
   - Include: Cost per event metric (calculated field)
   - Success criteria: Easy to spot cost spikes, understand cost breakdown by stage
+  - Note: Uses getCostMetricsQuery + getLast7DaysCosts, simple bar chart implementation
 
-- [ ] **Build QualityMetricsGrid component** (`src/components/admin/QualityMetricsGrid.tsx`)
+- [x] **Build QualityMetricsGrid component** (`src/components/admin/QualityMetricsGrid.tsx`)
 
   - Display: Average quality score (large number with trend arrow)
   - Breakdown: Individual score dimensions (factual, leakage, ambiguity, guessability, metadata) as gauge charts
   - Show: Failure rate percentage with 30-day trend
   - List: Top 5 failure reasons with counts
   - Success criteria: Comprehensive quality overview, identify improvement opportunities
+  - Note: Uses getQualityMetricsQuery, trend visualization via bar chart
 
-- [ ] **Build RecentGenerationsTable component** (`src/components/admin/RecentGenerationsTable.tsx`)
+- [x] **Build RecentGenerationsTable component** (`src/components/admin/RecentGenerationsTable.tsx`)
 
   - Display: Last 20 generation attempts (year, status, events generated, cost, duration, timestamp)
   - Features: Sortable columns, filterable by status (success/failed/skipped)
   - Drill-down: Click row to see detailed error message, generated events, quality scores
   - Success criteria: Easy to debug recent failures, understand generation patterns
+  - Note: Uses new getRecentGenerationsQuery added to convex/observability.ts
 
-- [ ] **Add navigation to admin dashboard**
+- [x] **Add navigation to admin dashboard**
   - Update main nav: Add "Admin" link (visible only to admin users)
   - Update route protection: Middleware checks admin role
   - Success criteria: Admin dashboard accessible to authorized users only, seamless navigation
+  - Note: AdminButton component with Clerk useUser hook, conditionally renders Settings icon
 
 ---
 
