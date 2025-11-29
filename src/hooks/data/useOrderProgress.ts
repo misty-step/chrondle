@@ -5,18 +5,21 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { safeConvexId } from "@/lib/validation";
 import type { Id } from "convex/_generated/dataModel";
-import type { OrderHint, OrderScore } from "@/types/orderGameState";
+import type { AttemptScore, OrderAttempt } from "@/types/orderGameState";
 import type { OrderProgressData } from "@/lib/deriveOrderGameState";
 
+/**
+ * Shape of the Order play record from Convex.
+ */
 interface ConvexOrderPlay {
   _id: Id<"orderPlays">;
   userId: Id<"users">;
   puzzleId: Id<"orderPuzzles">;
   ordering: string[];
-  hints: OrderHint[];
+  attempts: OrderAttempt[];
   completedAt?: number | null;
   updatedAt: number;
-  score?: OrderScore | null;
+  score?: AttemptScore | null;
 }
 
 interface UseOrderProgressReturn {
@@ -58,7 +61,7 @@ export function useOrderProgress(
 
     const normalized: OrderProgressData = {
       ordering: convexPlay.ordering ?? [],
-      hints: convexPlay.hints ?? [],
+      attempts: convexPlay.attempts ?? [],
       completedAt: convexPlay.completedAt ?? null,
       score: convexPlay.score ?? null,
     };

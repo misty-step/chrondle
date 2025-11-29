@@ -1,84 +1,49 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { HintDisplay } from "@/components/order/HintDisplay";
+import { useCallback, useMemo, useState } from "react";
 import { OrderEventList } from "@/components/order/OrderEventList";
 import { OrderInstructions } from "@/components/order/OrderInstructions";
+import { AttemptHistory } from "@/components/order/AttemptFeedback";
 import { GameCard } from "@/components/ui/GameCard";
 import { SubmitButton } from "@/components/ui/SubmitButton";
-import { useToast } from "@/hooks/use-toast";
-import { logger } from "@/lib/logger";
-import type { OrderEvent, ReadyState, OrderHint, OrderScore } from "@/types/orderGameState";
-import type { MutationError } from "@/observability/mutationErrorAdapter";
-import { deriveLockedPositions } from "@/lib/order/engine";
-import { calculateOrderScore } from "@/lib/order/scoring";
-import { generateAnchorHint, generateBracketHint, generateRelativeHint } from "@/lib/order/hints";
-import { hashHintContext } from "@/lib/order/hashHintContext";
-
-type HintType = OrderHint["type"];
+import type { OrderAttempt, ReadyState, PositionFeedback } from "@/types/orderGameState";
 
 interface OrderGameBoardProps {
   gameState: ReadyState;
   reorderEvents: (fromIndex: number, toIndex: number) => void;
-  takeHint: (hint: OrderHint) => void;
-  commitOrdering: (score: OrderScore) => Promise<[boolean, null] | [null, MutationError]>;
+  submitAttempt: () => Promise<OrderAttempt | null>;
 }
 
-export function OrderGameBoard({
-  gameState,
-  reorderEvents,
-  takeHint,
-  commitOrdering,
-}: OrderGameBoardProps) {
-  const { addToast } = useToast();
-  const { puzzle, currentOrder, hints } = gameState;
+export function OrderGameBoard({ gameState, reorderEvents, submitAttempt }: OrderGameBoardProps) {
+  const { puzzle, currentOrder, attempts } = gameState;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [pendingHintType, setPendingHintType] = useState<HintType | null>(null);
-  const [hintError, setHintError] = useState<string | null>(null);
+  // Get feedback from last attempt to show on cards
+  const lastAttemptFeedback = useMemo((): PositionFeedback[] | undefined => {
+    if (attempts.length === 0) return undefined;
 
-  // Derived state
-  const correctOrder = useMemo(
-    () =>
-      puzzle.events
-        .slice()
-        .sort((a, b) => a.year - b.year || a.id.localeCompare(b.id))
-        .map((e) => e.id),
-    [puzzle.events],
-  );
+    const lastAttempt = attempts[attempts.length - 1];
 
-  const puzzleSeed = useMemo(() => hashHintContext([puzzle.seed]), [puzzle.seed]);
+    // Map feedback to current ordering positions
+    // We need to find where each event in the current order was in the last attempt
+    const feedbackMap = new Map<string, PositionFeedback>();
+    lastAttempt.ordering.forEach((eventId, idx) => {
+      feedbackMap.set(eventId, lastAttempt.feedback[idx]);
+    });
 
-  const lockedPositions = useMemo(() => deriveLockedPositions(hints), [hints]);
+    // Return feedback for current order
+    return currentOrder.map((eventId) => feedbackMap.get(eventId) ?? "incorrect");
+  }, [attempts, currentOrder]);
 
-  const hintsByEvent = useMemo(() => {
-    return hints.reduce(
-      (acc, hint) => {
-        const eventId =
-          hint.type === "anchor" || hint.type === "bracket"
-            ? hint.eventId
-            : hint.type === "relative"
-              ? hint.earlierEventId
-              : null;
-        if (eventId) {
-          acc[eventId] = acc[eventId] || [];
-          acc[eventId].push(hint);
-        }
-        return acc;
-      },
-      {} as Record<string, OrderHint[]>,
-    );
-  }, [hints]);
+  // Clear feedback when user makes changes (ordering differs from last attempt)
+  const orderingChanged = useMemo(() => {
+    if (attempts.length === 0) return false;
+    const lastOrdering = attempts[attempts.length - 1].ordering;
+    return !ordersMatch(currentOrder, lastOrdering);
+  }, [attempts, currentOrder]);
 
-  const disabledHintTypes = useMemo(
-    () => ({
-      anchor: hints.some((h) => h.type === "anchor"),
-      relative: hints.some((h) => h.type === "relative"),
-      bracket: hints.some((h) => h.type === "bracket"),
-    }),
-    [hints],
-  );
+  const displayFeedback = orderingChanged ? undefined : lastAttemptFeedback;
 
-  // Handlers
   const handleOrderingChange = useCallback(
     (nextOrdering: string[], movedId?: string) => {
       const resolvedId = movedId ?? findMovedEventId(currentOrder, nextOrdering);
@@ -94,106 +59,49 @@ export function OrderGameBoard({
     [currentOrder, reorderEvents],
   );
 
-  const requestHint = useCallback(
-    (type: HintType) => {
-      if (pendingHintType || disabledHintTypes[type]) return;
-
-      setPendingHintType(type);
-      setHintError(null);
-
-      try {
-        const hint = createHintForType(type, {
-          currentOrder,
-          events: puzzle.events,
-          hints,
-          correctOrder,
-          puzzleSeed,
-        });
-        takeHint(hint);
-      } catch (error) {
-        logger.error("Failed to generate Order hint", error);
-        setHintError("Unable to generate hint. Adjust your ordering and try again.");
-      } finally {
-        setPendingHintType(null);
-      }
-    },
-    [
-      pendingHintType,
-      disabledHintTypes,
-      currentOrder,
-      puzzle.events,
-      hints,
-      correctOrder,
-      puzzleSeed,
-      takeHint,
-    ],
-  );
-
-  const handleCommit = useCallback(async () => {
-    const score = calculateOrderScore(currentOrder, puzzle.events, hints.length);
-    const [_success, error] = await commitOrdering(score);
-
-    if (error) {
-      addToast({
-        title: "Submission Failed",
-        description: error.message,
-        variant: "destructive",
-        actionLabel: error.retryable ? "Retry" : undefined,
-        onAction: error.retryable ? handleCommit : undefined,
-      });
+  const handleSubmit = useCallback(async () => {
+    setIsSubmitting(true);
+    try {
+      await submitAttempt();
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [currentOrder, puzzle.events, hints.length, commitOrdering, addToast]);
+  }, [submitAttempt]);
+
+  const buttonText = attempts.length === 0 ? "Check Order" : "Try Again";
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <OrderInstructions puzzleNumber={puzzle.puzzleNumber} events={puzzle.events} />
+      <OrderInstructions
+        puzzleNumber={puzzle.puzzleNumber}
+        events={puzzle.events}
+        attempts={attempts.length}
+      />
 
-      <div className="flex flex-col gap-6 lg:flex-row-reverse">
-        {/* Sidebar (Hints) */}
-        <div className="hidden lg:block lg:w-[360px]">
-          <HintDisplay
+      {/* Attempt History - shows feedback from previous attempts */}
+      {attempts.length > 0 && <AttemptHistory attempts={attempts} />}
+
+      {/* Main Column */}
+      <div className="space-y-4">
+        {/* The Board */}
+        <GameCard as="section" padding="default">
+          <OrderEventList
             events={puzzle.events}
-            hints={hints}
-            onRequestHint={requestHint}
-            disabledTypes={disabledHintTypes}
-            pendingType={pendingHintType}
-            error={hintError ?? undefined}
+            ordering={currentOrder}
+            onOrderingChange={handleOrderingChange}
+            feedback={displayFeedback}
           />
-        </div>
+        </GameCard>
 
-        {/* Main Column */}
-        <div className="flex-1 space-y-4">
-          {/* Mobile Hints */}
-          <div className="lg:hidden">
-            <HintDisplay
-              events={puzzle.events}
-              hints={hints}
-              onRequestHint={requestHint}
-              disabledTypes={disabledHintTypes}
-              pendingType={pendingHintType}
-              error={hintError ?? undefined}
-            />
-          </div>
-
-          {/* The Board */}
-          <GameCard as="section" padding="default">
-            <OrderEventList
-              events={puzzle.events}
-              ordering={currentOrder}
-              onOrderingChange={handleOrderingChange}
-              lockedPositions={lockedPositions}
-              hintsByEvent={hintsByEvent}
-            />
-          </GameCard>
-
-          <SubmitButton onClick={handleCommit}>Submit My Timeline</SubmitButton>
-        </div>
+        <SubmitButton onClick={handleSubmit} disabled={isSubmitting}>
+          {isSubmitting ? "Checking..." : buttonText}
+        </SubmitButton>
       </div>
     </div>
   );
 }
 
-// Helpers (copied from OrderGameIsland, moved here to be shared)
+// Helpers
 
 function findMovedEventId(previous: string[], next: string[]): string | null {
   if (previous.length !== next.length) return null;
@@ -208,59 +116,11 @@ function findMovedEventId(previous: string[], next: string[]): string | null {
   return null;
 }
 
-function createHintForType(
-  type: HintType,
-  context: {
-    currentOrder: string[];
-    events: OrderEvent[];
-    hints: OrderHint[];
-    correctOrder: string[];
-    puzzleSeed: number;
-  },
-): OrderHint {
-  const { currentOrder, events, hints, correctOrder, puzzleSeed } = context;
-
-  const stateSeed = hashHintContext([puzzleSeed, type, currentOrder.join("-"), hints.length]);
-
-  switch (type) {
-    case "anchor": {
-      const excludeEventIds = hints
-        .filter((h) => h.type === "anchor")
-        .map((h) => (h as Extract<OrderHint, { type: "anchor" }>).eventId);
-      return generateAnchorHint(currentOrder, correctOrder, {
-        seed: stateSeed,
-        excludeEventIds,
-      });
-    }
-    case "relative": {
-      const excludePairs = hints
-        .filter((h) => h.type === "relative")
-        .map((h) => ({
-          earlierEventId: (h as Extract<OrderHint, { type: "relative" }>).earlierEventId,
-          laterEventId: (h as Extract<OrderHint, { type: "relative" }>).laterEventId,
-        }));
-      return generateRelativeHint(currentOrder, events, {
-        seed: stateSeed,
-        excludePairs,
-      });
-    }
-    case "bracket": {
-      // Re-implement logic or import helper.
-      // For now, simple random selection using deterministic seed logic
-      // (Ideally this logic should be in a pure lib function, but putting it here to match Island behavior)
-      const bracketedIds = new Set(
-        hints
-          .filter((h) => h.type === "bracket")
-          .map((h) => (h as Extract<OrderHint, { type: "bracket" }>).eventId),
-      );
-      const available = events.filter((e) => !bracketedIds.has(e.id));
-      // Fallback if all bracketed
-      const candidates = available.length ? available : events;
-      // Simple deterministic pick
-      const index = Math.abs(stateSeed) % candidates.length;
-      return generateBracketHint([candidates[index]]);
-    }
-    default:
-      throw new Error(`Unsupported hint type: ${type}`);
+function ordersMatch(a: string[], b: string[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
   }
+  return true;
 }

@@ -8,9 +8,10 @@ import type { OrderEvent } from "@/types/orderGameState";
 interface OrderInstructionsProps {
   puzzleNumber: number;
   events: OrderEvent[];
+  attempts?: number;
 }
 
-export function OrderInstructions({ puzzleNumber, events }: OrderInstructionsProps) {
+export function OrderInstructions({ puzzleNumber, events, attempts = 0 }: OrderInstructionsProps) {
   const yearSpan = useMemo(() => {
     if (events.length === 0) return "0 years";
 
@@ -36,19 +37,22 @@ export function OrderInstructions({ puzzleNumber, events }: OrderInstructionsPro
     return Math.max(...events.map((e) => e.year));
   }, [events]);
 
+  const subtitle =
+    attempts === 0 ? "Arrange events from earliest to latest" : "Adjust and check again";
+
   return (
-    <ModeHero
-      title="Order Mode"
-      subtitle="Arrange events from earliest to latest"
-      eyebrow={`Daily puzzle · №${puzzleNumber}`}
-    >
-      {/* Minimal context badge showing timeline span */}
-      <div className="border-border/50 bg-muted/30 mt-2 inline-flex items-center gap-2 rounded-sm border px-3 py-1.5">
-        <span className="font-year text-muted-foreground text-xs">{formatYear(earliestYear)}</span>
-        <span className="text-muted-foreground/50">→</span>
-        <span className="font-year text-muted-foreground text-xs">{formatYear(latestYear)}</span>
-        <span className="text-muted-foreground/30">·</span>
-        <span className="text-muted-foreground text-xs italic">{yearSpan}</span>
+    <ModeHero title="Order Mode" subtitle={subtitle} eyebrow={`Daily puzzle · №${puzzleNumber}`}>
+      <div className="mt-2 flex flex-wrap items-center justify-start gap-3">
+        {/* Timeline span badge */}
+        <div className="border-border/50 bg-muted/30 inline-flex items-center gap-2 rounded-sm border px-3 py-1.5">
+          <span className="font-year text-muted-foreground text-xs">
+            {formatYear(earliestYear)}
+          </span>
+          <span className="text-muted-foreground/50">→</span>
+          <span className="font-year text-muted-foreground text-xs">{formatYear(latestYear)}</span>
+          <span className="text-muted-foreground/30">·</span>
+          <span className="text-muted-foreground text-xs italic">{yearSpan}</span>
+        </div>
       </div>
     </ModeHero>
   );

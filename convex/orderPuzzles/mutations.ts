@@ -2,12 +2,13 @@ import { v } from "convex/values";
 import { internalMutation, mutation } from "../_generated/server";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
-import { scoreOrderSubmission } from "../lib/orderScoring";
 import {
   type OrderEventCandidate,
   type SelectionConfig,
   selectEventsWithSpread,
 } from "./generation";
+import { arraysEqual, evaluateOrdering, isSolved, wouldSolve } from "../lib/orderValidation";
+import type { PositionFeedback } from "../lib/orderValidation";
 
 /**
  * Returns selection config with span constraints based on date hash.
@@ -73,20 +74,24 @@ import { withObservability } from "../lib/observability";
 import type { Id } from "../_generated/dataModel";
 
 /**
- * Validates a player's submission, recalculates the score server-side,
- * and persists the play for authenticated users.
+ * Order mode: Persists a completed Order play with attempts and score.
  */
 export const submitOrderPlay = mutation({
   args: {
     puzzleId: v.id("orderPuzzles"),
     userId: v.id("users"),
     ordering: v.array(v.string()),
-    hints: v.array(v.string()),
-    clientScore: v.object({
-      totalScore: v.number(),
-      correctPairs: v.number(),
-      totalPairs: v.number(),
-      hintMultiplier: v.number(),
+    attempts: v.array(
+      v.object({
+        ordering: v.array(v.string()),
+        feedback: v.array(v.string()),
+        pairsCorrect: v.number(),
+        totalPairs: v.number(),
+        timestamp: v.number(),
+      }),
+    ),
+    score: v.object({
+      attempts: v.number(),
     }),
   },
   handler: withObservability(
@@ -96,12 +101,15 @@ export const submitOrderPlay = mutation({
         puzzleId: Id<"orderPuzzles">;
         userId: Id<"users">;
         ordering: string[];
-        hints: string[];
-        clientScore: {
-          totalScore: number;
-          correctPairs: number;
+        attempts: Array<{
+          ordering: string[];
+          feedback: string[];
+          pairsCorrect: number;
           totalPairs: number;
-          hintMultiplier: number;
+          timestamp: number;
+        }>;
+        score: {
+          attempts: number;
         };
       },
     ) => {
@@ -123,9 +131,43 @@ export const submitOrderPlay = mutation({
         throw new Error("Order puzzle not found");
       }
 
-      const verifiedScore = scoreOrderSubmission(args.ordering, puzzle.events, args.hints.length);
-      if (Math.abs(verifiedScore.totalScore - args.clientScore.totalScore) > 1) {
-        throw new Error("Score verification failed");
+      // Verify the score matches the number of attempts
+      if (args.score.attempts !== args.attempts.length) {
+        throw new Error("Score verification failed: attempts count mismatch");
+      }
+
+      // CRITICAL SECURITY: Three-layer server-side verification
+      // Never trust client-provided attempts, feedback, or scores
+      // Pattern: Same as Classic mode submitRange - server recomputes everything
+
+      // Layer 1: Verify final ordering actually solves the puzzle
+      if (!wouldSolve(args.ordering, puzzle.events)) {
+        throw new Error("Validation failed: final ordering does not solve puzzle");
+      }
+
+      // Layer 2: Re-verify all attempts server-side (recompute feedback)
+      for (let i = 0; i < args.attempts.length; i++) {
+        const clientAttempt = args.attempts[i];
+        const serverFeedback = evaluateOrdering(clientAttempt.ordering, puzzle.events);
+
+        // Check feedback matches server recomputation
+        if (!arraysEqual(clientAttempt.feedback, serverFeedback.feedback)) {
+          throw new Error(`Validation failed: attempt ${i + 1} feedback mismatch`);
+        }
+
+        // Check pairs count matches server recomputation
+        if (
+          clientAttempt.pairsCorrect !== serverFeedback.pairsCorrect ||
+          clientAttempt.totalPairs !== serverFeedback.totalPairs
+        ) {
+          throw new Error(`Validation failed: attempt ${i + 1} pair counts incorrect`);
+        }
+      }
+
+      // Layer 3: Verify the final attempt is actually solved
+      const finalAttempt = args.attempts[args.attempts.length - 1];
+      if (!isSolved(finalAttempt as { feedback: PositionFeedback[] })) {
+        throw new Error("Validation failed: final attempt is not solved");
       }
 
       const existingPlay = await ctx.db
@@ -137,7 +179,8 @@ export const submitOrderPlay = mutation({
 
       const payload = {
         ordering: args.ordering,
-        hints: args.hints,
+        attempts: args.attempts,
+        score: args.score,
         completedAt: Date.now(),
         updatedAt: Date.now(),
       };
@@ -154,7 +197,7 @@ export const submitOrderPlay = mutation({
 
       return {
         status: "recorded" as const,
-        score: verifiedScore,
+        score: args.score,
       };
     },
     { name: "submitOrderPlay" },
