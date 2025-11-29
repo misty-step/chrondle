@@ -366,12 +366,13 @@
   - Success criteria: Sentry events captured within 30 seconds, proper severity mapping
   - Note: Implemented with 12 tests covering initialization, severity mapping, tagging, graceful degradation
 
-- [ ] **Implement email integration** (`convex/lib/observability/emailNotifier.ts`)
+- [x] **Implement email integration** (`convex/lib/observability/emailNotifier.ts`)
 
   - Use Resend for transactional email (configured via RESEND_API_KEY env var)
   - Send to: Configured admin email addresses (comma-separated EMAIL_RECIPIENTS env var)
   - Format: HTML email with alert details, metric values, timestamp
   - Success criteria: Email delivered within 2 minutes, actionable information provided
+  - Note: Implemented with 18 tests covering HTML generation, recipient parsing, error handling, graceful degradation
 
 - [ ] **Add alert checking to Orchestrator post-batch hook**
   - After daily batch completes, fetch current metrics: `metricsCollector.getMetrics("24h")`
