@@ -540,7 +540,7 @@
 
   - Success criteria: Order mode has independent pool depletion from Classic
 
-- [ ] **Write integration test for dual-mode event usage** (`convex/__tests__/dualModeEventUsage.test.ts`)
+- [x] **Write integration test for dual-mode event usage** (`convex/__tests__/dualModeEventUsage.test.ts`)
 
   - Test: Generate Classic puzzle for year 1969, verify events have `classicPuzzleId` set
   - Test: Generate Order puzzle, verify events have `orderPuzzleId` set
