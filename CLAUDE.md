@@ -20,7 +20,13 @@
 **Range-Based Game:**
 
 - Players submit normalized year ranges (e.g., 1960–1980 AD) instead of single guesses.
-- Scoring: `score = MAX_SCORES_BY_HINTS[hintsUsed] × ((W_MAX - width + 1) / W_MAX)` with `MAX_SCORES_BY_HINTS = [100, 85, 70, 55, 45, 35, 25]`. Containment is binary—no containment, no score.
+- Scoring: Uses linear interpolation with 5% minimum floor to ensure maximum-width ranges still earn points:
+  ```
+  widthFactor = 1 - ((width - 1) / (W_MAX - 1)) * (1 - MIN_WIDTH_FACTOR_FLOOR)
+  score = Math.floor(MAX_SCORES_BY_HINTS[hintsUsed] × widthFactor)
+  ```
+  where `MAX_SCORES_BY_HINTS = [100, 85, 70, 55, 45, 35, 25]` and `MIN_WIDTH_FACTOR_FLOOR = 0.05`.
+  This ensures maximum-width ranges (W_MAX=250) earn 5% of the score tier rather than 0 points. Containment is binary—no containment, no score.
 - Core hook: `useRangeGame` (NOT `useChrondle` - that's dead code)
 - Game state derivation: Pure functional via `deriveGameState` in `src/lib/gameState.ts`
 

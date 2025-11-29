@@ -63,23 +63,37 @@ describe("scoreRange", () => {
   });
 
   it("ensures a minimum score floor for maximum width ranges (0 hints)", () => {
-    // Width 250, 0 hints.
-    // Old logic: 0 pts. New logic (5% floor): ~5 pts.
+    // Width W_MAX, 0 hints.
+    // Old logic: 0 pts. New logic (5% floor): MIN_WIDTH_FACTOR_FLOOR * MAX_SCORES_BY_HINTS[0]
     const start = 1000;
-    const end = 1249; // Width 250
+    const width = SCORING_CONSTANTS.W_MAX;
+    const end = start + width - 1; // Width 250
     const answer = 1100;
-    const score = scoreRange(start, end, answer, 0, 0);
-    expect(score).toBe(5);
+    const hintsUsed = 0;
+
+    const score = scoreRange(start, end, answer, 0, hintsUsed);
+    const expectedScore = Math.floor(
+      SCORING_CONSTANTS.MIN_WIDTH_FACTOR_FLOOR * SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[hintsUsed],
+    );
+
+    expect(score).toBe(expectedScore); // 5 pts = Math.floor(0.05 * 100)
   });
 
   it("ensures a minimum score floor for maximum width ranges (6 hints)", () => {
-    // Width 250, 6 hints.
-    // Old logic: 0 pts. New logic (5% floor): 1 pt.
+    // Width W_MAX, 6 hints.
+    // Old logic: 0 pts. New logic (5% floor): MIN_WIDTH_FACTOR_FLOOR * MAX_SCORES_BY_HINTS[6]
     const start = 1000;
-    const end = 1249; // Width 250
+    const width = SCORING_CONSTANTS.W_MAX;
+    const end = start + width - 1; // Width 250
     const answer = 1100;
-    const score = scoreRange(start, end, answer, 0, 6);
-    expect(score).toBe(1);
+    const hintsUsed = 6;
+
+    const score = scoreRange(start, end, answer, 0, hintsUsed);
+    const expectedScore = Math.floor(
+      SCORING_CONSTANTS.MIN_WIDTH_FACTOR_FLOOR * SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[hintsUsed],
+    );
+
+    expect(score).toBe(expectedScore); // 1 pt = Math.floor(0.05 * 25)
   });
 });
 
