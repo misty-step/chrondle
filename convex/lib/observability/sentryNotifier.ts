@@ -1,3 +1,4 @@
+"use node";
 /**
  * Sentry Alert Notifier
  *

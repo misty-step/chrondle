@@ -1,3 +1,4 @@
+"use node";
 /**
  * Alert orchestration for event generation system.
  *

@@ -1,3 +1,4 @@
+"use node";
 /**
  * Email Alert Notifier
  *
