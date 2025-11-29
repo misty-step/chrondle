@@ -590,7 +590,7 @@
 
 **Context:** Admin needs to browse, search, filter, and edit the 4217-event pool. Must support filtering by year, era, text search, and usage status per mode.
 
-- [ ] **Create admin events query with search and filters** (`convex/admin/events.ts`)
+- [x] **Create admin events query with search and filters** (`convex/admin/events.ts`)
 
   - Export `searchEvents` query with args:
     - `search: v.optional(v.string())` - fuzzy text search on event text
@@ -608,8 +608,9 @@
     - `used_order`: `orderPuzzleId !== undefined`
   - Text search: Case-insensitive substring match on event text (use `.filter()` after index query)
   - Success criteria: Query returns <500ms for any filter combination
+  - Note: Also added `getEventStats` query for statistics header
 
-- [ ] **Create admin event mutation for text updates** (`convex/admin/events.ts`)
+- [x] **Create admin event mutation for text updates** (`convex/admin/events.ts`)
 
   - Export `updateEventText` mutation with args:
     - `eventId: v.id("events")`
@@ -618,7 +619,7 @@
   - Update: `ctx.db.patch(eventId, { event: text, updatedAt: Date.now() })`
   - Success criteria: Admin can fix typos, improve clarity without affecting puzzle associations
 
-- [ ] **Create admin event mutation for deletion** (`convex/admin/events.ts`)
+- [x] **Create admin event mutation for deletion** (`convex/admin/events.ts`)
 
   - Export `deleteEvent` mutation with args: `eventId: v.id("events")`
   - Validate: Event not currently used in any puzzle (`classicPuzzleId === undefined AND orderPuzzleId === undefined`)
@@ -626,7 +627,7 @@
   - Delete: `ctx.db.delete(eventId)`
   - Success criteria: Only unused events deletable, clear error for used events
 
-- [ ] **Build EventsTab component with search and filters** (`src/app/admin/dashboard/components/EventsTab.tsx`)
+- [x] **Build EventsTab component with search and filters** (`src/app/admin/dashboard/components/EventsTab.tsx`)
 
   - Search input: Debounced (300ms) text input for event text search
   - Filter row: Year range inputs, Era dropdown, Usage status dropdown
@@ -635,7 +636,7 @@
   - Empty state: "No events match filters"
   - Success criteria: Admin can find any event in <3 clicks
 
-- [ ] **Build inline event editing in EventsTab**
+- [x] **Build inline event editing in EventsTab**
 
   - Click event text → Inline textarea appears
   - Save button + Cancel button
@@ -643,14 +644,14 @@
   - Success feedback: Brief checkmark animation
   - Success criteria: Edit flow is <5 seconds for typo fix
 
-- [ ] **Build event deletion with confirmation in EventsTab**
+- [x] **Build event deletion with confirmation in EventsTab**
 
   - Delete button (trash icon) in Actions column
   - Click → Confirmation dialog: "Delete this event? This cannot be undone."
   - If event is used: Button disabled with tooltip "Event used in puzzle #X"
   - Success criteria: No accidental deletions, clear feedback on why deletion blocked
 
-- [ ] **Add event statistics summary to EventsTab header**
+- [x] **Add event statistics summary to EventsTab header**
 
   - Display: Total events (4217), Unused in Classic (3563), Unused in Order (TBD), Unused in Both
   - Calculate from query or separate stats query
