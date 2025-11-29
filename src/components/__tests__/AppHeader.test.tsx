@@ -26,6 +26,10 @@ vi.mock("@/components/AuthButtons", () => ({
   AuthButtons: () => <div data-testid="auth-buttons">auth</div>,
 }));
 
+vi.mock("@/components/AdminButton", () => ({
+  AdminButton: () => null,
+}));
+
 vi.mock("@/components/SupportModal", () => ({
   __esModule: true,
   default: () => null,
