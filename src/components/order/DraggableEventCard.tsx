@@ -140,9 +140,6 @@ function EventCardContent({
           </p>
         </div>
       </div>
-
-      {/* Feedback Badge */}
-      {feedback && <FeedbackBadge feedback={feedback} />}
     </>
   );
 }
@@ -155,48 +152,22 @@ interface PositionBadgeProps {
 function PositionBadge({ index, feedback }: PositionBadgeProps) {
   if (feedback === "correct") {
     return (
-      <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-green-500/30 bg-green-500/10">
-        <Check className="h-5 w-5 text-green-600 dark:text-green-400" aria-hidden="true" />
+      <div className="border-feedback-success/30 bg-feedback-success/10 shadow-hard flex h-9 w-9 items-center justify-center rounded-sm border-2">
+        <Check className="text-feedback-success h-5 w-5" aria-hidden="true" />
       </div>
     );
   }
 
   if (feedback === "incorrect") {
     return (
-      <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-red-500/30 bg-red-500/10">
-        <span className="text-base font-semibold text-red-600 dark:text-red-400">{index + 1}</span>
+      <div className="border-destructive/30 bg-destructive/10 shadow-hard flex h-9 w-9 items-center justify-center rounded-sm border-2">
+        <X className="text-destructive h-5 w-5" aria-hidden="true" />
       </div>
     );
   }
 
   // No feedback yet - default badge
   return <div className="number-badge">{index + 1}</div>;
-}
-
-interface FeedbackBadgeProps {
-  feedback: PositionFeedback;
-}
-
-function FeedbackBadge({ feedback }: FeedbackBadgeProps) {
-  if (feedback === "correct") {
-    return (
-      <div className="absolute top-2 right-2 flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-2 py-1 shadow-sm">
-        <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" aria-hidden="true" />
-        <span className="text-[10px] font-semibold tracking-wide text-green-600 uppercase dark:text-green-400">
-          Correct
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="absolute top-2 right-2 flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-1 shadow-sm">
-      <X className="h-3.5 w-3.5 text-red-600 dark:text-red-400" aria-hidden="true" />
-      <span className="text-[10px] font-semibold tracking-wide text-red-600 uppercase dark:text-red-400">
-        Wrong
-      </span>
-    </div>
-  );
 }
 
 function cardClasses({
@@ -208,9 +179,9 @@ function cardClasses({
 }) {
   const feedbackBorder =
     feedback === "correct"
-      ? "border-green-500/30"
+      ? "border-feedback-success/30"
       : feedback === "incorrect"
-        ? "border-red-500/30"
+        ? "border-destructive/30"
         : "border-border";
 
   return [

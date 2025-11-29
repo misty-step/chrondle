@@ -5,12 +5,11 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { safeConvexId } from "@/lib/validation";
 import type { Id } from "convex/_generated/dataModel";
-import type { GolfScore, OrderAttempt } from "@/types/orderGameState";
+import type { AttemptScore, OrderAttempt } from "@/types/orderGameState";
 import type { OrderProgressData } from "@/lib/deriveOrderGameState";
 
 /**
  * Shape of the Order play record from Convex.
- * Updated for golf mode (attempts instead of hints).
  */
 interface ConvexOrderPlay {
   _id: Id<"orderPlays">;
@@ -20,7 +19,7 @@ interface ConvexOrderPlay {
   attempts: OrderAttempt[];
   completedAt?: number | null;
   updatedAt: number;
-  score?: GolfScore | null;
+  score?: AttemptScore | null;
 }
 
 interface UseOrderProgressReturn {

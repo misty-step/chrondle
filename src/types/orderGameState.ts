@@ -32,7 +32,6 @@ export interface ReadyState {
   puzzle: OrderPuzzle;
   currentOrder: string[];
   attempts: OrderAttempt[];
-  par: number;
 }
 
 /**
@@ -44,7 +43,7 @@ export interface CompletedState {
   finalOrder: string[];
   correctOrder: string[];
   attempts: OrderAttempt[];
-  score: GolfScore;
+  score: AttemptScore;
 }
 
 export interface ErrorState {
@@ -71,7 +70,7 @@ export interface OrderEvent {
 }
 
 // =============================================================================
-// Golf Scoring System
+// Attempt Tracking
 // =============================================================================
 
 /**
@@ -92,71 +91,18 @@ export interface OrderAttempt {
 export type PositionFeedback = "correct" | "incorrect";
 
 /**
- * Golf-style scoring: strokes (attempts) relative to par.
+ * Simple attempt-based scoring.
  */
-export interface GolfScore {
-  /** Number of attempts to solve (1 = hole-in-one) */
-  strokes: number;
-  /** Expected number of attempts (e.g., 4) */
-  par: number;
-  /** strokes - par: negative is good (-2 = eagle), positive is over par */
-  relativeToPar: number;
-}
-
-// =============================================================================
-// Golf Terminology Helpers
-// =============================================================================
-
-export type GolfTerm =
-  | "hole-in-one"
-  | "eagle"
-  | "birdie"
-  | "par"
-  | "bogey"
-  | "double-bogey"
-  | "triple-bogey"
-  | "over-par";
-
-/**
- * Maps relative-to-par score to golf terminology.
- */
-export function getGolfTerm(relativeToPar: number): GolfTerm {
-  if (relativeToPar <= -3) return "hole-in-one"; // 1 stroke on par 4
-  if (relativeToPar === -2) return "eagle";
-  if (relativeToPar === -1) return "birdie";
-  if (relativeToPar === 0) return "par";
-  if (relativeToPar === 1) return "bogey";
-  if (relativeToPar === 2) return "double-bogey";
-  if (relativeToPar === 3) return "triple-bogey";
-  return "over-par";
-}
-
-/**
- * Returns emoji for golf term.
- */
-export function getGolfEmoji(term: GolfTerm): string {
-  switch (term) {
-    case "hole-in-one":
-      return "🏆";
-    case "eagle":
-      return "🦅";
-    case "birdie":
-      return "🐦";
-    case "par":
-      return "⛳";
-    case "bogey":
-    case "double-bogey":
-    case "triple-bogey":
-    case "over-par":
-      return "🏌️";
-  }
+export interface AttemptScore {
+  /** Number of arrangements to solve */
+  attempts: number;
 }
 
 // =============================================================================
 // Legacy Types (deprecated, kept for migration)
 // =============================================================================
 
-/** @deprecated Use GolfScore instead */
+/** @deprecated Use AttemptScore instead */
 export interface OrderScore {
   totalScore: number;
   correctPairs: number;

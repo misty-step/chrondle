@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { Check, X } from "lucide-react";
 import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
-import { getAccuracyPercent, getCorrectPositionCount } from "@/lib/order/golfScoring";
+import { getAccuracyPercent, getCorrectPositionCount } from "@/lib/order/attemptScoring";
 import type { OrderAttempt } from "@/types/orderGameState";
 
 interface AttemptFeedbackProps {
@@ -44,10 +44,10 @@ export function AttemptFeedback({ attempt, attemptNumber }: AttemptFeedbackProps
         {attempt.feedback.map((feedback, idx) => (
           <motion.div
             key={idx}
-            className={`flex h-10 w-10 items-center justify-center rounded-sm border-2 ${
+            className={`shadow-hard flex h-10 w-10 items-center justify-center rounded-sm border-2 ${
               feedback === "correct"
-                ? "border-green-500/30 bg-green-500/10"
-                : "border-red-500/30 bg-red-500/10"
+                ? "border-feedback-success/30 bg-feedback-success/10"
+                : "border-destructive/30 bg-destructive/10"
             }`}
             initial={prefersReducedMotion ? false : { scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -57,9 +57,9 @@ export function AttemptFeedback({ attempt, attemptNumber }: AttemptFeedbackProps
             }}
           >
             {feedback === "correct" ? (
-              <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <Check className="text-feedback-success h-5 w-5" />
             ) : (
-              <X className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <X className="text-destructive h-5 w-5" />
             )}
           </motion.div>
         ))}
@@ -68,7 +68,7 @@ export function AttemptFeedback({ attempt, attemptNumber }: AttemptFeedbackProps
       {/* Pairs accuracy */}
       <div className="text-muted-foreground text-center text-sm">
         {isPerfect ? (
-          <span className="font-semibold text-green-600 dark:text-green-400">Perfect order!</span>
+          <span className="text-feedback-success font-semibold">Perfect order!</span>
         ) : (
           <span>
             {attempt.pairsCorrect}/{attempt.totalPairs} pairs correct ({accuracyPercent}%)
@@ -81,13 +81,12 @@ export function AttemptFeedback({ attempt, attemptNumber }: AttemptFeedbackProps
 
 interface AttemptHistoryProps {
   attempts: OrderAttempt[];
-  par: number;
 }
 
 /**
  * Shows the history of all attempts with a summary header.
  */
-export function AttemptHistory({ attempts, par }: AttemptHistoryProps) {
+export function AttemptHistory({ attempts }: AttemptHistoryProps) {
   const prefersReducedMotion = useReducedMotion();
 
   if (attempts.length === 0) {
@@ -95,7 +94,7 @@ export function AttemptHistory({ attempts, par }: AttemptHistoryProps) {
   }
 
   const lastAttempt = attempts[attempts.length - 1];
-  const strokesLabel = attempts.length === 1 ? "stroke" : "strokes";
+  const attemptLabel = attempts.length === 1 ? "attempt" : "attempts";
 
   return (
     <motion.div
@@ -105,8 +104,8 @@ export function AttemptHistory({ attempts, par }: AttemptHistoryProps) {
     >
       {/* Summary header */}
       <div className="flex items-center justify-between">
-        <div className="text-foreground text-sm font-medium">
-          {attempts.length} {strokesLabel} · Par {par}
+        <div className="font-year text-foreground text-sm font-medium">
+          {attempts.length} {attemptLabel}
         </div>
         <ProgressDots attempts={attempts} />
       </div>
@@ -135,11 +134,11 @@ function ProgressDots({ attempts }: ProgressDotsProps) {
         // Color based on how close to perfect
         let colorClass: string;
         if (ratio === 1) {
-          colorClass = "bg-green-500";
+          colorClass = "bg-feedback-success";
         } else if (ratio >= 0.5) {
-          colorClass = "bg-amber-500";
+          colorClass = "bg-feedback-warning";
         } else {
-          colorClass = "bg-red-500";
+          colorClass = "bg-destructive";
         }
 
         return (

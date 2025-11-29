@@ -45,12 +45,12 @@ export default defineSchema({
     .index("by_number", ["puzzleNumber"])
     .index("by_date", ["date"]),
 
-  // Authenticated Order plays (golf mode)
+  // Authenticated Order plays
   orderPlays: defineTable({
     userId: v.id("users"),
     puzzleId: v.id("orderPuzzles"),
     ordering: v.array(v.string()), // Final ordering (event ids)
-    // Golf mode: array of attempts with feedback
+    // Array of attempts with feedback
     attempts: v.optional(
       v.array(
         v.object({
@@ -62,12 +62,10 @@ export default defineSchema({
         }),
       ),
     ),
-    // Golf score
+    // Attempt score
     score: v.optional(
       v.object({
-        strokes: v.number(),
-        par: v.number(),
-        relativeToPar: v.number(),
+        attempts: v.number(),
       }),
     ),
     // Legacy: hints field (deprecated, kept for old data)

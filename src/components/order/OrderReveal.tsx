@@ -4,118 +4,46 @@ import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Check, Share2 } from "lucide-react";
 import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
-import { getGolfTerm, getGolfEmoji, type GolfScore, type OrderEvent } from "@/types/orderGameState";
+import type { AttemptScore, OrderEvent } from "@/types/orderGameState";
 import { ComparisonGrid } from "./ComparisonGrid";
 
 interface OrderRevealProps {
   events: OrderEvent[];
   finalOrder: string[];
   correctOrder: string[];
-  score: GolfScore;
+  score: AttemptScore;
   puzzleNumber: number;
   onShare?: () => void;
 }
 
 /**
- * Golf-style terminology display.
+ * Archival-style success messaging based on arrangement count.
  */
-function getScoreDisplay(score: GolfScore): {
+function getArchivalDisplay(attempts: number): {
   title: string;
   message: string;
-  emoji: string;
 } {
-  const term = getGolfTerm(score.relativeToPar);
-  const emoji = getGolfEmoji(term);
-
-  switch (term) {
-    case "hole-in-one":
-      return {
-        title: "Hole in One!",
-        message: "Perfect chronological intuition!",
-        emoji,
-      };
-    case "eagle":
-      return {
-        title: "Eagle!",
-        message: "Exceptional historical knowledge!",
-        emoji,
-      };
-    case "birdie":
-      return {
-        title: "Birdie!",
-        message: "Great chronological sense!",
-        emoji,
-      };
-    case "par":
-      return {
-        title: "Par",
-        message: "Solid timeline ordering!",
-        emoji,
-      };
-    case "bogey":
-      return {
-        title: "Bogey",
-        message: "Close to par - nice work!",
-        emoji,
-      };
-    case "double-bogey":
-      return {
-        title: "Double Bogey",
-        message: "A challenging puzzle!",
-        emoji,
-      };
-    case "triple-bogey":
-      return {
-        title: "Triple Bogey",
-        message: "This one was tricky!",
-        emoji,
-      };
-    case "over-par":
-      return {
-        title: `+${score.relativeToPar}`,
-        message: "A real challenge - but you solved it!",
-        emoji,
-      };
-  }
-}
-
-/**
- * Get gradient classes for golf score tier.
- */
-function getScoreGradientClasses(relativeToPar: number) {
-  if (relativeToPar <= -2) {
-    // Eagle or better - gold/yellow
+  if (attempts === 1) {
     return {
-      background: "bg-gradient-to-br from-yellow-500/5 to-amber-600/10",
-      border: "border-yellow-500/20",
-      textColor: "text-yellow-700 dark:text-yellow-300",
-      labelColor: "text-yellow-600 dark:text-yellow-400",
+      title: "Perfectly Catalogued",
+      message: "First attempt, correct order",
     };
   }
-  if (relativeToPar <= 0) {
-    // Birdie or par - green
+  if (attempts === 2) {
     return {
-      background: "bg-gradient-to-br from-green-500/5 to-green-600/10",
-      border: "border-green-500/20",
-      textColor: "text-green-700 dark:text-green-300",
-      labelColor: "text-green-600 dark:text-green-400",
+      title: "Expertly Curated",
+      message: "Timeline established with precision",
     };
   }
-  if (relativeToPar <= 2) {
-    // Bogey/double bogey - blue
+  if (attempts <= 4) {
     return {
-      background: "bg-gradient-to-br from-blue-500/5 to-blue-600/10",
-      border: "border-blue-500/20",
-      textColor: "text-blue-700 dark:text-blue-300",
-      labelColor: "text-blue-600 dark:text-blue-400",
+      title: "Successfully Archived",
+      message: "Chronology confirmed",
     };
   }
-  // Over par - red
   return {
-    background: "bg-gradient-to-br from-red-500/5 to-red-600/10",
-    border: "border-red-500/20",
-    textColor: "text-red-700 dark:text-red-300",
-    labelColor: "text-red-600 dark:text-red-400",
+    title: "Timeline Complete",
+    message: "Events placed in historical order",
   };
 }
 
@@ -130,8 +58,8 @@ export function OrderReveal({
   const prefersReducedMotion = useReducedMotion();
   const [isShared, setIsShared] = useState(false);
 
-  const scoreDisplay = useMemo(() => getScoreDisplay(score), [score]);
-  const tierStyles = getScoreGradientClasses(score.relativeToPar);
+  const archivalDisplay = useMemo(() => getArchivalDisplay(score.attempts), [score.attempts]);
+  const attemptLabel = score.attempts === 1 ? "attempt" : "attempts";
 
   const handleShareClick = async () => {
     if (isShared || !onShare) return;
@@ -146,33 +74,30 @@ export function OrderReveal({
 
   return (
     <div className="space-y-6">
-      {/* Performance Banner Card */}
+      {/* Success Banner */}
       <motion.div
-        className={`flex w-full items-center gap-4 rounded-sm border-2 ${tierStyles.border} ${tierStyles.background} shadow-hard p-6`}
+        className="border-feedback-success/30 bg-feedback-success/5 shadow-hard flex w-full items-center gap-4 rounded-sm border-2 p-6"
         initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
         animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         transition={{
           duration: msToSeconds(ANIMATION_DURATIONS.HINT_TRANSITION),
         }}
       >
-        {/* Left side: Score message */}
+        {/* Left side: Success message */}
         <div className="flex flex-1 flex-col items-start">
-          <div
-            className={`mb-1 text-xs font-medium tracking-wide uppercase ${tierStyles.labelColor}`}
-          >
-            {score.strokes} {score.strokes === 1 ? "Stroke" : "Strokes"} · Par {score.par}
+          <div className="text-feedback-success mb-1 text-xs font-medium tracking-wide uppercase">
+            Puzzle №{puzzleNumber} · {score.attempts} {attemptLabel}
           </div>
-          <div
-            className={`flex items-center gap-2 text-2xl font-bold sm:text-3xl ${tierStyles.textColor}`}
-          >
-            <span>{scoreDisplay.emoji}</span>
-            <span>{scoreDisplay.title}</span>
+          <div className="text-feedback-success text-2xl font-bold sm:text-3xl">
+            {archivalDisplay.title}
           </div>
-          <div className={`mt-1 text-sm ${tierStyles.labelColor}/80`}>{scoreDisplay.message}</div>
+          <div className="text-feedback-success/80 mt-1 text-sm">{archivalDisplay.message}</div>
         </div>
 
-        {/* Right side: Puzzle number */}
-        <div className={`text-sm font-medium ${tierStyles.labelColor}`}>#{puzzleNumber}</div>
+        {/* Right side: Check icon */}
+        <div className="border-feedback-success/30 bg-feedback-success/10 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-sm border-2">
+          <Check className="text-feedback-success h-6 w-6" aria-hidden="true" />
+        </div>
       </motion.div>
 
       {/* Share Card */}
@@ -185,11 +110,13 @@ export function OrderReveal({
           delay: msToSeconds(ANIMATION_DURATIONS.PROXIMITY_DELAY),
         }}
       >
-        {/* Score breakdown */}
+        {/* Score summary */}
         <div className="text-foreground">
           <div className="text-muted-foreground text-sm">
-            Solved in <span className="font-semibold">{score.strokes}</span>{" "}
-            {score.strokes === 1 ? "attempt" : "attempts"}
+            Completed in{" "}
+            <span className="font-year font-semibold">
+              {score.attempts} {attemptLabel}
+            </span>
           </div>
         </div>
 
@@ -200,7 +127,7 @@ export function OrderReveal({
               type="button"
               onClick={handleShareClick}
               disabled={isShared}
-              className="bg-primary text-body-primary-foreground hover:bg-primary/90 shadow-hard-lg flex w-full cursor-pointer items-center justify-center gap-2 rounded-sm px-8 py-3 text-base font-semibold transition-all hover:scale-105 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto"
+              className="bg-primary text-primary-foreground shadow-hard-lg hover:bg-primary/90 flex w-full cursor-pointer items-center justify-center gap-2 rounded-sm px-8 py-3 text-base font-semibold transition-all hover:scale-105 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto"
               whileTap={
                 prefersReducedMotion || isShared
                   ? undefined
@@ -217,7 +144,7 @@ export function OrderReveal({
               ) : (
                 <>
                   <Share2 className="h-5 w-5" />
-                  <span>Share</span>
+                  <span>Share Result</span>
                 </>
               )}
             </motion.button>

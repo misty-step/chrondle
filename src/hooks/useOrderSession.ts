@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Id } from "convex/_generated/dataModel";
-import type { GolfScore, OrderAttempt } from "@/types/orderGameState";
+import type { AttemptScore, OrderAttempt } from "@/types/orderGameState";
 import { logger } from "@/lib/logger";
 
 const ORDER_SESSION_PREFIX = "chrondle_order_session_v2_";
@@ -14,14 +14,14 @@ const WRITE_DEBOUNCE_MS = 300;
 // =============================================================================
 
 /**
- * Client-side session state for Order game (golf mode).
+ * Client-side session state for Order game.
  * Stored in localStorage for anonymous users.
  */
 export interface OrderSessionState {
   ordering: string[];
   attempts: OrderAttempt[];
   completedAt: number | null;
-  score: GolfScore | null;
+  score: AttemptScore | null;
 }
 
 interface StoredOrderSession extends OrderSessionState {
@@ -32,7 +32,7 @@ interface UseOrderSessionReturn {
   state: OrderSessionState;
   setOrdering: (ordering: string[]) => void;
   addAttempt: (attempt: OrderAttempt) => void;
-  markCompleted: (score: GolfScore) => void;
+  markCompleted: (score: AttemptScore) => void;
   resetSession: (ordering: string[]) => void;
 }
 
@@ -141,7 +141,7 @@ export function useOrderSession(
   );
 
   const markCompleted = useCallback(
-    (score: GolfScore) => {
+    (score: AttemptScore) => {
       updateState((prev) => ({
         ...prev,
         completedAt: Date.now(),

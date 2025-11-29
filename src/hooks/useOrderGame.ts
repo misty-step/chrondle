@@ -14,9 +14,9 @@ import {
   logSubmissionAttempt,
 } from "@/lib/gameSubmission";
 import { deriveOrderGameState, type OrderDataSources } from "@/lib/deriveOrderGameState";
-import { createAttempt, calculateGolfScore, isSolved, DEFAULT_PAR } from "@/lib/order/golfScoring";
+import { createAttempt, calculateAttemptScore, isSolved } from "@/lib/order/attemptScoring";
 import { assertConvexId } from "@/lib/validation";
-import type { GolfScore, OrderAttempt, OrderGameState } from "@/types/orderGameState";
+import type { AttemptScore, OrderAttempt, OrderGameState } from "@/types/orderGameState";
 import { logger } from "@/lib/logger";
 
 // =============================================================================
@@ -113,7 +113,7 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
     async (
       finalAttempt: OrderAttempt,
       allAttempts: OrderAttempt[],
-      score: GolfScore,
+      score: AttemptScore,
     ): Promise<[boolean, null] | [null, MutationError]> => {
       const authCheck = checkSubmissionAuth(
         {
@@ -161,9 +161,7 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
             ordering: finalAttempt.ordering,
             attempts: allAttempts,
             score: {
-              strokes: score.strokes,
-              par: score.par,
-              relativeToPar: score.relativeToPar,
+              attempts: score.attempts,
             },
           });
           return true;
@@ -202,7 +200,7 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
     // Check if solved
     if (isSolved(attempt)) {
       const allAttempts = [...sessionAttemptsRef.current, attempt];
-      const score = calculateGolfScore(allAttempts, DEFAULT_PAR);
+      const score = calculateAttemptScore(allAttempts);
 
       // Mark completed locally
       session.markCompleted(score);

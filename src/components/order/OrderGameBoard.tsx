@@ -15,7 +15,7 @@ interface OrderGameBoardProps {
 }
 
 export function OrderGameBoard({ gameState, reorderEvents, submitAttempt }: OrderGameBoardProps) {
-  const { puzzle, currentOrder, attempts, par } = gameState;
+  const { puzzle, currentOrder, attempts } = gameState;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get feedback from last attempt to show on cards
@@ -68,21 +68,18 @@ export function OrderGameBoard({ gameState, reorderEvents, submitAttempt }: Orde
     }
   }, [submitAttempt]);
 
-  const strokesLabel = attempts.length === 1 ? "stroke" : "strokes";
-  const buttonText =
-    attempts.length === 0 ? "Check Order" : `Check Again (${attempts.length} ${strokesLabel})`;
+  const buttonText = attempts.length === 0 ? "Check Order" : "Try Again";
 
   return (
     <div className="flex w-full flex-col gap-6">
       <OrderInstructions
         puzzleNumber={puzzle.puzzleNumber}
         events={puzzle.events}
-        par={par}
-        strokes={attempts.length}
+        attempts={attempts.length}
       />
 
       {/* Attempt History - shows feedback from previous attempts */}
-      {attempts.length > 0 && <AttemptHistory attempts={attempts} par={par} />}
+      {attempts.length > 0 && <AttemptHistory attempts={attempts} />}
 
       {/* Main Column */}
       <div className="space-y-4">

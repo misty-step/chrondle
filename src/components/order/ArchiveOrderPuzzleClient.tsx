@@ -10,7 +10,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Footer } from "@/components/Footer";
-import { copyGolfShareTextToClipboard } from "@/lib/order/shareCard";
+import { copyArchivalShareTextToClipboard } from "@/lib/order/shareCard";
 import { logger } from "@/lib/logger";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 
@@ -62,7 +62,7 @@ export function ArchiveOrderPuzzleClient({
   if (gameState.status === "completed") {
     const handleShare = async () => {
       try {
-        await copyGolfShareTextToClipboard({
+        await copyArchivalShareTextToClipboard({
           puzzleNumber: gameState.puzzle.puzzleNumber,
           score: gameState.score,
           attempts: gameState.attempts,

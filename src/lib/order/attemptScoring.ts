@@ -1,11 +1,9 @@
-import type { GolfScore, OrderAttempt, OrderEvent, PositionFeedback } from "@/types/orderGameState";
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-/** Default par for all Order puzzles. Can be made dynamic later. */
-export const DEFAULT_PAR = 4;
+import type {
+  AttemptScore,
+  OrderAttempt,
+  OrderEvent,
+  PositionFeedback,
+} from "@/types/orderGameState";
 
 // =============================================================================
 // Core Scoring Functions
@@ -15,7 +13,7 @@ export const DEFAULT_PAR = 4;
  * Evaluates a player's ordering against the correct chronological order.
  * Returns detailed feedback for each position.
  *
- * This is a pure function - the core of the golf scoring system.
+ * This is a pure function - the core of the scoring system.
  *
  * @param ordering - Player's submitted event order (array of event IDs)
  * @param events - Puzzle events with year information
@@ -63,14 +61,11 @@ export function wouldSolve(ordering: string[], events: OrderEvent[]): boolean {
 }
 
 /**
- * Calculates the final golf score from completed attempts.
+ * Calculates the final score from completed attempts.
  */
-export function calculateGolfScore(attempts: OrderAttempt[], par: number = DEFAULT_PAR): GolfScore {
-  const strokes = attempts.length;
+export function calculateAttemptScore(attempts: OrderAttempt[]): AttemptScore {
   return {
-    strokes,
-    par,
-    relativeToPar: strokes - par,
+    attempts: attempts.length,
   };
 }
 
@@ -136,8 +131,14 @@ export function formatProgress(attempt: OrderAttempt): string {
 
 /**
  * Returns accuracy as a percentage (0-100).
+ *
+ * Defensive guard: Returns 0 if totalPairs is 0 (cannot happen with 6-event puzzles,
+ * but protects against edge cases).
  */
 export function getAccuracyPercent(attempt: OrderAttempt): number {
+  if (attempt.totalPairs === 0) {
+    return 0; // Graceful degradation for impossible edge case
+  }
   return Math.round((attempt.pairsCorrect / attempt.totalPairs) * 100);
 }
 

@@ -1,6 +1,11 @@
 import { logger } from "@/lib/logger";
-import { calculateGolfScore, DEFAULT_PAR, getCorrectOrder } from "@/lib/order/golfScoring";
-import type { GolfScore, OrderAttempt, OrderGameState, OrderPuzzle } from "@/types/orderGameState";
+import { calculateAttemptScore, getCorrectOrder } from "@/lib/order/attemptScoring";
+import type {
+  AttemptScore,
+  OrderAttempt,
+  OrderGameState,
+  OrderPuzzle,
+} from "@/types/orderGameState";
 
 // =============================================================================
 // Data Source Types
@@ -29,23 +34,23 @@ export interface OrderDataSources {
 }
 
 /**
- * Authenticated user progress stored on the server (golf mode).
+ * Authenticated user progress stored on the server.
  */
 export interface OrderProgressData {
   ordering: string[];
   attempts: OrderAttempt[];
   completedAt: number | null;
-  score: GolfScore | null;
+  score: AttemptScore | null;
 }
 
 /**
- * Anonymous/local session state stored in localStorage (golf mode).
+ * Anonymous/local session state stored in localStorage.
  */
 export interface OrderSessionState {
   ordering: string[];
   attempts: OrderAttempt[];
   completedAt: number | null;
-  score: GolfScore | null;
+  score: AttemptScore | null;
 }
 
 // =============================================================================
@@ -55,11 +60,11 @@ export interface OrderSessionState {
 /**
  * Pure function that derives the Order game state from orthogonal data sources.
  *
- * Golf Mode Rules:
- * - Players submit ordering attempts
- * - Each attempt shows feedback (correct/incorrect per position)
- * - Game completes when all 6 positions are correct
- * - Score = number of attempts (strokes)
+ * Arrangement Mode Rules:
+ * - Players submit ordering arrangements
+ * - Each arrangement shows feedback (correct/incorrect per position)
+ * - Game completes when all positions are correct
+ * - Score = number of arrangements to complete
  */
 export function deriveOrderGameState(sources: OrderDataSources): OrderGameState {
   try {
@@ -92,7 +97,6 @@ export function deriveOrderGameState(sources: OrderDataSources): OrderGameState 
     const orderPuzzle = puzzle.puzzle;
     const baselineOrder = orderPuzzle.events.map((event) => event.id);
     const correctOrder = getCorrectOrder(orderPuzzle.events);
-    const par = DEFAULT_PAR;
 
     // Merge server + session state (prefer server for authenticated users)
     const resolvedState = resolveState(auth, progress.progress, session, baselineOrder);
@@ -101,7 +105,7 @@ export function deriveOrderGameState(sources: OrderDataSources): OrderGameState 
     const isComplete = resolvedState.completedAt !== null;
 
     if (isComplete) {
-      const score = resolvedState.score ?? calculateGolfScore(resolvedState.attempts, par);
+      const score = resolvedState.score ?? calculateAttemptScore(resolvedState.attempts);
 
       return {
         status: "completed",
@@ -118,7 +122,6 @@ export function deriveOrderGameState(sources: OrderDataSources): OrderGameState 
       puzzle: orderPuzzle,
       currentOrder: resolvedState.ordering,
       attempts: resolvedState.attempts,
-      par,
     };
   } catch (error) {
     logger.error("Error deriving Order game state:", error);
@@ -140,7 +143,7 @@ interface ResolvedState {
   ordering: string[];
   attempts: OrderAttempt[];
   completedAt: number | null;
-  score: GolfScore | null;
+  score: AttemptScore | null;
 }
 
 /**

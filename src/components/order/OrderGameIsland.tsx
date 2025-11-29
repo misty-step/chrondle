@@ -9,7 +9,7 @@ import { OrderGameBoard } from "@/components/order/OrderGameBoard";
 import { GameModeLayout } from "@/components/GameModeLayout";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { copyGolfShareTextToClipboard } from "@/lib/order/shareCard";
+import { copyArchivalShareTextToClipboard } from "@/lib/order/shareCard";
 import { logger } from "@/lib/logger";
 import type { ReadyState } from "@/types/orderGameState";
 
@@ -58,7 +58,7 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
   if (gameState.status === "completed") {
     const handleShare = async () => {
       try {
-        await copyGolfShareTextToClipboard({
+        await copyArchivalShareTextToClipboard({
           puzzleNumber: gameState.puzzle.puzzleNumber,
           score: gameState.score,
           attempts: gameState.attempts,

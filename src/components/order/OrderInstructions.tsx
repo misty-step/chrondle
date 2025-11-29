@@ -8,16 +8,10 @@ import type { OrderEvent } from "@/types/orderGameState";
 interface OrderInstructionsProps {
   puzzleNumber: number;
   events: OrderEvent[];
-  par?: number;
-  strokes?: number;
+  attempts?: number;
 }
 
-export function OrderInstructions({
-  puzzleNumber,
-  events,
-  par,
-  strokes = 0,
-}: OrderInstructionsProps) {
+export function OrderInstructions({ puzzleNumber, events, attempts = 0 }: OrderInstructionsProps) {
   const yearSpan = useMemo(() => {
     if (events.length === 0) return "0 years";
 
@@ -44,7 +38,7 @@ export function OrderInstructions({
   }, [events]);
 
   const subtitle =
-    strokes === 0 ? "Arrange events from earliest to latest" : "Adjust and check again";
+    attempts === 0 ? "Arrange events from earliest to latest" : "Adjust and check again";
 
   return (
     <ModeHero title="Order Mode" subtitle={subtitle} eyebrow={`Daily puzzle · №${puzzleNumber}`}>
@@ -60,18 +54,10 @@ export function OrderInstructions({
           <span className="text-muted-foreground text-xs italic">{yearSpan}</span>
         </div>
 
-        {/* Golf scoring badge */}
-        {par !== undefined && (
+        {/* Arrangement count badge */}
+        {attempts > 0 && (
           <div className="border-primary/30 bg-primary/5 inline-flex items-center gap-2 rounded-sm border px-3 py-1.5">
-            <span className="text-primary text-xs font-medium">Par {par}</span>
-            {strokes > 0 && (
-              <>
-                <span className="text-primary/30">·</span>
-                <span className="text-primary text-xs">
-                  {strokes} {strokes === 1 ? "stroke" : "strokes"}
-                </span>
-              </>
-            )}
+            <span className="font-year text-primary text-xs font-medium">Attempt {attempts}</span>
           </div>
         )}
       </div>

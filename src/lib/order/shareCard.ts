@@ -1,83 +1,56 @@
-import type { GolfScore, OrderAttempt } from "@/types/orderGameState";
-import { getGolfTerm, getGolfEmoji } from "@/types/orderGameState";
+import type { AttemptScore, OrderAttempt } from "@/types/orderGameState";
 
 // =============================================================================
-// Golf Share Types
+// Archival Share Types
 // =============================================================================
 
-export interface GolfSharePayload {
+export interface ArchivalSharePayload {
   puzzleNumber: number;
-  score: GolfScore;
+  score: AttemptScore;
   attempts: OrderAttempt[];
   url?: string;
 }
 
 // =============================================================================
-// Golf Share Text Generation
+// Archival Share Text Generation
 // =============================================================================
 
 /**
- * Generates golf-style share text.
+ * Generates archival-style share text.
  *
  * Example:
  * CHRONDLE ORDER #247
- * 🐦 Birdie! (3 strokes, Par 4)
- * ⬜🟩⬜🟩⬜⬜ → ⬜🟩🟩🟩⬜🟩 → 🟩🟩🟩🟩🟩🟩
+ * 📋 3 attempts
+ * ⬜🟩⬜🟩⬜⬜
+ * ⬜🟩🟩🟩⬜🟩
+ * 🟩🟩🟩🟩🟩🟩
  * https://www.chrondle.app
  */
-export function generateGolfShareText(payload: GolfSharePayload): string {
+export function generateArchivalShareText(payload: ArchivalSharePayload): string {
   const { puzzleNumber, score, attempts, url } = payload;
 
-  const term = getGolfTerm(score.relativeToPar);
-  const emoji = getGolfEmoji(term);
+  const attemptLabel = score.attempts === 1 ? "attempt" : "attempts";
 
-  // Format the score line
-  const termDisplay = formatTermDisplay(term, score);
-  const strokeLabel = score.strokes === 1 ? "stroke" : "strokes";
-
-  // Build attempt progression line
-  const progressLine = attempts
-    .map((attempt) => {
-      return attempt.feedback.map((f) => (f === "correct" ? "🟩" : "⬜")).join("");
-    })
-    .join(" → ");
+  // Build attempt progression - each attempt on its own row
+  const progressLines = attempts
+    .map((attempt) => attempt.feedback.map((f) => (f === "correct" ? "🟩" : "⬜")).join(""))
+    .join("\n");
 
   let shareText = `CHRONDLE ORDER #${puzzleNumber}\n`;
-  shareText += `${emoji} ${termDisplay} (${score.strokes} ${strokeLabel}, Par ${score.par})\n`;
-  shareText += `${progressLine}\n\n`;
+  shareText += `📋 ${score.attempts} ${attemptLabel}\n`;
+  shareText += `${progressLines}\n\n`;
   shareText += url || "https://www.chrondle.app";
 
   return shareText;
 }
 
-function formatTermDisplay(term: string, score: GolfScore): string {
-  switch (term) {
-    case "hole-in-one":
-      return "Hole in One!";
-    case "eagle":
-      return "Eagle!";
-    case "birdie":
-      return "Birdie!";
-    case "par":
-      return "Par";
-    case "bogey":
-      return "Bogey";
-    case "double-bogey":
-      return "Double Bogey";
-    case "triple-bogey":
-      return "Triple Bogey";
-    case "over-par":
-      return `+${score.relativeToPar}`;
-    default:
-      return term;
-  }
-}
-
 /**
- * Copies golf-style share text to clipboard.
+ * Copies archival-style share text to clipboard.
  */
-export async function copyGolfShareTextToClipboard(payload: GolfSharePayload): Promise<void> {
-  const shareText = generateGolfShareText(payload);
+export async function copyArchivalShareTextToClipboard(
+  payload: ArchivalSharePayload,
+): Promise<void> {
+  const shareText = generateArchivalShareText(payload);
 
   if (!navigator.clipboard || !navigator.clipboard.writeText) {
     throw new Error("Clipboard API unsupported");
@@ -109,7 +82,9 @@ export function generateOrderShareText(payload: OrderSharePayload): string {
   const { dateLabel, puzzleNumber, results, score, url } = payload;
 
   const emojiLine = results.map((r) => (r === "correct" ? "✓" : "✗")).join(" ");
-  const accuracyPercent = Math.round((score.correctPairs / score.totalPairs) * 100);
+  // Defensive guard: Graceful degradation if totalPairs is 0 (legacy backwards compatibility)
+  const accuracyPercent =
+    score.totalPairs === 0 ? 0 : Math.round((score.correctPairs / score.totalPairs) * 100);
 
   let shareText = `CHRONDLE ORDER #${puzzleNumber} · ${dateLabel}\n`;
   shareText += `${emojiLine}\n\n`;
