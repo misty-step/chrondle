@@ -71,3 +71,20 @@ export const getQualityMetricsQuery = query({
     return metrics.quality;
   },
 });
+
+/**
+ * Query for recent generation attempts.
+ * Returns last N generation logs for debugging and monitoring.
+ */
+export const getRecentGenerationsQuery = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.max(1, Math.min(args.limit ?? 20, 100)); // Cap at 100
+
+    const logs = await ctx.db.query("generation_logs").order("desc").take(limit);
+
+    return logs;
+  },
+});
