@@ -753,32 +753,35 @@
 
 **Context:** After migration verified and all queries updated, remove deprecated `puzzleId` field to clean up schema.
 
-- [ ] **Audit all `puzzleId` references in codebase**
+- [x] **Audit all `puzzleId` references in codebase**
 
   - Search: `grep -rn "puzzleId" convex/ src/ --include="*.ts" --include="*.tsx"`
   - Categorize: Which still reference old field vs new `classicPuzzleId`/`orderPuzzleId`
   - Document: List of files needing updates
   - Success criteria: Complete inventory of old field usage
+  - Note: Found references in generationLogs.ts, events.ts, 3 scripts, and test files
 
-- [ ] **Update remaining queries to use `classicPuzzleId`**
+- [x] **Update remaining queries to use `classicPuzzleId`**
 
-  - Update `convex/generationLogs.ts:165`: Change `puzzleId === undefined` to `classicPuzzleId === undefined`
-  - Update any other files found in audit
+  - Updated `convex/generationLogs.ts:165`: Changed `puzzleId === undefined` to `classicPuzzleId === undefined`
+  - Updated `convex/events.ts`: All 11 references converted to use `classicPuzzleId` or `orderPuzzleId`
+  - Updated `scripts/audit-events.ts`, `scripts/manage-events.ts`, `scripts/quality-audit-sampler.ts`
+  - Updated test files in `convex/__tests__/` and `convex/lib/observability/__tests__/`
   - Success criteria: No runtime references to old `puzzleId` field
 
-- [ ] **Remove deprecated `puzzleId` field from schema** (`convex/schema.ts`)
+- [x] **Remove deprecated `puzzleId` field from schema** (`convex/schema.ts`)
 
-  - Remove: `puzzleId: v.optional(v.id("puzzles"))`
-  - Remove: `.index("by_puzzle", ["puzzleId"])`
-  - Remove: `.index("by_year_available", ["year", "puzzleId"])`
-  - Run: `npx convex dev` to verify schema validates
+  - Removed: `puzzleId: v.optional(v.id("puzzles"))`
+  - Removed: `.index("by_puzzle", ["puzzleId"])`
+  - Removed: `.index("by_year_available", ["year", "puzzleId"])`
+  - Removed obsolete migration file: `convex/migrations/migrateEventUsageTracking.ts`
   - Success criteria: Clean schema with only new per-mode fields
 
-- [ ] **Write migration to drop `puzzleId` values from documents**
+- [x] **Write migration to drop `puzzleId` values from documents**
 
-  - Optional cleanup: Set `puzzleId: undefined` on all events to free storage
-  - Or let Convex handle orphaned fields naturally
-  - Success criteria: No references to deprecated field anywhere
+  - Skipped: Convex handles orphaned fields naturally in documents
+  - Existing documents with old `puzzleId` field are fine - just unused
+  - Success criteria: No active references to deprecated field in code
 
 ---
 

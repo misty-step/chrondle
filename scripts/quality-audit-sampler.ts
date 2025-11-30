@@ -66,7 +66,9 @@ program.action(async (options) => {
     attempts += 1;
     const year = candidateYears[Math.floor(Math.random() * candidateYears.length)];
     const events = await client.query(api.events.getYearEvents, { year });
-    const filtered = options.unusedOnly ? events.filter((event: any) => !event.puzzleId) : events;
+    const filtered = options.unusedOnly
+      ? events.filter((event: any) => !event.classicPuzzleId)
+      : events;
     if (!filtered.length) continue;
     const event = filtered[Math.floor(Math.random() * filtered.length)];
     const issues: string[] = [];
@@ -83,7 +85,7 @@ program.action(async (options) => {
     results.push({
       year,
       event: event.event,
-      used: Boolean(event.puzzleId),
+      used: Boolean(event.classicPuzzleId),
       issues,
     });
   }

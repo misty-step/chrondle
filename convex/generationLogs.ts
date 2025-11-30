@@ -162,7 +162,8 @@ export function summarizeGenerationLogs(
 
 export function calculateEventPoolHealth(events: ReadonlyArray<Doc<"events">>): EventPoolHealth {
   const totalEvents = events.length;
-  const unusedEvents = events.filter((event) => event.puzzleId === undefined);
+  // Use classicPuzzleId - this is for Classic mode pool health
+  const unusedEvents = events.filter((event) => event.classicPuzzleId === undefined);
   const usedEvents = totalEvents - unusedEvents.length;
 
   const coverage = {

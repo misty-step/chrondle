@@ -41,11 +41,11 @@ describe("generationLogs helpers", () => {
 
   it("calculates event pool health across eras", () => {
     const events = [
-      { year: -500, puzzleId: undefined },
-      { year: 100, puzzleId: undefined },
-      { year: 800, puzzleId: undefined },
-      { year: 1600, puzzleId: undefined },
-      { year: 1700, puzzleId: "somePuzzleId" },
+      { year: -500, classicPuzzleId: undefined },
+      { year: 100, classicPuzzleId: undefined },
+      { year: 800, classicPuzzleId: undefined },
+      { year: 1600, classicPuzzleId: undefined },
+      { year: 1700, classicPuzzleId: "somePuzzleId" },
     ] as unknown as ReadonlyArray<Doc<"events">>;
 
     const health = calculateEventPoolHealth(events);

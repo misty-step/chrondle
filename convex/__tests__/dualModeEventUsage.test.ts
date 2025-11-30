@@ -27,7 +27,6 @@ describe("Dual-mode event usage tracking", () => {
       _creationTime: now,
       year,
       event: `Test event ${id}`,
-      puzzleId: options.classicPuzzleId as Doc<"puzzles">["_id"] | undefined,
       classicPuzzleId: options.classicPuzzleId as Doc<"puzzles">["_id"] | undefined,
       orderPuzzleId: options.orderPuzzleId as Doc<"orderPuzzles">["_id"] | undefined,
       updatedAt: now,

@@ -6,7 +6,6 @@ export default defineSchema({
   events: defineTable({
     year: v.number(), // e.g., 1969
     event: v.string(), // "Neil Armstrong walks on the moon"
-    puzzleId: v.optional(v.id("puzzles")), // DEPRECATED: Use classicPuzzleId. Kept for migration.
     classicPuzzleId: v.optional(v.id("puzzles")), // Links to Classic mode puzzle (null = unused in Classic)
     orderPuzzleId: v.optional(v.id("orderPuzzles")), // Links to Order mode puzzle (null = unused in Order)
     updatedAt: v.number(), // Manual timestamp (Convex provides _creationTime)
@@ -21,8 +20,6 @@ export default defineSchema({
     ),
   })
     .index("by_year", ["year"])
-    .index("by_puzzle", ["puzzleId"]) // DEPRECATED: Use by_classic_puzzle
-    .index("by_year_available", ["year", "puzzleId"]) // DEPRECATED: Use by_year_classic_available
     .index("by_classic_puzzle", ["classicPuzzleId"]) // Classic puzzle-to-event lookup
     .index("by_order_puzzle", ["orderPuzzleId"]) // Order puzzle-to-event lookup
     .index("by_year_classic_available", ["year", "classicPuzzleId"]) // Unused Classic events by year
