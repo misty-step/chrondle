@@ -663,7 +663,7 @@
 
 **Context:** Admin needs to view puzzle history for both Classic and Order modes, see player engagement, and drill into puzzle details.
 
-- [ ] **Create admin puzzles query for listing** (`convex/admin/puzzles.ts`)
+- [x] **Create admin puzzles query for listing** (`convex/admin/puzzles.ts`)
 
   - Export `listPuzzles` query with args:
     - `mode: v.union(v.literal("classic"), v.literal("order"))`
@@ -675,7 +675,7 @@
   - Order: Descending by puzzleNumber (newest first)
   - Success criteria: Unified interface for both puzzle types
 
-- [ ] **Create admin puzzle detail query** (`convex/admin/puzzles.ts`)
+- [x] **Create admin puzzle detail query** (`convex/admin/puzzles.ts`)
 
   - Export `getPuzzleDetail` query with args:
     - `mode: v.union(v.literal("classic"), v.literal("order"))`
@@ -685,8 +685,9 @@
     - Play count and completion stats
     - Historical context (Classic only, if generated)
   - Success criteria: All puzzle info available in single query
+  - Note: Also added `getTodaysPuzzles` query for OverviewTab
 
-- [ ] **Build PuzzlesTab component with mode toggle** (`src/app/admin/dashboard/components/PuzzlesTab.tsx`)
+- [x] **Build PuzzlesTab component with mode toggle** (`src/app/admin/dashboard/components/PuzzlesTab.tsx`)
 
   - Mode toggle: "Classic" / "Order" (uses ModeFilter component)
   - Results: DataTable with columns varying by mode
@@ -696,7 +697,7 @@
   - Row click → Opens detail modal
   - Success criteria: Admin can browse puzzle history for either mode
 
-- [ ] **Build PuzzleDetailModal component** (`src/app/admin/dashboard/components/PuzzleDetailModal.tsx`)
+- [x] **Build PuzzleDetailModal component** (`src/app/admin/dashboard/components/PuzzleDetailModal.tsx`)
 
   - Modal triggered by row click in PuzzlesTab
   - Header: Puzzle #{number} - {date}
@@ -707,12 +708,13 @@
   - Close button + click outside to dismiss
   - Success criteria: Full puzzle context visible without leaving dashboard
 
-- [ ] **Add "Today's Puzzles" card to OverviewTab** (`src/app/admin/dashboard/components/OverviewTab.tsx`)
+- [x] **Add "Today's Puzzles" card to OverviewTab** (`src/app/admin/dashboard/components/OverviewTab.tsx`)
 
   - New card showing today's Classic and Order puzzles side by side
   - Each shows: Puzzle #, target year/event span, play count so far
   - Click → Opens PuzzleDetailModal for that puzzle
   - Success criteria: Daily ops visibility - is today's content live and correct?
+  - Note: Created TodaysPuzzlesCard component, added to OverviewTab grid
 
 ---
 
