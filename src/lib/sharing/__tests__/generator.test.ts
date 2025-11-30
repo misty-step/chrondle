@@ -90,7 +90,7 @@ describe("generateShareText", () => {
 
     it("shows X for Loss", () => {
       const result = generateShareText([createRange(1900, 1900)], 40, false, 347);
-      expect(result).toContain("Score: ❌ 40/100");
+      expect(result).toContain("Score: 🫠 40/100");
     });
   });
 

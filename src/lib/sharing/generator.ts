@@ -24,7 +24,7 @@ function generateHintsBar(hintsUsed: number): string {
 }
 
 function getScoreEmoji(score: number, hasWon: boolean): string {
-  if (!hasWon) return "❌";
+  if (!hasWon) return "🫠";
   if (score >= 100) return "🎯";
   if (score >= 90) return "🔥";
   if (score >= 80) return "⭐";
