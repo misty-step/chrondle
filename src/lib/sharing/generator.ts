@@ -17,6 +17,21 @@ function getPrimaryRange(ranges: RangeGuess[]): RangeGuess | undefined {
   return ranges[ranges.length - 1];
 }
 
+function generateHintsBar(hintsUsed: number): string {
+  const maxHints = 6;
+  const used = Math.min(Math.max(0, hintsUsed), maxHints);
+  return "⬛".repeat(used) + "⬜".repeat(maxHints - used);
+}
+
+function getScoreEmoji(score: number, hasWon: boolean): string {
+  if (!hasWon) return "❌";
+  if (score >= 100) return "🎯";
+  if (score >= 90) return "🔥";
+  if (score >= 80) return "⭐";
+  if (score >= 70) return "😎";
+  return "👍";
+}
+
 export function generateShareText(
   ranges: RangeGuess[],
   totalScore: number,
@@ -41,17 +56,22 @@ export function generateShareText(
 
     const hintsUsed = primaryRange.hintsUsed ?? 0;
     const widthYears = primaryRange.end - primaryRange.start + 1;
+    const yearLabel = widthYears === 1 ? "year" : "years";
 
     // Header: Chrondle #96
     const header = `Chrondle${puzzleNumber ? ` #${puzzleNumber}` : ""}`;
 
-    // Stats Block
-    // 🏆 85/100
-    // 💡 2 • 📏 15y
-    const scoreLine = hasWon ? `🏆 ${totalScore}/100` : `❌ ${totalScore}/100`;
-    const statsLine = `💡 ${hintsUsed} • 📏 ${widthYears}y`;
+    // Range: 🗓️ 151 years
+    const rangeLine = `Range: 🗓️ ${widthYears} ${yearLabel}`;
 
-    return `${header}\n${scoreLine}\n${statsLine}\n\nchrondle.app`;
+    // Hints: ⬛⬛⬜⬜⬜⬜
+    const hintsLine = `Hints: ${generateHintsBar(hintsUsed)}`;
+
+    // Score: 🎯 100/100
+    const scoreEmoji = getScoreEmoji(totalScore, hasWon);
+    const scoreLine = `Score: ${scoreEmoji} ${totalScore}/100`;
+
+    return `${header}\n${rangeLine}\n${hintsLine}\n${scoreLine}\n\nchrondle.app`;
   } catch (error) {
     logger.error("Failed to generate share text:", error);
     return `Chrondle: Game complete\nchrondle.app`;
