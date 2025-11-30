@@ -11,93 +11,83 @@ vi.mock("@/lib/logger", () => ({
 
 describe("generateShareText", () => {
   // Helper to create a standard range guess
-  const createRange = (start: number, end: number): RangeGuess => ({
+  const createRange = (start: number, end: number, hintsUsed = 0): RangeGuess => ({
     start,
     end,
-    hintsUsed: 0,
+    hintsUsed: hintsUsed as RangeGuess["hintsUsed"],
     score: 0,
     timestamp: Date.now(),
   });
 
   describe("Header", () => {
-    it("shows attempt count for wins: Chrondle #347 1/6", () => {
-      const ranges = [createRange(1950, 1950)]; // Exact hit
-      const result = generateShareText(ranges, 100, true, 347, { targetYear: 1950 });
-      expect(result).toContain("Chrondle #347 1/6");
-    });
-
-    it("shows X/6 for losses: Chrondle #347 X/6", () => {
-      const ranges = [createRange(1000, 1100)]; // Miss
-      const result = generateShareText(ranges, 0, false, 347, { targetYear: 1950 });
-      expect(result).toContain("Chrondle #347 X/6");
-    });
-
-    it("omits puzzle number when not provided: Chrondle 1/6", () => {
+    it("shows standard header with puzzle number: Chrondle #347", () => {
       const ranges = [createRange(1950, 1950)];
-      const result = generateShareText(ranges, 100, true, undefined, { targetYear: 1950 });
-      expect(result).toContain("Chrondle 1/6");
+      const result = generateShareText(ranges, 100, true, 347);
+      expect(result).toContain("Chrondle #347");
+    });
+
+    it("omits puzzle number when not provided", () => {
+      const ranges = [createRange(1950, 1950)];
+      const result = generateShareText(ranges, 100, true);
+      expect(result).toContain("Chrondle");
       expect(result).not.toContain("#");
     });
   });
 
-  describe("Proximity Grid", () => {
-    const targetYear = 2000;
-
-    it("shows 5 Green squares for a Hit (Contained)", () => {
-      const ranges = [createRange(1990, 2010)]; // Contains 2000
-      const result = generateShareText(ranges, 100, true, undefined, { targetYear });
-      expect(result).toContain("🟩🟩🟩🟩🟩");
+  describe("Score Line", () => {
+    it("shows trophy and score for wins: 🏆 85/100", () => {
+      const ranges = [createRange(1900, 1915)];
+      const result = generateShareText(ranges, 85, true, 347);
+      expect(result).toContain("🏆 85/100");
     });
 
-    it("shows 4 Yellow squares for Very Close (<= 25 years)", () => {
-      // Target 2000. Range 1950-1975 (End is 1975, Dist 25)
-      const ranges = [createRange(1950, 1975)];
-      const result = generateShareText(ranges, 0, false, undefined, { targetYear });
-      expect(result).toContain("🟨🟨🟨🟨⬜");
+    it("shows X and score for losses: ❌ 40/100", () => {
+      const ranges = [createRange(1900, 1950)];
+      const result = generateShareText(ranges, 40, false, 347);
+      expect(result).toContain("❌ 40/100");
+    });
+  });
+
+  describe("Stats Line", () => {
+    it("shows hints and range width: 💡 2 • 📏 15y", () => {
+      // Range 1900-1914 = 15 years, 2 hints
+      const ranges = [createRange(1900, 1914, 2)];
+      const result = generateShareText(ranges, 85, true, 347);
+      expect(result).toContain("💡 2 • 📏 15y");
     });
 
-    it("shows 3 Yellow squares for Close (<= 100 years)", () => {
-      // Target 2000. Range 1900-1900 (Dist 100)
-      const ranges = [createRange(1900, 1900)];
-      const result = generateShareText(ranges, 0, false, undefined, { targetYear });
-      expect(result).toContain("🟨🟨🟨⬜⬜");
-    });
-
-    it("shows 2 Red squares for Far (<= 500 years)", () => {
-      // Target 2000. Range 1500-1500 (Dist 500)
-      const ranges = [createRange(1500, 1500)];
-      const result = generateShareText(ranges, 0, false, undefined, { targetYear });
-      expect(result).toContain("🟥🟥⬜⬜⬜");
-    });
-
-    it("shows 1 Red square for Very Far (> 500 years)", () => {
-      // Target 2000. Range 1000-1000 (Dist 1000)
-      const ranges = [createRange(1000, 1000)];
-      const result = generateShareText(ranges, 0, false, undefined, { targetYear });
-      expect(result).toContain("🟥⬜⬜⬜⬜");
-    });
-
-    it("generates multiple rows for multiple guesses", () => {
+    it("uses values from the last range", () => {
       const ranges = [
-        createRange(1000, 1000), // Very Far
-        createRange(1900, 1900), // Close
-        createRange(1990, 2010), // Hit
+        createRange(1800, 1900, 0), // First guess
+        createRange(1900, 1900, 3), // Final guess: 1 year, 3 hints
       ];
-      const result = generateShareText(ranges, 100, true, undefined, { targetYear });
-      const lines = result.split("\n").filter((line) => line.includes("⬜") || line.includes("🟩"));
+      const result = generateShareText(ranges, 100, true, 347);
+      expect(result).toContain("💡 3 • 📏 1y");
+    });
 
-      expect(lines).toHaveLength(3);
-      expect(lines[0]).toBe("🟥⬜⬜⬜⬜");
-      expect(lines[1]).toBe("🟨🟨🟨⬜⬜");
-      expect(lines[2]).toBe("🟩🟩🟩🟩🟩");
+    it("shows 0 hints correctly: 💡 0", () => {
+      const ranges = [createRange(1900, 1900, 0)];
+      const result = generateShareText(ranges, 100, true, 347);
+      expect(result).toContain("💡 0");
     });
   });
 
   describe("Footer", () => {
     it("includes chrondle.app", () => {
       const ranges = [createRange(1950, 1950)];
-      const result = generateShareText(ranges, 100, true, undefined, { targetYear: 1950 });
+      const result = generateShareText(ranges, 100, true);
       expect(result).toContain("chrondle.app");
+    });
+  });
+
+  describe("Full Examples", () => {
+    it("generates correct text for perfect win", () => {
+      const ranges = [createRange(1950, 1950, 0)];
+      const result = generateShareText(ranges, 100, true, 347);
+
+      const expected = `Chrondle #347\n🏆 100/100\n💡 0 • 📏 1y\n\nchrondle.app`;
+
+      expect(result).toBe(expected);
     });
   });
 
@@ -107,29 +97,9 @@ describe("generateShareText", () => {
       expect(result).toBe("Chrondle share text generation failed");
     });
 
-    it("returns fallback text for ranges with invalid structure", () => {
-      const result = generateShareText([{ foo: "bar" } as unknown as RangeGuess], 80, true);
+    it("returns fallback text for empty ranges", () => {
+      const result = generateShareText([], 0, false);
       expect(result).toBe("Chrondle share text generation failed");
-    });
-
-    it("returns fallback text on exception", () => {
-      // Mock logger.error to throw (simulating unexpected error)
-      const explodingRanges = new Proxy([], {
-        get() {
-          throw new Error("Test error");
-        },
-      });
-
-      const result = generateShareText(explodingRanges as unknown as RangeGuess[], 80, true);
-      expect(result).toContain("Chrondle: Game complete");
-    });
-
-    it("handles missing targetYear gracefully (fallback grid)", () => {
-      const ranges = [createRange(1950, 1950)];
-      // No targetYear provided
-      const result = generateShareText(ranges, 100, true);
-      // Should default to just showing green for win
-      expect(result).toContain("🟩🟩🟩🟩🟩");
     });
   });
 });
