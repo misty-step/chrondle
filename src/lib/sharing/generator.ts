@@ -5,25 +5,44 @@
 
 import type { RangeGuess } from "@/types/range";
 import { logger } from "@/lib/logger";
+import { GAME_CONFIG } from "@/lib/constants";
 
 interface ShareTextOptions {
   targetYear?: number;
 }
 
-function getPrimaryRange(ranges: RangeGuess[]): RangeGuess | undefined {
-  if (!Array.isArray(ranges) || ranges.length === 0) {
-    return undefined;
-  }
-  return ranges[ranges.length - 1];
-}
-
 /**
- * Generate hints visualization: 💡💡⬜⬜⬜⬜
+ * Generates a progress bar of emojis based on how close the guess was
+ * 5 squares total
+ * Green = Hit
+ * Yellow = Close
+ * Red = Far
  */
-function generateHintsBar(hintsUsed: number): string {
-  const maxHints = 6;
-  const used = Math.min(Math.max(0, hintsUsed), maxHints);
-  return "💡".repeat(used) + "⬜".repeat(maxHints - used);
+function generateProximityBar(range: RangeGuess, targetYear: number): string {
+  // Check if contained (Hit)
+  const contained = range.start <= targetYear && range.end >= targetYear;
+  if (contained) {
+    return "🟩🟩🟩🟩🟩";
+  }
+
+  // Calculate distance from closest edge
+  let distance = 0;
+  if (range.end < targetYear) {
+    distance = targetYear - range.end;
+  } else {
+    distance = range.start - targetYear;
+  }
+
+  // Map distance to bars
+  // <= 25: 4 Yellow (Very Close)
+  // <= 100: 3 Yellow (Close)
+  // <= 500: 2 Red (Far)
+  // > 500: 1 Red (Very Far)
+
+  if (distance <= 25) return "🟨🟨🟨🟨⬜";
+  if (distance <= 100) return "🟨🟨🟨⬜⬜";
+  if (distance <= 500) return "🟥🟥⬜⬜⬜";
+  return "🟥⬜⬜⬜⬜";
 }
 
 export function generateShareText(
@@ -31,7 +50,7 @@ export function generateShareText(
   totalScore: number,
   hasWon: boolean,
   puzzleNumber?: number,
-  _options: ShareTextOptions = {},
+  options: ShareTextOptions = {},
 ): string {
   try {
     if (
@@ -43,24 +62,25 @@ export function generateShareText(
       return "Chrondle share text generation failed";
     }
 
-    const primaryRange = getPrimaryRange(ranges);
-    const hintsUsed = primaryRange?.hintsUsed ?? 0;
-    const widthYears = primaryRange ? primaryRange.end - primaryRange.start + 1 : null;
+    const { targetYear } = options;
+    const maxGuesses = GAME_CONFIG.MAX_GUESSES;
+    const attemptsCount = hasWon ? ranges.length : "X";
 
-    // Header: Chrondle #96 85/100 or Chrondle #96 ✗
-    const header = hasWon
-      ? `Chrondle${puzzleNumber ? ` #${puzzleNumber}` : ""} ${totalScore}/100`
-      : `Chrondle${puzzleNumber ? ` #${puzzleNumber}` : ""} ✗`;
+    // Header: Chrondle #96 4/6
+    const header = `Chrondle${puzzleNumber ? ` #${puzzleNumber}` : ""} ${attemptsCount}/${maxGuesses}`;
 
-    // Hints visualization: 💡💡⬜⬜⬜⬜
-    const hints = generateHintsBar(hintsUsed);
+    // Generate grid
+    let grid = "";
+    if (targetYear !== undefined) {
+      grid = ranges.map((range) => generateProximityBar(range, targetYear)).join("\n");
+    } else {
+      // Fallback if targetYear is missing (shouldn't happen in normal play)
+      grid = ranges
+        .map((_, i) => (i === ranges.length - 1 && hasWon ? "🟩🟩🟩🟩🟩" : "⬜⬜⬜⬜⬜"))
+        .join("\n");
+    }
 
-    // Result: 🎯 15-year window or 📏 25-year window (missed)
-    const result = hasWon
-      ? `🎯 ${widthYears}-year window`
-      : `📏 ${widthYears}-year window (missed)`;
-
-    return `${header}\n\n${hints}\n${result}\n\nchrondle.app`;
+    return `${header}\n\n${grid}\n\nchrondle.app`;
   } catch (error) {
     logger.error("Failed to generate share text:", error);
     return `Chrondle: Game complete\nchrondle.app`;
