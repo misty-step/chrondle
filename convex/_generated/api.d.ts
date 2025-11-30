@@ -20,6 +20,8 @@ import type * as actions_eventGeneration_reviser from "../actions/eventGeneratio
 import type * as actions_eventGeneration_schemas from "../actions/eventGeneration/schemas.js";
 import type * as actions_eventGeneration_values from "../actions/eventGeneration/values.js";
 import type * as actions_historicalContext from "../actions/historicalContext.js";
+import type * as admin_events from "../admin/events.js";
+import type * as admin_puzzles from "../admin/puzzles.js";
 import type * as crons from "../crons.js";
 import type * as events from "../events.js";
 import type * as generationLogs from "../generationLogs.js";
@@ -86,6 +88,8 @@ declare const fullApi: ApiFromModules<{
   "actions/eventGeneration/schemas": typeof actions_eventGeneration_schemas;
   "actions/eventGeneration/values": typeof actions_eventGeneration_values;
   "actions/historicalContext": typeof actions_historicalContext;
+  "admin/events": typeof admin_events;
+  "admin/puzzles": typeof admin_puzzles;
   crons: typeof crons;
   events: typeof events;
   generationLogs: typeof generationLogs;

@@ -16,14 +16,25 @@ import { Card } from "@/components/ui/Card";
  *
  * Auto-refreshes via Convex subscription.
  */
-export function PoolHealthCard() {
-  // Default to "all" mode - shows events unused in both Classic and Order
-  const poolHealth = useQuery(api.observability.getPoolHealthQuery, { mode: "all" });
+
+type PoolMode = "all" | "classic" | "order";
+
+interface PoolHealthCardProps {
+  /** Game mode filter for pool health metrics */
+  mode?: PoolMode;
+}
+
+export function PoolHealthCard({ mode = "all" }: PoolHealthCardProps) {
+  const poolHealth = useQuery(api.observability.getPoolHealthQuery, { mode });
+
+  // Mode label for display
+  const modeLabel =
+    mode === "all" ? "Pool Health" : `Pool Health (${mode === "classic" ? "Classic" : "Order"})`;
 
   if (!poolHealth) {
     return (
       <Card className="p-6">
-        <h2 className="font-heading mb-4 text-lg font-semibold">Pool Health</h2>
+        <h2 className="font-heading mb-4 text-lg font-semibold">{modeLabel}</h2>
         <div className="text-text-secondary">Loading...</div>
       </Card>
     );
@@ -39,7 +50,7 @@ export function PoolHealthCard() {
 
   return (
     <Card className="p-6">
-      <h2 className="font-heading mb-4 text-lg font-semibold">Pool Health</h2>
+      <h2 className="font-heading mb-4 text-lg font-semibold">{modeLabel}</h2>
 
       {/* Unused Events Count */}
       <div className="mb-6">

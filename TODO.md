@@ -722,7 +722,7 @@
 
 **Context:** After schema migration, pool health and other metrics should support per-mode filtering.
 
-- [ ] **Update pool health query to support mode filter** (`convex/lib/observability/metricsService.ts`)
+- [x] **Update pool health query to support mode filter** (`convex/lib/observability/metricsService.ts`)
 
   - Update `calculatePoolHealth` function signature: `(events, mode?: "classic" | "order" | "all")`
   - Filter logic:
@@ -731,19 +731,21 @@
     - `"all"` (default): Count events where BOTH are undefined
   - Update depletion calculation: 6 events/day for Classic, varies for Order (based on selection algorithm)
   - Success criteria: Pool health accurately reflects per-mode availability
+  - Note: Already implemented in previous Phase 4.2 work
 
-- [ ] **Update PoolHealthCard to accept mode prop** (`src/components/admin/PoolHealthCard.tsx`)
+- [x] **Update PoolHealthCard to accept mode prop** (`src/components/admin/PoolHealthCard.tsx`)
 
   - Add prop: `mode: "classic" | "order" | "all"`
   - Pass mode to Convex query
   - Update labels: "Unused Events (Classic)" or "Unused Events (Order)"
   - Success criteria: Card accurately shows mode-specific pool health
 
-- [ ] **Wire ModeFilter to OverviewTab metrics**
+- [x] **Wire ModeFilter to OverviewTab metrics**
 
-  - OverviewTab receives selected mode from AdminTabs
-  - Pass mode to: PoolHealthCard, CostTrendsChart (if mode-specific costs tracked), QualityMetricsGrid
-  - Success criteria: All overview metrics respect mode filter
+  - OverviewTab uses `useGameMode()` hook to get mode from URL
+  - ModeFilter component rendered in OverviewTab header for mode switching
+  - Pass mode to: PoolHealthCard (CostTrendsChart and QualityMetricsGrid not mode-specific)
+  - Success criteria: Pool health metrics respect mode filter
 
 ---
 
