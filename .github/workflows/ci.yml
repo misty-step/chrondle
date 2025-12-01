@@ -157,6 +157,27 @@ jobs:
             echo "⚠️ Coverage report not found" >> $GITHUB_STEP_SUMMARY
           fi
 
+      - name: Coverage Report
+        if: matrix.check == 'test' && github.event_name == 'pull_request'
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          vite-config-path: vitest.config.ts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file-coverage-mode: changes
+
+      - name: Generate Coverage Badge
+        if: matrix.check == 'test' && github.ref == 'refs/heads/master'
+        run: npx make-coverage-badge --output-path public/badges/coverage.svg
+
+      - name: Commit Coverage Badge
+        if: matrix.check == 'test' && github.ref == 'refs/heads/master'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/badges/coverage.svg
+          git diff --staged --quiet || git commit -m "chore: update coverage badge [skip ci]"
+          git push
+
   validation:
     runs-on: ubuntu-latest
     name: validation-checks

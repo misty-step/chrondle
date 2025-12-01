@@ -28,6 +28,7 @@ const baseConfig = {
     coverage: {
       provider: "v8" as const,
       reporter: ["text", "json", "html", "json-summary"],
+      reportOnFailure: true,
       exclude: [
         "node_modules/**",
         "src/test/**",
