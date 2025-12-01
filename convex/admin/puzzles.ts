@@ -10,6 +10,7 @@
 
 import { query } from "../_generated/server";
 import { v } from "convex/values";
+import { requireAdmin } from "../lib/auth";
 
 const modeValidator = v.union(v.literal("classic"), v.literal("order"));
 
@@ -24,6 +25,7 @@ export const listPuzzles = query({
     cursor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const limit = Math.max(1, Math.min(args.limit ?? 20, 100));
     const cursorIndex = args.cursor ? parseInt(args.cursor, 10) : 0;
 
@@ -106,6 +108,7 @@ export const getPuzzleDetail = query({
     puzzleNumber: v.number(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     if (args.mode === "classic") {
       const puzzle = await ctx.db
         .query("puzzles")
@@ -184,6 +187,7 @@ export const getPuzzleDetail = query({
  */
 export const getTodaysPuzzles = query({
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     const today = new Date().toISOString().split("T")[0];
 
     // Get today's Classic puzzle

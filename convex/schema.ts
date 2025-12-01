@@ -9,19 +9,44 @@ export default defineSchema({
     classicPuzzleId: v.optional(v.id("puzzles")), // Links to Classic mode puzzle (null = unused in Classic)
     orderPuzzleId: v.optional(v.id("orderPuzzles")), // Links to Order mode puzzle (null = unused in Order)
     updatedAt: v.number(), // Manual timestamp (Convex provides _creationTime)
-    // Metadata for future game modes (Timeline, Category, etc.)
-    // Populated by Gemini 3 Generator. Optional for backward compatibility.
+    /**
+     * Optional metadata used to power richer game modes (Timeline, Category, per-era pool health, etc.).
+     *
+     * - Backward compatibility: existing events may have `metadata === undefined`; all game modes must treat
+     *   missing metadata as "unknown" and fall back to sensible defaults.
+     */
     metadata: v.optional(
       v.object({
-        /** Difficulty rating (1-5). 1=Obvious, 5=Obscure. Used for difficulty scaling. */
+        /**
+         * Difficulty rating from 1–5.
+         * 1 = very obvious / introductory events, 5 = highly obscure or specialist knowledge.
+         * Used to tune Classic and Order modes (e.g., puzzle mix, future difficulty sliders).
+         */
         difficulty: v.optional(v.number()),
-        /** Semantic categories (e.g., "war", "science"). Used for Category Mode. */
+        /**
+         * Semantic categories (e.g., "war", "politics", "science", "culture").
+         * Intended for Category / filterable modes and for admin search; free-form but should use a shared
+         * vocabulary where possible.
+         */
         category: v.optional(v.array(v.string())),
-        /** Historical era. "ancient" (<500), "medieval" (500-1500), "modern" (>1500). */
+        /**
+         * High-level historical era label derived from year:
+         * - "ancient"  → years ≤ 500
+         * - "medieval" → 501–1500
+         * - "modern"   → >1500
+         * Used for coverage orchestration, admin pool health by era, and future era-specific modes.
+         */
         era: v.optional(v.string()),
-        /** Fame level (1-5). How well-known the event is globally. */
+        /**
+         * Fame level from 1–5 describing how globally well-known the event is.
+         * 1 = niche / regional, 5 = globally iconic. Used to balance puzzles between deep cuts
+         * and crowd-pleasers.
+         */
         fame_level: v.optional(v.number()),
-        /** Flexible tags for filtering (e.g., "space", "revolution"). */
+        /**
+         * Flexible tags for search and future mechanics (e.g., "space", "revolution", "technology").
+         * Tags can overlap with `category` but are intentionally more granular and user-facing.
+         */
         tags: v.optional(v.array(v.string())),
       }),
     ),

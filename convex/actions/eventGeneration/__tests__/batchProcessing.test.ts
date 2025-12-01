@@ -63,11 +63,11 @@ vi.mock("../reviser", () => ({
 }));
 
 vi.mock("../../../lib/coverageOrchestrator", () => ({
-  selectWork: vi.fn().mockResolvedValue({
-    targetYears: Array.from({ length: 10 }, (_, i) => 1990 + i),
+  selectWork: vi.fn().mockImplementation(async (_ctx, count = 10) => ({
+    targetYears: Array.from({ length: count }, (_, i) => 1990 + i),
     priority: "missing",
-    eraBalance: { ancient: 0, medieval: 0, modern: 10 },
-  }),
+    eraBalance: { ancient: 0, medieval: 0, modern: count },
+  })),
 }));
 
 vi.mock("../../../lib/rateLimiter", () => ({
@@ -132,5 +132,17 @@ describe("generateDailyBatch integration", () => {
 
     expect(result.failures).toBe(2);
     expect(result.successes).toBe(8);
+  });
+
+  it("caps targetCount to 50 to prevent unbounded batches", async () => {
+    const ctx = {
+      runMutation: vi.fn().mockResolvedValue(undefined),
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await (generateDailyBatch as any).handler(ctx, { targetCount: 500 });
+
+    expect(result.attemptedYears).toHaveLength(50);
+    expect(rateLimiterCalls).toHaveLength(50);
   });
 });

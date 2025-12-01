@@ -18,6 +18,8 @@ const MAX_TOTAL_ATTEMPTS = 4;
 const MAX_CRITIC_CYCLES = 2;
 const MIN_REQUIRED_EVENTS = 6;
 const MAX_SELECTED_EVENTS = 10;
+const MAX_TARGET_COUNT = 50;
+const MIN_TARGET_COUNT = 1;
 
 // Rate limiter for batch processing: 10 req/sec sustained, 20 burst capacity
 // Prevents overwhelming OpenRouter API (60 req/min limit)
@@ -46,7 +48,8 @@ export const generateDailyBatch = internalAction({
     targetCount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const strategy = await selectWork(ctx, args.targetCount ?? 10);
+    const targetCount = clampTargetCount(args.targetCount ?? 10);
+    const strategy = await selectWork(ctx, targetCount);
     const startTime = Date.now();
 
     // Log strategy used
@@ -381,4 +384,9 @@ async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<Year
   }
 
   return result;
+}
+
+function clampTargetCount(value: number): number {
+  if (Number.isNaN(value) || !Number.isFinite(value)) return 10;
+  return Math.max(MIN_TARGET_COUNT, Math.min(MAX_TARGET_COUNT, Math.floor(value)));
 }

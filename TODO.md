@@ -445,7 +445,7 @@
 - Carmack: Direct implementation. Two explicit fields (`classicPuzzleId`, `orderPuzzleId`) instead of clever nested structures
 - Torvalds: The code is the truth. Fix the schema first, UI follows naturally
 
-**Current State:** Dashboard shows 3563 "unused" events but this only counts Classic. Order mode samples from entire 4217-event pool without tracking. Admin has no way to browse/edit events or view puzzles.
+**Current State:** Dashboard shows 3563 "unused" events but this only counts Classic. Order mode samples from entire 4217-event pool without marking them used. Admin has no way to browse/edit events or view puzzles.
 
 **Target State:** Per-mode usage tracking, Events Browser with search/filter/edit, Puzzles Manager for both modes, pool health metrics per mode.
 
@@ -767,7 +767,7 @@
   - Updated `convex/events.ts`: All 11 references converted to use `classicPuzzleId` or `orderPuzzleId`
   - Updated `scripts/audit-events.ts`, `scripts/manage-events.ts`, `scripts/quality-audit-sampler.ts`
   - Updated test files in `convex/__tests__/` and `convex/lib/observability/__tests__/`
-  - Success criteria: No runtime references to old `puzzleId` field
+  - Success criteria: No runtime references to deprecated field in code
 
 - [x] **Remove deprecated `puzzleId` field from schema** (`convex/schema.ts`)
 
@@ -800,7 +800,7 @@
 
   - Test: Generate 10 years in parallel, verify all complete
   - Test: Partial failures don't block other years
-  - Test: Rate limiting prevents exceeding 60 req/min
+  - Test: Rate limiting prevents exceeding OpenRouter limits
   - Success criteria: Batch processing is robust, handles errors gracefully
 
 - [x] **Write integration test for alert engine** (`convex/lib/observability/__tests__/alertEngine.test.ts`)
@@ -811,36 +811,66 @@
 
 ### Performance Tests
 
-- [ ] **Benchmark Gemini 3 vs GPT-5-mini generation latency**
+- [x] **Benchmark Gemini 3 vs GPT-5-mini generation latency**
 
   - Measure: Time to generate 6 events for 1 year (both models)
   - Compare: p50, p95, p99 latencies
   - Verify: Gemini 3 latency acceptable (<30s p95), not significantly slower than GPT-5-mini
   - Success criteria: Latency regression <20%, cost savings justify any slowdown
 
-- [ ] **Load test batch processing with 50 concurrent years**
+- [x] **Load test batch processing with 50 concurrent years**
   - Verify: Rate limiter prevents 429 errors
   - Measure: Total batch completion time, memory usage
   - Success criteria: Can handle 50 years without exceeding OpenRouter limits, memory usage <512MB
 
 ### Documentation
 
-- [ ] **Update CLAUDE.md with Gemini 3 migration notes**
+- [x] **Update CLAUDE.md with Gemini 3 migration notes**
 
   - Document: New gemini3Client abstraction, thinking tokens concept, context caching
   - Add: Troubleshooting guide for Gemini 3 failures, how to check fallback logs
   - Success criteria: Future developers understand new LLM infrastructure
 
-- [ ] **Document event metadata schema in schema.ts**
+- [x] **Document event metadata schema in schema.ts**
 
   - Add JSDoc comments explaining each metadata field: purpose, valid values, usage in game modes
   - Document backward compatibility: existing events without metadata still work
   - Success criteria: Schema self-documenting, no confusion about metadata purpose
 
-- [ ] **Create admin dashboard user guide** (`docs/admin-dashboard.md`)
+- [x] **Create admin dashboard user guide** (`docs/admin-dashboard.md`)
   - Document: How to access dashboard, what each panel shows, how to interpret metrics
   - Include: Screenshots of each component, troubleshooting common issues
   - Success criteria: Non-technical admins can use dashboard without assistance
+
+### Review Hardening from PR #64 (Security & Reliability)
+
+- [x] **Harden QualityValidator file I/O path handling** (`convex/lib/qualityValidator.ts`)
+
+  - Restrict leaky phrases database reads/writes to a fixed, app-controlled path; no dynamic paths influenced by user input.
+  - Use atomic write pattern (temp file + rename) and robust error handling to avoid partial/corrupted `leakyPhrases.json` under concurrent updates.
+  - Tests: Add unit/integration tests that simulate path traversal attempts and concurrent writes, asserting only the safe path is used and file contents remain consistent.
+  - Success criteria: No code paths can write outside the intended directory; concurrent updates do not corrupt the leaky phrases store.
+
+- [x] **Enforce server-side admin authorization for Convex admin APIs** (`convex/admin/events.ts`, `convex/admin/puzzles.ts`, related admin actions)
+
+  - Derive admin status from `ctx.auth` and server-side role metadata instead of trusting any client-provided `isAdmin` flag or userId.
+  - Extract a shared `requireAdmin(ctx)` helper and apply it to all admin queries/mutations so access control is centralized and auditable.
+  - Tests: Add Convex tests that verify non-admin identities are rejected even when client code attempts to call admin functions directly.
+  - Success criteria: Only authenticated admin users can invoke admin APIs; attempts from non-admins fail with clear, structured errors.
+
+- [x] **Bound AlertEngine cooldown map growth** (`convex/lib/observability/alertEngine.ts`)
+
+  - Introduce TTL or LRU-style cleanup for `lastAlertTimes` so entries older than a configured window are pruned before/after checks.
+  - Ensure cleanup runs in a predictable place (e.g., inside `checkAlerts`) without adding cross-module coupling or unexpected cron work.
+  - Tests: Extend alert engine tests to cover long-running scenarios where many distinct alerts fire over time, asserting the map does not grow without bound.
+  - Success criteria: AlertEngine memory usage remains stable over long periods; cooldown behavior is preserved while old entries are reclaimed.
+
+- [x] **Add input size limits to event generation and admin flows** (event generation pipeline + relevant admin endpoints)
+
+  - Define and enforce explicit limits for batch sizes, candidate counts, and request payload sizes for event generation/admin scripts to prevent resource exhaustion.
+  - Validate inputs at the boundary (Convex actions/mutations) and return structured errors when limits are exceeded instead of letting oversized prompts reach the LLM.
+  - Tests: Add tests that exercise oversized requests (e.g., large year ranges or huge metadata payloads) and assert they are rejected fast with clear messages.
+  - Success criteria: No single request can drive unbounded token usage or memory growth; oversized inputs fail fast with actionable feedback.
 
 ---
 

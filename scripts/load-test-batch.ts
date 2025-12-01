@@ -30,53 +30,60 @@ async function getClient(): Promise<ConvexHttpClient> {
   return new ConvexHttpClient(url);
 }
 
+const DEFAULT_TOTAL_YEARS = 50;
+const DEFAULT_CONCURRENCY = 50;
+const DEFAULT_START_YEAR = 1850;
+
+function parseNumberArg(raw: string | undefined): number | undefined {
+  if (!raw) return undefined;
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function getLoadTestConfig() {
+  // CLI usage: tsx scripts/load-test-batch.ts [totalYears] [concurrency] [startYear]
+  const totalYearsFromArg = parseNumberArg(process.argv[2]);
+  const concurrencyFromArg = parseNumberArg(process.argv[3]);
+  const startYearFromArg = parseNumberArg(process.argv[4]);
+
+  const totalYearsEnv = parseNumberArg(process.env.LOAD_TEST_YEARS);
+  const concurrencyEnv = parseNumberArg(process.env.LOAD_TEST_CONCURRENCY);
+  const startYearEnv = parseNumberArg(process.env.LOAD_TEST_START_YEAR);
+
+  const totalYears = totalYearsFromArg ?? totalYearsEnv ?? DEFAULT_TOTAL_YEARS;
+  const concurrency = concurrencyFromArg ?? concurrencyEnv ?? DEFAULT_CONCURRENCY;
+  const startYear = startYearFromArg ?? startYearEnv ?? DEFAULT_START_YEAR;
+
+  return { totalYears, concurrency, startYear } as const;
+}
+
 async function runLoadTest() {
-  console.log("Starting Batch Processing Load Test (50 concurrent years)...");
+  const { totalYears, concurrency, startYear } = getLoadTestConfig();
+
+  console.log(
+    `Starting Batch Processing Load Test (targetYears=${totalYears}, concurrency=${concurrency})...`,
+  );
   const client = await getClient();
 
-  // Generate a list of 50 arbitrary years to process
-  // We'll pick a range that likely has some gaps or just random years
-  const startYear = 1850;
-  const years = Array.from({ length: 50 }, (_, i) => startYear + i);
-
+  // Generate a contiguous block of years for the load test.
+  const years = Array.from({ length: totalYears }, (_, i) => startYear + i);
   console.log(`Targeting years: ${years[0]} - ${years[years.length - 1]}`);
 
   const startTime = performance.now();
+  const memStart = process.memoryUsage();
+
   let completed = 0;
   let failed = 0;
+  let rateLimited = 0;
 
-  // We'll use testGenerateYearEvents in parallel chunks to simulate the batch processor
-  // The actual internal batch processor uses rateLimiter, but here we are testing
-  // the system's ability to handle the load if we were to invoke it.
-  // Wait, the TODO says "Load test batch processing". Ideally we should invoke `generateDailyBatch`.
-  // But `generateDailyBatch` is internal.
+  const batches: number[][] = [];
+  for (let i = 0; i < years.length; i += concurrency) {
+    batches.push(years.slice(i, i + concurrency));
+  }
 
-  // Best approximation: invoke testGenerateYearEvents in parallel, but throttle it ourselves
-  // to match the 10 req/sec limit if we want to simulate the internal behavior,
-  // OR we can just blast it and see if the backend handles it (it should, via queueing).
-
-  // Actually, `testGenerateYearEvents` calls `executeYearGeneration` which calls `runGenerationPipeline`.
-  // It does NOT go through the `rateLimiter` defined in `orchestrator.ts` unless we call `generateDailyBatch`.
-
-  // So, strictly speaking, calling `testGenerateYearEvents` 50 times in parallel will mostly hit OpenRouter rate limits
-  // and fail unless *we* implement rate limiting here or if the backend `testGenerateYearEvents` was wrapped.
-  // `testGenerateYearEvents` in `orchestrator.ts` is just `handler: async (ctx, args) => executeYearGeneration(...)`.
-  // It skips the rate limiter in `generateDailyBatch`.
-
-  // So this load test will likely fail with 429s if we don't rate limit client-side.
-  // This is a good test of the backend's isolation (it shouldn't crash the server), but less useful for testing the "Batch Processing" feature itself.
-
-  // To properly test the "Batch Processing" feature (which includes rate limiting), we should ideally invoke `generateDailyBatch`.
-  // Since we can't easily invoke internal actions from here without admin privileges and `npx convex run`,
-  // let's assume we simulate the *throughput* by running a throttled loop here.
-
-  const BATCH_SIZE = 5; // Conservative client-side batching
-
-  for (let i = 0; i < years.length; i += BATCH_SIZE) {
-    const batch = years.slice(i, i + BATCH_SIZE);
-    console.log(
-      `Processing batch ${i / BATCH_SIZE + 1}/${Math.ceil(years.length / BATCH_SIZE)}: ${batch.join(", ")}`,
-    );
+  for (let i = 0; i < batches.length; i += 1) {
+    const batch = batches[i];
+    console.log(`Processing batch ${i + 1}/${batches.length}: ${batch.join(", ")}`);
 
     const promises = batch.map(async (year) => {
       try {
@@ -84,24 +91,46 @@ async function runLoadTest() {
           api.actions.eventGeneration.orchestrator.testGenerateYearEvents,
           { year },
         );
-        if (result.status === "success") completed++;
-        else failed++;
-        return result;
+        if (result.status === "success") {
+          completed += 1;
+        } else {
+          failed += 1;
+        }
       } catch (e: any) {
-        console.error(`Year ${year} failed to invoke:`, e.message);
-        failed++;
+        const message = e?.message ?? String(e);
+        if (message.includes("429") || message.toLowerCase().includes("too many requests")) {
+          rateLimited += 1;
+        }
+        console.error(`Year ${year} failed to invoke:`, message);
+        failed += 1;
       }
     });
 
     await Promise.all(promises);
   }
 
-  const duration = performance.now() - startTime;
+  const durationMs = performance.now() - startTime;
+  const elapsedSeconds = durationMs / 1000;
+  const memEnd = process.memoryUsage();
+
+  const bytesToMb = (bytes: number) => bytes / 1024 / 1024;
+  const rssStartMb = bytesToMb(memStart.rss);
+  const rssEndMb = bytesToMb(memEnd.rss);
+  const rssDeltaMb = rssEndMb - rssStartMb;
+
   console.log("\n--- Load Test Summary ---");
-  console.log(`Total Duration: ${(duration / 1000).toFixed(2)}s`);
-  console.log(`Throughput: ${(50 / (duration / 1000)).toFixed(2)} years/sec`);
+  console.log(`Total Duration: ${elapsedSeconds.toFixed(2)}s`);
+  console.log(`Throughput: ${(totalYears / Math.max(1, elapsedSeconds)).toFixed(2)} years/sec`);
   console.log(`Success: ${completed}`);
   console.log(`Failed: ${failed}`);
+  console.log(`Rate-limited (HTTP 429 style): ${rateLimited}`);
+  console.log("\nApproximate Node process memory usage (RSS):");
+  console.log(`  Start: ${rssStartMb.toFixed(2)} MB`);
+  console.log(`  End:   ${rssEndMb.toFixed(2)} MB`);
+  console.log(`  Delta: ${rssDeltaMb.toFixed(2)} MB`);
 }
 
-runLoadTest().catch(console.error);
+runLoadTest().catch((error) => {
+  console.error("Load test failed with unexpected error:", error);
+  process.exitCode = 1;
+});

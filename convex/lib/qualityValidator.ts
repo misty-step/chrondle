@@ -3,6 +3,27 @@
 import fs from "node:fs";
 import path from "node:path";
 
+const LEAKY_PHRASES_BASE_DIR = path.join(process.cwd(), "convex", "data");
+const DEFAULT_LEAKY_PHRASES_FILE = path.join(LEAKY_PHRASES_BASE_DIR, "leakyPhrases.json");
+
+function resolvePhrasesFile(phrasesFile?: string): string {
+  if (!phrasesFile) {
+    return DEFAULT_LEAKY_PHRASES_FILE;
+  }
+
+  const resolved = path.resolve(phrasesFile);
+  const relative = path.relative(LEAKY_PHRASES_BASE_DIR, resolved);
+
+  // Only allow files inside the convex/data directory to avoid arbitrary file writes
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error(
+      `Invalid leaky phrases file path: ${phrasesFile}. Files must live under ${LEAKY_PHRASES_BASE_DIR}.`,
+    );
+  }
+
+  return resolved;
+}
+
 export type QualityScores = {
   semantic_leakage: number; // 0 (no leak) to 1 (obvious leak)
   factual: number; // placeholder for future signals
@@ -36,9 +57,10 @@ export class SemanticLeakageDetector {
   private phrases: LeakyPhrase[];
   private readonly phrasesFile: string;
 
-  constructor(phrasesFile = path.join(process.cwd(), "convex", "data", "leakyPhrases.json")) {
-    this.phrasesFile = phrasesFile;
-    this.phrases = this.loadPhrases(phrasesFile);
+  constructor(phrasesFile?: string) {
+    const resolvedFile = resolvePhrasesFile(phrasesFile);
+    this.phrasesFile = resolvedFile;
+    this.phrases = this.loadPhrases(resolvedFile);
   }
 
   score(text: string): { score: number; closest?: LeakyPhrase } {
@@ -102,8 +124,15 @@ export class SemanticLeakageDetector {
         fs.mkdirSync(dir, { recursive: true });
       }
 
-      // Write with pretty formatting for version control
-      fs.writeFileSync(this.phrasesFile, JSON.stringify(this.phrases, null, 2), "utf-8");
+      // Write with pretty formatting for version control using a temp file + rename for atomicity
+      const payload = JSON.stringify(this.phrases, null, 2);
+      const tempFile = path.join(
+        dir,
+        `${path.basename(this.phrasesFile)}.tmp-${process.pid}-${Date.now()}`,
+      );
+
+      fs.writeFileSync(tempFile, payload, "utf-8");
+      fs.renameSync(tempFile, this.phrasesFile);
     } catch (error) {
       // Don't throw - learning is best-effort, shouldn't break generation
       const message = error instanceof Error ? error.message : String(error);

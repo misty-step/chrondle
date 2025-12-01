@@ -77,4 +77,31 @@ describe("QualityValidator feedback loop", () => {
       yearRange: [1989, 1989],
     });
   });
+
+  it("rejects phrases file paths outside convex/data", () => {
+    const unsafePath = path.join(process.cwd(), "tmp", "leaky-phrases-outside.json");
+    expect(() => new SemanticLeakageDetector(unsafePath)).toThrow(/convex[\/\\]data/);
+    expect(fs.existsSync(unsafePath)).toBe(false);
+  });
+
+  it("never writes corrupted JSON when learning multiple phrases", () => {
+    const detector = new SemanticLeakageDetector(testFile);
+    const validator = new QualityValidatorImpl(detector);
+
+    const texts = [
+      "Concurrent write event A",
+      "Concurrent write event B",
+      "Concurrent write event C",
+    ];
+
+    for (const text of texts) {
+      validator.learnFromRejected(text, [1900, 1900]);
+    }
+
+    const raw = fs.readFileSync(testFile, "utf-8");
+    expect(() => JSON.parse(raw)).not.toThrow();
+    const content = JSON.parse(raw);
+    expect(Array.isArray(content)).toBe(true);
+    expect(content.length).toBeGreaterThan(0);
+  });
 });

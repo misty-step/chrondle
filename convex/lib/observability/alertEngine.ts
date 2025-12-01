@@ -130,6 +130,7 @@ export class AlertEngine {
   private lastAlertTimes: Map<string, number> = new Map();
   private rules: AlertRule[];
   private notifiers: Map<AlertChannel, Notifier>;
+  private readonly pruneAfterMs: number;
 
   /**
    * Creates an AlertEngine instance.
@@ -140,6 +141,9 @@ export class AlertEngine {
   constructor(rules: AlertRule[] = STANDARD_ALERT_RULES, notifiers: Map<AlertChannel, Notifier>) {
     this.rules = rules;
     this.notifiers = notifiers;
+    const maxCooldown = Math.max(0, ...rules.map((r) => r.cooldown));
+    // Bound map growth: prune entries older than 2x max cooldown, minimum 24h
+    this.pruneAfterMs = Math.max(maxCooldown * 2, 24 * 60 * 60 * 1000);
   }
 
   /**
@@ -151,6 +155,7 @@ export class AlertEngine {
    */
   async checkAlerts(metrics: Metrics): Promise<string[]> {
     const now = Date.now();
+    this.pruneExpired(now);
     const firedAlerts: string[] = [];
 
     for (const rule of this.rules) {
@@ -279,5 +284,17 @@ export class AlertEngine {
    */
   resetAllCooldowns(): void {
     this.lastAlertTimes.clear();
+  }
+
+  /**
+   * Prune expired cooldown entries to prevent unbounded map growth.
+   */
+  private pruneExpired(now: number): void {
+    const cutoff = now - this.pruneAfterMs;
+    for (const [ruleName, ts] of this.lastAlertTimes.entries()) {
+      if (ts < cutoff) {
+        this.lastAlertTimes.delete(ruleName);
+      }
+    }
   }
 }

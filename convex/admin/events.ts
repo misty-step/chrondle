@@ -12,6 +12,7 @@
 import { query, mutation } from "../_generated/server";
 import { v, ConvexError } from "convex/values";
 import type { Doc } from "../_generated/dataModel";
+import { requireAdmin } from "../lib/auth";
 
 /**
  * Usage filter types for event queries.
@@ -44,6 +45,7 @@ export const searchEvents = query({
     cursor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const limit = Math.max(1, Math.min(args.limit ?? 50, 200)); // Cap at 200
     const cursorIndex = args.cursor ? parseInt(args.cursor, 10) : 0;
 
@@ -98,6 +100,7 @@ export const searchEvents = query({
  */
 export const getEventStats = query({
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     const events = await ctx.db.query("events").collect();
 
     const total = events.length;
@@ -140,12 +143,16 @@ export const updateEventText = mutation({
     text: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const { eventId, text } = args;
 
     // Validate text
     const trimmedText = text.trim();
     if (trimmedText.length === 0) {
       throw new ConvexError("Event text cannot be empty");
+    }
+    if (trimmedText.length > 500) {
+      throw new ConvexError("Event text is too long (max 500 chars)");
     }
 
     // Get current event
@@ -178,6 +185,7 @@ export const deleteEvent = mutation({
     eventId: v.id("events"),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const { eventId } = args;
 
     // Get event

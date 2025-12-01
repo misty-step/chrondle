@@ -283,6 +283,85 @@ describe("STANDARD_ALERT_RULES", () => {
   });
 });
 
+describe("AlertEngine cooldown pruning", () => {
+  const createMockMetrics = (): Metrics => ({
+    poolHealth: {
+      unusedEvents: 200,
+      daysUntilDepletion: 10, // force pool depletion rule to fire
+      coverageByEra: { ancient: 20, medieval: 60, modern: 120 },
+      yearsReady: 100,
+    },
+    cost: {
+      costToday: 0.5,
+      cost7DayAvg: 0.45,
+      cost30Day: 12.0,
+      costPerEvent: 0.02,
+    },
+    quality: {
+      avgQualityScore: 0.85,
+      failureRate: 0.1,
+      topFailureReasons: [],
+      qualityTrend: [0.8, 0.82, 0.85, 0.87, 0.85, 0.83, 0.85],
+    },
+    latency: {
+      p50: 0,
+      p95: 0,
+      p99: 0,
+      avgDuration: 0,
+    },
+    timestamp: Date.now(),
+  });
+
+  const mockNotifier = vi.fn(async () => {});
+  const notifiers = new Map<AlertChannel, Notifier>([
+    ["sentry", mockNotifier as unknown as Notifier],
+    ["email", mockNotifier as unknown as Notifier],
+  ]);
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    mockNotifier.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("prunes stale cooldown entries older than pruneAfterMs", async () => {
+    const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+    const metrics = createMockMetrics();
+
+    // First check fires and records cooldown timestamp
+    await engine.checkAlerts(metrics);
+    expect(mockNotifier).toHaveBeenCalled();
+
+    mockNotifier.mockClear();
+
+    // Advance beyond prune window (pruneAfterMs = maxCooldown * 2 or 24h; maxCooldown is 24h → 48h)
+    vi.advanceTimersByTime(48 * 60 * 60 * 1000 + 1000);
+
+    // This should prune stale entries before evaluating; alert should fire again
+    await engine.checkAlerts(metrics);
+    expect(mockNotifier).toHaveBeenCalled();
+  });
+
+  it("keeps recent cooldown entries within prune window", async () => {
+    const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
+    const metrics = createMockMetrics();
+
+    await engine.checkAlerts(metrics);
+    expect(mockNotifier).toHaveBeenCalled();
+    mockNotifier.mockClear();
+
+    // Advance less than prune window but within cooldown (24h)
+    vi.advanceTimersByTime(12 * 60 * 60 * 1000);
+    await engine.checkAlerts(metrics);
+
+    // Should be suppressed by cooldown and not pruned yet
+    expect(mockNotifier).not.toHaveBeenCalled();
+  });
+});
+
 describe("AlertEngine integration smoke", () => {
   const sentryNotifier = vi.fn().mockResolvedValue(undefined);
   const emailNotifier = vi.fn().mockResolvedValue(undefined);
