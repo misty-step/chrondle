@@ -9,7 +9,7 @@ import type { RangeGuess } from "@/types/range";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/Separator";
-import { Target, Ruler, Lightbulb, Award, ChevronDown } from "lucide-react";
+import { Target, Ruler, Lightbulb, Award, ChevronDown, Check, AlertCircle } from "lucide-react";
 import { RangeProximity } from "@/components/game/RangeProximity";
 
 interface GameCompleteProps {
@@ -182,10 +182,12 @@ export function GameComplete({
     return "Share";
   })();
 
-  const shareButtonTone = (() => {
-    if (shareStatus === "success") return "bg-emerald-500 hover:bg-emerald-600";
-    if (shareStatus === "error") return "bg-rose-500 hover:bg-rose-600";
-    return "bg-primary hover:bg-primary/90";
+  // Share button stays vermilion - feedback via icon + animation, not color change
+  const shareButtonIcon = (() => {
+    if (shareStatus === "success")
+      return <Check className="size-4 animate-[check-in_250ms_ease-out_forwards]" />;
+    if (shareStatus === "error") return <AlertCircle className="size-4" />;
+    return null;
   })();
 
   const showTargetMarker = Boolean(
@@ -243,9 +245,10 @@ export function GameComplete({
           disabled={isSharing}
           className={cn(
             "w-full justify-center gap-2 text-sm font-semibold text-white",
-            shareButtonTone,
+            shareStatus === "success" && "animate-[stamp-confirm_200ms_ease-out]",
           )}
         >
+          {shareButtonIcon}
           {shareButtonLabel}
         </Button>
       </div>
