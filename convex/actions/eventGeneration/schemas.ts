@@ -16,6 +16,15 @@ export const CandidateEventSchema = z.object({
     has_century_terms: z.boolean(),
     has_spelled_year: z.boolean(),
   }),
+  metadata: z
+    .object({
+      difficulty: z.number().min(1).max(5).optional(),
+      category: z.array(z.string()).optional(),
+      era: z.enum(["ancient", "medieval", "modern"]).optional(),
+      fame_level: z.number().min(1).max(5).optional(),
+      tags: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 export const GeneratorOutputSchema = z.object({
@@ -29,6 +38,7 @@ export const GeneratorOutputSchema = z.object({
 
 export type CandidateEvent = z.infer<typeof CandidateEventSchema>;
 export type GeneratorOutput = z.infer<typeof GeneratorOutputSchema>;
+export type EventMetadata = z.infer<typeof CandidateEventSchema>["metadata"];
 
 export const CritiqueScoreSchema = z.object({
   factual: z.number().min(0).max(1),

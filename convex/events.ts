@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 
 // Import events into the pool (one event per row)
 export const importEvent = internalMutation({
@@ -20,11 +20,10 @@ export const importEvent = internalMutation({
       return { skipped: true, id: existing._id };
     }
 
-    // Create new event with undefined puzzleId (unassigned)
+    // Create new event (unassigned to any puzzle)
     const id = await ctx.db.insert("events", {
       year,
       event,
-      puzzleId: undefined,
       updatedAt: Date.now(),
     });
 
@@ -58,7 +57,6 @@ export const importYearEvents = internalMutation({
       const id = await ctx.db.insert("events", {
         year,
         event,
-        puzzleId: undefined,
         updatedAt: Date.now(),
       });
 
@@ -88,13 +86,13 @@ export const getYearEvents = query({
   },
 });
 
-// Get available years (years with 6+ unused events)
+// Get available years (years with 6+ unused events for Classic mode)
 export const getAvailableYears = internalQuery({
   handler: async (ctx) => {
-    // Get all events that aren't assigned to a puzzle
+    // Get all events that aren't assigned to a Classic puzzle
     const unusedEvents = await ctx.db
       .query("events")
-      .filter((q) => q.eq(q.field("puzzleId"), undefined))
+      .filter((q) => q.eq(q.field("classicPuzzleId"), undefined))
       .collect();
 
     // Group by year and count
@@ -114,7 +112,49 @@ export const getAvailableYears = internalQuery({
   },
 });
 
-// Mark events as used by a puzzle
+// Fetch events missing metadata (internal use)
+export const getEventsMissingMetadata = internalQuery({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit }) => {
+    const max = Math.max(1, Math.min(limit ?? 500, 2000));
+    const events = await ctx.db
+      .query("events")
+      .filter((q) => q.eq(q.field("metadata"), undefined))
+      .take(max);
+
+    return events.map((event) => ({
+      _id: event._id,
+      year: event.year,
+      event: event.event,
+      updatedAt: event.updatedAt,
+    }));
+  },
+});
+
+// Public query wrapper for external scripts
+export const getEventsMissingMetadataPublic = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit }) => {
+    const max = Math.max(1, Math.min(limit ?? 500, 2000));
+    const events = await ctx.db
+      .query("events")
+      .filter((q) => q.eq(q.field("metadata"), undefined))
+      .take(max);
+
+    return events.map((event) => ({
+      _id: event._id,
+      year: event.year,
+      event: event.event,
+      updatedAt: event.updatedAt,
+    }));
+  },
+});
+
+// Mark events as used by a Classic puzzle
 export const assignEventsToPuzzle = internalMutation({
   args: {
     eventIds: v.array(v.id("events")),
@@ -123,12 +163,56 @@ export const assignEventsToPuzzle = internalMutation({
   handler: async (ctx, { eventIds, puzzleId }) => {
     for (const eventId of eventIds) {
       await ctx.db.patch(eventId, {
-        puzzleId,
+        classicPuzzleId: puzzleId,
         updatedAt: Date.now(),
       });
     }
 
     return { assigned: eventIds.length };
+  },
+});
+
+// Internal mutation for updating event metadata
+export const updateEventMetadata = internalMutation({
+  args: {
+    eventId: v.id("events"),
+    metadata: v.object({
+      difficulty: v.optional(v.number()),
+      category: v.optional(v.array(v.string())),
+      era: v.optional(v.string()),
+      fame_level: v.optional(v.number()),
+      tags: v.optional(v.array(v.string())),
+    }),
+  },
+  handler: async (ctx, { eventId, metadata }) => {
+    await ctx.db.patch(eventId, {
+      metadata,
+      updatedAt: Date.now(),
+    });
+
+    return { eventId };
+  },
+});
+
+// Public mutation wrapper for external scripts
+export const updateEventMetadataPublic = mutation({
+  args: {
+    eventId: v.id("events"),
+    metadata: v.object({
+      difficulty: v.optional(v.number()),
+      category: v.optional(v.array(v.string())),
+      era: v.optional(v.string()),
+      fame_level: v.optional(v.number()),
+      tags: v.optional(v.array(v.string())),
+    }),
+  },
+  handler: async (ctx, { eventId, metadata }) => {
+    await ctx.db.patch(eventId, {
+      metadata,
+      updatedAt: Date.now(),
+    });
+
+    return { eventId };
   },
 });
 
@@ -144,8 +228,10 @@ export const deleteYearEvents = internalMutation({
       .withIndex("by_year", (q) => q.eq("year", year))
       .collect();
 
-    // Check if any events are used in puzzles
-    const usedEvents = events.filter((e) => e.puzzleId !== undefined);
+    // Check if any events are used in puzzles (either mode)
+    const usedEvents = events.filter(
+      (e) => e.classicPuzzleId !== undefined || e.orderPuzzleId !== undefined,
+    );
     if (usedEvents.length > 0) {
       throw new Error(
         `Cannot delete events for year ${year}: ${usedEvents.length} events are used in puzzles`,
@@ -177,7 +263,8 @@ export const getAllYearsWithStats = query({
     for (const event of allEvents) {
       const stats = yearStats.get(event.year) || { total: 0, used: 0 };
       stats.total++;
-      if (event.puzzleId !== undefined) {
+      // Count as used if assigned to Classic mode (primary mode)
+      if (event.classicPuzzleId !== undefined) {
         stats.used++;
       }
       yearStats.set(event.year, stats);
@@ -201,8 +288,9 @@ export const getAllYearsWithStats = query({
 export const getEventPoolStats = query({
   handler: async (ctx) => {
     const allEvents = await ctx.db.query("events").collect();
-    const assignedEvents = allEvents.filter((e) => e.puzzleId !== undefined);
-    const unassignedEvents = allEvents.filter((e) => e.puzzleId === undefined);
+    // Count Classic mode assignments (primary mode for pool stats)
+    const assignedEvents = allEvents.filter((e) => e.classicPuzzleId !== undefined);
+    const unassignedEvents = allEvents.filter((e) => e.classicPuzzleId === undefined);
 
     // Count unique years
     const uniqueYears = new Set(allEvents.map((e) => e.year));
@@ -240,7 +328,8 @@ export const deleteEvent = internalMutation({
       throw new Error(`Event with ID ${eventId} not found.`);
     }
 
-    if (event.puzzleId !== undefined) {
+    // Check if used in either game mode
+    if (event.classicPuzzleId !== undefined || event.orderPuzzleId !== undefined) {
       throw new Error("Cannot delete event: It is used in a puzzle.");
     }
 
@@ -263,7 +352,8 @@ export const updateEvent = internalMutation({
       throw new Error(`Event with ID ${eventId} not found.`);
     }
 
-    if (event.puzzleId !== undefined) {
+    // Check if used in either game mode
+    if (event.classicPuzzleId !== undefined || event.orderPuzzleId !== undefined) {
       throw new Error("Cannot update event: It is used in a puzzle.");
     }
 

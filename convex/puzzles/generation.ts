@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, internalMutation } from "../_generated/server";
-import { Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import { selectYearForPuzzle } from "../lib/puzzleHelpers";
 
@@ -68,10 +67,10 @@ export const generateDailyPuzzle = internalMutation({
       updatedAt: Date.now(),
     });
 
-    // Update the selected events with the puzzleId
+    // Mark events as used in Classic mode
     for (const event of selectedEvents) {
       await ctx.db.patch(event._id, {
-        puzzleId,
+        classicPuzzleId: puzzleId,
         updatedAt: Date.now(),
       });
     }
@@ -155,10 +154,10 @@ export const ensureTodaysPuzzle = mutation({
       updatedAt: Date.now(),
     });
 
-    // Update events with puzzleId
+    // Mark events as used in Classic mode
     for (const event of selectedEvents) {
       await ctx.db.patch(event._id, {
-        puzzleId,
+        classicPuzzleId: puzzleId,
         updatedAt: Date.now(),
       });
     }

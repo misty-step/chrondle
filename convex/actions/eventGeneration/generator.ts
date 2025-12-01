@@ -2,11 +2,7 @@
 
 import { v } from "convex/values";
 import { internalAction } from "../../_generated/server";
-import {
-  createResponsesClient,
-  type ResponsesClient,
-  type TokenUsage,
-} from "../../lib/responsesClient";
+import { createGemini3Client, type Gemini3Client, type TokenUsage } from "../../lib/gemini3Client";
 import type { CandidateEvent } from "./schemas";
 import { GeneratorOutputSchema, parseEra, type Era } from "./schemas";
 import { logStageError, logStageSuccess } from "../../lib/logging";
@@ -34,26 +30,20 @@ DIVERSITY GUIDANCE:
 Balance your event selection across different spheres of human activity and different parts of the world.
 If the year has limited documented events, focus on what IS known rather than forcing artificial diversity.`;
 
-let cachedGeneratorClient: ResponsesClient | null = null;
+let cachedGeneratorClient: Gemini3Client | null = null;
 
-function getGeneratorClient(): ResponsesClient {
+function getGeneratorClient(): Gemini3Client {
   if (!cachedGeneratorClient) {
-    cachedGeneratorClient = createResponsesClient({
+    cachedGeneratorClient = createGemini3Client({
       temperature: 0.8,
       maxOutputTokens: 32_000, // Generous for 12-18 events
-      reasoning: {
-        effort: "medium", // Quality reasoning for historical accuracy
-      },
-      text: {
-        verbosity: "medium", // Natural, detailed JSON output
-      },
-      pricing: {
-        "openai/gpt-5-mini": {
-          inputCostPer1K: 0.15,
-          outputCostPer1K: 0.6,
-          reasoningCostPer1K: 0.15,
-        },
-      },
+      thinking_level: "high", // Creativity + reasoning
+      cache_system_prompt: true,
+      cache_ttl_seconds: 86_400,
+      structured_outputs: true,
+      model: "google/gemini-3-pro-preview",
+      fallbackModel: "openai/gpt-5-mini",
+      stage: "generator",
     });
   }
   return cachedGeneratorClient;
@@ -72,13 +62,16 @@ export interface GeneratorActionResult {
     requestId: string;
     model: string;
     usage: TokenUsage;
+    costUsd: number;
+    cacheHit: boolean;
+    fallbackFrom?: string;
   };
 }
 
 interface GenerateCandidatesParams {
   year: number;
   era: Era;
-  llmClient?: ResponsesClient;
+  llmClient?: Gemini3Client;
 }
 
 export const generateCandidates = internalAction({
@@ -104,15 +97,22 @@ export async function generateCandidatesForYear(
   };
 
   const response = await client.generate({
-    prompt: {
-      system: GENERATOR_SYSTEM_PROMPT,
-      user: buildGeneratorUserPrompt(year, era),
-    },
+    system: GENERATOR_SYSTEM_PROMPT,
+    user: buildGeneratorUserPrompt(year, era),
     schema: GeneratorOutputSchema,
     metadata: {
       stage: "generator",
       year,
       era,
+    },
+    options: {
+      thinking_level: "high",
+      cache_system_prompt: true,
+      cache_ttl_seconds: 86_400,
+      maxOutputTokens: 32_000,
+      temperature: 0.8,
+      structured_outputs: true,
+      model: "google/gemini-3-pro-preview",
     },
   });
 
@@ -121,12 +121,12 @@ export async function generateCandidatesForYear(
     year,
     response.data.year.era,
     era,
-    response.requestId,
+    response.metadata.requestId,
   );
 
   logStageSuccess("Generator", "LLM call succeeded", {
-    requestId: response.requestId,
-    model: response.model,
+    requestId: response.metadata.requestId,
+    model: response.metadata.model,
     tokens: response.usage.totalTokens,
     year,
   });
@@ -137,19 +137,90 @@ export async function generateCandidatesForYear(
     year: yearSummary,
     candidates,
     llm: {
-      requestId: response.requestId,
-      model: response.model,
+      requestId: response.metadata.requestId,
+      model: response.metadata.model,
       usage: response.usage,
+      costUsd: response.cost.totalUsd,
+      cacheHit: response.metadata.cacheHit,
+      fallbackFrom: response.metadata.fallbackFrom,
     },
   };
+}
+
+/**
+ * Builds enhanced prompt guidance for sparse years (ancient, BC, obscure modern).
+ * Provides historical context to improve generation success rate.
+ *
+ * @param year - Target year (negative for BCE)
+ * @param era - Era classification ("BCE" or "CE")
+ * @param digits - Number of digits in the year (1-4)
+ * @returns Additional context string or empty if not needed
+ */
+function buildEnhancedPrompt(year: number, era: Era, digits: number): string {
+  const absoluteYear = Math.abs(year);
+
+  // Ancient years (1-2 digits): Add historical context primer
+  if (digits <= 2 && era === "CE") {
+    const contexts = [
+      "Context: Early Roman Empire period. Focus on emperors, dynasties, and major figures.",
+      "Possible figures: Emperors (Augustus, Tiberius, Nero, Vespasian, Trajan), philosophers, military leaders.",
+      "Cultural movements: Early Christianity, Roman architecture, Silk Road trade.",
+      "Prefer figure-centric events: 'Emperor X ascends throne' rather than 'Rome experiences change'.",
+    ];
+    return "\n\n" + contexts.join("\n");
+  }
+
+  // BCE years: Enforce figure-centric approach
+  if (era === "BCE") {
+    const bcContexts = [
+      "Context: Ancient world - emphasize specific figures and dynasties.",
+      "Structure events around people: 'Caesar conquers Gaul' NOT 'Rome expands territory'.",
+      "Key civilizations: Egypt (pharaohs, dynasties), Greece (philosophers, city-states), Rome (consuls, generals), Persia (kings), China (dynasties, emperors).",
+      "Avoid passive constructions - use active voice with named individuals.",
+    ];
+
+    // Add specific dynasty/ruler context for different BCE periods
+    // Note: In BCE, larger numbers = earlier times (300 BCE is earlier than 30 BCE)
+    if (absoluteYear >= 30 && absoluteYear <= 300) {
+      bcContexts.push(
+        "Hellenistic period: Alexander's successors, Ptolemies, Seleucids, Roman Republic expansion.",
+      );
+    } else if (absoluteYear > 300 && absoluteYear <= 500) {
+      bcContexts.push(
+        "Classical period: Greek city-states, Persian Empire, Roman Republic early phase, Warring States (China).",
+      );
+    } else if (absoluteYear > 500) {
+      bcContexts.push(
+        "Early civilizations: Bronze Age, early dynasties, formation of major cultural centers.",
+      );
+    }
+
+    return "\n\n" + bcContexts.join("\n");
+  }
+
+  // Obscure modern years (sparse documentation periods): Provide decade context
+  // Years 1500-1700 CE tend to have sparse documentation outside major European events
+  if (era === "CE" && year >= 1500 && year <= 1700 && digits === 4) {
+    const decadeContexts = [
+      "Context: Early modern period - Renaissance, Reformation, Age of Exploration.",
+      "Major contemporaries: Consider events in Europe, Ottoman Empire, Ming/Qing China, Mughal India, Aztec/Inca empires.",
+      "Topics: Religious conflicts, voyages of exploration, scientific discoveries, artistic movements, dynastic changes.",
+      "If documentation is limited, prioritize known figures and major political changes over mundane events.",
+    ];
+    return "\n\n" + decadeContexts.join("\n");
+  }
+
+  // No enhancement needed for well-documented modern years (1700+)
+  return "";
 }
 
 function buildGeneratorUserPrompt(year: number, era: Era): string {
   const absoluteYear = Math.abs(year);
   const yearLabel = era === "BCE" ? absoluteYear : year;
   const digitCount = Math.min(4, Math.max(1, getDigitCount(year)));
+  const enhancedContext = buildEnhancedPrompt(year, era, digitCount);
 
-  return `Target year: ${yearLabel} (${era})
+  return `Target year: ${yearLabel} (${era})${enhancedContext}
 
 Generate 12-18 historical events that occurred in ${yearLabel} ${era}.
 
@@ -160,6 +231,12 @@ Requirements:
 - Topical diversity (mix politics, science, culture, technology, sports, economy, war, religion, exploration)
 - Geographic diversity (multiple regions - not all Western)
 - Difficulty range: mix of obscure (1-2) and recognizable (4-5)
+- For each event, estimate metadata:
+  - difficulty (1-5)
+  - category array (e.g., ["war", "politics", "science", "culture", "technology", "religion", "economy", "sports", "exploration", "arts"])
+  - era bucket: "ancient" (<500 CE), "medieval" (500-1500 CE), "modern" (1500+ CE)
+  - fame_level (1-5) how well-known the event is
+  - tags: free-form strings (2-5 short tags)
 
 Return JSON in this EXACT format:
 {
@@ -179,6 +256,13 @@ Return JSON in this EXACT format:
         "has_digits": false,
         "has_century_terms": false,
         "has_spelled_year": false
+      },
+      "metadata": {
+        "difficulty": 3,
+        "category": ["politics", "science"],
+        "era": "modern",
+        "fame_level": 4,
+        "tags": ["industrial", "europe"]
       }
     }
   ]

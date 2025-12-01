@@ -1,17 +1,15 @@
 "use node";
 
 import { v } from "convex/values";
+import { z } from "zod";
 import { internalAction } from "../../_generated/server";
-import {
-  createResponsesClient,
-  type ResponsesClient,
-  type TokenUsage,
-} from "../../lib/responsesClient";
+import { createGemini3Client, type Gemini3Client, type TokenUsage } from "../../lib/gemini3Client";
 import { hasLeakage, hasProperNoun, isValidWordCount } from "../../lib/eventValidation";
 import type { CandidateEvent, CritiqueResult } from "./schemas";
 import { CritiqueResultSchema, parseEra, type Era } from "./schemas";
 import { CandidateEventValue } from "./values";
 import { logStageError, logStageSuccess } from "../../lib/logging";
+import { QualityValidatorImpl } from "../../lib/qualityValidator";
 
 const CRITIC_SYSTEM_PROMPT = `You are ChronBot Critic, a precision editor scoring historical event clues.
 
@@ -41,26 +39,34 @@ const SCORE_THRESHOLDS = {
   guessability: 0.4,
 } as const;
 
-let cachedCriticClient: ResponsesClient | null = null;
+const ALLOWED_CATEGORIES = [
+  "war",
+  "politics",
+  "science",
+  "culture",
+  "technology",
+  "religion",
+  "economy",
+  "sports",
+  "exploration",
+  "arts",
+];
 
-function getCriticClient(): ResponsesClient {
+let cachedCriticClient: Gemini3Client | null = null;
+const qualityValidator = new QualityValidatorImpl();
+
+function getCriticClient(): Gemini3Client {
   if (!cachedCriticClient) {
-    cachedCriticClient = createResponsesClient({
+    cachedCriticClient = createGemini3Client({
       temperature: 0.2,
       maxOutputTokens: 32_000, // Generous for critique arrays
-      reasoning: {
-        effort: "low", // Simple scoring doesn't need deep reasoning
-      },
-      text: {
-        verbosity: "low", // Concise but complete critiques
-      },
-      pricing: {
-        "openai/gpt-5-mini": {
-          inputCostPer1K: 0.15,
-          outputCostPer1K: 0.6,
-          reasoningCostPer1K: 0.15,
-        },
-      },
+      thinking_level: "low", // Simple scoring doesn't need deep reasoning
+      structured_outputs: true,
+      cache_system_prompt: true,
+      cache_ttl_seconds: 86_400,
+      model: "google/gemini-3-flash-preview",
+      fallbackModel: "openai/gpt-5-mini",
+      stage: "critic",
     });
   }
   return cachedCriticClient;
@@ -72,6 +78,9 @@ export interface CriticActionResult {
     requestId: string;
     model: string;
     usage: TokenUsage;
+    costUsd: number;
+    cacheHit: boolean;
+    fallbackFrom?: string;
   };
   deterministicFailures: number;
 }
@@ -80,7 +89,7 @@ interface CriticParams {
   year: number;
   era: Era;
   candidates: CandidateEvent[];
-  llmClient?: ResponsesClient;
+  llmClient?: Gemini3Client;
 }
 
 export const critiqueCandidates = internalAction({
@@ -108,26 +117,34 @@ export async function critiqueCandidatesForYear(params: CriticParams): Promise<C
         requestId: "",
         model: "",
         usage: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0, totalTokens: 0 },
+        costUsd: 0,
+        cacheHit: false,
       },
       deterministicFailures: 0,
     };
   }
 
-  const deterministic = runDeterministicChecks(candidates);
+  const deterministic = runDeterministicChecks(candidates, year, era);
   const llmClient = params.llmClient ?? getCriticClient();
   let response;
   try {
     response = await llmClient.generate({
-      prompt: {
-        system: CRITIC_SYSTEM_PROMPT,
-        user: buildCriticUserPrompt(year, era, candidates),
-      },
+      system: CRITIC_SYSTEM_PROMPT,
+      user: buildCriticUserPrompt(year, era, candidates),
       schema: zodArrayForCount(candidates.length),
-      jsonFormat: "array", // Allow array at root level
       metadata: {
         stage: "critic",
         year,
         era,
+      },
+      options: {
+        thinking_level: "low",
+        structured_outputs: true,
+        model: "google/gemini-3-flash-preview",
+        cache_system_prompt: true,
+        cache_ttl_seconds: 86_400,
+        maxOutputTokens: 32_000,
+        temperature: 0.2,
       },
     });
   } catch (error) {
@@ -136,24 +153,42 @@ export async function critiqueCandidatesForYear(params: CriticParams): Promise<C
   }
 
   logStageSuccess("Critic", "LLM call succeeded", {
-    requestId: response.requestId,
+    requestId: response.metadata.requestId,
     tokens: response.usage.totalTokens,
     year,
   });
 
   const llmResults = ensureArrayLength(response.data, candidates.length);
-  const merged = candidates.map((candidate, index) =>
-    mergeCritiques(candidate, llmResults[index], deterministic[index]),
+  const merged = await Promise.all(
+    candidates.map(async (candidate, index) => {
+      const validation = await qualityValidator.validateEvent({
+        event_text: candidate.event_text,
+        year,
+        metadata: candidate.metadata,
+      });
+
+      return mergeCritiques(candidate, llmResults[index], deterministic[index], validation);
+    }),
   );
+
+  // Learn from rejected events with high semantic leakage
+  for (const result of merged) {
+    if (!result.passed && result.scores.leak_risk > 0.6) {
+      qualityValidator.learnFromRejected(result.event.event_text, [year, year]);
+    }
+  }
 
   const deterministicFailures = deterministic.filter((item) => item.issues.length > 0).length;
 
   return {
     results: merged,
     llm: {
-      requestId: response.requestId,
-      model: response.model,
+      requestId: response.metadata.requestId,
+      model: response.metadata.model,
       usage: response.usage,
+      costUsd: response.cost.totalUsd,
+      cacheHit: response.metadata.cacheHit,
+      fallbackFrom: response.metadata.fallbackFrom,
     },
     deterministicFailures,
   };
@@ -196,7 +231,11 @@ interface DeterministicCheckResult {
   rewriteHints: string[];
 }
 
-function runDeterministicChecks(candidates: CandidateEvent[]): DeterministicCheckResult[] {
+function runDeterministicChecks(
+  candidates: CandidateEvent[],
+  year: number,
+  era: Era,
+): DeterministicCheckResult[] {
   return candidates.map((candidate) => {
     const issues: string[] = [];
     const rewriteHints: string[] = [];
@@ -221,32 +260,85 @@ function runDeterministicChecks(candidates: CandidateEvent[]): DeterministicChec
       rewriteHints.push("Add a specific person, place, or institution");
     }
 
+    const metadataResult = validateMetadata(candidate, year, era);
+    issues.push(...metadataResult.issues);
+    rewriteHints.push(...metadataResult.rewriteHints);
+
     return { issues, rewriteHints };
   });
+}
+
+function validateMetadata(
+  candidate: CandidateEvent,
+  year: number,
+  _era: Era,
+): DeterministicCheckResult {
+  const issues: string[] = [];
+  const rewriteHints: string[] = [];
+
+  const metadata = candidate.metadata;
+  if (!metadata) {
+    issues.push("Missing metadata");
+    rewriteHints.push("Add difficulty, category, era, fame_level, tags");
+    return { issues, rewriteHints };
+  }
+
+  if (metadata.difficulty !== undefined && (metadata.difficulty < 1 || metadata.difficulty > 5)) {
+    issues.push("Metadata difficulty out of range");
+    rewriteHints.push("Set difficulty between 1 and 5");
+  }
+
+  if (metadata.fame_level !== undefined && (metadata.fame_level < 1 || metadata.fame_level > 5)) {
+    issues.push("Metadata fame_level out of range");
+    rewriteHints.push("Set fame_level between 1 and 5");
+  }
+
+  if (metadata.category && metadata.category.some((cat) => !ALLOWED_CATEGORIES.includes(cat))) {
+    issues.push("Metadata category not in allowed list");
+    rewriteHints.push("Use allowed categories only");
+  }
+
+  const expectedEra = categorizeEra(year);
+  if (metadata.era && metadata.era !== expectedEra) {
+    issues.push("Metadata era does not match year");
+    rewriteHints.push(`Set era to ${expectedEra}`);
+  }
+
+  return { issues, rewriteHints };
 }
 
 function mergeCritiques(
   candidate: CandidateEvent,
   llmResult: CritiqueResult,
   deterministic: DeterministicCheckResult,
+  validation: { passed: boolean; scores: { semantic_leakage: number }; suggestions?: string[] },
 ): CritiqueResult {
-  const threshold = enforceScoreThresholds(llmResult.scores);
+  const blendedScores = {
+    ...llmResult.scores,
+    leak_risk: clamp01(0.7 * llmResult.scores.leak_risk + 0.3 * validation.scores.semantic_leakage),
+  };
+
+  const threshold = enforceScoreThresholds(blendedScores);
   const combinedIssues = dedupeStrings([
     ...deterministic.issues,
     ...threshold.issues,
+    ...(validation.passed ? [] : ["Validator flagged potential leakage"]),
     ...llmResult.issues,
   ]);
   const combinedHints = dedupeStrings([
     ...deterministic.rewriteHints,
     ...threshold.hints,
+    ...(validation.suggestions ?? []),
     ...llmResult.rewrite_hints,
   ]);
 
-  const passed = llmResult.passed && deterministic.issues.length === 0 && !threshold.failed;
+  const passed =
+    llmResult.passed && deterministic.issues.length === 0 && !threshold.failed && validation.passed;
 
   return {
     ...llmResult,
     event: candidate,
+    scores: blendedScores,
     passed,
     issues: combinedIssues,
     rewrite_hints: combinedHints,
@@ -288,6 +380,16 @@ function enforceScoreThresholds(scores: CritiqueResult["scores"]): ThresholdResu
   return { issues, hints, failed };
 }
 
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function categorizeEra(year: number): "ancient" | "medieval" | "modern" {
+  if (year < 500) return "ancient";
+  if (year < 1500) return "medieval";
+  return "modern";
+}
+
 function dedupeStrings(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean)));
 }
@@ -305,5 +407,5 @@ function ensureArrayLength(results: CritiqueResult[], count: number): CritiqueRe
 }
 
 function zodArrayForCount(count: number) {
-  return CritiqueResultSchema.array().length(count);
+  return z.array(CritiqueResultSchema).length(count, { message: `expected ${count} results` });
 }

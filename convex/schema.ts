@@ -6,12 +6,56 @@ export default defineSchema({
   events: defineTable({
     year: v.number(), // e.g., 1969
     event: v.string(), // "Neil Armstrong walks on the moon"
-    puzzleId: v.optional(v.id("puzzles")), // null if unused, links to puzzle if used
+    classicPuzzleId: v.optional(v.id("puzzles")), // Links to Classic mode puzzle (null = unused in Classic)
+    orderPuzzleId: v.optional(v.id("orderPuzzles")), // Links to Order mode puzzle (null = unused in Order)
     updatedAt: v.number(), // Manual timestamp (Convex provides _creationTime)
+    /**
+     * Optional metadata used to power richer game modes (Timeline, Category, per-era pool health, etc.).
+     *
+     * - Backward compatibility: existing events may have `metadata === undefined`; all game modes must treat
+     *   missing metadata as "unknown" and fall back to sensible defaults.
+     */
+    metadata: v.optional(
+      v.object({
+        /**
+         * Difficulty rating from 1–5.
+         * 1 = very obvious / introductory events, 5 = highly obscure or specialist knowledge.
+         * Used to tune Classic and Order modes (e.g., puzzle mix, future difficulty sliders).
+         */
+        difficulty: v.optional(v.number()),
+        /**
+         * Semantic categories (e.g., "war", "politics", "science", "culture").
+         * Intended for Category / filterable modes and for admin search; free-form but should use a shared
+         * vocabulary where possible.
+         */
+        category: v.optional(v.array(v.string())),
+        /**
+         * High-level historical era label derived from year:
+         * - "ancient"  → years ≤ 500
+         * - "medieval" → 501–1500
+         * - "modern"   → >1500
+         * Used for coverage orchestration, admin pool health by era, and future era-specific modes.
+         */
+        era: v.optional(v.string()),
+        /**
+         * Fame level from 1–5 describing how globally well-known the event is.
+         * 1 = niche / regional, 5 = globally iconic. Used to balance puzzles between deep cuts
+         * and crowd-pleasers.
+         */
+        fame_level: v.optional(v.number()),
+        /**
+         * Flexible tags for search and future mechanics (e.g., "space", "revolution", "technology").
+         * Tags can overlap with `category` but are intentionally more granular and user-facing.
+         */
+        tags: v.optional(v.array(v.string())),
+      }),
+    ),
   })
     .index("by_year", ["year"])
-    .index("by_puzzle", ["puzzleId"])
-    .index("by_year_available", ["year", "puzzleId"]), // Efficient unused event queries
+    .index("by_classic_puzzle", ["classicPuzzleId"]) // Classic puzzle-to-event lookup
+    .index("by_order_puzzle", ["orderPuzzleId"]) // Order puzzle-to-event lookup
+    .index("by_year_classic_available", ["year", "classicPuzzleId"]) // Unused Classic events by year
+    .index("by_year_order_available", ["year", "orderPuzzleId"]), // Unused Order events by year
 
   // Daily puzzles (starts empty, populated by cron job)
   puzzles: defineTable({
@@ -123,9 +167,13 @@ export default defineSchema({
     token_usage: v.object({
       input: v.number(),
       output: v.number(),
+      reasoning: v.optional(v.number()),
       total: v.number(),
     }),
     cost_usd: v.number(),
+    cache_hits: v.optional(v.number()),
+    cache_misses: v.optional(v.number()),
+    fallback_count: v.optional(v.number()),
     error_message: v.optional(v.string()),
     timestamp: v.number(),
   })

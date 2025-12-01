@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Flame, Archive, Heart } from "lucide-react";
 
 import { AuthButtons } from "@/components/AuthButtons";
+import { AdminButton } from "@/components/AdminButton";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import SupportModal from "@/components/SupportModal";
 import { ModeDropdown } from "@/components/ModeDropdown";
@@ -138,6 +139,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               >
                 <Heart className="text-body-primary h-4 w-4 transition-colors group-hover:text-rose-600" />
               </NavbarButton>
+
+              {/* Admin Button - Only visible to admins */}
+              <AdminButton />
 
               {/* Theme Toggle */}
               <ThemeToggle />

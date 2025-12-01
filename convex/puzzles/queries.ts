@@ -127,3 +127,13 @@ export const getPuzzleYears = query({
     return { years };
   },
 });
+
+/**
+ * Get all puzzles (for demand analysis)
+ * @returns Array of all puzzle documents
+ */
+export const getAllPuzzles = query({
+  handler: async (ctx) => {
+    return await ctx.db.query("puzzles").collect();
+  },
+});

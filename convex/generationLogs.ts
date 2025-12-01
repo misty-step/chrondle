@@ -35,9 +35,13 @@ export const logGenerationAttempt = internalMutation({
     token_usage: v.object({
       input: v.number(),
       output: v.number(),
+      reasoning: v.optional(v.number()),
       total: v.number(),
     }),
     cost_usd: v.number(),
+    cache_hits: v.optional(v.number()),
+    cache_misses: v.optional(v.number()),
+    fallback_count: v.optional(v.number()),
     error_message: v.optional(v.string()),
     timestamp: v.optional(v.number()),
   },
@@ -158,7 +162,8 @@ export function summarizeGenerationLogs(
 
 export function calculateEventPoolHealth(events: ReadonlyArray<Doc<"events">>): EventPoolHealth {
   const totalEvents = events.length;
-  const unusedEvents = events.filter((event) => event.puzzleId === undefined);
+  // Use classicPuzzleId - this is for Classic mode pool health
+  const unusedEvents = events.filter((event) => event.classicPuzzleId === undefined);
   const usedEvents = totalEvents - unusedEvents.length;
 
   const coverage = {

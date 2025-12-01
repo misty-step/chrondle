@@ -16,7 +16,7 @@ crons.daily(
   "autonomous event pool replenishment",
   { hourUTC: 2, minuteUTC: 0 },
   internal.actions.eventGeneration.orchestrator.generateDailyBatch,
-  { targetCount: 3 },
+  { targetCount: 10 },
 );
 
 crons.daily(

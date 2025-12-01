@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { LLMClient } from "../../../lib/llmClient";
+import type { Gemini3Client } from "../../../lib/gemini3Client";
 import type { CandidateEvent, CritiqueResult } from "../schemas";
 import { reviseCandidatesForYear } from "../reviser";
 
@@ -36,22 +36,32 @@ function mockFailure(overrides: Partial<CritiqueResult> = {}): CritiqueResult {
   };
 }
 
-function createMockClient(output: CandidateEvent[]): LLMClient {
+function createMockClient(output: CandidateEvent[]): Gemini3Client {
   return {
     generate: vi.fn().mockResolvedValue({
       data: output,
       rawText: JSON.stringify(output),
-      model: "openai/gpt-4o-mini",
       usage: {
         inputTokens: 300,
         outputTokens: 250,
         reasoningTokens: 0,
         totalTokens: 550,
-        costUsd: 0.01,
       },
-      requestId: "req_reviser_test",
+      cost: {
+        inputUsd: 0.006,
+        outputUsd: 0.004,
+        reasoningUsd: 0,
+        cacheSavingsUsd: 0,
+        totalUsd: 0.01,
+      },
+      metadata: {
+        model: "google/gemini-3-pro-preview",
+        latencyMs: 1300,
+        cacheHit: false,
+        requestId: "req_reviser_test",
+      },
     }),
-  } as unknown as LLMClient;
+  } as unknown as Gemini3Client;
 }
 
 describe("reviseCandidatesForYear", () => {
@@ -80,7 +90,7 @@ describe("reviseCandidatesForYear", () => {
     expect(result.rewrites).toHaveLength(1);
     expect(result.rewrites[0].canonical_title).toBe("Norman Conquest");
     expect(result.rewrites[0].geo).toBe("England");
-    expect(result.llm.model).toBe("openai/gpt-4o-mini");
+    expect(result.llm.model).toBe("google/gemini-3-pro-preview");
   });
 
   it("short-circuits when no failing events", async () => {

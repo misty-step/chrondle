@@ -151,7 +151,7 @@ program
       const existingEvents = await client.query(api.events.getYearEvents, {
         year,
       });
-      const usedEvents = existingEvents.filter((e: any) => e.puzzleId !== undefined);
+      const usedEvents = existingEvents.filter((e: any) => e.classicPuzzleId !== undefined);
 
       if (usedEvents.length > 0) {
         console.error(`❌ Cannot update year ${year}: some events already published in puzzles`);
@@ -405,11 +405,11 @@ program
         const event = events[i];
         let status = "[Available]";
 
-        if (event.puzzleId) {
+        if (event.classicPuzzleId) {
           try {
             // Get puzzle details
             const puzzle = await client.query(api.puzzles.getPuzzleById, {
-              puzzleId: event.puzzleId as any,
+              puzzleId: event.classicPuzzleId as any,
             });
 
             if (puzzle) {
@@ -427,7 +427,7 @@ program
       }
 
       // Summary
-      const usedCount = events.filter((e: any) => e.puzzleId).length;
+      const usedCount = events.filter((e: any) => e.classicPuzzleId).length;
       const availableCount = events.length - usedCount;
 
       console.log(
@@ -569,10 +569,10 @@ program
         console.log("✅ No duplicate events found");
       }
 
-      // Check 3: All puzzleIds reference valid puzzles
+      // Check 3: All classicPuzzleIds reference valid puzzles
       console.log("\n✓ Checking puzzle references...");
       let puzzleRefIssues = 0;
-      const puzzleIdSet = new Set<string>();
+      const classicPuzzleIdSet = new Set<string>();
 
       // Collect all unique puzzle IDs from events
       for (const stats of yearStats) {
@@ -580,25 +580,25 @@ program
           year: stats.year,
         });
         for (const event of events) {
-          if (event.puzzleId) {
-            puzzleIdSet.add(event.puzzleId);
+          if (event.classicPuzzleId) {
+            classicPuzzleIdSet.add(event.classicPuzzleId);
           }
         }
       }
 
       // Verify each puzzle ID exists
-      for (const puzzleId of puzzleIdSet) {
+      for (const classicPuzzleId of classicPuzzleIdSet) {
         try {
           const puzzle = await client.query(api.puzzles.getPuzzleById, {
-            puzzleId: puzzleId as any,
+            puzzleId: classicPuzzleId as any,
           });
           if (!puzzle) {
             puzzleRefIssues++;
-            issues.push(`   Invalid puzzle reference: ${puzzleId}`);
+            issues.push(`   Invalid puzzle reference: ${classicPuzzleId}`);
           }
         } catch {
           puzzleRefIssues++;
-          issues.push(`   Invalid puzzle reference: ${puzzleId} (error querying)`);
+          issues.push(`   Invalid puzzle reference: ${classicPuzzleId} (error querying)`);
         }
       }
 
@@ -808,7 +808,7 @@ program
             .slice(1)
             .some((word: any) => word.length > 0 && word[0] === word[0].toUpperCase());
 
-          if (!hasProperNoun && !event.puzzleId) {
+          if (!hasProperNoun && !event.classicPuzzleId) {
             yearIssues.push(`Possibly vague: "${event.event.substring(0, 50)}..."`);
           }
         }

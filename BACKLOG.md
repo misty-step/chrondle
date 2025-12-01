@@ -1,11 +1,23 @@
 # BACKLOG
 
-Last groomed: 2025-11-18
+Last groomed: 2025-11-25
 Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-guardian, security-sentinel, performance-pathfinder, maintainability-maven, user-experience-advocate, product-visionary, design-systems-architect)
+
+**Recent Addition (2025-11-25):** Event & Puzzle Generation System Modernization deferred items added to "Soon" and "Later" sections. See TODO.md for approved Phase 1-3 implementation tasks (120 hours, 6 weeks).
 
 ---
 
 ## Now (Sprint-Ready, <2 weeks)
+
+### [BUGFIX] Order mode attempt calculation is not always correct
+
+- played order mode, solved puzzle in 2 attempts, game over screen showed 9 attempts
+
+### [UX BUG] Order mode drag and drop restrictions are not intuitive
+
+- too easy for new players to think it doesn't work
+- they try to drag the whole card
+- they don't press and hold the handle icon long enough
 
 ### [QUALITY] HIGH - Convex Contract Enforcement for Order Submissions
 
@@ -258,6 +270,61 @@ React.useEffect(() => {
 
 ---
 
+### [RELIABILITY] HIGH - Circuit Breaker for Gemini3Client Failures
+
+**Files**: `convex/lib/gemini3Client.ts`
+**Source**: PR #64 CodeRabbit review (https://github.com/misty-step/chrondle/pull/64#issuecomment-3596768229)
+**Problem**: Exponential backoff up to 15 seconds per attempt can stall batch generation under persistent upstream failures; there is no circuit breaker to stop hammering a failing model/endpoint.
+**Fix**: Add a simple per-model circuit breaker that tracks recent failure rate and opens after a threshold (for example, 5 failures in 5 minutes), short-circuiting to a safe fallback (GPT-5-mini or skip) while recording metrics for AlertEngine.
+**Effort**: 2h | **Benefit**: Faster recovery under outages, protects cron budgets and avoids cascading retries.
+**Acceptance**: Integration tests simulate sustained 5xx/429 responses and assert the circuit opens, subsequent calls bypass Gemini 3, and metrics/alerts reflect the open state.
+
+---
+
+### [OBSERVABILITY] MEDIUM - Monitor New Dual-Mode Indices & DR Plan
+
+**Files**: `convex/schema.ts`, `convex/generationLogs.ts`, `convex/lib/observability/metricsService.ts`
+**Source**: PR #64 CodeRabbit review (https://github.com/misty-step/chrondle/pull/64#issuecomment-3596768229)
+**Problem**: New dual-mode indices (`by_year_classic_available`, `by_year_order_available`) and observability tables may impact write performance and lack an explicit disaster recovery plan.
+**Fix**: Add lightweight metrics/alerts for index/query performance (p95 latency, error rates) and document a DR plan for observability data (retention window, backup/export strategy).
+**Effort**: 3h | **Benefit**: Early detection of index regressions and clear recovery playbook if metrics storage fails.
+**Acceptance**: Metrics show up in the admin dashboard or external monitoring, and DR runbook is captured in docs with tested restore steps.
+
+---
+
+### [SECURITY] HIGH - Admin Audit Logging & RBAC Hardening
+
+**Files**: `convex/admin/events.ts`, `convex/admin/puzzles.ts`, `convex/lib/observability/metricsService.ts`
+**Source**: PR #64 CodeRabbit review (https://github.com/misty-step/chrondle/pull/64#issuecomment-3596768229)
+**Problem**: New admin APIs rely primarily on role checks at the UI boundary; there is no centralized server-side RBAC model or audit log for admin operations.
+**Fix**: Introduce a simple RBAC layer (roles + permissions) enforced inside Convex admin actions and emit structured audit events for sensitive operations (delete/update) into observability/metrics.
+**Effort**: 4h | **Benefit**: Stronger defense-in-depth for admin surfaces and traceability of destructive actions.
+**Acceptance**: Automated tests cover non-admin access failures and audit entries appear for admin mutations with actor, action, and target IDs.
+
+---
+
+### [SECURITY] MEDIUM - Distributed Rate Limiting & File Ops Scanning
+
+**Files**: `convex/lib/rateLimiter.ts`, `convex/actions/eventGeneration/orchestrator.ts`, `convex/lib/qualityValidator.ts`
+**Source**: PR #64 CodeRabbit review (https://github.com/misty-step/chrondle/pull/64#issuecomment-3596768229)
+**Problem**: Current rate limiting is single-process and file system operations (quality validator feedback loop) lack automated scanning for unsafe patterns.
+**Fix**: Extend rate limiting strategy to consider distributed deployments (per-user/per-action tokens) and add lightweight security scanning or lint checks for file operations touching leaky phrases storage.
+**Effort**: 4h | **Benefit**: Better protection against brute-force or abuse scenarios and earlier detection of risky file access patterns.
+**Acceptance**: New rate limiting rules are covered by tests and security checks run in CI to flag unsafe file access changes.
+
+---
+
+### [COST] MEDIUM - Cost Optimization for LLM Usage
+
+**Files**: `convex/actions/eventGeneration/orchestrator.ts`, `convex/lib/observability/metricsCollector.ts`, `convex/lib/observability/metricsService.ts`
+**Source**: PR #64 CodeRabbit review (https://github.com/misty-step/chrondle/pull/64#issuecomment-3596768229)
+**Problem**: Observability tracks cost and token usage but there is no automated cost optimization loop (e.g., dynamically choosing Flash vs Pro models or adjusting batch sizes).
+**Fix**: Add simple heuristics that adjust model choice and batch parameters based on recent cost metrics, plus alerts when costs exceed configured budgets.
+**Effort**: 3h | **Benefit**: Keeps generation costs within targets while preserving quality.
+**Acceptance**: Tests verify model selection logic responds to simulated high-cost scenarios and cost alerts fire when thresholds are breached.
+
+---
+
 ### [UX] MEDIUM - ARIA Role Clarity for Toast Notifications
 
 **File**: `src/components/ui/toaster.tsx:13-118`
@@ -267,401 +334,6 @@ React.useEffect(() => {
 
 **Effort**: 1h | **Benefit**: Better screen reader UX
 **Acceptance**: Non-destructive toasts use status role, destructive use alert
-
----
-
-### [QUALITY] MEDIUM - Sentry Test Initialization Robustness
-
-**File**: `src/observability/__tests__/sentry.client.test.ts:39-93`
-**Source**: PR #55 CodeRabbit review
-**Problem**: Tests depend on execution order (first test initializes, others assume initialized)
-**Fix**: Add `beforeEach` to explicitly initialize Sentry with test DSN
-
-**Effort**: 30m | **Benefit**: Tests isolated, reordering-safe
-**Acceptance**: Tests pass in any order
-
----
-
-### [QUALITY] MEDIUM - ConvexError for Structured Validation
-
-**File**: `convex/orderPuzzles/mutations.ts:92-161`
-**Source**: PR #55 CodeRabbit review
-**Problem**: Plain `Error` objects lose client-side error classification context
-**Fix**: Use `ConvexError` for validation errors to enable structured handling
-
-```typescript
-if (Math.abs(verifiedScore.totalScore - args.clientScore.totalScore) > 1) {
-  throw new ConvexError("Score verification failed");
-}
-```
-
-**Effort**: 1h | **Benefit**: Better client error UX, proper retryable classification
-**Acceptance**: Validation errors classified as VALIDATION with retryable: false
-
----
-
-### [OBSERVABILITY] MEDIUM - Deep Argument Sanitization
-
-**File**: `convex/lib/observability.ts:119-126`
-**Source**: PR #55 CodeRabbit review
-**Problem**: Shallow sanitization only redacts top-level `token`/`password`, misses nested sensitive data
-**Fix**: Implement recursive sanitization or use library
-
-```typescript
-{
-  user: {
-    password: "secret";
-  }
-} // Currently NOT sanitized
-```
-
-**Effort**: 2h | **Benefit**: Comprehensive PII protection in error logs
-**Acceptance**: Nested sensitive fields redacted in Sentry extras
-
----
-
-### [OBSERVABILITY] MEDIUM - User Context Enrichment in Observability
-
-**File**: `convex/lib/observability.ts:31-82`
-**Source**: PR #55 CodeRabbit review
-**Problem**: Wrapper doesn't extract user context from args (e.g., `args.userId`)
-**Fix**: Add truncated userId to Sentry tags
-
-```typescript
-tags: {
-  convexFn: config.name,
-  userId: args?.userId ? String(args.userId).slice(0, 8) : undefined,
-  ...config.tags,
-}
-```
-
-**Effort**: 30m | **Benefit**: User-scoped error tracking
-**Acceptance**: userId appears in Sentry tags when present in args
-
----
-
-### [OBSERVABILITY] LOW - classifyError Type Alignment
-
-**File**: `convex/lib/observability.ts:91`
-**Source**: PR #55 CodeRabbit review
-**Problem**: Returns "unknown" but type includes "server" - unclassified errors likely server-side
-**Fix**: Return "server" instead of "unknown" OR align type with implementation
-
-**Effort**: 10m | **Benefit**: More accurate error classification
-**Acceptance**: Unclassified errors tagged as "server" or type updated
-
----
-
-### [OBSERVABILITY] MEDIUM - Sample Rate Validation
-
-**File**: `src/observability/sentry.client.ts:27-80`
-**Source**: PR #55 CodeRabbit review
-**Problem**: `parseFloat` on env vars can produce NaN, breaking sampling
-**Fix**: Add validation helper
-
-```typescript
-function parseSampleRate(value: string | undefined, defaultValue: number): number {
-  if (!value) return defaultValue;
-  const parsed = parseFloat(value);
-  return isNaN(parsed) || parsed < 0 || parsed > 1 ? defaultValue : parsed;
-}
-```
-
-**Effort**: 30m | **Benefit**: Prevents NaN sampling rates
-**Acceptance**: Invalid sample rates fall back to defaults
-
----
-
-### [OBSERVABILITY] MEDIUM - Error Deduplication
-
-**File**: `src/observability/mutationErrorAdapter.ts:78-110`
-**Source**: PR #55 CodeRabbit review
-**Problem**: Repeated errors (e.g., spamming submit) create noise in Sentry
-**Fix**: Add 5-second deduplication window
-
-```typescript
-const recentErrors = new Map<string, number>();
-const errorKey = `${error.code}:${error.message}`;
-const lastSeen = recentErrors.get(errorKey);
-if (!lastSeen || Date.now() - lastSeen > 5000) {
-  recentErrors.set(errorKey, Date.now());
-  captureClientException(error.originalError, {...});
-}
-```
-
-**Effort**: 1h | **Benefit**: Reduces Sentry quota usage
-**Acceptance**: Duplicate errors within 5s not sent to Sentry
-
----
-
-### [INFRA] HIGH - No Structured Logging (Pino)
-
-**Files**: `src/lib/logger.ts`, `convex/lib/logging.ts`
-**Perspectives**: architecture-guardian
-**Impact**: Console-based logging unusable for log aggregation, debugging in Vercel
-**Current**: Custom console wrapper (248 lines) without JSON structure
-**Fix**:
-
-- Install pino + pino-pretty
-- Create structured logger with request IDs, user context, timing
-- Export context-aware child loggers
-  **Effort**: 4h | **Impact**: Production observability, debugging
-  **Acceptance**: JSON-structured logs in Vercel, correlation IDs present
-
----
-
-### [INFRA] HIGH - No Vercel Speed Insights
-
-**Perspectives**: observability-audit
-**Impact**: No Core Web Vitals tracking (LCP, FID, CLS), no Real User Monitoring
-**Current State**: Vercel Analytics installed but Speed Insights missing
-**Fix**:
-
-```bash
-pnpm add @vercel/speed-insights
-```
-
-```typescript
-// app/layout.tsx - add after <Analytics />
-import { SpeedInsights } from '@vercel/speed-insights/next';
-<SpeedInsights />
-```
-
-**Effort**: 10m | **Impact**: Performance visibility, Core Web Vitals tracking
-**Acceptance**: Speed Insights data visible in Vercel dashboard
-
----
-
-### [INFRA] HIGH - OpenTelemetry Missing Grafana Cloud Export
-
-**File**: `src/instrumentation.ts`
-**Perspectives**: observability-audit
-**Impact**: Traces collected but not exported anywhere - invisible data
-**Current State**: registerOTel configured but no OTLP exporter endpoint set
-**Fix**: Configure Vercel env vars for Grafana Cloud (free tier: 50GB traces/month)
-
-```bash
-# In Vercel env vars
-OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-us-east-0.grafana.net/otlp
-OTEL_EXPORTER_OTLP_HEADERS="Authorization=Basic <base64(instanceId:apiKey)>"
-```
-
-**Effort**: 30m | **Impact**: Distributed tracing visibility
-**Acceptance**: Traces visible in Grafana Cloud Tempo
-
----
-
-### [INFRA] MEDIUM - Wire Custom Events to Vercel Analytics
-
-**Files**: `src/lib/analytics.ts`, `src/hooks/useAnalytics.ts`
-**Perspectives**: observability-audit
-**Impact**: GameAnalytics events collected but not sent to Vercel Analytics - no conversion funnels
-**Current State**: Custom analytics module exists (505 lines) but likely only logs to console
-**Fix**: Wire events to Vercel Analytics track():
-
-```typescript
-import { track } from "@vercel/analytics";
-track("game_completed", { score, hintsUsed, puzzleNumber });
-```
-
-**Effort**: 2h | **Impact**: Product insights, conversion tracking
-**Acceptance**: Custom events visible in Vercel Analytics dashboard
-
----
-
-### [INFRA] MEDIUM - Configure Intelligent Trace Sampling
-
-**File**: `src/instrumentation.ts`
-**Perspectives**: observability-audit
-**Impact**: Default 100% sampling may exceed free tier quickly
-**Fix**: Configure intelligent sampler (10% base, 100% errors)
-
-```typescript
-registerOTel({
-  serviceName: "chrondle",
-  tracesSampleRate: 0.1, // 10% base rate
-  // Use custom sampler for 100% on errors
-});
-```
-
-**Effort**: 30m | **Impact**: Stay within free tier, capture all errors
-**Acceptance**: Sample rate configured, error traces always captured
-
----
-
-### [SECURITY] MEDIUM - Data Exposure in getUserPlay/userExists
-
-**Files**: `convex/plays/queries.ts:28-94`, `convex/users/queries.ts:73-113`
-**Perspectives**: security-sentinel
-**Impact**: Returns play records and emails for any userId without ownership check
-**Attack Vector**: Enumerate user IDs to see others' guesses, completion status, scores
-**Fix**: Verify authenticated user matches requested userId
-**Effort**: 40m | **Priority**: MEDIUM
-**Acceptance**: Queries return 403 when userId doesn't match auth
-
----
-
-### [SECURITY] MEDIUM - Missing Rate Limiting on Mutations
-
-**File**: `convex/puzzles.ts:316-391`
-**Perspectives**: security-sentinel
-**Impact**: Brute force attack - submit 1000 guesses/second to find answer
-**Fix**: Rate limit: max 6 guesses per puzzle, 2-second delay between guesses
-**Effort**: 45m | **Impact**: Game integrity
-**Acceptance**: Rate limit errors returned when exceeded
-
----
-
-### [TESTS] HIGH - Missing Hook Test Coverage
-
-**Files**: Multiple hooks in `src/hooks/`
-**Perspectives**: maintainability-maven
-**Impact**: Core game logic has zero test coverage
-
-| Hook                              | Risk                                |
-| --------------------------------- | ----------------------------------- |
-| `useOrderGame.ts`                 | HIGH - Main Order mode orchestrator |
-| `useShareGame.ts`                 | MEDIUM - User-facing share feature  |
-| `useAnalytics.ts`                 | MEDIUM - User behavior tracking     |
-| `useScreenReaderAnnouncements.ts` | MEDIUM - Accessibility              |
-
-**Fix**: Add test files for each hook with React Testing Library
-**Effort**: 8h total | **Benefit**: Confidence for Order mode, sharing features
-**Acceptance**: 80%+ coverage on critical hooks
-
----
-
-### [DOCS] HIGH - Undocumented Scoring Constants
-
-**File**: `src/lib/scoring.ts:3-11`
-**Perspectives**: maintainability-maven
-**Impact**: Developers can't tune scoring without understanding rationale
-**Code**:
-
-```typescript
-export const SCORING_CONSTANTS = {
-  W_MAX: 250, // Why 250?
-  MAX_SCORES_BY_HINTS: [100, 85, 70, 55, 45, 35, 25] as const, // Why these?
-  HINT_COSTS: [15, 15, 15, 10, 10, 10] as const, // Why 15/10 split?
-};
-```
-
-**Fix**: Add documentation explaining each constant's rationale
-**Effort**: 30m | **Benefit**: Safe future tuning, informed game balance
-**Acceptance**: Each constant has JSDoc explaining why
-
----
-
-### [ARCHITECTURE] MEDIUM - Information Leakage in Toast Handling
-
-**File**: `src/hooks/actions/useGameActions.ts:45-81`
-**Perspectives**: complexity-archaeologist
-**Impact**: 13 instances of identical toast handling pattern
-**Code**:
-
-```typescript
-if ("addToast" in toastContext) {
-  toastContext.addToast({...});
-}
-```
-
-**Violation**: Toast implementation detail leaks through abstraction
-**Fix**: Extract to domain-specific notification methods:
-
-```typescript
-const notify = useNotifications();
-notify.error("title", "description");
-```
-
-**Effort**: 1h | **Benefit**: Eliminates 13 duplication sites
-**Acceptance**: No direct toast context access in action hooks
-
----
-
-### [ARCHITECTURE] MEDIUM - GameIsland 55-Line Adapter
-
-**File**: `src/components/GameIsland.tsx:69-125`
-**Perspectives**: complexity-archaeologist
-**Impact**: Adapter transforms `useRangeGame` output to match legacy interface
-**Violation**: Adapter adds complexity without hiding implementation
-**Fix**: Update consuming components to use new interface directly, remove adapter
-**Effort**: 2h | **Benefit**: Reduces GameIsland by 50+ lines
-**Acceptance**: GameLayout uses gameState directly, no adapter
-
----
-
-### [DESIGN] MEDIUM - GamesGallery Hardcoded Colors
-
-**File**: `src/components/GamesGallery.tsx:40-58, 285-287`
-**Perspectives**: design-systems-architect
-**Impact**: 20+ hex colors bypass token system, won't theme globally
-**Code**:
-
-```typescript
-bg: "bg-[#EBE7DE] dark:bg-[#2A2420]",
-fg: "text-[#3E3428] dark:text-[#EBE7DE]",
-```
-
-**Fix**: Either add semantic tokens (`--gallery-classic-bg`) or document as intentional design outlier
-**Effort**: 1h | **Benefit**: Token consistency or documented exception
-**Acceptance**: Colors either use tokens or have documentation
-
----
-
-### [DESIGN] MEDIUM - ComparisonGrid Duplication
-
-**File**: `src/components/order/ComparisonGrid.tsx:48-261`
-**Perspectives**: design-systems-architect
-**Impact**: ~100 lines duplicated between mobile and desktop views
-**Violation**: Information leakage - layout concerns leak into business logic
-**Fix**: Extract shared `EventListItem` component
-**Effort**: 1h | **Benefit**: DRY, single source of truth
-**Acceptance**: No duplicated rendering logic
-
----
-
-### [PERFORMANCE] MEDIUM - getUserCompletedPuzzles In-Memory Filter
-
-**File**: `convex/plays/queries.ts:105-118`
-**Perspectives**: performance-pathfinder
-**Impact**: `.filter()` after index filters in memory
-**Fix**: Add compound index `by_user_completed` on `["userId", "completedAt"]`
-**Expected**: 200ms → 20ms for users with many completed puzzles
-**Effort**: 30m | **Impact**: 7/10
-**Acceptance**: Query uses index without in-memory filter
-
----
-
-### [COMPLEXITY] MEDIUM - enhancedFeedback.ts Nested Era Logic
-
-**File**: `src/lib/enhancedFeedback.ts:185-255`
-**Perspectives**: complexity-archaeologist, maintainability-maven
-**Impact**: 7 nested conditionals, overlapping thresholds (10, 15, 100, 500)
-**Fix**: Extract to strategy pattern with testable units
-**Effort**: 2h | **Benefit**: 9/10 - Testable, extensible
-**Acceptance**: Each strategy separately testable
-
----
-
-### [COMPLEXITY] MEDIUM - constants.ts Configuration Explosion
-
-**File**: `src/lib/constants.ts:1-284`
-**Perspectives**: complexity-archaeologist, maintainability-maven
-**Impact**: 284 lines spanning unrelated domains
-**Fix**: Split into domain files: `config/game.ts`, `config/scoring.ts`, `config/ui.ts`
-**Effort**: 2h | **Impact**: 6/10
-**Acceptance**: Constants colocated with usage
-
----
-
-### [UX] HIGH - No Loading State for Guess Submission
-
-**File**: `src/components/game/RangeInput.tsx:296-304`
-**Perspectives**: user-experience-advocate
-**Impact**: No feedback while mutation processes → Users click multiple times
-**Fix**: Pass `isSubmitting` to RangeInput, show loading spinner + "Submitting..."
-**Effort**: 30m | **Impact**: 8/10
-**Acceptance**: Button shows loading state during submission
 
 ---
 
@@ -687,454 +359,12547 @@ fg: "text-[#3E3428] dark:text-[#EBE7DE]",
 
 ---
 
-### PR #61 Design System Feedback (CodeRabbit Review - 88 comments)
+### [UX] HIGH - No Loading State for Guess Submission
 
-**Review Date**: 2025-11-25
-**PR**: #61 "feat: comprehensive archival design system with Tailwind v4"
-**Categorization**: 18 high-priority alignment issues, 28 code quality improvements, 40 low-priority items
-**P0 Issues Fixed**: HintIndicator crash guard, bg-surface-hover missing class
-
-#### [DESIGN] HIGH - Semantic Token Migration Completion
-
-**Files**: 8 components with remaining hardcoded colors
-**Source**: PR #61 CodeRabbit review
-**Problem**: Design system migration incomplete - hardcoded colors/inline styles bypass token system
-**Impact**: Inconsistent dark mode support, harder to maintain theme
-
-**Affected Components**:
-
-1. `src/components/magicui/ripple-button.tsx (13)` - Hardcoded `#ffffff` default
-2. `src/components/ui/StreakIndicator.tsx (27-59)` - Inline styles + hardcoded `"white"`
-3. `src/components/game/RangeTimeline.tsx (70, 115, 143)` - SVG hex colors won't adapt to dark mode
-4. `src/components/ui/EventsCard.tsx (11-45)` - Timeline dot `to-blue-600` primitive
-5. `src/components/modals/GameComplete.tsx (379-386)` - `bg-amber-100` hardcoded
-6. `src/components/ui/Badge.tsx (10-18)` - `earlier`/`later` variants need semantic tokens
-7. `src/components/modals/GameComplete.tsx (117-132)` - Feedback status colors hardcoded
-8. `src/components/magicui/ripple-button.tsx (49-53)` - Missing semantic border color
-
-**Fix**: Replace all with CSS custom properties/semantic Tailwind tokens
-**Effort**: 4h | **Benefit**: Complete design system consistency
-**Acceptance**: No hardcoded colors in components, SVGs use `currentColor` or CSS vars
+**File**: `src/components/game/RangeInput.tsx:296-304`
+**Perspectives**: user-experience-advocate
+**Impact**: No feedback while mutation processes → Users click multiple times
+**Fix**: Pass `isSubmitting` to RangeInput, show loading spinner + "Submitting..."
+**Effort**: 30m | **Impact**: 8/10
+**Acceptance**: Button shows loading state during submission
 
 ---
 
-#### [QUALITY] MEDIUM - Type Safety Improvements
+### [UX] MEDIUM - Era Toggle Focus Management
 
-**Files**: 3 files using `any` or loose typing
-**Source**: PR #61 CodeRabbit review
-
-1. **useOrderPuzzleData.ts (7, 106-119)** - Replace `any` with union type for puzzle shapes
-
-   - **Fix**: Create `ConvexPuzzle | NormalizedPuzzle` union type
-   - **Effort**: 30m
-
-2. **convexServer.ts (17-38)** - Tighten `convexPuzzle.events` typing
-
-   - **Fix**: Add proper event type instead of implicit `any[]`
-   - **Effort**: 20m
-
-3. **formatHints.tsx (1)** - Remove unnecessary React runtime import
-   - **Fix**: Change to type-only import: `import type { ReactNode } from "react"`
-   - **Effort**: 5m
-
-**Total Effort**: 1h | **Benefit**: Catch schema drift at compile time
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
 
 ---
 
-#### [QUALITY] MEDIUM - Component Cleanup
+### [UX] MEDIUM - Generic Error Screen
 
-**Files**: 7 files with unused code or TODOs
-**Source**: PR #61 CodeRabbit review
-
-1. **Card.tsx (5-67)** - Remove empty string in `cn("")` call (cosmetic)
-2. **OrderReveal.tsx (119-128)** - Reorder Tailwind classes for consistency
-3. **DebugBanner.tsx (12-28)** - Migrate inline styles to semantic tokens
-4. **OrderGameBoard.tsx (132-145)** - Remove unused destructured variable
-5. **OrderGameBoard.tsx (247-262)** - Address TODO for bracket hint generation
-6. **LoadingExperience.tsx (10-24)** - Remove unused `delayMs` prop
-7. **GameModeLayout.tsx (17-25)** - Remove unused `_confettiRef` prop
-
-**Effort**: 2h | **Benefit**: Cleaner codebase, addressed TODOs
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
 
 ---
 
-#### [TESTS] HIGH - Test Coverage Expansion
+### [UX] MEDIUM - Era Toggle Focus Management
 
-**Files**: 9 test files with gaps identified
-**Source**: PR #61 CodeRabbit review
-
-1. **typography.tsx (1-106)** - Add unit tests for new typography components
-
-   - **Coverage**: Variant rendering, polymorphic `as` prop, ref forwarding
-   - **Effort**: 2h
-
-2. **LoadingExperience.unit.test.tsx (6-20)** - Expand coverage
-
-   - **Missing**: `progress`, `subMessage`, `intent`, `prefersReducedMotion`, `delayMs`
-   - **Effort**: 1h
-
-3. **convexServer.import.test.ts (5-16)** - Add fetch helper tests
-
-   - **Missing**: `fetchOrderPuzzleByNumber`, `fetchClassicPuzzleByNumber`
-   - **Effort**: 1h
-
-4. **LoadingModules.unit.test.tsx (19-21)** - Use role/testid instead of CSS class selector
-
-   - **Fix**: Replace `.querySelector(".h-1\\.5")` with `role="progressbar"`
-   - **Effort**: 15m
-
-5. **AppHeader.test.tsx (43-53)** - More robust test selectors
-
-   - **Fix**: Add `data-testid="archive-button"` or use `getByRole("link", { name: /archive/i })`
-   - **Effort**: 30m
-
-6. **SubmitButton.test.tsx (14-30, 33-75, 133-149)** - Various improvements
-
-   - **Issues**: Brittle class assertions, no-assertion test, tight coupling
-   - **Effort**: 2h
-
-7. **HintPanel.test.tsx (222-276)** - Fix conditional assertions that may hide failures
-
-   - **Effort**: 1h
-
-8. **GameModeLayout.test.tsx (324-343, 345-364)** - Improve hydration tests, review documentary tests
-   - **Effort**: 1.5h
-
-**Total Effort**: 9.5h | **Benefit**: Catch regressions in new components
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
 
 ---
 
-#### [ACCESSIBILITY] MEDIUM - A11y Refinements
+### [UX] MEDIUM - Generic Error Screen
 
-**Files**: 8 components with accessibility improvements
-**Source**: PR #61 CodeRabbit review
-
-1. **InlineWarning.tsx (28-51)** - Fix `role="alert"` + `aria-live="polite"` conflict
-
-   - **Fix**: Use `role="status"` for polite, reserve `role="alert"` for assertive
-   - **Effort**: 30m
-
-2. **GuessHistory.tsx (21-61)** - Add `role="listitem"` to GuessRow
-
-   - **Current**: Parent has `role="list"` but children don't have `role="listitem"`
-   - **Effort**: 15m
-
-3. **GameLayout.tsx (89-91)** - Minor stamp overlay a11y tweak
-
-   - **Effort**: 20m
-
-4. **ThemeToggle.tsx (50-95)** - Expose pressed state for a11y
-
-   - **Fix**: Add `aria-pressed` attribute
-   - **Effort**: 15m
-
-5. **GameComplete.tsx (214-407)** - Progressive breakdown a11y nits
-
-   - **Effort**: 1h
-
-6. **RangeInput.tsx (169-170)** - Tighten reduced-motion + keyboard UX
-
-   - **Effort**: 30m
-
-7. **LoadingScreen.tsx (10-15)** - Clarify null-coalescing intent (add comment)
-
-   - **Effort**: 5m
-
-8. **OrderGameIsland.tsx (46-55)** - Use dedicated error component instead of LoadingScreen
-   - **Fix**: Create proper error state component
-   - **Effort**: 1h
-
-**Total Effort**: 4h | **Benefit**: WCAG AA compliance, better screen reader UX
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
 
 ---
 
-#### [DOCS] MEDIUM - Documentation Additions
+### [UX] MEDIUM - Era Toggle Focus Management
 
-**Files**: 5 files needing documentation
-**Source**: PR #61 CodeRabbit review
-
-1. **hashHintContext.ts (1-13)** - Document non-crypto intent
-
-   - **Fix**: Add JSDoc clarifying FNV-1a is for bucketing, not security
-   - **Effort**: 10m
-
-2. **DESIGN_SYSTEM.md (9-15)** - Fix markdownlint warnings
-
-   - **Issues**: Missing code fence languages, bare URLs
-   - **Effort**: 15m
-
-3. **.lintstagedrc.js (3-8)** - Quote file paths for spaces
-
-   - **Fix**: Wrap filenames in quotes or use xargs for robustness
-   - **Effort**: 10m
-
-4. **HintPanel.tsx (187-188)** - Extract magic number constant
-   - **Current**: Hardcoded `3` for maximum hints
-   - **Fix**: `const MAX_ORDER_HINTS = 3`
-   - **Effort**: 5m
-
-**Total Effort**: 40m | **Benefit**: Better maintainability
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
 
 ---
 
-#### [ARCHITECTURE] MEDIUM - Architecture Concerns
+### [UX] MEDIUM - Generic Error Screen
 
-**Files**: 6 files with architectural issues
-**Source**: PR #61 CodeRabbit review
-
-1. **GameIsland.tsx (237-250)** - Error UI rendered outside ErrorBoundary scope
-
-   - **Risk**: Errors in error UI itself won't be caught
-   - **Effort**: 1h
-
-2. **ClassicArchivePuzzleClient.tsx (49-55)** - Render explicit error state instead of perpetual loading
-
-   - **Current**: Error shows loading spinner forever
-   - **Effort**: 30m
-
-3. **globals.css (673-682)** - Paper-edge SVG filters remain non-functional
-
-   - **Status**: Known issue, may be intentional
-   - **Effort**: 2h (if fixing)
-
-4. **ripple-button.tsx (60-71)** - Clarify canonical ripple color source
-
-   - **Issue**: Confusion between class-based and inline style colors
-   - **Effort**: 30m
-
-5. **RangeInput.tsx (62-90)** - Confirm `hasBeenModified` gating is intentional
-   - **Current**: Validation only runs after first modification
-   - **Effort**: Review + document intent (20m)
-
-**Total Effort**: 4.5h | **Benefit**: Clearer architecture, fewer edge cases
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
 
 ---
 
-#### [PRAISE] Acknowledged Positive Feedback (No Action Required)
+### [UX] MEDIUM - Era Toggle Focus Management
 
-**Source**: PR #61 CodeRabbit review - 40 comments
-
-**Categories**:
-
-- ✅ Test alignment and quality (7 comments)
-- ✅ Component logic soundness (5 comments)
-- ✅ Deep module pattern implementation (3 comments)
-- ✅ Consistent styling updates (10 comments)
-- ✅ Proper type usage (8 comments)
-- ✅ Good foundations for testing/infrastructure (7 comments)
-
-**Items Explicitly Praised**:
-
-- RangeInput test alignment with new copy/scoring
-- Deep module pattern in HintPanel/GameCard
-- Consistent vermilion token wiring
-- Extended mode detection for `/archive/order`
-- Deterministic hash implementation
-- Solid ARIA semantics in InlineWarning
-- Archive shell composition
-- Loss state styling with semantic tokens
-
-**Total**: 40 items requiring no action, documented for context
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
 
 ---
 
-**PR #61 Summary**:
+### [UX] MEDIUM - Generic Error Screen
 
-- **Fixed Immediately (P0)**: 2 critical issues (HintIndicator crash, missing utility class)
-- **High Priority (P1)**: 18 items → 11.5h effort (semantic tokens, type safety, cleanup)
-- **Medium Priority (P2)**: 28 items → 18.5h effort (tests, a11y, docs, architecture)
-- **Acknowledged**: 40 items of positive feedback
-
-**Recommended Next Steps**:
-
-1. Complete semantic token migration (4h) - finish design system goals
-2. Address type safety improvements (1h) - prevent runtime errors
-3. Expand test coverage (9.5h) - protect new components
-4. Accessibility refinements (4h) - WCAG AA compliance
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
 
 ---
 
-## Soon (Exploring, 3-6 months)
+### [UX] MEDIUM - Era Toggle Focus Management
 
-### [PRODUCT] Social Leaderboards & Competition System
-
-**Current State**: Zero social features - completely single-player
-**Perspectives**: product-visionary
-**Competitive Gap**: 90% of daily games have leaderboards
-**Missing**: Friend leaderboards, global rankings, weekly tournaments, social proof
-**Implementation**: Add friendships table, weeklyScores table, challenge links
-**Business Value**: Viral coefficient 1.05 → 1.3+, could 3-5x user acquisition
-**Effort**: 5-7 days | **Value**: 10/10
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
 
 ---
 
-### [PRODUCT] Premium Subscription Tier
+### [UX] MEDIUM - Generic Error Screen
 
-**Current State**: 100% free, Bitcoin donations only
-**Perspectives**: product-visionary
-**Bundle ($4.99/mo)**: Unlimited archive, difficulty variants, streak freezes, badges
-**Revenue Projection**: 50K DAU × 5% = $12.5K/mo = $150K/year
-**Effort**: 8-10 days | **Value**: 10/10
-
----
-
-### [PRODUCT] Freemium Archive Paywall
-
-**Current State**: 1,821-puzzle archive FREE
-**Perspectives**: product-visionary
-**Model**: Free = Daily + 5 archive/month, Premium = Unlimited
-**Effort**: 2-3 days | **Value**: 9/10 - Immediate monetization
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
 
 ---
 
-### [PRODUCT] Shareable Challenge Links
+### [UX] MEDIUM - Era Toggle Focus Management
 
-**Current State**: Basic emoji share only
-**Perspectives**: product-visionary
-**Features**: "Beat my score" links, puzzle-specific sharing, streak flexing
-**Viral Impact**: 3-5x user acquisition
-**Effort**: 3 days | **Value**: 9/10
-
----
-
-### [PRODUCT] Streak Freeze & Recovery
-
-**Current State**: Miss one day = streak reset (churn trigger)
-**Perspectives**: product-visionary
-**Features**: Freeze tokens, emergency saves ($1.99/3-pack), vacation mode
-**Business Value**: Reduce churn 20-30%, impulse purchase revenue
-**Effort**: 3-4 days | **Value**: 8/10
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
 
 ---
 
-### [PRODUCT] Difficulty Variants
+### [UX] MEDIUM - Generic Error Screen
 
-**Current State**: Single difficulty
-**Perspectives**: product-visionary
-**Opportunity**: Easy Mode (beginners), Hard Mode (experts), Speed Run (competitive)
-**TAM Expansion**: Easy mode opens younger audience (12-16), families
-**Effort**: 4-5 days | **Value**: 8/10
-
----
-
-### [DESIGN] Analog Archival Aesthetic Overhaul
-
-**Current State**: Generic blue-on-white UI
-**Perspectives**: product-visionary, design-systems-architect
-**Direction**: Library card catalog, typewriter effects, wax seals, filing cabinet metaphors
-**Typography**: Libre Baskerville, Courier Prime, IBM Plex Mono
-**Success Metrics**: Session +15-20%, Share rate +25-30%, Return +10%
-**Effort**: 160h (~4 weeks) | **Value**: 10/10 - Major differentiator
-**Note**: Detailed spec preserved in `docs/design/AESTHETIC_OVERHAUL.md`
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
 
 ---
 
-### [PRODUCT] Confidence Wager System
+### [UX] MEDIUM - Era Toggle Focus Management
 
-**Problem**: Players can binary-search without engaging with hints
-**Mechanic**: Wager confidence before submitting guess
-**Options**: Confidence slider (1-5 stars), proximity wager (±10yr/±50yr), hint trade-off
-**Design Goal**: Add 5-10s contemplation time per guess
-**Effort**: 4-6 days | **Value**: 8/10
-
----
-
-### [INFRA] Changelog Automation (Changesets)
-
-**Current**: Manual CHANGELOG.md updates
-**Fix**: Install @changesets/cli, configure for pnpm workspace
-**Effort**: 2h | **Impact**: Consistent releases
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
 
 ---
 
-### [UX] Offline Support
+### [UX] MEDIUM - Generic Error Screen
 
-**Current State**: App unusable without internet
-**Fix**: Detect navigator.onLine, cache daily puzzle in localStorage
-**Effort**: 4h | **Impact**: Opens mobile usage in connectivity-poor scenarios
-
----
-
-### [UX] Archive Search
-
-**Current**: Must browse page-by-page
-**Fix**: Search by puzzle number or topic, filter by completion status
-**Effort**: 4h | **Impact**: Improved archive usability
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
 
 ---
 
-## Later (Someday/Maybe, 6+ months)
+### [UX] MEDIUM - Era Toggle Focus Management
 
-- **[PRODUCT] Educational B2B Platform** - Topic collections, teacher dashboard, student progress tracking
-- **[PRODUCT] Public API** - REST API for puzzle data, OAuth, Zapier integration
-- **[PLATFORM] Mobile PWA Enhancement** - App store presence, offline mode, native share
-- **[PRODUCT] Internationalization** - Multi-language support, region-specific events
-- **[PRODUCT] AI-Powered Personalization** - Adaptive difficulty, personalized content
-- **[PRODUCT] Template Marketplace** - Community-contributed events with revenue share
-
----
-
-## Learnings
-
-**From this grooming session (2025-11-18):**
-
-1. **Security gap was larger than expected**: submitGuess/submitRange accepting client-controlled userId is a critical auth bypass that wasn't previously identified. All mutations accepting userId should be audited.
-
-2. **Infrastructure debt is blocking production readiness**: No Sentry + no structured logging = operating blind. These are prerequisites before scaling user acquisition.
-
-3. **Toast system being non-functional explains UX complaints**: The entire error feedback system is a placeholder. This single fix will dramatically improve user experience.
-
-4. **Performance issues in archive queries will compound**: Full table scans work with 1,821 puzzles but will break at scale. Must fix before archive paywall drives increased usage.
-
-5. **Design system is actually solid**: Despite some hardcoded colors in GamesGallery, the token system is well-architected. The aesthetic overhaul can build on good foundations.
-
-6. **Observability infrastructure is half-built**: OpenTelemetry and Vercel Analytics installed but not fully wired. Traces go nowhere (no Grafana export), analytics has no custom events, no health check for uptime monitoring. Quick wins available (Speed Insights = 10m, health check = 15m).
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
 
 ---
 
-## Summary Metrics
+### [UX] MEDIUM - Generic Error Screen
 
-**Analyzed**: Full codebase with 8 specialized perspectives + observability audit
-**New Findings**: 22 security issues (+4), 8 infrastructure gaps (+6 from observability), 3 performance optimizations, 4 architecture refactors
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
 
-**Priority Distribution**:
+---
 
-- Now (Sprint-Ready): 10 items - security critical, UX critical, performance wins, health check
-- Next (Quarter): 22 items - infrastructure, observability, tests, maintainability
-- Soon (Exploring): 12 items - product features, design overhaul
-- Later (Someday): 6 items - platform expansion
+### [UX] MEDIUM - Era Toggle Focus Management
 
-**Critical Path Effort**:
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
 
-- Security fixes: ~5h
-- UX critical fixes (toast + validation): ~4h
-- Performance (archive + bundle): ~3h
-- Observability foundation (Sentry + Pino + health): ~7.5h
-- **Total to production-ready: ~19.5h**
+---
 
-**Observability Quick Wins** (< 30 min each):
+### [UX] MEDIUM - Generic Error Screen
 
-- Add health check endpoint (15m)
-- Add Vercel Speed Insights (10m)
-- Configure trace sampling (30m)
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
 
-**Revenue Opportunities** (Soon):
+---
 
-- Premium subscription: $30K-300K/year potential
-- Archive paywall: Immediate monetization of 1,821 puzzles
-- Streak saves: $24K/year impulse purchases
+### [UX] MEDIUM - Era Toggle Focus Management
 
-**Top 5 ROI Items**:
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
 
-1. **Fix access control in mutations** (1h, CRITICAL) - Security foundation
-2. **Implement toast system** (2-3h, CRITICAL) - All UX feedback depends on this
-3. **Add Sentry + Speed Insights** (3h + 10m, CRITICAL) - Production visibility before scaling
-4. **Archive query optimization** (2h, 10x speedup) - Unblocks archive paywall
-5. **Replace react-markdown** (1h, 44KB savings) - Largest bundle win
+---
 
-**Observability Foundation** (do before scaling users):
+### [UX] MEDIUM - Generic Error Screen
 
-- Sentry: Error tracking with session replay
-- Speed Insights: Core Web Vitals monitoring
-- Health check: Uptime monitoring
-- Grafana Cloud: Trace export for performance debugging
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+**Perspectives**: user-experience-advocate
+**Impact**: Technical error messages, only "Reload Page" option
+**Fix**: User-friendly error translation, multiple recovery options (Try Again, Check Connection, Contact Support)
+**Effort**: 2h | **Impact**: 8/10
+**Acceptance**: Errors show actionable recovery steps
+
+---
+
+### [UX] MEDIUM - Era Toggle Focus Management
+
+**File**: `src/components/ui/EraToggle.tsx`
+**Perspectives**: user-experience-advocate
+**Impact**: No visual focus indicator for keyboard users
+**Fix**: Implement roving tabindex, visible focus ring on buttons
+**Effort**: 1h | **Impact**: HIGH - Accessibility
+**Acceptance**: Tab shows clear focus indicator, arrow keys work properly
+
+---
+
+### [UX] MEDIUM - Generic Error Screen
+
+**File**: `src/components/GameIsland.tsx:249-260`
+\*\*Perspectives

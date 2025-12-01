@@ -3,20 +3,27 @@
 import { v } from "convex/values";
 import { action, internalAction, type ActionCtx } from "../../_generated/server";
 import { internal } from "../../_generated/api";
-import type { TokenUsage } from "../../lib/llmClient";
+import type { TokenUsage } from "../../lib/gemini3Client";
 import { generateCandidatesForYear } from "./generator";
 import { critiqueCandidatesForYear } from "./critic";
 import type { CritiqueResult } from "./schemas";
 import { reviseCandidatesForYear } from "./reviser";
 import type { CandidateEvent, Era } from "./schemas";
-import { chooseWorkYears } from "../../lib/workSelector";
+import { selectWork } from "../../lib/coverageOrchestrator";
 import { logStageError, logStageSuccess } from "../../lib/logging";
 import { runAlertChecks } from "../../lib/alerts";
+import { RateLimiter } from "../../lib/rateLimiter";
 
 const MAX_TOTAL_ATTEMPTS = 4;
 const MAX_CRITIC_CYCLES = 2;
 const MIN_REQUIRED_EVENTS = 6;
 const MAX_SELECTED_EVENTS = 10;
+const MAX_TARGET_COUNT = 50;
+const MIN_TARGET_COUNT = 1;
+
+// Rate limiter for batch processing: 10 req/sec sustained, 20 burst capacity
+// Prevents overwhelming OpenRouter API (60 req/min limit)
+const rateLimiter = new RateLimiter({ tokensPerSecond: 10, burstCapacity: 20 });
 
 export const generateYearEvents = internalAction({
   args: {
@@ -41,38 +48,69 @@ export const generateDailyBatch = internalAction({
     targetCount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { years } = await chooseWorkYears(ctx, args.targetCount ?? 3);
-    const results = [] as Array<{ year: number; result: YearGenerationResult }>;
+    const targetCount = clampTargetCount(args.targetCount ?? 10);
+    const strategy = await selectWork(ctx, targetCount);
+    const startTime = Date.now();
 
-    for (const year of years) {
-      try {
-        const result = await executeYearGeneration(ctx, year);
-        results.push({ year, result });
-      } catch (error) {
-        logStageError("Orchestrator", error, { year });
-        results.push({
-          year,
-          result: {
-            status: "failed",
-            reason: "insufficient_quality",
-            metadata: {
-              attempts: 0,
-              criticCycles: 0,
-              revisions: 0,
-              deterministicFailures: 0,
+    // Log strategy used
+    logStageSuccess("Orchestrator", "Coverage strategy selected", {
+      yearsSelected: strategy.targetYears.length,
+      selectedYears: strategy.targetYears,
+      priority: strategy.priority,
+      eraBalance: strategy.eraBalance,
+    });
+
+    // Process years in parallel with rate limiting
+    const results = await Promise.all(
+      strategy.targetYears.map(async (year) => {
+        try {
+          // Wrap each generation in rate limiter to respect API limits
+          const result = await rateLimiter.execute(async () => executeYearGeneration(ctx, year));
+          return { year, result };
+        } catch (error) {
+          logStageError("Orchestrator", error, { year });
+          return {
+            year,
+            result: {
+              status: "failed" as const,
+              reason: "insufficient_quality" as const,
+              metadata: {
+                attempts: 0,
+                criticCycles: 0,
+                revisions: 0,
+                deterministicFailures: 0,
+              },
+              usage: createUsageSummary(),
             },
-            usage: createUsageSummary(),
-          },
-        });
-      }
-    }
+          };
+        }
+      }),
+    );
+
+    const duration = Date.now() - startTime;
 
     await runAlertChecks(ctx);
 
+    const successes = results.filter((entry) => entry.result.status === "success");
+    const failures = results.filter((entry) => entry.result.status === "failed");
+    const totalCost = results.reduce((sum, entry) => sum + entry.result.usage.total.costUsd, 0);
+
+    logStageSuccess("Orchestrator", "Batch completed", {
+      attemptedYears: strategy.targetYears.length,
+      successCount: successes.length,
+      failureCount: failures.length,
+      failedYears: failures.map((f) => f.year),
+      totalCostUsd: totalCost,
+      durationMs: duration,
+      avgTimePerYear: Math.round(duration / strategy.targetYears.length),
+    });
+
     return {
       attemptedYears: results.map((entry) => entry.year),
-      successes: results.filter((entry) => entry.result.status === "success").length,
-      failures: results.filter((entry) => entry.result.status === "failed").length,
+      successes: successes.length,
+      failures: failures.length,
+      totalCostUsd: totalCost,
+      durationMs: duration,
     };
   },
 });
@@ -83,6 +121,9 @@ export interface TokenUsageTotals {
   reasoningTokens: number;
   totalTokens: number;
   costUsd: number;
+  cacheHits: number;
+  cacheMisses: number;
+  fallbacks: number;
 }
 
 export interface UsageSummary {
@@ -144,7 +185,10 @@ export async function runGenerationPipeline(
     attempts += 1;
 
     const generation = await deps.generator({ year, era });
-    recordUsage(usage.generator, usage.total, generation.llm.usage);
+    recordUsage(usage.generator, usage.total, generation.llm.usage, generation.llm.costUsd, {
+      cacheHit: generation.llm.cacheHit,
+      fallbackFrom: generation.llm.fallbackFrom,
+    });
 
     let candidates = generation.candidates;
     let cycles = 0;
@@ -154,7 +198,10 @@ export async function runGenerationPipeline(
       totalCycles += 1;
 
       const critique = await deps.critic({ year, era, candidates });
-      recordUsage(usage.critic, usage.total, critique.llm.usage);
+      recordUsage(usage.critic, usage.total, critique.llm.usage, critique.llm.costUsd, {
+        cacheHit: critique.llm.cacheHit,
+        fallbackFrom: critique.llm.fallbackFrom,
+      });
       totalDeterministicFailures += critique.deterministicFailures;
 
       const passingResults = critique.results.filter((result) => result.passed);
@@ -183,7 +230,10 @@ export async function runGenerationPipeline(
       }
 
       const revision = await deps.reviser({ failing: failingResults, year, era });
-      recordUsage(usage.reviser, usage.total, revision.llm.usage);
+      recordUsage(usage.reviser, usage.total, revision.llm.usage, revision.llm.costUsd, {
+        cacheHit: revision.llm.cacheHit,
+        fallbackFrom: revision.llm.fallbackFrom,
+      });
       totalRevisions += 1;
 
       candidates = rebuildCandidateSet(critique.results, revision.rewrites);
@@ -259,6 +309,9 @@ function emptyUsageTotals(): TokenUsageTotals {
     reasoningTokens: 0,
     totalTokens: 0,
     costUsd: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    fallbacks: 0,
   };
 }
 
@@ -266,17 +319,32 @@ function recordUsage(
   stageTotals: TokenUsageTotals,
   overall: TokenUsageTotals,
   usage: TokenUsage,
+  costUsd: number,
+  metadata: { cacheHit: boolean; fallbackFrom?: string | null | undefined },
 ): void {
-  addUsage(stageTotals, usage);
-  addUsage(overall, usage);
+  addUsage(stageTotals, usage, costUsd, metadata);
+  addUsage(overall, usage, costUsd, metadata);
 }
 
-function addUsage(target: TokenUsageTotals, usage: TokenUsage): void {
+function addUsage(
+  target: TokenUsageTotals,
+  usage: TokenUsage,
+  costUsd: number,
+  metadata: { cacheHit: boolean; fallbackFrom?: string | null | undefined },
+): void {
   target.inputTokens += usage.inputTokens;
   target.outputTokens += usage.outputTokens;
   target.reasoningTokens += usage.reasoningTokens;
   target.totalTokens += usage.totalTokens;
-  target.costUsd += usage.costUsd ?? 0;
+  target.costUsd += costUsd;
+  if (metadata.cacheHit) {
+    target.cacheHits += 1;
+  } else {
+    target.cacheMisses += 1;
+  }
+  if (metadata.fallbackFrom) {
+    target.fallbacks += 1;
+  }
 }
 
 async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<YearGenerationResult> {
@@ -297,9 +365,13 @@ async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<Year
     token_usage: {
       input: result.usage.total.inputTokens,
       output: result.usage.total.outputTokens,
+      reasoning: result.usage.total.reasoningTokens,
       total: result.usage.total.totalTokens,
     },
     cost_usd: result.usage.total.costUsd,
+    cache_hits: result.usage.total.cacheHits,
+    cache_misses: result.usage.total.cacheMisses,
+    fallback_count: result.usage.total.fallbacks,
     error_message: result.status === "failed" ? result.reason : undefined,
   });
 
@@ -312,4 +384,9 @@ async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<Year
   }
 
   return result;
+}
+
+function clampTargetCount(value: number): number {
+  if (Number.isNaN(value) || !Number.isFinite(value)) return 10;
+  return Math.max(MIN_TARGET_COUNT, Math.min(MAX_TARGET_COUNT, Math.floor(value)));
 }

@@ -1,12 +1,9 @@
 "use node";
 
 import { v } from "convex/values";
+import { z } from "zod";
 import { internalAction } from "../../_generated/server";
-import {
-  createResponsesClient,
-  type ResponsesClient,
-  type TokenUsage,
-} from "../../lib/responsesClient";
+import { createGemini3Client, type Gemini3Client, type TokenUsage } from "../../lib/gemini3Client";
 import type { CandidateEvent, CritiqueResult } from "./schemas";
 import { CandidateEventSchema, parseEra, type Era } from "./schemas";
 import { CandidateEventValue } from "./values";
@@ -28,26 +25,20 @@ REWRITING STRATEGIES:
 
 OUTPUT: Valid JSON with rewritten events.`;
 
-let cachedReviserClient: ResponsesClient | null = null;
+let cachedReviserClient: Gemini3Client | null = null;
 
-function getReviserClient(): ResponsesClient {
+function getReviserClient(): Gemini3Client {
   if (!cachedReviserClient) {
-    cachedReviserClient = createResponsesClient({
+    cachedReviserClient = createGemini3Client({
       temperature: 0.6,
       maxOutputTokens: 16_000, // Sufficient for rewrites
-      reasoning: {
-        effort: "medium", // Quality rewrites need reasoning
-      },
-      text: {
-        verbosity: "medium", // Natural rewrites
-      },
-      pricing: {
-        "openai/gpt-5-mini": {
-          inputCostPer1K: 0.15,
-          outputCostPer1K: 0.6,
-          reasoningCostPer1K: 0.15,
-        },
-      },
+      thinking_level: "medium",
+      structured_outputs: true,
+      cache_system_prompt: true,
+      cache_ttl_seconds: 86_400,
+      model: "google/gemini-3-pro-preview",
+      fallbackModel: "openai/gpt-5-mini",
+      stage: "reviser",
     });
   }
   return cachedReviserClient;
@@ -59,6 +50,9 @@ export interface ReviserActionResult {
     requestId: string;
     model: string;
     usage: TokenUsage;
+    costUsd: number;
+    cacheHit: boolean;
+    fallbackFrom?: string;
   };
 }
 
@@ -66,7 +60,7 @@ interface ReviserParams {
   failing: CritiqueResult[];
   year: number;
   era: Era;
-  llmClient?: ResponsesClient;
+  llmClient?: Gemini3Client;
 }
 
 export const reviseCandidates = internalAction({
@@ -96,7 +90,7 @@ export async function reviseCandidatesForYear(params: ReviserParams): Promise<Re
   if (!failing.length) {
     return {
       rewrites: [],
-      llm: { requestId: "", model: "", usage: emptyUsage() },
+      llm: { requestId: "", model: "", usage: emptyUsage(), costUsd: 0, cacheHit: false },
     };
   }
 
@@ -104,17 +98,23 @@ export async function reviseCandidatesForYear(params: ReviserParams): Promise<Re
   let response;
   try {
     response = await client.generate({
-      prompt: {
-        system: REVISER_SYSTEM_PROMPT,
-        user: buildReviserUserPrompt(year, era, failing),
-      },
-      schema: CandidateEventSchema.array().length(failing.length),
-      jsonFormat: "array", // Allow array at root level
+      system: REVISER_SYSTEM_PROMPT,
+      user: buildReviserUserPrompt(year, era, failing),
+      schema: enforceArrayLength(failing.length),
       metadata: {
         stage: "reviser",
         year,
         era,
         failingCount: failing.length,
+      },
+      options: {
+        thinking_level: "medium",
+        structured_outputs: true,
+        cache_system_prompt: true,
+        cache_ttl_seconds: 86_400,
+        maxOutputTokens: 16_000,
+        temperature: 0.6,
+        model: "google/gemini-3-pro-preview",
       },
     });
   } catch (error) {
@@ -123,7 +123,7 @@ export async function reviseCandidatesForYear(params: ReviserParams): Promise<Re
   }
 
   logStageSuccess("Reviser", "LLM call succeeded", {
-    requestId: response.requestId,
+    requestId: response.metadata.requestId,
     tokens: response.usage.totalTokens,
     year,
   });
@@ -132,9 +132,12 @@ export async function reviseCandidatesForYear(params: ReviserParams): Promise<Re
   return {
     rewrites,
     llm: {
-      requestId: response.requestId,
-      model: response.model,
+      requestId: response.metadata.requestId,
+      model: response.metadata.model,
       usage: response.usage,
+      costUsd: response.cost.totalUsd,
+      cacheHit: response.metadata.cacheHit,
+      fallbackFrom: response.metadata.fallbackFrom,
     },
   };
 }
@@ -191,4 +194,9 @@ function emptyUsage(): TokenUsage {
     reasoningTokens: 0,
     totalTokens: 0,
   };
+}
+
+// Explicit helper ensures Zod narrowing for array length failures is surfaced early
+function enforceArrayLength(count: number) {
+  return z.array(CandidateEventSchema).length(count, { message: `expected ${count} rewrites` });
 }
