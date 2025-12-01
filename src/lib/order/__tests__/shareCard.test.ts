@@ -1,5 +1,13 @@
-import { describe, it, expect } from "vitest";
-import { generateOrderShareText, type OrderSharePayload } from "../shareCard";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  generateOrderShareText,
+  generateArchivalShareText,
+  copyArchivalShareTextToClipboard,
+  copyOrderShareTextToClipboard,
+  type OrderSharePayload,
+  type ArchivalSharePayload,
+} from "../shareCard";
+import type { OrderAttempt, AttemptScore } from "@/types/orderGameState";
 
 describe("generateOrderShareText", () => {
   describe("NYT-style header", () => {
@@ -306,6 +314,186 @@ chrondle.app`;
 chrondle.app`;
 
       expect(result).toBe(expected);
+    });
+  });
+});
+
+// =============================================================================
+// Test Fixtures for Archival
+// =============================================================================
+
+const createMockAttempt = (feedback: ("correct" | "incorrect")[]): OrderAttempt => ({
+  ordering: feedback.map((_, i) => `event-${i}`),
+  feedback,
+  pairsCorrect: feedback.filter((f) => f === "correct").length,
+  totalPairs: feedback.length,
+  timestamp: Date.now(),
+});
+
+const createMockScore = (overrides: Partial<AttemptScore> = {}): AttemptScore => ({
+  attempts: 3,
+  ...overrides,
+});
+
+// =============================================================================
+// generateArchivalShareText
+// =============================================================================
+
+describe("generateArchivalShareText", () => {
+  it("generates share text with puzzle number", () => {
+    const result = generateArchivalShareText({
+      puzzleNumber: 247,
+      score: createMockScore(),
+      attempts: [createMockAttempt(["correct", "correct", "correct"])],
+    });
+
+    expect(result).toContain("Chrondle: Order #247");
+  });
+
+  it("shows correct feedback as green squares", () => {
+    const result = generateArchivalShareText({
+      puzzleNumber: 1,
+      score: createMockScore(),
+      attempts: [createMockAttempt(["correct", "correct", "correct"])],
+    });
+
+    expect(result).toContain("🟩🟩🟩");
+  });
+
+  it("shows incorrect feedback as white squares", () => {
+    const result = generateArchivalShareText({
+      puzzleNumber: 1,
+      score: createMockScore(),
+      attempts: [createMockAttempt(["incorrect", "incorrect", "incorrect"])],
+    });
+
+    expect(result).toContain("⬜⬜⬜");
+  });
+
+  it("shows mixed feedback correctly", () => {
+    const result = generateArchivalShareText({
+      puzzleNumber: 1,
+      score: createMockScore(),
+      attempts: [createMockAttempt(["correct", "incorrect", "correct", "incorrect"])],
+    });
+
+    expect(result).toContain("🟩⬜🟩⬜");
+  });
+
+  it("shows multiple attempts on separate lines", () => {
+    const result = generateArchivalShareText({
+      puzzleNumber: 1,
+      score: createMockScore(),
+      attempts: [
+        createMockAttempt(["incorrect", "correct", "incorrect"]),
+        createMockAttempt(["correct", "correct", "incorrect"]),
+        createMockAttempt(["correct", "correct", "correct"]),
+      ],
+    });
+
+    expect(result).toContain("⬜🟩⬜\n🟩🟩⬜\n🟩🟩🟩");
+  });
+
+  it("uses default URL when not provided", () => {
+    const result = generateArchivalShareText({
+      puzzleNumber: 1,
+      score: createMockScore(),
+      attempts: [createMockAttempt(["correct"])],
+    });
+
+    expect(result).toContain("https://www.chrondle.app");
+  });
+
+  it("uses custom URL when provided", () => {
+    const result = generateArchivalShareText({
+      puzzleNumber: 1,
+      score: createMockScore(),
+      attempts: [createMockAttempt(["correct"])],
+      url: "https://custom.url",
+    });
+
+    expect(result).toContain("https://custom.url");
+    expect(result).not.toContain("chrondle.app");
+  });
+});
+
+// =============================================================================
+// Clipboard Functions
+// =============================================================================
+
+describe("clipboard functions", () => {
+  beforeEach(() => {
+    Object.defineProperty(globalThis, "navigator", {
+      value: {
+        clipboard: {
+          writeText: vi.fn().mockResolvedValue(undefined),
+        },
+      },
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe("copyArchivalShareTextToClipboard", () => {
+    it("copies share text to clipboard", async () => {
+      await copyArchivalShareTextToClipboard({
+        puzzleNumber: 1,
+        score: createMockScore(),
+        attempts: [createMockAttempt(["correct"])],
+      });
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining("Chrondle: Order #1"),
+      );
+    });
+
+    it("throws when clipboard API unavailable", async () => {
+      Object.defineProperty(globalThis, "navigator", {
+        value: { clipboard: null },
+        writable: true,
+      });
+
+      await expect(
+        copyArchivalShareTextToClipboard({
+          puzzleNumber: 1,
+          score: createMockScore(),
+          attempts: [createMockAttempt(["correct"])],
+        }),
+      ).rejects.toThrow("Clipboard API unsupported");
+    });
+  });
+
+  describe("copyOrderShareTextToClipboard", () => {
+    it("copies share text to clipboard", async () => {
+      await copyOrderShareTextToClipboard({
+        dateLabel: "2025-01-15",
+        puzzleNumber: 1,
+        results: ["correct"],
+        score: { totalScore: 100, correctPairs: 1, totalPairs: 1, hintsUsed: 0 },
+      });
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining("Chrondle Order #1"),
+      );
+    });
+
+    it("throws when clipboard API unavailable", async () => {
+      Object.defineProperty(globalThis, "navigator", {
+        value: { clipboard: null },
+        writable: true,
+      });
+
+      await expect(
+        copyOrderShareTextToClipboard({
+          dateLabel: "2025-01-15",
+          puzzleNumber: 1,
+          results: ["correct"],
+          score: { totalScore: 100, correctPairs: 1, totalPairs: 1, hintsUsed: 0 },
+        }),
+      ).rejects.toThrow("Clipboard API unsupported");
     });
   });
 });
