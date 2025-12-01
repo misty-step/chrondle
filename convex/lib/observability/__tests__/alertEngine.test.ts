@@ -283,6 +283,96 @@ describe("STANDARD_ALERT_RULES", () => {
   });
 });
 
+describe("AlertEngine integration smoke", () => {
+  const sentryNotifier = vi.fn().mockResolvedValue(undefined);
+  const emailNotifier = vi.fn().mockResolvedValue(undefined);
+
+  const baseMetrics = (): Metrics => ({
+    poolHealth: {
+      unusedEvents: 4000,
+      daysUntilDepletion: 120,
+      coverageByEra: { ancient: 800, medieval: 1200, modern: 2000 },
+      yearsReady: 2000,
+    },
+    cost: {
+      costToday: 100,
+      cost7DayAvg: 100,
+      cost30Day: 3000,
+      costPerEvent: 0.02,
+    },
+    quality: {
+      avgQualityScore: 0.9,
+      failureRate: 0.1,
+      topFailureReasons: [],
+      qualityTrend: [],
+    },
+    latency: {
+      p50: 800,
+      p95: 1500,
+      p99: 2500,
+      avgDuration: 900,
+    },
+    timestamp: Date.now(),
+  });
+
+  function createEngine() {
+    return new AlertEngine(
+      STANDARD_ALERT_RULES,
+      new Map([
+        ["sentry", sentryNotifier as unknown as Notifier],
+        ["email", emailNotifier as unknown as Notifier],
+      ]),
+    );
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-12-01T00:00:00Z"));
+    sentryNotifier.mockClear();
+    emailNotifier.mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("fires pool depletion alert and routes to both channels", async () => {
+    const metrics: Metrics = {
+      ...baseMetrics(),
+      poolHealth: { ...baseMetrics().poolHealth, daysUntilDepletion: 10, unusedEvents: 120 },
+    };
+
+    const engine = createEngine();
+    const fired = await engine.checkAlerts(metrics);
+
+    expect(fired).toContain("Pool Depletion Imminent");
+    expect(sentryNotifier).toHaveBeenCalledTimes(1);
+    expect(emailNotifier).toHaveBeenCalledTimes(1);
+  });
+
+  it("respects cost spike cooldown and re-fires after window", async () => {
+    const metrics: Metrics = {
+      ...baseMetrics(),
+      cost: { ...baseMetrics().cost, costToday: 500, cost7DayAvg: 100 },
+    };
+
+    const engine = createEngine();
+
+    const first = await engine.checkAlerts(metrics);
+    expect(first).toContain("Cost Spike Detected");
+    expect(sentryNotifier).toHaveBeenCalledTimes(1);
+
+    const second = await engine.checkAlerts(metrics);
+    expect(second).not.toContain("Cost Spike Detected");
+
+    vi.advanceTimersByTime(6 * 60 * 60 * 1000 + 1);
+
+    const third = await engine.checkAlerts(metrics);
+    expect(third).toContain("Cost Spike Detected");
+    expect(sentryNotifier).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("AlertEngine", () => {
   const createMockMetrics = (overrides?: Partial<Metrics>): Metrics => ({
     poolHealth: {

@@ -789,7 +789,7 @@
 
 ### Integration Tests
 
-- [ ] **Write end-to-end test for Gemini 3 migration** (`convex/lib/__tests__/gemini3Integration.test.ts`)
+- [x] **Write end-to-end test for Gemini 3 migration** (`convex/lib/__tests__/gemini3Integration.test.ts`)
 
   - Test: Generate events for year 1969 using Gemini3Client
   - Verify: Events meet quality thresholds, metadata populated, cost tracked accurately
