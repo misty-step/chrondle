@@ -80,9 +80,10 @@ describe("generateDailyBatch integration", () => {
 
     const ctx = {
       runMutation: vi.fn().mockResolvedValue(undefined),
-    } as unknown as Parameters<typeof generateDailyBatch.handler>[0];
+    };
 
-    const result = await generateDailyBatch.handler(ctx, {});
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await (generateDailyBatch as any).handler(ctx, {});
 
     expect(result.attemptedYears).toHaveLength(10);
     expect(result.successes).toBe(9);
@@ -118,9 +119,10 @@ describe("generateDailyBatch integration", () => {
 
     const ctx = {
       runMutation: vi.fn().mockResolvedValue(undefined),
-    } as unknown as Parameters<typeof generateDailyBatch.handler>[0];
+    };
 
-    const result = await generateDailyBatch.handler(ctx, {});
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await (generateDailyBatch as any).handler(ctx, {});
 
     expect(result.failures).toBe(1);
     expect(result.successes).toBe(9);

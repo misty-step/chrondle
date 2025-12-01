@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { STANDARD_ALERT_RULES, AlertEngine } from "../alertEngine";
-import type { AlertNotification, Notifier, AlertChannel } from "../alertEngine";
+import type { Notifier, AlertChannel } from "../alertEngine";
 import type { Metrics } from "../metricsCollector";
 
 describe("STANDARD_ALERT_RULES", () => {
