@@ -796,14 +796,14 @@
   - Test: Fallback to GPT-5-mini works when Gemini 3 fails (mock Gemini 3 failure)
   - Success criteria: Full pipeline works with Gemini 3, fallback is reliable
 
-- [ ] **Write integration test for batch processing** (`convex/actions/eventGeneration/__tests__/batchProcessing.test.ts`)
+- [x] **Write integration test for batch processing** (`convex/actions/eventGeneration/__tests__/batchProcessing.test.ts`)
 
   - Test: Generate 10 years in parallel, verify all complete
   - Test: Partial failures don't block other years
   - Test: Rate limiting prevents exceeding 60 req/min
   - Success criteria: Batch processing is robust, handles errors gracefully
 
-- [ ] **Write integration test for alert engine** (`convex/lib/observability/__tests__/alertEngine.test.ts`)
+- [x] **Write integration test for alert engine** (`convex/lib/observability/__tests__/alertEngine.test.ts`)
   - Test: Pool depletion alert fires when threshold crossed
   - Test: Cost spike alert fires with correct cooldown
   - Test: Slack notification sent (mock webhook)

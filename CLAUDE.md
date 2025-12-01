@@ -41,6 +41,14 @@
 - BC/AD format enforced (never BCE/CE) via `enforceADBC()` post-processing
 - File: `convex/actions/historicalContext.ts`
 
+**Event Generation Infrastructure (Gemini 3):**
+
+- **Client:** `convex/lib/gemini3Client.ts` - Handles "Thinking Tokens", Context Caching, and Structured Outputs.
+- **Pipeline:** Generator -> Critic -> Reviser (Deep Module Architecture).
+- **Models:** `google/gemini-3-pro-preview` (Generator), `google/gemini-3-flash-preview` (Critic).
+- **Fallback:** Automatically fails over to `openai/gpt-5-mini` on error.
+- **Cost:** Tracks Input/Output/Reasoning tokens. Reasoning tokens are billed at $0.
+
 ## Stack
 
 **Hard requirements:** pnpm (npm blocked), Vitest + React Testing Library + jest-dom matchers, motion (NOT framer-motion)

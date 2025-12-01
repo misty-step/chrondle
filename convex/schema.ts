@@ -9,12 +9,19 @@ export default defineSchema({
     classicPuzzleId: v.optional(v.id("puzzles")), // Links to Classic mode puzzle (null = unused in Classic)
     orderPuzzleId: v.optional(v.id("orderPuzzles")), // Links to Order mode puzzle (null = unused in Order)
     updatedAt: v.number(), // Manual timestamp (Convex provides _creationTime)
+    // Metadata for future game modes (Timeline, Category, etc.)
+    // Populated by Gemini 3 Generator. Optional for backward compatibility.
     metadata: v.optional(
       v.object({
-        difficulty: v.optional(v.number()), // 1-5
+        /** Difficulty rating (1-5). 1=Obvious, 5=Obscure. Used for difficulty scaling. */
+        difficulty: v.optional(v.number()),
+        /** Semantic categories (e.g., "war", "science"). Used for Category Mode. */
         category: v.optional(v.array(v.string())),
-        era: v.optional(v.string()), // "ancient" | "medieval" | "modern"
-        fame_level: v.optional(v.number()), // 1-5
+        /** Historical era. "ancient" (<500), "medieval" (500-1500), "modern" (>1500). */
+        era: v.optional(v.string()),
+        /** Fame level (1-5). How well-known the event is globally. */
+        fame_level: v.optional(v.number()),
+        /** Flexible tags for filtering (e.g., "space", "revolution"). */
         tags: v.optional(v.array(v.string())),
       }),
     ),

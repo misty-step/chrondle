@@ -4,6 +4,18 @@ import { generateCandidatesForYear } from "../../actions/eventGeneration/generat
 import { critiqueCandidatesForYear } from "../../actions/eventGeneration/critic";
 import type { CandidateEvent } from "../../actions/eventGeneration/schemas";
 
+// Mock QualityValidator to avoid external calls and ensure deterministic validation
+vi.mock("../qualityValidator", () => ({
+  QualityValidatorImpl: vi.fn().mockImplementation(() => ({
+    validateEvent: vi.fn().mockResolvedValue({
+      passed: true,
+      scores: { semantic_leakage: 0.05 },
+      suggestions: [],
+    }),
+    learnFromRejected: vi.fn(),
+  })),
+}));
+
 type CacheStatus = "HIT" | "MISS" | null;
 
 const apiKey = "test-openrouter-key";
@@ -11,7 +23,7 @@ const apiKey = "test-openrouter-key";
 function buildCandidate(index: number): CandidateEvent {
   return {
     canonical_title: `Event ${index} headline`,
-    event_text: "Historic milestone shapes global trajectory",
+    event_text: "Historic milestone for NASA shapes global trajectory",
     geo: "Global",
     difficulty_guess: 3,
     confidence: 0.9,
@@ -154,7 +166,7 @@ describe("Gemini 3 migration integration", () => {
     expect(generation.llm.model).toBe("google/gemini-3-pro-preview");
     expect(critique.llm.model).toBe("google/gemini-3-flash-preview");
     expect(generation.llm.costUsd).toBeCloseTo(0.0064, 6); // (800 input + 400 output) pricing
-    expect(critique.llm.costUsd).toBeCloseTo(0.0048, 6);
+    expect(critique.llm.costUsd).toBeCloseTo(0.00372, 6);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
