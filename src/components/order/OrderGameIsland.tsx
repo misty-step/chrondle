@@ -4,13 +4,14 @@ import { useState } from "react";
 import { Preloaded, usePreloadedQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOrderGame } from "@/hooks/useOrderGame";
+import { useToast } from "@/hooks/use-toast";
+import { useWebShare } from "@/hooks/useWebShare";
 import { OrderReveal } from "@/components/order/OrderReveal";
 import { OrderGameBoard } from "@/components/order/OrderGameBoard";
 import { GameModeLayout } from "@/components/GameModeLayout";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { copyArchivalShareTextToClipboard } from "@/lib/order/shareCard";
-import { logger } from "@/lib/logger";
+import { generateArchivalShareText } from "@/lib/order/shareCard";
 import type { ReadyState } from "@/types/orderGameState";
 
 interface OrderGameIslandProps {
@@ -19,7 +20,13 @@ interface OrderGameIslandProps {
 
 export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
   const puzzle = usePreloadedQuery(preloadedPuzzle);
-  const { gameState, reorderEvents, submitAttempt } = useOrderGame(undefined, puzzle);
+  const { addToast } = useToast();
+  const { share, shareMethod } = useWebShare();
+  const { gameState, reorderEvents, submitAttempt, isSubmitting } = useOrderGame(
+    undefined,
+    puzzle,
+    addToast,
+  );
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   if (gameState.status === "loading-puzzle") {
@@ -57,16 +64,17 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
 
   if (gameState.status === "completed") {
     const handleShare = async () => {
-      try {
-        await copyArchivalShareTextToClipboard({
-          puzzleNumber: gameState.puzzle.puzzleNumber,
-          score: gameState.score,
-          attempts: gameState.attempts,
-        });
+      const text = generateArchivalShareText({
+        puzzleNumber: gameState.puzzle.puzzleNumber,
+        score: gameState.score,
+        attempts: gameState.attempts,
+      });
 
-        setShareFeedback("Copied to clipboard!");
-      } catch (error) {
-        logger.error("Failed to copy Order share text", error);
+      const success = await share(text);
+
+      if (success) {
+        setShareFeedback(shareMethod === "webshare" ? "Shared!" : "Copied to clipboard!");
+      } else {
         setShareFeedback("Share failed. Try again.");
       }
     };
@@ -75,9 +83,6 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
       <GameModeLayout mode="order" puzzleNumber={gameState.puzzle.puzzleNumber} isArchive={false}>
         <LayoutContainer className="flex max-w-4xl flex-col gap-6">
           <OrderReveal
-            events={gameState.puzzle.events}
-            finalOrder={gameState.finalOrder}
-            correctOrder={gameState.correctOrder}
             score={gameState.score}
             puzzleNumber={gameState.puzzle.puzzleNumber}
             onShare={handleShare}
@@ -99,6 +104,7 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
           gameState={gameState as ReadyState}
           reorderEvents={reorderEvents}
           submitAttempt={submitAttempt}
+          isSubmitting={isSubmitting}
         />
       </LayoutContainer>
     </GameModeLayout>

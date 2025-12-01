@@ -4,13 +4,9 @@ import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Check, Share2 } from "lucide-react";
 import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
-import type { AttemptScore, OrderEvent } from "@/types/orderGameState";
-import { ComparisonGrid } from "./ComparisonGrid";
+import type { AttemptScore } from "@/types/orderGameState";
 
 interface OrderRevealProps {
-  events: OrderEvent[];
-  finalOrder: string[];
-  correctOrder: string[];
   score: AttemptScore;
   puzzleNumber: number;
   onShare?: () => void;
@@ -47,14 +43,7 @@ function getArchivalDisplay(attempts: number): {
   };
 }
 
-export function OrderReveal({
-  events,
-  finalOrder,
-  correctOrder,
-  score,
-  puzzleNumber,
-  onShare,
-}: OrderRevealProps) {
+export function OrderReveal({ score, puzzleNumber, onShare }: OrderRevealProps) {
   const prefersReducedMotion = useReducedMotion();
   const [isShared, setIsShared] = useState(false);
 
@@ -150,19 +139,6 @@ export function OrderReveal({
             </motion.button>
           </div>
         )}
-      </motion.div>
-
-      {/* Event Comparison Card */}
-      <motion.div
-        className="border-border bg-surface-elevated shadow-hard rounded-sm border-2 p-6"
-        initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
-        animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-        transition={{
-          duration: msToSeconds(ANIMATION_DURATIONS.HINT_TRANSITION),
-          delay: msToSeconds(ANIMATION_DURATIONS.PROXIMITY_DELAY) * 1.5,
-        }}
-      >
-        <ComparisonGrid events={events} finalOrder={finalOrder} correctOrder={correctOrder} />
       </motion.div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { OrderEventList } from "@/components/order/OrderEventList";
 import { OrderInstructions } from "@/components/order/OrderInstructions";
 import { AttemptHistory } from "@/components/order/AttemptFeedback";
@@ -12,11 +12,16 @@ interface OrderGameBoardProps {
   gameState: ReadyState;
   reorderEvents: (fromIndex: number, toIndex: number) => void;
   submitAttempt: () => Promise<OrderAttempt | null>;
+  isSubmitting: boolean;
 }
 
-export function OrderGameBoard({ gameState, reorderEvents, submitAttempt }: OrderGameBoardProps) {
+export function OrderGameBoard({
+  gameState,
+  reorderEvents,
+  submitAttempt,
+  isSubmitting,
+}: OrderGameBoardProps) {
   const { puzzle, currentOrder, attempts } = gameState;
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get feedback from last attempt to show on cards
   const lastAttemptFeedback = useMemo((): PositionFeedback[] | undefined => {
@@ -60,12 +65,7 @@ export function OrderGameBoard({ gameState, reorderEvents, submitAttempt }: Orde
   );
 
   const handleSubmit = useCallback(async () => {
-    setIsSubmitting(true);
-    try {
-      await submitAttempt();
-    } finally {
-      setIsSubmitting(false);
-    }
+    await submitAttempt();
   }, [submitAttempt]);
 
   const buttonText = attempts.length === 0 ? "Check Order" : "Try Again";

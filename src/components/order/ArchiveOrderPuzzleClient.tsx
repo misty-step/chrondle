@@ -4,14 +4,15 @@ import React, { useState } from "react";
 import Link from "next/link";
 import type { OrderPuzzle, ReadyState } from "@/types/orderGameState";
 import { useOrderGame } from "@/hooks/useOrderGame";
+import { useToast } from "@/hooks/use-toast";
+import { useWebShare } from "@/hooks/useWebShare";
 import { OrderReveal } from "@/components/order/OrderReveal";
 import { OrderGameBoard } from "@/components/order/OrderGameBoard";
 import { AppHeader } from "@/components/AppHeader";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Footer } from "@/components/Footer";
-import { copyArchivalShareTextToClipboard } from "@/lib/order/shareCard";
-import { logger } from "@/lib/logger";
+import { generateArchivalShareText } from "@/lib/order/shareCard";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 
 interface ArchiveOrderPuzzleClientProps {
@@ -23,7 +24,13 @@ export function ArchiveOrderPuzzleClient({
   puzzleNumber,
   initialPuzzle,
 }: ArchiveOrderPuzzleClientProps): React.ReactElement {
-  const { gameState, reorderEvents, submitAttempt } = useOrderGame(puzzleNumber, initialPuzzle);
+  const { addToast } = useToast();
+  const { share, shareMethod } = useWebShare();
+  const { gameState, reorderEvents, submitAttempt, isSubmitting } = useOrderGame(
+    puzzleNumber,
+    initialPuzzle,
+    addToast,
+  );
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   if (gameState.status === "loading-puzzle") {
@@ -61,16 +68,17 @@ export function ArchiveOrderPuzzleClient({
 
   if (gameState.status === "completed") {
     const handleShare = async () => {
-      try {
-        await copyArchivalShareTextToClipboard({
-          puzzleNumber: gameState.puzzle.puzzleNumber,
-          score: gameState.score,
-          attempts: gameState.attempts,
-        });
+      const text = generateArchivalShareText({
+        puzzleNumber: gameState.puzzle.puzzleNumber,
+        score: gameState.score,
+        attempts: gameState.attempts,
+      });
 
-        setShareFeedback("Copied to clipboard!");
-      } catch (error) {
-        logger.error("Failed to copy Order share text", error);
+      const success = await share(text);
+
+      if (success) {
+        setShareFeedback(shareMethod === "webshare" ? "Shared!" : "Copied to clipboard!");
+      } else {
         setShareFeedback("Share failed. Try again.");
       }
     };
@@ -89,9 +97,6 @@ export function ArchiveOrderPuzzleClient({
               </Link>
             </div>
             <OrderReveal
-              events={gameState.puzzle.events}
-              finalOrder={gameState.finalOrder}
-              correctOrder={gameState.correctOrder}
               score={gameState.score}
               puzzleNumber={gameState.puzzle.puzzleNumber}
               onShare={handleShare}
@@ -129,6 +134,7 @@ export function ArchiveOrderPuzzleClient({
               gameState={gameState as ReadyState}
               reorderEvents={reorderEvents}
               submitAttempt={submitAttempt}
+              isSubmitting={isSubmitting}
             />
           </LayoutContainer>
         </main>
