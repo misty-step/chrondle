@@ -165,70 +165,41 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file-coverage-mode: changes
 
-      - name: Extract coverage percentages
+      - name: Update Coverage Badges
         if: matrix.check == 'test' && github.ref == 'refs/heads/master'
-        id: coverage
+        env:
+          GH_TOKEN: ${{ secrets.GIST_TOKEN }}
         run: |
-          LINES=$(jq '.total.lines.pct' coverage/coverage-summary.json)
-          BRANCHES=$(jq '.total.branches.pct' coverage/coverage-summary.json)
-          FUNCTIONS=$(jq '.total.functions.pct' coverage/coverage-summary.json)
-          STATEMENTS=$(jq '.total.statements.pct' coverage/coverage-summary.json)
-          echo "lines=$LINES" >> $GITHUB_OUTPUT
-          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
-          echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
-          echo "statements=$STATEMENTS" >> $GITHUB_OUTPUT
+          # Generate badge JSON files with color logic
+          for metric in lines branches functions statements; do
+            VALUE=$(jq ".total.${metric}.pct" coverage/coverage-summary.json)
 
-      - name: Update Lines badge
-        if: matrix.check == 'test' && github.ref == 'refs/heads/master'
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gistID: ${{ vars.COVERAGE_GIST_ID }}
-          filename: coverage-lines.json
-          label: lines
-          message: ${{ steps.coverage.outputs.lines }}%
-          valColorRange: ${{ steps.coverage.outputs.lines }}
-          maxColorRange: 100
-          minColorRange: 0
+            # Color thresholds: brightgreen (≥80%), yellow (≥70%), red (<70%)
+            if (( $(echo "$VALUE >= 80" | bc -l) )); then
+              COLOR="brightgreen"
+            elif (( $(echo "$VALUE >= 70" | bc -l) )); then
+              COLOR="yellow"
+            else
+              COLOR="red"
+            fi
 
-      - name: Update Branches badge
-        if: matrix.check == 'test' && github.ref == 'refs/heads/master'
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gistID: ${{ vars.COVERAGE_GIST_ID }}
-          filename: coverage-branches.json
-          label: branches
-          message: ${{ steps.coverage.outputs.branches }}%
-          valColorRange: ${{ steps.coverage.outputs.branches }}
-          maxColorRange: 100
-          minColorRange: 0
+            # Capitalize metric for label
+            LABEL=$(echo "$metric" | sed 's/.*/\u&/')
+            echo "{\"schemaVersion\":1,\"label\":\"$LABEL\",\"message\":\"${VALUE}%\",\"color\":\"$COLOR\"}" > /tmp/coverage-${metric}.json
+          done
 
-      - name: Update Functions badge
-        if: matrix.check == 'test' && github.ref == 'refs/heads/master'
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gistID: ${{ vars.COVERAGE_GIST_ID }}
-          filename: coverage-functions.json
-          label: functions
-          message: ${{ steps.coverage.outputs.functions }}%
-          valColorRange: ${{ steps.coverage.outputs.functions }}
-          maxColorRange: 100
-          minColorRange: 0
-
-      - name: Update Statements badge
-        if: matrix.check == 'test' && github.ref == 'refs/heads/master'
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gistID: ${{ vars.COVERAGE_GIST_ID }}
-          filename: coverage-statements.json
-          label: statements
-          message: ${{ steps.coverage.outputs.statements }}%
-          valColorRange: ${{ steps.coverage.outputs.statements }}
-          maxColorRange: 100
-          minColorRange: 0
+          # Update all badge files atomically via API (avoids 409 conflicts)
+          jq -n \
+            --arg lines "$(cat /tmp/coverage-lines.json)" \
+            --arg branches "$(cat /tmp/coverage-branches.json)" \
+            --arg functions "$(cat /tmp/coverage-functions.json)" \
+            --arg statements "$(cat /tmp/coverage-statements.json)" \
+            '{files: {
+              "coverage-lines.json": {content: $lines},
+              "coverage-branches.json": {content: $branches},
+              "coverage-functions.json": {content: $functions},
+              "coverage-statements.json": {content: $statements}
+            }}' | gh api --method PATCH /gists/${{ vars.COVERAGE_GIST_ID }} --input -
 
   validation:
     runs-on: ubuntu-latest
