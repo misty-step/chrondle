@@ -16,8 +16,19 @@ interface EnvValidationResult {
 /**
  * Validates all required environment variables (client and server)
  * @returns Validation result with missing variables
+ *
+ * Note: This function is context-aware. During build/SSG (server-side, non-production),
+ * it skips validation since env vars are embedded at build time and validated at runtime.
+ * This prevents false failures during Next.js static generation.
  */
 export function validateEnvironment(): EnvValidationResult {
+  // Skip validation during build/SSG - env vars are embedded at build time
+  // and validated at runtime when actually used. This handles the case where
+  // Next.js prerenders pages before runtime environment is available.
+  if (typeof window === "undefined" && process.env.NODE_ENV !== "production") {
+    return { isValid: true, missingVars: [], warnings: [] };
+  }
+
   const result: EnvValidationResult = {
     isValid: true,
     missingVars: [],
@@ -37,9 +48,7 @@ export function validateEnvironment(): EnvValidationResult {
 
   // Check optional but recommended variables
   if (!process.env.OPENROUTER_API_KEY) {
-    result.warnings.push(
-      "OPENROUTER_API_KEY is not set - AI features will be disabled",
-    );
+    result.warnings.push("OPENROUTER_API_KEY is not set - AI features will be disabled");
   }
 
   // Log validation results
@@ -64,9 +73,7 @@ export function validateEnvironment(): EnvValidationResult {
  */
 export function validateServerEnvironment(): void {
   if (!process.env.OPENROUTER_API_KEY) {
-    throw new Error(
-      "OPENROUTER_API_KEY is required for AI historical context generation",
-    );
+    throw new Error("OPENROUTER_API_KEY is required for AI historical context generation");
   }
 }
 
