@@ -165,18 +165,70 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file-coverage-mode: changes
 
-      - name: Generate Coverage Badge
+      - name: Extract coverage percentages
         if: matrix.check == 'test' && github.ref == 'refs/heads/master'
-        run: npx make-coverage-badge --output-path public/badges/coverage.svg
-
-      - name: Commit Coverage Badge
-        if: matrix.check == 'test' && github.ref == 'refs/heads/master'
+        id: coverage
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add --force public/badges/coverage.svg
-          git diff --staged --quiet || git commit -m "chore: update coverage badge [skip ci]"
-          git push
+          LINES=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          BRANCHES=$(jq '.total.branches.pct' coverage/coverage-summary.json)
+          FUNCTIONS=$(jq '.total.functions.pct' coverage/coverage-summary.json)
+          STATEMENTS=$(jq '.total.statements.pct' coverage/coverage-summary.json)
+          echo "lines=$LINES" >> $GITHUB_OUTPUT
+          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+          echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+          echo "statements=$STATEMENTS" >> $GITHUB_OUTPUT
+
+      - name: Update Lines badge
+        if: matrix.check == 'test' && github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ vars.COVERAGE_GIST_ID }}
+          filename: coverage-lines.json
+          label: lines
+          message: ${{ steps.coverage.outputs.lines }}%
+          valColorRange: ${{ steps.coverage.outputs.lines }}
+          maxColorRange: 100
+          minColorRange: 0
+
+      - name: Update Branches badge
+        if: matrix.check == 'test' && github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ vars.COVERAGE_GIST_ID }}
+          filename: coverage-branches.json
+          label: branches
+          message: ${{ steps.coverage.outputs.branches }}%
+          valColorRange: ${{ steps.coverage.outputs.branches }}
+          maxColorRange: 100
+          minColorRange: 0
+
+      - name: Update Functions badge
+        if: matrix.check == 'test' && github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ vars.COVERAGE_GIST_ID }}
+          filename: coverage-functions.json
+          label: functions
+          message: ${{ steps.coverage.outputs.functions }}%
+          valColorRange: ${{ steps.coverage.outputs.functions }}
+          maxColorRange: 100
+          minColorRange: 0
+
+      - name: Update Statements badge
+        if: matrix.check == 'test' && github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ vars.COVERAGE_GIST_ID }}
+          filename: coverage-statements.json
+          label: statements
+          message: ${{ steps.coverage.outputs.statements }}%
+          valColorRange: ${{ steps.coverage.outputs.statements }}
+          maxColorRange: 100
+          minColorRange: 0
 
   validation:
     runs-on: ubuntu-latest

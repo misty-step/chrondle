@@ -191,9 +191,6 @@ importers:
       lint-staged:
         specifier: 16.1.2
         version: 16.1.2
-      make-coverage-badge:
-        specifier: ^1.2.0
-        version: 1.2.0
       prettier-plugin-tailwindcss:
         specifier: ^0.6.14
         version: 0.6.14(prettier@3.5.3)
@@ -3939,11 +3936,6 @@ packages:
   magicast@0.3.5:
     resolution: {integrity: sha512-L0WhttDl+2BOsybvEOLK7fW3UA0OQ0IQ2d6Zl2x/a6vVRs3bAY0ECOSHHeL5jD+SbOpOCUEi0y1DgHEn9Qn1AQ==}
 
-  make-coverage-badge@1.2.0:
-    resolution: {integrity: sha512-nA1eQZJ9vcY2UoQLVIdzqyRoNtAZHWlXJfrHkaMB/pQgTYBPmbImkykfxWeAtUQuLJXzb6eAhbR7nEgrt+S7FA==}
-    engines: {node: '>=6.11', npm: '>=5.3'}
-    hasBin: true
-
   make-dir@4.0.0:
     resolution: {integrity: sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==}
     engines: {node: '>=10'}
@@ -4131,10 +4123,6 @@ packages:
         optional: true
       react-dom:
         optional: true
-
-  mri@1.1.4:
-    resolution: {integrity: sha512-6y7IjGPm8AzlvoUrwAaw1tLnUBudaS3752vcd8JtrpGGQn+rXIe63LFVHm/YMwtqAuh+LJPCFdlLYPWM1nYn6w==}
-    engines: {node: '>=4'}
 
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
@@ -9524,10 +9512,6 @@ snapshots:
       '@babel/types': 7.27.6
       source-map-js: 1.2.1
 
-  make-coverage-badge@1.2.0:
-    dependencies:
-      mri: 1.1.4
-
   make-dir@4.0.0:
     dependencies:
       semver: 7.7.2
@@ -9822,8 +9806,6 @@ snapshots:
     optionalDependencies:
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
-
-  mri@1.1.4: {}
 
   mrmime@2.0.1: {}
 
