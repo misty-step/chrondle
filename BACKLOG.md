@@ -230,6 +230,36 @@ export function GET() {
 
 ## Next (This Quarter, <3 months)
 
+### [QUALITY] LOW - Coverage Badge Cache-Busting
+
+**File**: `README.md:3`
+**Source**: PR #66 review feedback
+**Problem**: `raw.githubusercontent.com` CDN may cache badge for hours, showing stale coverage
+**Options**:
+
+- Use shields.io dynamic badge with JSON endpoint
+- Add `?v=timestamp` cache-bust param to badge URL
+- Document expected cache delay in README
+  **Effort**: 30m | **Benefit**: Fresh badge data
+  **Acceptance**: Badge updates within 5 minutes of master push
+
+---
+
+### [QUALITY] LOW - Coverage Trend Tracking
+
+**Files**: `.github/workflows/ci.yml`, new dashboard or external service
+**Source**: PR #66 review feedback
+**Problem**: No visibility into coverage trends over time
+**Options**:
+
+- Integrate Codecov/Coveralls (free tier)
+- Store historical coverage in JSON file, build simple chart
+- Use GitHub Actions artifact retention for history
+  **Effort**: 1-2h | **Benefit**: Track coverage improvements over time
+  **Acceptance**: Historical coverage data accessible for last 30 days
+
+---
+
 ### [QUALITY] HIGH - Toast Provider Unmount Cleanup
 
 **File**: `src/hooks/use-toast.tsx:51-61`
