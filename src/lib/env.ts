@@ -17,15 +17,15 @@ interface EnvValidationResult {
  * Validates all required environment variables (client and server)
  * @returns Validation result with missing variables
  *
- * Note: This function is context-aware. During build/SSG (server-side, non-production),
- * it skips validation since env vars are embedded at build time and validated at runtime.
- * This prevents false failures during Next.js static generation.
+ * Note: This function validates NEXT_PUBLIC_* vars which are client-side only.
+ * On server (SSG/build), these vars may not be available and validation is
+ * meaningless - skip entirely. The deep module owns its execution context.
  */
 export function validateEnvironment(): EnvValidationResult {
-  // Skip validation during build/SSG - env vars are embedded at build time
-  // and validated at runtime when actually used. This handles the case where
-  // Next.js prerenders pages before runtime environment is available.
-  if (typeof window === "undefined" && process.env.NODE_ENV !== "production") {
+  // Server-side: skip validation. NEXT_PUBLIC_* vars are client-side only,
+  // embedded in the JS bundle at build time. Validation only makes sense
+  // in browser where we can show error UI to users.
+  if (typeof window === "undefined") {
     return { isValid: true, missingVars: [], warnings: [] };
   }
 
