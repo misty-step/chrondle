@@ -1,5 +1,3 @@
-"use node";
-
 /**
  * Shared helpers for redacting sensitive values from errors before logging.
  *

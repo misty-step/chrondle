@@ -26,7 +26,7 @@ export function ArchiveOrderPuzzleClient({
 }: ArchiveOrderPuzzleClientProps): React.ReactElement {
   const { addToast } = useToast();
   const { share, shareMethod } = useWebShare();
-  const { gameState, reorderEvents, submitAttempt, isSubmitting } = useOrderGame(
+  const { gameState, reorderEvents, submitAttempt, isSubmitting, lastError } = useOrderGame(
     puzzleNumber,
     initialPuzzle,
     addToast,
@@ -135,6 +135,7 @@ export function ArchiveOrderPuzzleClient({
               reorderEvents={reorderEvents}
               submitAttempt={submitAttempt}
               isSubmitting={isSubmitting}
+              lastError={lastError}
             />
           </LayoutContainer>
         </main>

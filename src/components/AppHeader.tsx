@@ -9,6 +9,7 @@ import { AdminButton } from "@/components/AdminButton";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import SupportModal from "@/components/SupportModal";
 import { ModeDropdown } from "@/components/ModeDropdown";
+import { MobileNavMenu } from "@/components/MobileNavMenu";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { NavbarButton } from "@/components/ui/NavbarButton";
 import { formatPuzzleNumber } from "@/lib/puzzleUtils";
@@ -119,12 +120,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               {/* Mobile Mode Dropdown */}
               <ModeDropdown className="flex sm:hidden" />
 
+              {/* Mobile Hamburger Menu - contains Archive, Support, Theme, Auth */}
+              <MobileNavMenu
+                archiveHref={archiveHref}
+                onSupportClick={() => setShowSupport(true)}
+              />
+
+              {/* Desktop-only buttons below */}
+
               {/* Archive Button */}
               <NavbarButton
                 href={archiveHref}
                 title="Browse puzzle archive"
                 aria-label="Browse puzzle archive"
                 overlayColor="primary"
+                className="hidden sm:flex"
               >
                 <Archive className="h-5 w-5" />
               </NavbarButton>
@@ -135,19 +145,19 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 title="Support Chrondle"
                 aria-label="Support Chrondle"
                 overlayColor="rose"
-                className={cn(showHeartbeat && "animate-heartbeat")}
+                className={cn("hidden sm:flex", showHeartbeat && "animate-heartbeat")}
               >
                 <Heart className="text-body-primary h-4 w-4 transition-colors group-hover:text-rose-600" />
               </NavbarButton>
 
               {/* Admin Button - Only visible to admins */}
-              <AdminButton />
+              <AdminButton className="hidden sm:flex" />
 
               {/* Theme Toggle */}
-              <ThemeToggle />
+              <ThemeToggle className="hidden sm:flex" />
 
-              {/* Auth Buttons - Rightmost */}
-              <AuthButtons />
+              {/* Auth Buttons - Rightmost (desktop only) */}
+              <AuthButtons className="hidden sm:flex" />
             </div>
           </div>
         </LayoutContainer>

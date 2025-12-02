@@ -22,7 +22,7 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
   const puzzle = usePreloadedQuery(preloadedPuzzle);
   const { addToast } = useToast();
   const { share, shareMethod } = useWebShare();
-  const { gameState, reorderEvents, submitAttempt, isSubmitting } = useOrderGame(
+  const { gameState, reorderEvents, submitAttempt, isSubmitting, lastError } = useOrderGame(
     undefined,
     puzzle,
     addToast,
@@ -105,6 +105,7 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
           reorderEvents={reorderEvents}
           submitAttempt={submitAttempt}
           isSubmitting={isSubmitting}
+          lastError={lastError}
         />
       </LayoutContainer>
     </GameModeLayout>

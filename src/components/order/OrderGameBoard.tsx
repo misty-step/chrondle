@@ -7,12 +7,14 @@ import { AttemptHistory } from "@/components/order/AttemptFeedback";
 import { GameCard } from "@/components/ui/GameCard";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import type { OrderAttempt, ReadyState, PositionFeedback } from "@/types/orderGameState";
+import type { MutationError } from "@/observability/mutationErrorAdapter";
 
 interface OrderGameBoardProps {
   gameState: ReadyState;
   reorderEvents: (fromIndex: number, toIndex: number) => void;
   submitAttempt: () => Promise<OrderAttempt | null>;
   isSubmitting: boolean;
+  lastError?: MutationError | null;
 }
 
 export function OrderGameBoard({
@@ -20,6 +22,7 @@ export function OrderGameBoard({
   reorderEvents,
   submitAttempt,
   isSubmitting,
+  lastError,
 }: OrderGameBoardProps) {
   const { puzzle, currentOrder, attempts } = gameState;
 
@@ -96,6 +99,21 @@ export function OrderGameBoard({
         <SubmitButton onClick={handleSubmit} disabled={isSubmitting}>
           {isSubmitting ? "Checking..." : buttonText}
         </SubmitButton>
+
+        {/* Inline error feedback */}
+        {lastError && (
+          <div
+            className="text-destructive bg-destructive/5 border-destructive/20 rounded-sm border px-4 py-3 text-sm"
+            role="alert"
+          >
+            <p className="font-medium">{lastError.message}</p>
+            {lastError.retryable && (
+              <p className="text-destructive/80 mt-1 text-xs">
+                Tap &ldquo;Try Again&rdquo; to resubmit.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

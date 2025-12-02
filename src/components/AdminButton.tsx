@@ -4,13 +4,17 @@ import { useUser } from "@clerk/nextjs";
 import { NavbarButton } from "@/components/ui/NavbarButton";
 import { Settings } from "lucide-react";
 
+interface AdminButtonProps {
+  className?: string;
+}
+
 /**
  * Admin Button - Conditional navigation to admin dashboard
  *
  * Only visible to users with admin role in Clerk publicMetadata.
  * Checks: publicMetadata.role === "admin" OR "admin" in publicMetadata.roles array
  */
-export function AdminButton() {
+export function AdminButton({ className }: AdminButtonProps) {
   const { isLoaded, user } = useUser();
 
   // Don't render until auth is loaded
@@ -34,6 +38,7 @@ export function AdminButton() {
       title="Admin dashboard"
       aria-label="Open admin dashboard"
       overlayColor="primary"
+      className={className}
     >
       <Settings className="h-5 w-5" />
     </NavbarButton>

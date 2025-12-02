@@ -33,6 +33,10 @@ interface UseOrderGameReturn {
   submitAttempt: () => Promise<OrderAttempt | null>;
   /** True while submitting and persisting a winning attempt */
   isSubmitting: boolean;
+  /** Last error from submission attempt (null if none or cleared) */
+  lastError: MutationError | null;
+  /** Clear the last error */
+  clearError: () => void;
 }
 
 // =============================================================================
@@ -45,6 +49,7 @@ export function useOrderGame(
   addToast?: (toast: Omit<Toast, "id">) => void,
 ): UseOrderGameReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastError, setLastError] = useState<MutationError | null>(null);
   const puzzle = useOrderPuzzleData(puzzleNumber, initialPuzzle);
   const auth = useAuthState();
   const progress = useOrderProgress(auth.userId, puzzle.puzzle?.id ?? null);
@@ -123,6 +128,16 @@ export function useOrderGame(
       allAttempts: OrderAttempt[],
       score: AttemptScore,
     ): Promise<[boolean, null] | [null, MutationError]> => {
+      // DEBUG: Log submission context
+      logger.info("[persistToServer] Starting submission", {
+        isAuthenticated: auth.isAuthenticated,
+        userId: auth.userId,
+        puzzleId: puzzle.puzzle?.id,
+        attemptCount: allAttempts.length,
+        finalOrdering: finalAttempt.ordering,
+        feedback: finalAttempt.feedback,
+      });
+
       const authCheck = checkSubmissionAuth(
         {
           isAuthenticated: auth.isAuthenticated,
@@ -158,6 +173,13 @@ export function useOrderGame(
         ];
       }
 
+      logger.info("[persistToServer] Calling submitOrderPlay mutation", {
+        puzzleId: puzzle.puzzle.id,
+        userId: auth.userId,
+        ordering: finalAttempt.ordering,
+        attemptCount: allAttempts.length,
+      });
+
       const result = await safeMutation(
         async () => {
           const puzzleId = assertConvexId(puzzle.puzzle!.id, "orderPuzzles");
@@ -180,6 +202,18 @@ export function useOrderGame(
         },
       );
 
+      // DEBUG: Log result
+      if (result[0]) {
+        logger.info("[persistToServer] Success");
+      } else {
+        logger.error("[persistToServer] Failed", {
+          errorCode: result[1]?.code,
+          errorMessage: result[1]?.message,
+          retryable: result[1]?.retryable,
+          originalError: result[1]?.originalError,
+        });
+      }
+
       logSubmissionAttempt("order", "submitAttempt", authCheck, result[0] ? "success" : "failure");
       return result;
     },
@@ -189,6 +223,10 @@ export function useOrderGame(
   // =========================================================================
   // Submit Attempt
   // =========================================================================
+
+  const clearError = useCallback(() => {
+    setLastError(null);
+  }, []);
 
   const submitAttempt = useCallback(async (): Promise<OrderAttempt | null> => {
     // Guard: prevent double-submit
@@ -201,6 +239,8 @@ export function useOrderGame(
       return null;
     }
 
+    // Clear any previous error on new submission
+    setLastError(null);
     setIsSubmitting(true);
 
     try {
@@ -225,6 +265,8 @@ export function useOrderGame(
           // Only mark completed after server confirms persistence
           session.markCompleted(score);
         } else {
+          // Set error state for inline display
+          setLastError(error);
           // Show toast on failure - game stays playable for retry
           addToast?.({
             title: "Couldn't save result",
@@ -248,7 +290,9 @@ export function useOrderGame(
       reorderEvents,
       submitAttempt,
       isSubmitting,
+      lastError,
+      clearError,
     }),
-    [gameState, reorderEvents, submitAttempt, isSubmitting],
+    [gameState, reorderEvents, submitAttempt, isSubmitting, lastError, clearError],
   );
 }
