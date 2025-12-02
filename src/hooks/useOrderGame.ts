@@ -250,13 +250,14 @@ export function useOrderGame(
       // Create the attempt with feedback
       const attempt = createAttempt(ordering, events);
 
-      // Add attempt to session (for immediate UI feedback)
-      session.addAttempt(attempt);
-
-      // Check if solved
+      // Check if solved BEFORE adding to session (prevents attempt duplication on retry)
       if (isSolved(attempt)) {
+        // Compute allAttempts from pre-mutation state to avoid counting attempt twice
         const allAttempts = [...sessionAttemptsRef.current, attempt];
         const score = calculateAttemptScore(allAttempts);
+
+        // Add attempt to session for UI feedback
+        session.addAttempt(attempt);
 
         // Persist to server FIRST (await result!)
         const [success, error] = await persistToServer(attempt, allAttempts, score);
@@ -276,6 +277,9 @@ export function useOrderGame(
             variant: "destructive",
           });
         }
+      } else {
+        // Not solved - add attempt to session for UI feedback
+        session.addAttempt(attempt);
       }
 
       return attempt;
