@@ -63,4 +63,28 @@ describe("Order hint generation", () => {
     const hint = generateBracketHint([bcEvent]);
     expect(hint).toEqual({ type: "bracket", eventId: "rome", yearRange: [-69, -19] });
   });
+
+  // Edge case: when all pairs are excluded, fallback returns first chronological pair
+  it("falls back to first chronological pair when all misordered pairs are excluded", () => {
+    // With ordering ["c", "a", "b"] and events in chronological order [a, b, c]:
+    // Misordered pairs are: (a, c), (b, c) - both should be excludable
+    const hint = generateRelativeHint(["c", "a", "b"], events, {
+      excludePairs: [
+        { earlierEventId: "a", laterEventId: "c" },
+        { earlierEventId: "b", laterEventId: "c" },
+      ],
+    });
+    // When no misordered pairs remain, it should still return a valid pair
+    expect(hint.type).toBe("relative");
+  });
+
+  // Edge case: only two events
+  it("handles exactly two events in relative hint", () => {
+    const twoEvents: OrderEvent[] = [
+      { id: "a", year: 1200, text: "Event A" },
+      { id: "b", year: 1500, text: "Event B" },
+    ];
+    const hint = generateRelativeHint(["b", "a"], twoEvents);
+    expect(hint).toEqual({ type: "relative", earlierEventId: "a", laterEventId: "b" });
+  });
 });

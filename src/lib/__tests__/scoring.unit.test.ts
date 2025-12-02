@@ -62,6 +62,10 @@ describe("scoreRange", () => {
     expect(() => scoreRange(1950, 1950, 1950, 0, 7 as never)).toThrow(/between 0 and 6 inclusive/i);
   });
 
+  it("rejects negative tolerance values", () => {
+    expect(() => scoreRange(1950, 1960, 1955, -1)).toThrow(/tolerance cannot be negative/i);
+  });
+
   it("ensures a minimum score floor for maximum width ranges (0 hints)", () => {
     // Width W_MAX, 0 hints.
     // Old logic: 0 pts. New logic (5% floor): MIN_WIDTH_FACTOR_FLOOR * MAX_SCORES_BY_HINTS[0]

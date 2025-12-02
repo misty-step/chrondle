@@ -115,5 +115,26 @@ describe("generateShareText", () => {
       const result = generateShareText([], 0, false);
       expect(result).toContain("Chrondle share text generation failed");
     });
+
+    it("returns fallback text for ranges with invalid start type", () => {
+      const invalidRanges = [
+        { start: "not a number", end: 1950, hintsUsed: 0 },
+      ] as unknown as RangeGuess[];
+      const result = generateShareText(invalidRanges, 80, true);
+      expect(result).toContain("Chrondle share text generation failed");
+    });
+
+    it("defaults hintsUsed to 0 when not provided", () => {
+      const rangesWithoutHints = [
+        {
+          start: 1950,
+          end: 1960,
+          score: 50,
+          timestamp: Date.now(),
+        },
+      ] as RangeGuess[];
+      const result = generateShareText(rangesWithoutHints, 50, true, 1);
+      expect(result).toContain("Hints: ⬜⬜⬜⬜⬜⬜");
+    });
   });
 });
