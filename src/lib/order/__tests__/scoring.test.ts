@@ -27,4 +27,23 @@ describe("calculateOrderScore", () => {
     expect(partial.hintsUsed).toBe(2);
     expect(partial.totalScore).toBe(partial.correctPairs * 2);
   });
+
+  it("falls back to event order when ordering is empty", () => {
+    const result = calculateOrderScore([], events, 0);
+    // Empty ordering defaults to events in their original order [a, b, c, d]
+    // which is perfect, so all pairs correct
+    expect(result.correctPairs).toBe(6);
+    expect(result.totalPairs).toBe(6);
+  });
+
+  it("counts perfect positions correctly", () => {
+    // Only 'a' and 'd' are in correct position
+    const result = calculateOrderScore(["a", "c", "b", "d"], events, 0);
+    expect(result.perfectPositions).toBe(2);
+  });
+
+  it("counts all positions correct for perfect ordering", () => {
+    const result = calculateOrderScore(["a", "b", "c", "d"], events, 0);
+    expect(result.perfectPositions).toBe(4);
+  });
 });

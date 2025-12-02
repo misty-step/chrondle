@@ -1,5 +1,7 @@
 # Chrondle: The Daily History Game
 
+![Coverage](https://raw.githubusercontent.com/misty-step/chrondle/master/public/badges/coverage.svg)
+
 **Chrondle** is an engaging web-based puzzle game where your knowledge of history is put to the test! Guess the year of a historical event based on a series of revealing clues. Each day brings a new challenge, spanning millennia of human history.
 
 ## Features
