@@ -1,22 +1,30 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { OrderEventList } from "@/components/order/OrderEventList";
 import { OrderInstructions } from "@/components/order/OrderInstructions";
 import { AttemptHistory } from "@/components/order/AttemptFeedback";
 import { GameCard } from "@/components/ui/GameCard";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import type { OrderAttempt, ReadyState, PositionFeedback } from "@/types/orderGameState";
+import type { MutationError } from "@/observability/mutationErrorAdapter";
 
 interface OrderGameBoardProps {
   gameState: ReadyState;
   reorderEvents: (fromIndex: number, toIndex: number) => void;
   submitAttempt: () => Promise<OrderAttempt | null>;
+  isSubmitting: boolean;
+  lastError?: MutationError | null;
 }
 
-export function OrderGameBoard({ gameState, reorderEvents, submitAttempt }: OrderGameBoardProps) {
+export function OrderGameBoard({
+  gameState,
+  reorderEvents,
+  submitAttempt,
+  isSubmitting,
+  lastError,
+}: OrderGameBoardProps) {
   const { puzzle, currentOrder, attempts } = gameState;
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get feedback from last attempt to show on cards
   const lastAttemptFeedback = useMemo((): PositionFeedback[] | undefined => {
@@ -60,12 +68,7 @@ export function OrderGameBoard({ gameState, reorderEvents, submitAttempt }: Orde
   );
 
   const handleSubmit = useCallback(async () => {
-    setIsSubmitting(true);
-    try {
-      await submitAttempt();
-    } finally {
-      setIsSubmitting(false);
-    }
+    await submitAttempt();
   }, [submitAttempt]);
 
   const buttonText = attempts.length === 0 ? "Check Order" : "Try Again";
@@ -96,6 +99,21 @@ export function OrderGameBoard({ gameState, reorderEvents, submitAttempt }: Orde
         <SubmitButton onClick={handleSubmit} disabled={isSubmitting}>
           {isSubmitting ? "Checking..." : buttonText}
         </SubmitButton>
+
+        {/* Inline error feedback */}
+        {lastError && (
+          <div
+            className="text-destructive bg-destructive/5 border-destructive/20 rounded-sm border px-4 py-3 text-sm"
+            role="alert"
+          >
+            <p className="font-medium">{lastError.message}</p>
+            {lastError.retryable && (
+              <p className="text-destructive/80 mt-1 text-xs">
+                Tap &ldquo;Try Again&rdquo; to resubmit.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -26,6 +26,7 @@ import type * as crons from "../crons.js";
 import type * as events from "../events.js";
 import type * as generationLogs from "../generationLogs.js";
 import type * as lib_alerts from "../lib/alerts.js";
+import type * as lib_auth from "../lib/auth.js";
 import type * as lib_coverageOrchestrator from "../lib/coverageOrchestrator.js";
 import type * as lib_errorSanitization from "../lib/errorSanitization.js";
 import type * as lib_eventValidation from "../lib/eventValidation.js";
@@ -94,6 +95,7 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   generationLogs: typeof generationLogs;
   "lib/alerts": typeof lib_alerts;
+  "lib/auth": typeof lib_auth;
   "lib/coverageOrchestrator": typeof lib_coverageOrchestrator;
   "lib/errorSanitization": typeof lib_errorSanitization;
   "lib/eventValidation": typeof lib_eventValidation;

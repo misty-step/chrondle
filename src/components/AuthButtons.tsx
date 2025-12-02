@@ -7,7 +7,11 @@ import { AuthSkeleton } from "@/components/skeletons/AuthSkeleton";
 import { isMobileDevice } from "@/lib/platformDetection";
 import { useEffect, useState } from "react";
 
-export function AuthButtons() {
+interface AuthButtonsProps {
+  className?: string;
+}
+
+export function AuthButtons({ className }: AuthButtonsProps) {
   const { isLoaded, isSignedIn } = useUser();
   const [isMobile, setIsMobile] = useState(false);
 
@@ -18,13 +22,17 @@ export function AuthButtons() {
 
   // Show skeleton while auth is loading to prevent flash
   if (!isLoaded) {
-    return <AuthSkeleton />;
+    return (
+      <div className={className}>
+        <AuthSkeleton />
+      </div>
+    );
   }
 
   // User is signed in - show user button
   if (isSignedIn) {
     return (
-      <div className="flex h-10 w-10 items-center justify-center">
+      <div className={`flex h-10 w-10 items-center justify-center ${className ?? ""}`}>
         <UserButton
           afterSignOutUrl="/"
           appearance={{
@@ -47,6 +55,7 @@ export function AuthButtons() {
         title="Sign in to save progress and access archive"
         aria-label="Sign in to your account"
         overlayColor="primary"
+        className={className}
       >
         <LogIn className="h-5 w-5" />
       </NavbarButton>

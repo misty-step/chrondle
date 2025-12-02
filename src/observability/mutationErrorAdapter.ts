@@ -36,16 +36,34 @@ export function classifyMutationError(error: unknown): MutationError {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
 
-    // Auth errors
+    // Auth errors - catch various patterns from Convex mutations
     if (
       message.includes("unauthenticated") ||
       message.includes("unauthorized") ||
-      message.includes("forbidden")
+      message.includes("forbidden") ||
+      message.includes("authentication required") ||
+      message.includes("user not found") ||
+      message.includes("not authenticated")
     ) {
       return {
         code: "AUTH",
         message: "Please sign in to perform this action.",
         retryable: false,
+        originalError: error,
+      };
+    }
+
+    // Validation errors from server-side checks
+    if (
+      message.includes("validation failed") ||
+      message.includes("score verification failed") ||
+      message.includes("puzzle not found") ||
+      message.includes("mismatch")
+    ) {
+      return {
+        code: "VALIDATION",
+        message: "Something went wrong validating your submission. Please try again.",
+        retryable: true,
         originalError: error,
       };
     }

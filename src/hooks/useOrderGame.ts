@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import { useAuthState } from "@/hooks/data/useAuthState";
 import { useOrderPuzzleData } from "@/hooks/data/useOrderPuzzleData";
@@ -18,6 +18,7 @@ import { createAttempt, calculateAttemptScore, isSolved } from "@/lib/order/atte
 import { assertConvexId } from "@/lib/validation";
 import type { AttemptScore, OrderAttempt, OrderGameState } from "@/types/orderGameState";
 import { logger } from "@/lib/logger";
+import type { Toast } from "@/hooks/use-toast";
 
 // =============================================================================
 // Hook Interface
@@ -30,13 +31,25 @@ interface UseOrderGameReturn {
   reorderEvents: (fromIndex: number, toIndex: number) => void;
   /** Submit current ordering as an attempt; returns the attempt with feedback */
   submitAttempt: () => Promise<OrderAttempt | null>;
+  /** True while submitting and persisting a winning attempt */
+  isSubmitting: boolean;
+  /** Last error from submission attempt (null if none or cleared) */
+  lastError: MutationError | null;
+  /** Clear the last error */
+  clearError: () => void;
 }
 
 // =============================================================================
 // Hook Implementation
 // =============================================================================
 
-export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): UseOrderGameReturn {
+export function useOrderGame(
+  puzzleNumber?: number,
+  initialPuzzle?: unknown,
+  addToast?: (toast: Omit<Toast, "id">) => void,
+): UseOrderGameReturn {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastError, setLastError] = useState<MutationError | null>(null);
   const puzzle = useOrderPuzzleData(puzzleNumber, initialPuzzle);
   const auth = useAuthState();
   const progress = useOrderProgress(auth.userId, puzzle.puzzle?.id ?? null);
@@ -115,6 +128,16 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
       allAttempts: OrderAttempt[],
       score: AttemptScore,
     ): Promise<[boolean, null] | [null, MutationError]> => {
+      // DEBUG: Log submission context
+      logger.info("[persistToServer] Starting submission", {
+        isAuthenticated: auth.isAuthenticated,
+        userId: auth.userId,
+        puzzleId: puzzle.puzzle?.id,
+        attemptCount: allAttempts.length,
+        finalOrdering: finalAttempt.ordering,
+        feedback: finalAttempt.feedback,
+      });
+
       const authCheck = checkSubmissionAuth(
         {
           isAuthenticated: auth.isAuthenticated,
@@ -150,6 +173,13 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
         ];
       }
 
+      logger.info("[persistToServer] Calling submitOrderPlay mutation", {
+        puzzleId: puzzle.puzzle.id,
+        userId: auth.userId,
+        ordering: finalAttempt.ordering,
+        attemptCount: allAttempts.length,
+      });
+
       const result = await safeMutation(
         async () => {
           const puzzleId = assertConvexId(puzzle.puzzle!.id, "orderPuzzles");
@@ -172,6 +202,18 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
         },
       );
 
+      // DEBUG: Log result
+      if (result[0]) {
+        logger.info("[persistToServer] Success");
+      } else {
+        logger.error("[persistToServer] Failed", {
+          errorCode: result[1]?.code,
+          errorMessage: result[1]?.message,
+          retryable: result[1]?.retryable,
+          originalError: result[1]?.originalError,
+        });
+      }
+
       logSubmissionAttempt("order", "submitAttempt", authCheck, result[0] ? "success" : "failure");
       return result;
     },
@@ -182,42 +224,79 @@ export function useOrderGame(puzzleNumber?: number, initialPuzzle?: unknown): Us
   // Submit Attempt
   // =========================================================================
 
+  const clearError = useCallback(() => {
+    setLastError(null);
+  }, []);
+
   const submitAttempt = useCallback(async (): Promise<OrderAttempt | null> => {
+    // Guard: prevent double-submit
+    if (isSubmitting) {
+      return null;
+    }
+
     if (!puzzle.puzzle) {
       logger.error("[useOrderGame] Cannot submit attempt: no puzzle");
       return null;
     }
 
-    const ordering = sessionOrderingRef.current;
-    const events = puzzle.puzzle.events;
+    // Clear any previous error on new submission
+    setLastError(null);
+    setIsSubmitting(true);
 
-    // Create the attempt with feedback
-    const attempt = createAttempt(ordering, events);
+    try {
+      const ordering = sessionOrderingRef.current;
+      const events = puzzle.puzzle.events;
 
-    // Add attempt to session
-    session.addAttempt(attempt);
+      // Create the attempt with feedback
+      const attempt = createAttempt(ordering, events);
 
-    // Check if solved
-    if (isSolved(attempt)) {
-      const allAttempts = [...sessionAttemptsRef.current, attempt];
-      const score = calculateAttemptScore(allAttempts);
+      // Check if solved BEFORE adding to session (prevents attempt duplication on retry)
+      if (isSolved(attempt)) {
+        // Compute allAttempts from pre-mutation state to avoid counting attempt twice
+        const allAttempts = [...sessionAttemptsRef.current, attempt];
+        const score = calculateAttemptScore(allAttempts);
 
-      // Mark completed locally
-      session.markCompleted(score);
+        // Add attempt to session for UI feedback
+        session.addAttempt(attempt);
 
-      // Persist to server for authenticated users
-      await persistToServer(attempt, allAttempts, score);
+        // Persist to server FIRST (await result!)
+        const [success, error] = await persistToServer(attempt, allAttempts, score);
+
+        if (success) {
+          // Only mark completed after server confirms persistence
+          session.markCompleted(score);
+        } else {
+          // Set error state for inline display
+          setLastError(error);
+          // Show toast on failure - game stays playable for retry
+          addToast?.({
+            title: "Couldn't save result",
+            description: error?.retryable
+              ? "Your progress wasn't saved. Try submitting again."
+              : "Something went wrong. Your local progress is preserved.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        // Not solved - add attempt to session for UI feedback
+        session.addAttempt(attempt);
+      }
+
+      return attempt;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    return attempt;
-  }, [puzzle.puzzle, session, persistToServer]);
+  }, [isSubmitting, puzzle.puzzle, session, persistToServer, addToast]);
 
   return useMemo(
     () => ({
       gameState,
       reorderEvents,
       submitAttempt,
+      isSubmitting,
+      lastError,
+      clearError,
     }),
-    [gameState, reorderEvents, submitAttempt],
+    [gameState, reorderEvents, submitAttempt, isSubmitting, lastError, clearError],
   );
 }
