@@ -22,6 +22,7 @@ const baseConfig = {
       "**/node_modules/**",
       "**/dist/**",
       "**/cypress/**",
+      "**/e2e/**",
       "**/.{idea,git,cache,output,temp}/**",
       "src/lib/__tests__/performance.integration.test.ts",
     ],
@@ -40,12 +41,12 @@ const baseConfig = {
         ".next/**",
         "convex/_generated/**",
       ],
-      // Coverage thresholds - ratcheted up from 14/25/65/14
+      // Coverage thresholds - ratcheted up from 28/55/74/28
       thresholds: {
-        lines: 28, // Improved from 14% → 28%
-        functions: 55, // Improved from 25% → 55%
-        branches: 74, // Improved from 65% → 74%
-        statements: 28, // Improved from 14% → 28%
+        lines: 30, // Improved from 28% → 30%
+        functions: 58, // Improved from 55% → 58%
+        branches: 75, // Improved from 74% → 75%
+        statements: 30, // Improved from 28% → 30%
       },
     },
   },
