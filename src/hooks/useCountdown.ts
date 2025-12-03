@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "convex/_generated/api";
-import { formatCountdown, getTimeUntilMidnight } from "@/lib/display/formatting";
+import { formatCountdown, getTimeUntilMidnight } from "@/lib/displayFormatting";
 import { logger } from "@/lib/logger";
 
 export interface UseCountdownReturn {

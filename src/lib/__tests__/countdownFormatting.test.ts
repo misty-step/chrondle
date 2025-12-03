@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { getTimeUntilMidnight, formatCountdown } from "../formatting";
+import { getTimeUntilMidnight, formatCountdown } from "../displayFormatting";
 
 // =============================================================================
 // formatCountdown

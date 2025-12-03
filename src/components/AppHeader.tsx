@@ -12,7 +12,6 @@ import { ModeDropdown } from "@/components/ModeDropdown";
 import { MobileNavMenu } from "@/components/MobileNavMenu";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { NavbarButton } from "@/components/ui/NavbarButton";
-import { formatPuzzleNumber } from "@/lib/puzzleUtils";
 import { getStreakColorClasses } from "@/lib/ui/streak-styling";
 import { cn } from "@/lib/utils";
 
@@ -84,7 +83,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                       isArchive ? "text-muted-foreground italic" : "text-foreground/70",
                     )}
                   >
-                    {formatPuzzleNumber(puzzleNumber)}
+                    {`#${puzzleNumber}`}
                   </span>
                 </>
               )}
