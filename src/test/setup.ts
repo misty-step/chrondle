@@ -72,27 +72,33 @@ beforeEach(() => {
     writable: true,
   });
 
-  // Mock matchMedia to prevent hanging in tests
-  Object.defineProperty(window, "matchMedia", {
-    value: mockMatchMedia,
-    writable: true,
-  });
+  // DOM-specific setup (skip in edge-runtime)
+  if (typeof window !== "undefined") {
+    // Mock matchMedia to prevent hanging in tests
+    Object.defineProperty(window, "matchMedia", {
+      value: mockMatchMedia,
+      writable: true,
+    });
+  }
 
-  // Ensure DOM container exists for React Testing Library
-  document.body.innerHTML = '<div id="root"></div>';
+  // Ensure DOM container exists for React Testing Library (skip in edge-runtime)
+  if (typeof document !== "undefined" && document.body) {
+    document.body.innerHTML = '<div id="root"></div>';
+  }
 });
 
 // COMPREHENSIVE CLEANUP: Force cleanup all resources after each test
 afterEach(async () => {
-
   // Clear all Vitest timers
   vi.clearAllTimers();
 
   // Clear all mocks to prevent accumulation
   vi.clearAllMocks();
 
-  // Reset DOM to prevent memory leaks
-  document.body.innerHTML = "";
+  // Reset DOM to prevent memory leaks (skip in edge-runtime)
+  if (typeof document !== "undefined" && document.body) {
+    document.body.innerHTML = "";
+  }
 
   // Force any pending microtasks to complete
   await new Promise((resolve) => setTimeout(resolve, 0));

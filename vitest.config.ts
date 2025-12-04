@@ -15,6 +15,13 @@ const baseConfig = {
         minThreads: 2,
       },
     },
+    // Use edge-runtime for Convex function tests (convex-test)
+    environmentMatchGlobs: [
+      ["convex/**/*.convex.test.ts", "edge-runtime"] as [string, "edge-runtime"],
+      ["**", "jsdom"] as [string, "jsdom"],
+    ],
+    // Inline convex-test to enable import.meta.glob transform
+    server: { deps: { inline: ["convex-test"] } },
     // Prevent tests from hanging
     testTimeout: 10000, // 10 second timeout per test
     hookTimeout: 10000, // 10 second timeout for hooks
@@ -40,13 +47,15 @@ const baseConfig = {
         "**/*.d.ts",
         ".next/**",
         "convex/_generated/**",
+        "convex/migrations/**", // One-time batch operations
+        "convex/test.setup.ts", // Test infrastructure (import.meta.glob artifacts)
       ],
-      // Coverage thresholds - ratcheted up from 28/55/74/28
+      // Coverage thresholds - ratcheted up from 30/58/75/30
       thresholds: {
-        lines: 30, // Improved from 28% → 30%
-        functions: 58, // Improved from 55% → 58%
-        branches: 75, // Improved from 74% → 75%
-        statements: 30, // Improved from 28% → 30%
+        lines: 31, // Improved from 30% → 31%
+        functions: 59, // Improved from 58% → 59%
+        branches: 76, // Improved from 75% → 76%
+        statements: 31, // Improved from 30% → 31%
       },
     },
   },

@@ -95,6 +95,7 @@
     }
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@eslint/eslintrc": "^3",
     "@next/bundle-analyzer": "15.5.3",
     "@playwright/test": "^1.57.0",
@@ -112,6 +113,7 @@
     "@welldone-software/why-did-you-render": "^10.0.1",
     "commander": "^14.0.0",
     "concurrently": "^9.2.0",
+    "convex-test": "^0.0.41",
     "dotenv": "^17.2.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",

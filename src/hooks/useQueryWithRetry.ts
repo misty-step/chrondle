@@ -4,61 +4,10 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery as useConvexQuery } from "convex/react";
 import { FunctionReference, FunctionReturnType } from "convex/server";
 import { logger } from "@/lib/logger";
+import { RetryConfig, DEFAULT_RETRY_CONFIG, calculateBackoffDelay } from "@/lib/retryUtils";
 
-/**
- * Configuration for retry behavior
- */
-interface RetryConfig {
-  maxRetries?: number;
-  baseDelayMs?: number;
-  maxDelayMs?: number;
-  shouldRetry?: (error: Error) => boolean;
-  onRetry?: (attempt: number, error: Error) => void;
-}
-
-/**
- * Default configuration for retry behavior
- */
-const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
-  maxRetries: 3,
-  baseDelayMs: 1000, // 1 second
-  maxDelayMs: 4000, // 4 seconds max
-  shouldRetry: (error: Error) => {
-    // Retry on network errors and server errors
-    const message = error.message.toLowerCase();
-    return (
-      message.includes("network") ||
-      message.includes("server error") ||
-      message.includes("timeout") ||
-      message.includes("fetch") ||
-      message.includes("convex") ||
-      message.includes("500") ||
-      message.includes("502") ||
-      message.includes("503") ||
-      message.includes("504")
-    );
-  },
-  onRetry: (attempt: number, error: Error) => {
-    logger.warn(`[useQueryWithRetry] Retry attempt ${attempt}:`, {
-      error: error.message,
-      timestamp: new Date().toISOString(),
-      stack: error.stack,
-    });
-  },
-};
-
-/**
- * Calculate exponential backoff delay with jitter
- */
-function calculateBackoffDelay(attempt: number, baseDelayMs: number, maxDelayMs: number): number {
-  // Exponential backoff: 1s, 2s, 4s
-  const exponentialDelay = baseDelayMs * Math.pow(2, attempt);
-  // Add jitter to prevent thundering herd
-  const jitter = Math.random() * 0.5 + 0.75; // ±25% jitter
-  const delayWithJitter = Math.floor(exponentialDelay * jitter);
-  // Cap at max delay
-  return Math.min(delayWithJitter, maxDelayMs);
-}
+// Re-export RetryConfig for consumers
+export type { RetryConfig };
 
 /**
  * Hook that wraps Convex useQuery with retry logic for transient errors
@@ -86,7 +35,21 @@ export function useQueryWithRetry<
   Query extends FunctionReference<"query">,
   Args = Query extends FunctionReference<"query", infer A> ? A : never,
 >(query: Query, args: Args | "skip", config?: RetryConfig): FunctionReturnType<Query> | undefined {
-  const mergedConfig = useMemo(() => ({ ...DEFAULT_RETRY_CONFIG, ...config }), [config]);
+  const mergedConfig = useMemo(
+    () => ({
+      ...DEFAULT_RETRY_CONFIG,
+      // Override onRetry to use hook-specific context
+      onRetry: (attempt: number, error: Error) => {
+        logger.warn(`[useQueryWithRetry] Retry attempt ${attempt}:`, {
+          error: error.message,
+          timestamp: new Date().toISOString(),
+          stack: error.stack,
+        });
+      },
+      ...config,
+    }),
+    [config],
+  );
 
   // Track retry state
   const [retryCount, setRetryCount] = useState(0);
@@ -162,13 +125,6 @@ export function useQueryWithRetry<
       lastErrorRef.current = null;
       return;
     }
-
-    // If result is undefined but we're not in initial loading state,
-    // this might be an error condition
-    // Note: This is a heuristic since Convex doesn't expose errors directly
-
-    // For now, we'll rely on the Convex query error handling in the query function itself
-    // and trust that it returns null on errors (as getUserPlay does)
   }, [queryResult, args]);
 
   // Log retry information in development
