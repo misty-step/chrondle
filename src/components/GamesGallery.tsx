@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowRight, Crosshair, Shuffle, GripHorizontal, Crown, Sun, Moon } from "lucide-react";
@@ -70,6 +70,19 @@ export function GamesGallery() {
   const router = useRouter();
   const [activeKey, setActiveKey] = useState<ModeKey | null>("classic");
   const { currentTheme, toggle, isMounted } = useTheme();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection for responsive layout adjustments
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    const checkMobile = () => setIsMobile(mediaQuery.matches);
+
+    checkMobile(); // Check on mount
+
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
+  }, []);
 
   const handleSelect = useCallback(
     (mode: ModeKey, route: string) => {
@@ -82,8 +95,14 @@ export function GamesGallery() {
   return (
     <main className="bg-background relative flex h-[100dvh] w-full flex-col overflow-hidden md:flex-row">
       {/* --- Branding Anchor with Theme Toggle --- */}
-      <div className="pointer-events-none absolute top-6 right-0 left-0 z-50 flex justify-center">
-        <div className="border-outline-default/30 bg-card/90 shadow-hard pointer-events-auto flex items-center gap-2 rounded-sm border-2 px-5 py-2 backdrop-blur-md dark:border-[oklch(0.45_0.03_260)] dark:shadow-[0_4px_20px_oklch(0.55_0.2_25/0.3),0_0_30px_oklch(0.65_0.22_25/0.2)]">
+      <div className={cn(
+        "pointer-events-none absolute right-0 left-0 z-50 flex justify-center transition-all duration-300",
+        "top-4 md:top-6"
+      )}>
+        <div className={cn(
+          "border-outline-default/30 bg-card/90 shadow-hard pointer-events-auto flex items-center gap-2 rounded-sm border-2 backdrop-blur-md dark:border-[oklch(0.45_0.03_260)] dark:shadow-[0_4px_20px_oklch(0.55_0.2_25/0.3),0_0_30px_oklch(0.65_0.22_25/0.2)]",
+          "px-3 py-1.5 md:px-5 md:py-2 origin-top scale-90 md:scale-100"
+        )}>
           <div className="bg-primary/10 dark:bg-vermilion/15 rounded-sm p-1.5">
             <Crown className="text-body-primary h-4 w-4 dark:text-[oklch(0.65_0.22_25)]" />
           </div>
@@ -132,7 +151,8 @@ export function GamesGallery() {
             layout
             initial={false}
             animate={{
-              flex: isActive ? 2.5 : 1,
+              // On mobile, give significantly more space to the active card
+              flex: isActive ? (isMobile ? 8 : 2.5) : 1,
             }}
             transition={{
               type: "spring",
@@ -192,7 +212,7 @@ export function GamesGallery() {
             />
 
             {/* Content Container */}
-            <div className="relative z-20 flex h-full w-full flex-col p-8 md:p-12 lg:p-16">
+            <div className="relative z-20 flex h-full w-full flex-col p-5 md:p-12 lg:p-16">
               {/* Top Bar: Icon & Badge */}
               <div className="flex items-start justify-between">
                 <div
@@ -220,7 +240,10 @@ export function GamesGallery() {
               </div>
 
               {/* Main Title Area */}
-              <div className="flex flex-1 flex-col justify-center">
+              <div className={cn(
+                "flex flex-1 flex-col justify-center",
+                isActive && "overflow-y-auto py-2" // Allow scrolling when active
+              )}>
                 <motion.div
                   animate={{
                     scale: isActive ? 1 : 0.9,
@@ -230,12 +253,12 @@ export function GamesGallery() {
                   transition={{ duration: 0.5, ease: "circOut" }}
                   className="origin-left"
                 >
-                  <h2 className="font-display text-5xl leading-none tracking-tight drop-shadow-sm sm:text-6xl md:text-7xl lg:text-8xl">
+                  <h2 className="font-display leading-none tracking-tight drop-shadow-sm text-4xl sm:text-6xl md:text-7xl lg:text-8xl">
                     {mode.title}
                   </h2>
                 </motion.div>
 
-                <div className="relative h-0">
+                <div className="relative">
                   <AnimatePresence>
                     {isActive && (
                       <motion.div
@@ -243,7 +266,7 @@ export function GamesGallery() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         transition={{ delay: 0.2, duration: 0.4, ease: "easeOut" }}
-                        className="absolute top-6 left-0 w-full max-w-lg"
+                        className="pt-6 w-full max-w-lg"
                       >
                         <p
                           className={cn(
@@ -253,7 +276,7 @@ export function GamesGallery() {
                         >
                           {mode.subtitle}
                         </p>
-                        <p className="font-serif text-xl leading-relaxed font-medium opacity-90 md:text-2xl">
+                        <p className="font-serif leading-relaxed font-medium opacity-90 text-lg md:text-2xl">
                           {mode.description}
                         </p>
                       </motion.div>
@@ -263,7 +286,7 @@ export function GamesGallery() {
               </div>
 
               {/* Bottom Bar: CTA */}
-              <div className="mt-auto flex h-20 items-end justify-between">
+              <div className="mt-auto flex h-20 items-end justify-between shrink-0">
                 {!isActive && (
                   <motion.div
                     initial={{ opacity: 0 }}
