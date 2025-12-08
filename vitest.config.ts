@@ -38,6 +38,7 @@ const baseConfig = {
       reporter: ["text", "json", "html", "json-summary"],
       reportOnFailure: true,
       exclude: [
+        // Standard exclusions
         "node_modules/**",
         "src/test/**",
         "**/*.test.{ts,tsx}",
@@ -47,15 +48,45 @@ const baseConfig = {
         "**/*.d.ts",
         ".next/**",
         "convex/_generated/**",
-        "convex/migrations/**", // One-time batch operations
-        "convex/test.setup.ts", // Test infrastructure (import.meta.glob artifacts)
+        "convex/migrations/**",
+        "convex/test.setup.ts",
+
+        // Pure type definitions (no runtime code)
+        "src/types/game.ts",
+        "src/types/range.ts",
+        "src/types/orderGameState.ts",
+        // NOTE: Keep puzzle.ts and gameState.ts - they have type guards
+
+        // Third-party UI libraries
+        "src/components/ui/**",
+        "src/components/magicui/**",
+
+        // Bootstrap/infrastructure
+        "src/lib/env.ts",
+        "src/instrumentation.ts",
+        "src/middleware.ts",
+        "src/components/providers.tsx",
+        "src/components/providers/**",
+
+        // Convex config/schema
+        "convex/auth.config.ts",
+        "convex/schema.ts",
+
+        // Root config files
+        ".lintstagedrc.js",
+        ".size-limit.mjs",
+        "sentry.*.mjs",
+        "tailwind.config.mjs",
+        "postcss.config.mjs",
+        "lefthook.yml",
+        "next.config.ts",
       ],
-      // Coverage thresholds - ratcheted up from 30/58/75/30
+      // Coverage thresholds - ratcheted to current levels
       thresholds: {
-        lines: 31, // Improved from 30% → 31%
-        functions: 59, // Improved from 58% → 59%
-        branches: 76, // Improved from 75% → 76%
-        statements: 31, // Improved from 30% → 31%
+        lines: 39,
+        functions: 69,
+        branches: 79,
+        statements: 39,
       },
     },
   },

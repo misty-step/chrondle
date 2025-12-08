@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
-import { describe, it, expect } from "vitest";
-import { api } from "../_generated/api";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { api, internal } from "../_generated/api";
 import schema from "../schema";
 import { modules } from "../test.setup";
 import type { Id } from "../_generated/dataModel";
@@ -151,6 +151,206 @@ describe("users/mutations", () => {
 
       expect(user?.email).toBe("existing@example.com"); // Original email preserved
       expect(user?.currentStreak).toBe(10); // Original stats preserved
+    });
+  });
+});
+
+describe("users/statistics", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-01-15T12:00:00.000Z")); // Monday
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  describe("updateUserStats", () => {
+    it("increments totalPlays on completion", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "stats_test_1",
+          email: "stats@test.com",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 5,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const result = await t.mutation(internal.users.statistics.updateUserStats, {
+        userId: userId!,
+        puzzleCompleted: true,
+        guessCount: 3,
+        previousPuzzleDate: undefined,
+      });
+
+      expect(result.totalPlays).toBe(6);
+    });
+
+    it("increments perfectGames on 1-guess completion", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "stats_test_2",
+          email: "perfect@test.com",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 2,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const result = await t.mutation(internal.users.statistics.updateUserStats, {
+        userId: userId!,
+        puzzleCompleted: true,
+        guessCount: 1, // Perfect game!
+        previousPuzzleDate: undefined,
+      });
+
+      expect(result.perfectGames).toBe(3);
+    });
+
+    it("continues streak when previous puzzle was yesterday", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "streak_test_1",
+          email: "streak@test.com",
+          currentStreak: 5,
+          longestStreak: 10,
+          totalPlays: 20,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const result = await t.mutation(internal.users.statistics.updateUserStats, {
+        userId: userId!,
+        puzzleCompleted: true,
+        guessCount: 2,
+        previousPuzzleDate: "2024-01-14", // Yesterday
+      });
+
+      expect(result.currentStreak).toBe(6);
+      expect(result.longestStreak).toBe(10); // Doesn't exceed
+    });
+
+    it("updates longestStreak when current exceeds it", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "streak_test_2",
+          email: "longest@test.com",
+          currentStreak: 9,
+          longestStreak: 9,
+          totalPlays: 20,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const result = await t.mutation(internal.users.statistics.updateUserStats, {
+        userId: userId!,
+        puzzleCompleted: true,
+        guessCount: 2,
+        previousPuzzleDate: "2024-01-14", // Yesterday
+      });
+
+      expect(result.currentStreak).toBe(10);
+      expect(result.longestStreak).toBe(10); // Now updated!
+    });
+
+    it("resets streak to 1 when gap > 1 day", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "streak_test_3",
+          email: "gap@test.com",
+          currentStreak: 5,
+          longestStreak: 10,
+          totalPlays: 20,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const result = await t.mutation(internal.users.statistics.updateUserStats, {
+        userId: userId!,
+        puzzleCompleted: true,
+        guessCount: 2,
+        previousPuzzleDate: "2024-01-10", // 5 days ago
+      });
+
+      expect(result.currentStreak).toBe(1); // Reset to 1
+      expect(result.longestStreak).toBe(10); // Preserved
+    });
+
+    it("resets streak to 0 on failed puzzle", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "streak_test_4",
+          email: "fail@test.com",
+          currentStreak: 5,
+          longestStreak: 10,
+          totalPlays: 20,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const result = await t.mutation(internal.users.statistics.updateUserStats, {
+        userId: userId!,
+        puzzleCompleted: false, // Failed!
+        guessCount: 6,
+        previousPuzzleDate: "2024-01-14",
+      });
+
+      expect(result.currentStreak).toBe(0);
+      expect(result.longestStreak).toBe(10); // Preserved
+    });
+
+    it("throws error for non-existent user", async () => {
+      const t = convexTest(schema, modules);
+
+      // Create a valid user, get its ID format, then delete it
+      let deletedUserId: Id<"users">;
+      await t.run(async (ctx) => {
+        deletedUserId = await ctx.db.insert("users", {
+          clerkId: "to_be_deleted",
+          email: "delete@test.com",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+        await ctx.db.delete(deletedUserId);
+      });
+
+      await expect(
+        t.mutation(internal.users.statistics.updateUserStats, {
+          userId: deletedUserId!,
+          puzzleCompleted: true,
+          guessCount: 2,
+        }),
+      ).rejects.toThrow("User not found");
     });
   });
 });

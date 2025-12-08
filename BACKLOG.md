@@ -9,10 +9,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 
 ## Now (Sprint-Ready, <2 weeks)
 
-### [BUGFIX] Order mode attempt calculation is not always correct
-
-- played order mode, solved puzzle in 2 attempts, game over screen showed 9 attempts
-
 ### [UX BUG] Order mode drag and drop restrictions are not intuitive
 
 - too easy for new players to think it doesn't work

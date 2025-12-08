@@ -8,6 +8,10 @@ import type { Id } from "../_generated/dataModel";
 // Type assertion for path-based API access (works at runtime, not type-checked)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const puzzlesQueries = (api as any)["puzzles/queries"];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const puzzlesMutations = (api as any)["puzzles/mutations"];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const playsQueries = (api as any)["plays/queries"];
 
 /**
  * Puzzle Query Tests using convex-test
@@ -304,6 +308,404 @@ describe("puzzles/queries", () => {
       const puzzles = await t.query(puzzlesQueries.getAllPuzzles, {});
 
       expect(puzzles).toHaveLength(2);
+    });
+  });
+});
+
+/**
+ * Puzzle Mutation Tests using convex-test
+ *
+ * Tests game state mutations with authoritative scoring.
+ */
+
+describe("puzzles/mutations", () => {
+  describe("submitGuess", () => {
+    it("creates new play record on first guess", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      let puzzleId: Id<"puzzles">;
+
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "guess_test_1",
+          email: "guess@test.com",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+
+        puzzleId = await ctx.db.insert("puzzles", {
+          puzzleNumber: 1,
+          date: "2024-01-15",
+          targetYear: 1969,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 0,
+          avgGuesses: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const result = await t.mutation(puzzlesMutations.submitGuess, {
+        puzzleId: puzzleId!,
+        userId: userId!,
+        guess: 1970,
+      });
+
+      expect(result.correct).toBe(false);
+      expect(result.guesses).toEqual([1970]);
+      expect(result.targetYear).toBe(1969);
+    });
+
+    it("returns correct: true on exact match", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      let puzzleId: Id<"puzzles">;
+
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "guess_test_2",
+          email: "correct@test.com",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+
+        puzzleId = await ctx.db.insert("puzzles", {
+          puzzleNumber: 2,
+          date: "2024-01-15",
+          targetYear: 1945,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 0,
+          avgGuesses: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const result = await t.mutation(puzzlesMutations.submitGuess, {
+        puzzleId: puzzleId!,
+        userId: userId!,
+        guess: 1945,
+      });
+
+      expect(result.correct).toBe(true);
+      expect(result.guesses).toEqual([1945]);
+    });
+
+    it("throws error on completed puzzle", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      let puzzleId: Id<"puzzles">;
+
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "guess_test_3",
+          email: "completed@test.com",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+
+        puzzleId = await ctx.db.insert("puzzles", {
+          puzzleNumber: 3,
+          date: "2024-01-15",
+          targetYear: 2000,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 0,
+          avgGuesses: 0,
+          updatedAt: Date.now(),
+        });
+
+        // Create completed play
+        await ctx.db.insert("plays", {
+          userId,
+          puzzleId,
+          guesses: [2000],
+          completedAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      });
+
+      await expect(
+        t.mutation(puzzlesMutations.submitGuess, {
+          puzzleId: puzzleId!,
+          userId: userId!,
+          guess: 2001,
+        }),
+      ).rejects.toThrow("Puzzle already completed");
+    });
+
+    it("throws error when max attempts reached", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      let puzzleId: Id<"puzzles">;
+
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "guess_test_4",
+          email: "maxed@test.com",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+
+        puzzleId = await ctx.db.insert("puzzles", {
+          puzzleNumber: 4,
+          date: "2024-01-15",
+          targetYear: 1990,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 0,
+          avgGuesses: 0,
+          updatedAt: Date.now(),
+        });
+
+        // Create play with 6 wrong guesses
+        await ctx.db.insert("plays", {
+          userId,
+          puzzleId,
+          guesses: [1980, 1981, 1982, 1983, 1984, 1985],
+          updatedAt: Date.now(),
+        });
+      });
+
+      await expect(
+        t.mutation(puzzlesMutations.submitGuess, {
+          puzzleId: puzzleId!,
+          userId: userId!,
+          guess: 1990,
+        }),
+      ).rejects.toThrow("Maximum attempts reached");
+    });
+  });
+
+  describe("submitRange", () => {
+    it("creates play record with correct range on first submission", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      let puzzleId: Id<"puzzles">;
+
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "range_test_1",
+          email: "range@test.com",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+
+        puzzleId = await ctx.db.insert("puzzles", {
+          puzzleNumber: 10,
+          date: "2024-01-15",
+          targetYear: 1969,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 0,
+          avgGuesses: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const result = await t.mutation(puzzlesMutations.submitRange, {
+        puzzleId: puzzleId!,
+        userId: userId!,
+        start: 1960,
+        end: 1980,
+        hintsUsed: 0,
+      });
+
+      expect(result.contained).toBe(true);
+      expect(result.range.start).toBe(1960);
+      expect(result.range.end).toBe(1980);
+      expect(result.totalScore).toBeGreaterThan(0);
+      expect(result.attemptsRemaining).toBe(5);
+    });
+
+    it("normalizes inverted range bounds", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      let puzzleId: Id<"puzzles">;
+
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "range_test_2",
+          email: "inverted@test.com",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+
+        puzzleId = await ctx.db.insert("puzzles", {
+          puzzleNumber: 11,
+          date: "2024-01-15",
+          targetYear: 1945,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 0,
+          avgGuesses: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      // Submit with end < start (inverted)
+      const result = await t.mutation(puzzlesMutations.submitRange, {
+        puzzleId: puzzleId!,
+        userId: userId!,
+        start: 1950, // Higher value first
+        end: 1940, // Lower value second
+        hintsUsed: 1,
+      });
+
+      // Should be normalized to 1940-1950
+      expect(result.range.start).toBe(1940);
+      expect(result.range.end).toBe(1950);
+      expect(result.contained).toBe(true);
+    });
+
+    it("returns contained: false when target not in range", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      let puzzleId: Id<"puzzles">;
+
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "range_test_3",
+          email: "miss@test.com",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+
+        puzzleId = await ctx.db.insert("puzzles", {
+          puzzleNumber: 12,
+          date: "2024-01-15",
+          targetYear: 1969,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 0,
+          avgGuesses: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const result = await t.mutation(puzzlesMutations.submitRange, {
+        puzzleId: puzzleId!,
+        userId: userId!,
+        start: 1980,
+        end: 2000,
+        hintsUsed: 2,
+      });
+
+      expect(result.contained).toBe(false);
+      expect(result.totalScore).toBe(0);
+      expect(result.attemptsRemaining).toBe(5);
+    });
+
+    it("accumulates ranges on subsequent submissions", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      let puzzleId: Id<"puzzles">;
+
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "range_test_4",
+          email: "multi@test.com",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+
+        puzzleId = await ctx.db.insert("puzzles", {
+          puzzleNumber: 13,
+          date: "2024-01-15",
+          targetYear: 1969,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 0,
+          avgGuesses: 0,
+          updatedAt: Date.now(),
+        });
+
+        // Create play with one failed range
+        await ctx.db.insert("plays", {
+          userId,
+          puzzleId,
+          ranges: [{ start: 1980, end: 2000, hintsUsed: 0, score: 0, timestamp: Date.now() }],
+          totalScore: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const result = await t.mutation(puzzlesMutations.submitRange, {
+        puzzleId: puzzleId!,
+        userId: userId!,
+        start: 1960,
+        end: 1975,
+        hintsUsed: 1,
+      });
+
+      expect(result.ranges).toHaveLength(2);
+      expect(result.attemptsRemaining).toBe(4);
+      expect(result.contained).toBe(true);
+    });
+
+    it("throws error on non-existent puzzle", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      let fakePuzzleId: Id<"puzzles">;
+
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "range_test_5",
+          email: "nopuzzle@test.com",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+
+        // Create and delete puzzle to get valid ID format
+        fakePuzzleId = await ctx.db.insert("puzzles", {
+          puzzleNumber: 999,
+          date: "2024-01-15",
+          targetYear: 1900,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 0,
+          avgGuesses: 0,
+          updatedAt: Date.now(),
+        });
+        await ctx.db.delete(fakePuzzleId);
+      });
+
+      await expect(
+        t.mutation(puzzlesMutations.submitRange, {
+          puzzleId: fakePuzzleId!,
+          userId: userId!,
+          start: 1960,
+          end: 1980,
+          hintsUsed: 0,
+        }),
+      ).rejects.toThrow("Puzzle not found");
     });
   });
 });
