@@ -117,6 +117,7 @@ logs_result.json
 
 # Playwright test artifacts
 .playwright-mcp/
+playwright-report/
 
 # Convex generated files
 # ⚠️ EXCEPTION: These files are NOT gitignored despite being generated

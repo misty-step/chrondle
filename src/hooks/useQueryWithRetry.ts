@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery as useConvexQuery } from "convex/react";
 import { FunctionReference, FunctionReturnType } from "convex/server";
-import { logger } from "@/lib/logger";
-import { RetryConfig, DEFAULT_RETRY_CONFIG, calculateBackoffDelay } from "@/lib/retryUtils";
+import { RetryConfig } from "@/lib/retryUtils";
 
 // Re-export RetryConfig for consumers
 export type { RetryConfig };
@@ -34,110 +32,12 @@ export type { RetryConfig };
 export function useQueryWithRetry<
   Query extends FunctionReference<"query">,
   Args = Query extends FunctionReference<"query", infer A> ? A : never,
->(query: Query, args: Args | "skip", config?: RetryConfig): FunctionReturnType<Query> | undefined {
-  const mergedConfig = useMemo(
-    () => ({
-      ...DEFAULT_RETRY_CONFIG,
-      // Override onRetry to use hook-specific context
-      onRetry: (attempt: number, error: Error) => {
-        logger.warn(`[useQueryWithRetry] Retry attempt ${attempt}:`, {
-          error: error.message,
-          timestamp: new Date().toISOString(),
-          stack: error.stack,
-        });
-      },
-      ...config,
-    }),
-    [config],
-  );
-
-  // Track retry state
-  const [retryCount, setRetryCount] = useState(0);
-  const [isRetrying, setIsRetrying] = useState(false);
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastErrorRef = useRef<Error | null>(null);
-
+  // Note: config parameter preserved for API compatibility
+>(query: Query, args: Args | "skip", _config?: RetryConfig): FunctionReturnType<Query> | undefined {
   // Use the standard Convex query hook
+  // Convex handles reconnection and error recovery automatically
   // @ts-expect-error - Type mismatch with Convex generics
   const queryResult = useConvexQuery(query, args);
-
-  // Track if we've seen an error for this query
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [hasError, setHasError] = useState(false);
-
-  // Clean up timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Handle retry logic
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const scheduleRetry = useCallback(() => {
-    if (retryCount >= mergedConfig.maxRetries) {
-      logger.error("[useQueryWithRetry] Max retries reached:", {
-        query: "query",
-        retries: retryCount,
-        lastError: lastErrorRef.current?.message,
-        timestamp: new Date().toISOString(),
-      });
-      setIsRetrying(false);
-      return;
-    }
-
-    const delay = calculateBackoffDelay(
-      retryCount,
-      mergedConfig.baseDelayMs,
-      mergedConfig.maxDelayMs,
-    );
-
-    logger.error(
-      `[useQueryWithRetry] Scheduling retry ${retryCount + 1}/${mergedConfig.maxRetries} after ${delay}ms`,
-    );
-
-    setIsRetrying(true);
-
-    retryTimeoutRef.current = setTimeout(() => {
-      setRetryCount((prev) => prev + 1);
-      setIsRetrying(false);
-      // The query will automatically re-run when we update the retry count
-    }, delay);
-  }, [retryCount, mergedConfig]);
-
-  // Monitor query result for errors
-  useEffect(() => {
-    // Check if the query result indicates an error
-    // Convex doesn't expose errors directly in useQuery, but undefined with args !== "skip"
-    // after initial load could indicate a problem
-
-    if (args === "skip") {
-      // Query is intentionally skipped
-      return;
-    }
-
-    // If we get a result, clear error state
-    if (queryResult !== undefined) {
-      setHasError(false);
-      setRetryCount(0);
-      lastErrorRef.current = null;
-      return;
-    }
-  }, [queryResult, args]);
-
-  // Log retry information in development
-  useEffect(() => {
-    if (process.env.NODE_ENV === "development" && isRetrying) {
-      logger.error("[useQueryWithRetry] Retry state:", {
-        query: "query",
-        attempt: retryCount,
-        isRetrying,
-        hasResult: queryResult !== undefined,
-      });
-    }
-  }, [isRetrying, retryCount, query, queryResult]);
 
   return queryResult;
 }

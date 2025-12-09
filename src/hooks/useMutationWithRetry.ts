@@ -77,7 +77,7 @@ export function useMutationWithRetry<Mutation extends FunctionReference<"mutatio
           retryCountRef.current = 0;
 
           if (process.env.NODE_ENV === "development" && attempt > 0) {
-            logger.error(`[useMutationWithRetry] Succeeded after ${attempt} retries:`, {
+            logger.info(`[useMutationWithRetry] Succeeded after ${attempt} retries:`, {
               mutation: "mutation",
               timestamp: new Date().toISOString(),
             });
