@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "convex/_generated/api";
-import { formatCountdown, getTimeUntilMidnight } from "@/lib/display/formatting";
+import {
+  calculateCountdownTime,
+  shouldTriggerCompletion,
+  didCountdownRestart,
+} from "@/lib/time/countdownCalculation";
 import { logger } from "@/lib/logger";
 
 export interface UseCountdownReturn {
@@ -44,7 +48,6 @@ export function useCountdown(options: UseCountdownOptions = {}): UseCountdownRet
   // Reset completion state when target changes
   useEffect(() => {
     if (effectiveTarget && isComplete) {
-      // New target arrived, reset completion
       setIsComplete(false);
       logger.warn("[useCountdown] New target detected, resetting completion state");
     }
@@ -58,39 +61,19 @@ export function useCountdown(options: UseCountdownOptions = {}): UseCountdownRet
 
     const updateCountdown = () => {
       try {
-        let remaining: number;
+        const result = calculateCountdownTime(
+          { targetTimestamp: effectiveTarget, enableFallback },
+          Date.now(),
+        );
 
-        if (effectiveTarget) {
-          // Use Convex-provided timestamp
-          const now = Date.now();
-          remaining = effectiveTarget - now;
-          setError(null);
-        } else if (enableFallback) {
-          // Fallback to local midnight calculation
-          remaining = getTimeUntilMidnight();
-          if (!error) {
-            setError("Using local countdown - server timing unavailable");
-          }
-        } else {
-          // No fallback, show error state
-          setTimeString("--:--:--");
-          setIsComplete(false);
-          setError("Countdown unavailable");
-          return;
-        }
+        setTimeString(result.timeString);
+        setError(result.error);
 
-        if (remaining <= 0) {
-          setTimeString("00:00:00");
-          if (!isComplete) {
-            setIsComplete(true);
-            logger.warn("[useCountdown] Countdown complete, new puzzle should be available");
-            // The query will refetch automatically due to Convex reactivity
-          }
-          return;
-        }
-
-        setTimeString(formatCountdown(remaining));
-        if (isComplete) {
+        // Handle completion transition
+        if (shouldTriggerCompletion(result, isComplete)) {
+          setIsComplete(true);
+          logger.warn("[useCountdown] Countdown complete, new puzzle should be available");
+        } else if (didCountdownRestart(result, isComplete)) {
           setIsComplete(false);
         }
       } catch (err) {
@@ -107,7 +90,7 @@ export function useCountdown(options: UseCountdownOptions = {}): UseCountdownRet
     const interval = setInterval(updateCountdown, 1000);
 
     return () => clearInterval(interval);
-  }, [effectiveTarget, isLoading, enableFallback, error, isComplete]);
+  }, [effectiveTarget, isLoading, enableFallback, isComplete]);
 
   return {
     timeString,

@@ -23,6 +23,7 @@
     "test:integration:watch": "vitest -c vitest.config.integration.ts",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
     "test-module-system": "node scripts/test-module-system.mjs",
     "bundle-analysis": "ANALYZE=true pnpm build",
     "size": "size-limit",
@@ -94,8 +95,10 @@
     }
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@eslint/eslintrc": "^3",
     "@next/bundle-analyzer": "15.5.3",
+    "@playwright/test": "^1.57.0",
     "@size-limit/preset-app": "11.2.0",
     "@tailwindcss/postcss": "^4",
     "@tailwindcss/typography": "^0.5.19",
@@ -110,6 +113,7 @@
     "@welldone-software/why-did-you-render": "^10.0.1",
     "commander": "^14.0.0",
     "concurrently": "^9.2.0",
+    "convex-test": "^0.0.41",
     "dotenv": "^17.2.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",

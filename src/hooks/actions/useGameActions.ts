@@ -3,12 +3,16 @@
 import { useState, useCallback, useMemo } from "react";
 import { api } from "../../../convex/_generated/api";
 import { DataSources } from "@/lib/deriveGameState";
-import { GAME_CONFIG } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { assertConvexId, isConvexIdValidationError } from "@/lib/validation";
+import {
+  validateGuessSubmission,
+  validateRangeSubmission,
+  normalizeHintCount,
+} from "@/lib/validation/rangeValidation";
 import { useMutationWithRetry } from "@/hooks/useMutationWithRetry";
 import { logger } from "@/lib/logger";
-import { scoreRange, SCORING_CONSTANTS } from "@/lib/scoring";
+import { scoreRange } from "@/lib/scoring";
 import type { HintCount, RangeGuess } from "@/types/range";
 import { checkSubmissionAuth, logSubmissionAttempt } from "@/lib/gameSubmission";
 
@@ -99,26 +103,14 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
         return false;
       }
 
-      // Validate guess is a valid year
-      const currentYear = new Date().getFullYear();
-      if (guess < -9999 || guess > currentYear) {
+      // Validate guess using extracted pure function
+      const guessValidation = validateGuessSubmission(guess, session.sessionGuesses.length);
+      if (!guessValidation.valid) {
         if ("addToast" in toastContext) {
+          const error = guessValidation.errors[0];
           toastContext.addToast({
-            title: "Invalid Year",
-            description: `Please enter a year between -9999 and ${currentYear}`,
-            variant: "destructive",
-          });
-        }
-        return false;
-      }
-
-      // Check if already at max guesses
-      const totalGuesses = session.sessionGuesses.length;
-      if (totalGuesses >= GAME_CONFIG.MAX_GUESSES) {
-        if ("addToast" in toastContext) {
-          toastContext.addToast({
-            title: "No Guesses Remaining",
-            description: "You've used all 6 guesses for this puzzle",
+            title: error.field === "guess" ? "Invalid Year" : "No Guesses Remaining",
+            description: error.message,
             variant: "destructive",
           });
         }
@@ -254,34 +246,18 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
         return false;
       }
 
-      if (start > end) {
+      // Validate range using extracted pure function
+      const rangeValidation = validateRangeSubmission(start, end);
+      if (!rangeValidation.valid) {
         if ("addToast" in toastContext) {
+          const error = rangeValidation.errors[0];
+          const title =
+            error.field === "width" && error.message.includes("narrower")
+              ? "Range Too Wide"
+              : "Invalid Range";
           toastContext.addToast({
-            title: "Invalid Range",
-            description: "Start year must be before end year",
-            variant: "destructive",
-          });
-        }
-        return false;
-      }
-
-      const width = end - start + 1;
-      if (width <= 0) {
-        if ("addToast" in toastContext) {
-          toastContext.addToast({
-            title: "Invalid Range",
-            description: "Range width must be at least 1 year",
-            variant: "destructive",
-          });
-        }
-        return false;
-      }
-
-      if (width > SCORING_CONSTANTS.W_MAX) {
-        if ("addToast" in toastContext) {
-          toastContext.addToast({
-            title: "Range Too Wide",
-            description: "Range must be 200 years or narrower",
+            title,
+            description: error.message,
             variant: "destructive",
           });
         }
@@ -292,8 +268,7 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
         return false;
       }
 
-      const maxHintLevel = SCORING_CONSTANTS.MAX_SCORES_BY_HINTS.length - 1;
-      const hintLevel = Math.max(0, Math.min(maxHintLevel, hintsUsed)) as HintCount;
+      const hintLevel = normalizeHintCount(hintsUsed) as HintCount;
       const optimisticRange: RangeGuess = {
         start,
         end,

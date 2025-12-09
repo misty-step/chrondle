@@ -4,71 +4,10 @@ import { useRef, useCallback, useMemo } from "react";
 import { useMutation as useConvexMutation } from "convex/react";
 import { FunctionReference, FunctionArgs, FunctionReturnType } from "convex/server";
 import { logger } from "@/lib/logger";
+import { RetryConfig, DEFAULT_RETRY_CONFIG, calculateBackoffDelay, sleep } from "@/lib/retryUtils";
 
-/**
- * Configuration for mutation retry behavior
- */
-interface MutationRetryConfig {
-  maxRetries?: number;
-  baseDelayMs?: number;
-  maxDelayMs?: number;
-  shouldRetry?: (error: Error) => boolean;
-  onRetry?: (attempt: number, error: Error) => void;
-}
-
-/**
- * Default configuration for mutation retry behavior
- */
-const DEFAULT_MUTATION_RETRY_CONFIG: Required<MutationRetryConfig> = {
-  maxRetries: 3,
-  baseDelayMs: 1000, // 1 second
-  maxDelayMs: 4000, // 4 seconds max
-  shouldRetry: (error: Error) => {
-    // Retry on network errors and server errors
-    const message = error.message.toLowerCase();
-    return (
-      message.includes("network") ||
-      message.includes("server error") ||
-      message.includes("timeout") ||
-      message.includes("fetch") ||
-      message.includes("convex") ||
-      message.includes("500") ||
-      message.includes("502") ||
-      message.includes("503") ||
-      message.includes("504") ||
-      // Also retry on generic Convex errors that might be transient
-      message.includes("failed to fetch") ||
-      message.includes("request failed")
-    );
-  },
-  onRetry: (attempt: number, error: Error) => {
-    logger.warn(`[useMutationWithRetry] Retry attempt ${attempt}:`, {
-      error: error.message,
-      timestamp: new Date().toISOString(),
-      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
-    });
-  },
-};
-
-/**
- * Calculate exponential backoff delay with jitter
- */
-function calculateBackoffDelay(attempt: number, baseDelayMs: number, maxDelayMs: number): number {
-  // Exponential backoff: 1s, 2s, 4s
-  const exponentialDelay = baseDelayMs * Math.pow(2, attempt);
-  // Add jitter to prevent thundering herd
-  const jitter = Math.random() * 0.5 + 0.75; // ±25% jitter
-  const delayWithJitter = Math.floor(exponentialDelay * jitter);
-  // Cap at max delay
-  return Math.min(delayWithJitter, maxDelayMs);
-}
-
-/**
- * Sleep for a given number of milliseconds
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+// Re-export RetryConfig for consumers
+export type { RetryConfig };
 
 /**
  * Hook that wraps Convex useMutation with retry logic for transient errors
@@ -98,10 +37,24 @@ function sleep(ms: number): Promise<void> {
  */
 export function useMutationWithRetry<Mutation extends FunctionReference<"mutation">>(
   mutation: Mutation,
-  config?: MutationRetryConfig,
+  config?: RetryConfig,
 ): (args: FunctionArgs<Mutation>) => Promise<FunctionReturnType<Mutation>> {
   // Memoize config to avoid dependency changes
-  const mergedConfig = useMemo(() => ({ ...DEFAULT_MUTATION_RETRY_CONFIG, ...config }), [config]);
+  const mergedConfig = useMemo(
+    () => ({
+      ...DEFAULT_RETRY_CONFIG,
+      // Override onRetry to use hook-specific context
+      onRetry: (attempt: number, error: Error) => {
+        logger.warn(`[useMutationWithRetry] Retry attempt ${attempt}:`, {
+          error: error.message,
+          timestamp: new Date().toISOString(),
+          stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+        });
+      },
+      ...config,
+    }),
+    [config],
+  );
 
   // Use the standard Convex mutation hook
   const mutate = useConvexMutation(mutation);
@@ -124,7 +77,7 @@ export function useMutationWithRetry<Mutation extends FunctionReference<"mutatio
           retryCountRef.current = 0;
 
           if (process.env.NODE_ENV === "development" && attempt > 0) {
-            logger.error(`[useMutationWithRetry] Succeeded after ${attempt} retries:`, {
+            logger.info(`[useMutationWithRetry] Succeeded after ${attempt} retries:`, {
               mutation: "mutation",
               timestamp: new Date().toISOString(),
             });
@@ -207,10 +160,10 @@ export function useMutationWithRetry<Mutation extends FunctionReference<"mutatio
  */
 export function createMutationHookWithRetry<Mutation extends FunctionReference<"mutation">>(
   mutation: Mutation,
-  defaultConfig?: MutationRetryConfig,
+  defaultConfig?: RetryConfig,
 ) {
   return function useMutationHook(
-    config?: MutationRetryConfig,
+    config?: RetryConfig,
   ): (args: FunctionArgs<Mutation>) => Promise<FunctionReturnType<Mutation>> {
     return useMutationWithRetry(mutation, { ...defaultConfig, ...config });
   };
