@@ -7,8 +7,8 @@ test.describe("Smoke Tests", () => {
     page.on("console", (msg) => {
       if (msg.type() === "error") {
         const text = msg.text();
-        // Ignore favicon errors and hydration warnings
-        if (!text.includes("favicon") && !text.includes("Hydration")) {
+        // Ignore favicon errors, hydration warnings, and Vercel Analytics (not available in CI)
+        if (!text.includes("favicon") && !text.includes("Hydration") && !text.includes("_vercel")) {
           consoleErrors.push(text);
         }
       }
