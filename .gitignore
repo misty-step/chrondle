@@ -124,3 +124,4 @@ logs_result.json
 # See convex/_generated/README.md for full explanation
 # convex/_generated/  # ← DO NOT UNCOMMENT THIS LINE!
 backups/
+test-results/
