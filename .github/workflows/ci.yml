@@ -439,6 +439,7 @@ jobs:
         env:
           NEXT_PUBLIC_CONVEX_URL: https://handsome-raccoon-955.convex.cloud
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_aGVhbHRoeS1kb2UtMjMuY2xlcmsuYWNjb3VudHMuZGV2JA
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
 
       - name: Upload Playwright report
         if: always()
