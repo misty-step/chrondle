@@ -388,6 +388,7 @@ jobs:
         with:
           name: build-output
           path: .next/
+          include-hidden-files: true
 
   e2e:
     runs-on: ubuntu-latest
