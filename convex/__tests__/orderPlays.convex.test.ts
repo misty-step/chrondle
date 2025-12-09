@@ -263,8 +263,11 @@ describe("orderPlays/queries", () => {
         userId: userId!,
       });
 
-      // Same bug as classic plays - filter with neq(completedAt, null) doesn't work for undefined
-      // Documenting actual behavior:
+      // TODO(#71): Convex neq(completedAt, null) incorrectly matches undefined - should be 2 when fixed
+      // Current behavior: Returns 3 plays (2 with completedAt set + 1 with completedAt undefined)
+      // Expected behavior: Should return only 2 plays with completedAt actually set
+      // This assertion will need updating to toHaveLength(2) when the query filter is corrected.
+      // See: https://github.com/misty-step/chrondle/issues/71
       expect(completedPlays).toHaveLength(3);
     });
 

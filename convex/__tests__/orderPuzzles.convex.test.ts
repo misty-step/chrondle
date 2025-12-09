@@ -1,28 +1,9 @@
 import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
+import { api } from "../_generated/api";
 import schema from "../schema";
 import { modules } from "../test.setup";
 import type { Id } from "../_generated/dataModel";
-
-// Type assertion for path-based API access (works at runtime, not type-checked)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const orderPuzzlesQueries = (schema as any, modules as any, {} as any) as any;
-
-// Access queries via api path
-
-const getApi = () => {
-  // Need to access these after convexTest initializes
-  return {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getDailyOrderPuzzle: (api: any) => api["orderPuzzles/queries"].getDailyOrderPuzzle,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getOrderPuzzleByNumber: (api: any) => api["orderPuzzles/queries"].getOrderPuzzleByNumber,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getArchiveOrderPuzzles: (api: any) => api["orderPuzzles/queries"].getArchiveOrderPuzzles,
-  };
-};
-
-import { api } from "../_generated/api";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const orderQueries = (api as any)["orderPuzzles/queries"];
