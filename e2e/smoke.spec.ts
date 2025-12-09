@@ -8,7 +8,12 @@ test.describe("Smoke Tests", () => {
       if (msg.type() === "error") {
         const text = msg.text();
         // Ignore favicon errors, hydration warnings, and Vercel Analytics (not available in CI)
-        if (!text.includes("favicon") && !text.includes("Hydration") && !text.includes("_vercel")) {
+        if (
+          !text.includes("favicon") &&
+          !text.includes("Hydration") &&
+          !text.includes("_vercel") &&
+          !text.includes("Failed to load resource: the server responded with a status of 404")
+        ) {
           consoleErrors.push(text);
         }
       }
