@@ -23,6 +23,7 @@ jobs:
 
       # Step 2: Validate required secrets (fail fast)
       - name: Validate required secrets
+        id: validate-secrets
         run: |
           errors=0
           warnings=0
@@ -56,6 +57,13 @@ jobs:
           check_optional "$SENTRY_TOKEN" "SENTRY_AUTH_TOKEN"
           check_optional "$SENTRY_ORG_VAL" "SENTRY_ORG"
           check_optional "$SENTRY_PROJ" "SENTRY_PROJECT"
+
+          # Set output for Sentry configuration status
+          if [ -n "$SENTRY_TOKEN" ] && [ -n "$SENTRY_ORG_VAL" ] && [ -n "$SENTRY_PROJ" ]; then
+            echo "sentry_configured=true" >> $GITHUB_OUTPUT
+          else
+            echo "sentry_configured=false" >> $GITHUB_OUTPUT
+          fi
 
           if [ $errors -gt 0 ]; then
             echo ""
@@ -116,7 +124,7 @@ jobs:
 
       # Step 5: Create Sentry release (skipped if Sentry not configured)
       - name: Create Sentry release
-        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' && secrets.SENTRY_ORG != '' && secrets.SENTRY_PROJECT != '' }}
+        if: steps.validate-secrets.outputs.sentry_configured == 'true'
         uses: getsentry/action-release@v3.4.0
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
