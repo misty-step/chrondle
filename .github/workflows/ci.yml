@@ -448,3 +448,47 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # Verify production secrets are configured before merge
+  # Prevents post-merge deploy failures due to missing secrets
+  verify-production-secrets:
+    name: Verify Production Secrets
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && (github.base_ref == 'master' || github.base_ref == 'main')
+
+    steps:
+      - name: Check production secrets are configured
+        run: |
+          echo "🔐 Verifying production secrets for post-merge deploy..."
+          errors=0
+
+          check_secret() {
+            if [ -z "$1" ]; then
+              echo "::error::Production secret not configured: $2"
+              errors=$((errors + 1))
+            else
+              echo "✓ $2"
+            fi
+          }
+
+          echo "=== Required for Deploy ==="
+          check_secret "$CLERK_KEY" "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+          check_secret "$CONVEX_URL" "NEXT_PUBLIC_CONVEX_URL"
+          check_secret "$CONVEX_KEY" "CONVEX_DEPLOY_KEY"
+
+          if [ $errors -gt 0 ]; then
+            echo ""
+            echo "::error::$errors production secret(s) missing!"
+            echo "Merging this PR will trigger a failing deploy."
+            echo ""
+            echo "Add missing secrets at:"
+            echo "GitHub repo → Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ All required production secrets verified"
+        env:
+          CLERK_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+          CONVEX_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}

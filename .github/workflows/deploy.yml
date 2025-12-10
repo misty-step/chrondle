@@ -21,7 +21,63 @@ jobs:
         with:
           fetch-depth: 0 # Needed for git history if required
 
-      # Step 2: Setup Node.js and pnpm
+      # Step 2: Validate required secrets (fail fast)
+      - name: Validate required secrets
+        run: |
+          errors=0
+          warnings=0
+
+          check_required() {
+            if [ -z "$1" ]; then
+              echo "::error::Missing required secret: $2"
+              errors=$((errors + 1))
+            else
+              echo "✓ $2"
+            fi
+          }
+
+          check_optional() {
+            if [ -z "$1" ]; then
+              echo "::warning::Optional secret not configured: $2"
+              warnings=$((warnings + 1))
+            else
+              echo "✓ $2"
+            fi
+          }
+
+          echo "=== Required Secrets ==="
+          check_required "$CLERK_KEY" "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+          check_required "$CONVEX_URL" "NEXT_PUBLIC_CONVEX_URL"
+          check_required "$CONVEX_KEY" "CONVEX_DEPLOY_KEY"
+
+          echo ""
+          echo "=== Optional Secrets (Sentry) ==="
+          check_optional "$SENTRY_DSN" "NEXT_PUBLIC_SENTRY_DSN"
+          check_optional "$SENTRY_TOKEN" "SENTRY_AUTH_TOKEN"
+          check_optional "$SENTRY_ORG_VAL" "SENTRY_ORG"
+          check_optional "$SENTRY_PROJ" "SENTRY_PROJECT"
+
+          if [ $errors -gt 0 ]; then
+            echo ""
+            echo "::error::$errors required secret(s) missing. Add them at:"
+            echo "GitHub repo → Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+
+          if [ $warnings -gt 0 ]; then
+            echo ""
+            echo "Note: $warnings optional secret(s) not configured. Sentry features will be skipped."
+          fi
+        env:
+          CLERK_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+          CONVEX_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          SENTRY_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG_VAL: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJ: ${{ secrets.SENTRY_PROJECT }}
+
+      # Step 3: Setup Node.js and pnpm
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -58,8 +114,9 @@ jobs:
           NEXT_PUBLIC_SENTRY_ENVIRONMENT: production
           NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
 
-      # Step 5: Create Sentry release and upload sourcemaps
+      # Step 5: Create Sentry release (skipped if Sentry not configured)
       - name: Create Sentry release
+        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' && secrets.SENTRY_ORG != '' && secrets.SENTRY_PROJECT != '' }}
         uses: getsentry/action-release@v3.4.0
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
