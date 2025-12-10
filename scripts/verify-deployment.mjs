@@ -6,18 +6,22 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs/promises";
 
-// Load environment variables
+// Load environment variables (from env vars first, then .env.local fallback)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const envPath = join(__dirname, "../.env.local");
 
-try {
-  const envContent = await fs.readFile(envPath, "utf-8");
-  const envVars = dotenv.parse(envContent);
-  Object.assign(process.env, envVars);
-} catch (error) {
-  console.error("❌ Error loading .env.local:", error.message);
-  process.exit(1);
+// Only load .env.local if NEXT_PUBLIC_CONVEX_URL is not already set (CI passes it directly)
+if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+  try {
+    const envContent = await fs.readFile(envPath, "utf-8");
+    const envVars = dotenv.parse(envContent);
+    Object.assign(process.env, envVars);
+  } catch (error) {
+    console.error("❌ Error loading .env.local:", error.message);
+    console.error("   Set NEXT_PUBLIC_CONVEX_URL environment variable or create .env.local");
+    process.exit(1);
+  }
 }
 
 const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL;
