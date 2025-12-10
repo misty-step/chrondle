@@ -49,19 +49,22 @@ export const searchEvents = query({
     const limit = Math.max(1, Math.min(args.limit ?? 50, 200)); // Cap at 200
     const cursorIndex = args.cursor ? parseInt(args.cursor, 10) : 0;
 
-    // Fetch all events (with 4217 events, full scan is acceptable for admin)
-    // TODO: If pool grows significantly, implement indexed year range query
-    let events = await ctx.db.query("events").order("asc").collect();
-
-    // Apply filters in order of selectivity
-
-    // 1. Year range filter (most selective)
-    if (args.yearMin !== undefined) {
-      events = events.filter((e) => e.year >= args.yearMin!);
-    }
-    if (args.yearMax !== undefined) {
-      events = events.filter((e) => e.year <= args.yearMax!);
-    }
+    // Fetch events using indexed year range query if possible, otherwise use index for sorting
+    // Note: switching to "by_year" index changes default sort order from creation time to year
+    let events = await ctx.db
+      .query("events")
+      .withIndex("by_year", (q) => {
+        let builder = q;
+        if (args.yearMin !== undefined) {
+          builder = builder.gte("year", args.yearMin);
+        }
+        if (args.yearMax !== undefined) {
+          builder = builder.lte("year", args.yearMax);
+        }
+        return builder;
+      })
+      .order("asc")
+      .collect();
 
     // 2. Era filter (uses metadata.era)
     if (args.era !== undefined) {
