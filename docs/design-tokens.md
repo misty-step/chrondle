@@ -513,6 +513,35 @@ Before merging:
 + </SubmitButton>
 ```
 
+### 4. Automated Enforcement
+
+**ESLint Rule (eslint.config.mjs)**
+
+Primitive token usage is automatically blocked:
+
+```js
+"no-restricted-syntax": [
+  "error",
+  {
+    "selector": "Literal[value=/\\b(text|bg|border)-(ink|parchment)-\\d+\\b/]",
+    "message": "Use semantic tokens instead"
+  }
+]
+```
+
+**Pre-commit Hook (.husky/pre-commit)**
+
+Scans staged files for primitive tokens and blocks commits:
+
+```bash
+🎨 Checking for primitive token usage in staged files...
+❌ DESIGN SYSTEM VIOLATION: Primitive tokens detected!
+
+Use semantic tokens instead:
+  - text-ink-900 → text-primary
+  - bg-parchment-50 → bg-surface-elevated
+```
+
 ---
 
 ## References
