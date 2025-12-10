@@ -136,8 +136,9 @@ jobs:
           version: ${{ github.sha }}
 
       # Step 6: Deploy to Convex (production)
+      # Note: CONVEX_DEPLOY_KEY starting with "prod:" triggers production deploy
       - name: Deploy to Convex
-        run: npx convex deploy --prod
+        run: npx convex deploy
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
