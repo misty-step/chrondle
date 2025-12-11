@@ -101,6 +101,7 @@ function EventCardContent({
   const textRef = useRef<HTMLParagraphElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
   const handleProps = { ...(listeners ?? {}), ...(attributes ?? {}) };
+  const isInteractive = Boolean(onCardClick);
 
   // Truncation detection via ResizeObserver
   useEffect(() => {
@@ -143,12 +144,23 @@ function EventCardContent({
       </div>
 
       <div
-        className="flex flex-1 cursor-pointer items-start gap-4 px-4 py-4 sm:px-5"
+        className={[
+          "flex flex-1 items-start gap-4 px-4 py-4 sm:px-5",
+          isInteractive && "cursor-pointer",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         onClick={onCardClick}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === "Enter" && onCardClick?.()}
-        aria-label={isTruncated ? "Tap to read full event text" : undefined}
+        role={isInteractive ? "button" : undefined}
+        tabIndex={isInteractive ? 0 : undefined}
+        onKeyDown={(e) => {
+          if (!onCardClick) return;
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onCardClick();
+          }
+        }}
+        aria-describedby={isTruncated ? "truncation-hint" : undefined}
       >
         {/* Year Tab - Only shown in results view */}
         {showYear && (
@@ -173,7 +185,9 @@ function EventCardContent({
             {event.text}
           </p>
           {isTruncated && (
-            <span className="text-muted-foreground mt-1 block text-sm">Tap to read more</span>
+            <span id="truncation-hint" className="text-muted-foreground mt-1 block text-sm">
+              Tap to read more
+            </span>
           )}
         </div>
       </div>

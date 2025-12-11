@@ -128,14 +128,12 @@ describe("scoreRangeDetailed", () => {
   });
 
   it("applies quadratic width penalty (mid-range scores improved)", () => {
-    // Width 100, 0 hints should score ~84 (was 62 with linear)
+    // Width 100, 0 hints: quadratic formula yields exactly 84
     const score100 = scoreRange(1900, 1999, 1950, 0, 0);
-    expect(score100).toBeGreaterThanOrEqual(80);
-    expect(score100).toBeLessThanOrEqual(90);
+    expect(score100).toBe(84);
 
-    // Width 150, 3 hints should score ~36 (was 23 with linear)
+    // Width 150, 3 hints: quadratic formula yields exactly 36
     const score150 = scoreRange(1900, 2049, 2000, 0, 3);
-    expect(score150).toBeGreaterThanOrEqual(32);
-    expect(score150).toBeLessThanOrEqual(40);
+    expect(score150).toBe(36);
   });
 });
