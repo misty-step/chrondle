@@ -2,8 +2,8 @@ import { HintCount, ScoreResult } from "../types/range";
 
 export const SCORING_CONSTANTS = {
   W_MAX: 250,
-  // Minimum width factor floor: ensures maximum-width ranges earn at least 5% of max score
-  MIN_WIDTH_FACTOR_FLOOR: 0.05,
+  // Minimum width factor floor: ensures maximum-width ranges earn at least 4% of max score
+  MIN_WIDTH_FACTOR_FLOOR: 0.04,
   // Flat deduction scoring: max possible score at each hint level (0-6 hints)
   // Costs: 0 hints=100pts, -15pts, -15pts, -15pts, -10pts, -10pts, -10pts
   // Cumulative max scores: [100, 85, 70, 55, 45, 35, 25]
@@ -68,10 +68,10 @@ function calculateWidth(start: number, end: number): number {
  *
  * Scoring system:
  * - Base: 100 points maximum (for 1-year range, 0 hints)
- * - Width penalty: Linear interpolation from 100% (1-year) to 5% (W_MAX-year range)
+ * - Width penalty: Quadratic interpolation from 100% (1-year) to 4% (W_MAX-year range)
  * - Hint costs: Flat deductions of 15, 15, 15, 10, 10, 10 points
  * - Final: max_score_for_hints * width_factor, rounded down
- * - Minimum floor: Even maximum-width ranges earn 5% of max score for hint tier
+ * - Minimum floor: Even maximum-width ranges earn 4% of max score for hint tier
  */
 export function scoreRangeDetailed(
   start: number,
@@ -103,9 +103,9 @@ export function scoreRangeDetailed(
   const maxScoreForHints = MAX_SCORES_BY_HINTS[hintsUsed];
 
   const minFloor = SCORING_CONSTANTS.MIN_WIDTH_FACTOR_FLOOR;
-  // Progress from 0.0 (width 1) to 1.0 (width W_MAX)
-  const progress = (width - 1) / (SCORING_CONSTANTS.W_MAX - 1);
-  // Linearly interpolate between 1.0 (width 1) and MIN_WIDTH_FACTOR_FLOOR (width W_MAX)
+  // Progress from 0.0 (width 1) to 1.0 (width W_MAX), squared for quadratic curve
+  const progress = Math.pow((width - 1) / (SCORING_CONSTANTS.W_MAX - 1), 2);
+  // Quadratic interpolation: gentle slope in playable range, steep at extremes
   const widthFactor = 1 - progress * (1 - minFloor);
 
   const baseScore = maxScoreForHints * widthFactor;
