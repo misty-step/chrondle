@@ -46,7 +46,10 @@
     "verify:auth:prod": "node scripts/verify-auth-production.mjs --production",
     "deployment:check": "node scripts/check-deployment-ready.mjs",
     "pre-push": "pnpm type-check && pnpm verify:convex",
-    "quality": "node scripts/quality-report.mjs"
+    "quality": "node scripts/quality-report.mjs",
+    "changeset": "changeset",
+    "changeset:version": "changeset version",
+    "changeset:publish": "changeset publish"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.32.1",
@@ -96,6 +99,8 @@
     }
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.5.2",
+    "@changesets/cli": "^2.29.8",
     "@edge-runtime/vm": "^5.0.0",
     "@eslint/eslintrc": "^3",
     "@next/bundle-analyzer": "15.5.3",

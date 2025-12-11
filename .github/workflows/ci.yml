@@ -241,6 +241,20 @@ jobs:
       - name: Test module system compatibility
         run: pnpm test-module-system
 
+  docs:
+    runs-on: ubuntu-latest
+    name: docs-link-check
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check documentation links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --offline --no-progress '**/*.md'
+          fail: false
+
   build:
     runs-on: ubuntu-latest
     needs: [quality-checks, validation]
