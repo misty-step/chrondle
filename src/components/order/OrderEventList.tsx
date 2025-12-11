@@ -23,6 +23,7 @@ import {
 } from "@dnd-kit/sortable";
 import type { OrderEvent, PositionFeedback } from "@/types/orderGameState";
 import { DraggableEventCard, OrderEventCardOverlay } from "@/components/order/DraggableEventCard";
+import { EventDetailDrawer } from "@/components/order/EventDetailDrawer";
 
 interface OrderEventListProps {
   events: OrderEvent[];
@@ -55,6 +56,17 @@ export function OrderEventList({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [localOrder, setLocalOrder] = useState<string[]>(ordering);
   const latestOrderRef = useRef(localOrder);
+
+  // Drawer state for viewing full event text
+  const [drawerEvent, setDrawerEvent] = useState<OrderEvent | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Block drawer during active drag
+  const handleCardClick = (event: OrderEvent) => {
+    if (activeId) return;
+    setDrawerEvent(event);
+    setDrawerOpen(true);
+  };
 
   useEffect(() => {
     latestOrderRef.current = localOrder;
@@ -146,6 +158,7 @@ export function OrderEventList({
                   event={event}
                   index={index}
                   feedback={feedback?.[index]}
+                  onCardClick={() => handleCardClick(event)}
                 />
               );
             })}
@@ -163,6 +176,7 @@ export function OrderEventList({
       <p aria-live="polite" className="sr-only">
         {announcement}
       </p>
+      <EventDetailDrawer open={drawerOpen} onOpenChange={setDrawerOpen} event={drawerEvent} />
     </div>
   );
 }

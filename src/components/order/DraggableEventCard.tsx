@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { DraggableSyntheticListeners } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -13,6 +14,7 @@ export interface DraggableEventCardProps {
   index: number;
   feedback?: PositionFeedback;
   showYear?: boolean;
+  onCardClick?: () => void;
 }
 
 export function DraggableEventCard({
@@ -20,6 +22,7 @@ export function DraggableEventCard({
   index,
   feedback,
   showYear = false,
+  onCardClick,
 }: DraggableEventCardProps) {
   const prefersReducedMotion = useReducedMotion();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -49,6 +52,7 @@ export function DraggableEventCard({
         showYear={showYear}
         listeners={listeners}
         attributes={attributes}
+        onCardClick={onCardClick}
       />
     </motion.li>
   );
@@ -81,6 +85,7 @@ interface EventCardContentProps {
   listeners?: DraggableSyntheticListeners;
   attributes?: React.HTMLAttributes<HTMLElement>;
   mutedHandle?: boolean;
+  onCardClick?: () => void;
 }
 
 function EventCardContent({
@@ -91,8 +96,27 @@ function EventCardContent({
   listeners,
   attributes,
   mutedHandle = false,
+  onCardClick,
 }: EventCardContentProps) {
+  const textRef = useRef<HTMLParagraphElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
   const handleProps = { ...(listeners ?? {}), ...(attributes ?? {}) };
+  const isInteractive = Boolean(onCardClick);
+
+  // Truncation detection via ResizeObserver
+  useEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+
+    const checkTruncation = () => {
+      setIsTruncated(el.scrollHeight > el.clientHeight);
+    };
+
+    checkTruncation();
+    const observer = new ResizeObserver(checkTruncation);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [event.text]);
 
   return (
     <>
@@ -103,6 +127,7 @@ function EventCardContent({
           "cursor-grab active:cursor-grabbing",
           "bg-muted/20 border-border/30 rounded-t-sm border-b",
         ].join(" ")}
+        data-vaul-no-drag
         {...handleProps}
       >
         <div
@@ -118,7 +143,25 @@ function EventCardContent({
         </div>
       </div>
 
-      <div className="flex flex-1 items-start gap-4 px-4 py-4 sm:px-5">
+      <div
+        className={[
+          "flex flex-1 items-start gap-4 px-4 py-4 sm:px-5",
+          isInteractive && "cursor-pointer",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        onClick={onCardClick}
+        role={isInteractive ? "button" : undefined}
+        tabIndex={isInteractive ? 0 : undefined}
+        onKeyDown={(e) => {
+          if (!onCardClick) return;
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onCardClick();
+          }
+        }}
+        aria-describedby={isTruncated ? "truncation-hint" : undefined}
+      >
         {/* Year Tab - Only shown in results view */}
         {showYear && (
           <div className="absolute top-3 -left-3 flex items-center">
@@ -135,9 +178,17 @@ function EventCardContent({
 
         {/* Event Text */}
         <div className="min-w-0 flex-1">
-          <p className="font-event text-body-primary line-clamp-3 text-xl leading-relaxed">
+          <p
+            ref={textRef}
+            className="font-event text-body-primary line-clamp-3 text-xl leading-relaxed"
+          >
             {event.text}
           </p>
+          {isTruncated && (
+            <span id="truncation-hint" className="text-muted-foreground mt-1 block text-sm">
+              Tap to read more
+            </span>
+          )}
         </div>
       </div>
     </>

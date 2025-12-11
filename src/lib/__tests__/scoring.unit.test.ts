@@ -68,7 +68,7 @@ describe("scoreRange", () => {
 
   it("ensures a minimum score floor for maximum width ranges (0 hints)", () => {
     // Width W_MAX, 0 hints.
-    // Old logic: 0 pts. New logic (5% floor): MIN_WIDTH_FACTOR_FLOOR * MAX_SCORES_BY_HINTS[0]
+    // Quadratic formula at max width: 4% floor → floor(0.04 * 100) = 4 pts
     const start = 1000;
     const width = SCORING_CONSTANTS.W_MAX;
     const end = start + width - 1; // Width 250
@@ -80,12 +80,12 @@ describe("scoreRange", () => {
       SCORING_CONSTANTS.MIN_WIDTH_FACTOR_FLOOR * SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[hintsUsed],
     );
 
-    expect(score).toBe(expectedScore); // 5 pts = Math.floor(0.05 * 100)
+    expect(score).toBe(expectedScore); // 4 pts = Math.floor(0.04 * 100)
   });
 
   it("ensures a minimum score floor for maximum width ranges (6 hints)", () => {
     // Width W_MAX, 6 hints.
-    // Old logic: 0 pts. New logic (5% floor): MIN_WIDTH_FACTOR_FLOOR * MAX_SCORES_BY_HINTS[6]
+    // Quadratic formula at max width: 4% floor → floor(0.04 * 25) = 1 pt
     const start = 1000;
     const width = SCORING_CONSTANTS.W_MAX;
     const end = start + width - 1; // Width 250
@@ -97,7 +97,7 @@ describe("scoreRange", () => {
       SCORING_CONSTANTS.MIN_WIDTH_FACTOR_FLOOR * SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[hintsUsed],
     );
 
-    expect(score).toBe(expectedScore); // 1 pt = Math.floor(0.05 * 25)
+    expect(score).toBe(expectedScore); // 1 pt = Math.floor(0.04 * 25)
   });
 });
 
@@ -111,10 +111,9 @@ describe("scoreRangeDetailed", () => {
       score: 100, // New system: 100 points for 1-year range, 0 hints
     });
 
-    // baseScore should equal the unrounded score value
+    // baseScore for width=1: quadratic progress = 0², widthFactor = 1.0
     const maxScore = SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[0]; // 100
-    const widthFactor = (SCORING_CONSTANTS.W_MAX - result.width + 1) / SCORING_CONSTANTS.W_MAX; // 250/250 = 1.0
-    const expectedBase = maxScore * widthFactor; // 100 * 1.0 = 100
+    const expectedBase = maxScore * 1.0; // 100
 
     expect(result.baseScore).toBeCloseTo(expectedBase, 6);
   });
@@ -126,5 +125,15 @@ describe("scoreRangeDetailed", () => {
       score: 0,
       width: 101,
     });
+  });
+
+  it("applies quadratic width penalty (mid-range scores improved)", () => {
+    // Width 100, 0 hints: quadratic formula yields exactly 84
+    const score100 = scoreRange(1900, 1999, 1950, 0, 0);
+    expect(score100).toBe(84);
+
+    // Width 150, 3 hints: quadratic formula yields exactly 36
+    const score150 = scoreRange(1900, 2049, 2000, 0, 3);
+    expect(score150).toBe(36);
   });
 });
