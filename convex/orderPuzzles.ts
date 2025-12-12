@@ -3,12 +3,15 @@
  */
 export {
   generateDailyOrderPuzzle,
+  generateTomorrowOrderPuzzle,
   ensureTodaysOrderPuzzle,
+  ensureOrderPuzzleForDate,
   submitOrderPlay,
 } from "./orderPuzzles/mutations";
 
 export {
   getDailyOrderPuzzle,
+  getOrderPuzzleByDate,
   getOrderPuzzleByNumber,
   getArchiveOrderPuzzles,
 } from "./orderPuzzles/queries";
