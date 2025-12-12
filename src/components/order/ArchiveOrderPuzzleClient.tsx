@@ -100,6 +100,7 @@ export function ArchiveOrderPuzzleClient({
               score={gameState.score}
               puzzleNumber={gameState.puzzle.puzzleNumber}
               onShare={handleShare}
+              isArchive={true}
             />
             {shareFeedback && (
               <p className="text-muted-foreground text-center text-sm" role="status">

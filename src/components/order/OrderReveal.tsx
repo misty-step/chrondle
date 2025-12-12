@@ -4,12 +4,16 @@ import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Check, Share2 } from "lucide-react";
 import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
+import { NextPuzzleCountdownCard } from "@/components/game/NextPuzzleCountdownCard";
+import { useCountdown } from "@/hooks/useCountdown";
 import type { AttemptScore } from "@/types/orderGameState";
 
 interface OrderRevealProps {
   score: AttemptScore;
   puzzleNumber: number;
   onShare?: () => void;
+  /** Whether this is an archive puzzle (hides countdown) */
+  isArchive?: boolean;
 }
 
 /**
@@ -43,9 +47,12 @@ function getArchivalDisplay(attempts: number): {
   };
 }
 
-export function OrderReveal({ score, puzzleNumber, onShare }: OrderRevealProps) {
+export function OrderReveal({ score, puzzleNumber, onShare, isArchive = false }: OrderRevealProps) {
   const prefersReducedMotion = useReducedMotion();
   const [isShared, setIsShared] = useState(false);
+
+  // Only show countdown for daily puzzles (not archive)
+  const { timeString } = useCountdown({ strategy: "localMidnight" });
 
   const archivalDisplay = useMemo(() => getArchivalDisplay(score.attempts), [score.attempts]);
   const attemptLabel = score.attempts === 1 ? "attempt" : "attempts";
@@ -140,6 +147,9 @@ export function OrderReveal({ score, puzzleNumber, onShare }: OrderRevealProps) 
           </div>
         )}
       </motion.div>
+
+      {/* Countdown Card - only for daily puzzles */}
+      {!isArchive && <NextPuzzleCountdownCard timeString={timeString} />}
     </div>
   );
 }
