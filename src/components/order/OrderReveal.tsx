@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Check, Share2 } from "lucide-react";
 import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
-import type { AttemptScore } from "@/types/orderGameState";
+import { formatYear } from "@/lib/displayFormatting";
+import type { AttemptScore, OrderEvent } from "@/types/orderGameState";
 
 interface OrderRevealProps {
   score: AttemptScore;
   puzzleNumber: number;
   onShare?: () => void;
+  events?: OrderEvent[];
 }
 
 /**
@@ -43,7 +45,7 @@ function getArchivalDisplay(attempts: number): {
   };
 }
 
-export function OrderReveal({ score, puzzleNumber, onShare }: OrderRevealProps) {
+export function OrderReveal({ score, puzzleNumber, onShare, events }: OrderRevealProps) {
   const prefersReducedMotion = useReducedMotion();
   const [isShared, setIsShared] = useState(false);
 
@@ -140,6 +142,53 @@ export function OrderReveal({ score, puzzleNumber, onShare }: OrderRevealProps) 
           </div>
         )}
       </motion.div>
+
+      {/* Events List */}
+      {events && events.length > 0 && (
+        <motion.div
+          className="space-y-4 pt-4"
+          initial={prefersReducedMotion ? false : { opacity: 0 }}
+          animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1 }}
+          transition={{
+            duration: msToSeconds(ANIMATION_DURATIONS.HINT_TRANSITION),
+            delay: msToSeconds(ANIMATION_DURATIONS.PROXIMITY_DELAY) * 2,
+          }}
+        >
+          <div className="text-muted-foreground text-center text-sm font-semibold tracking-wider uppercase">
+            Correct Timeline
+          </div>
+          <div className="space-y-4">
+            {events.map((event, index) => (
+              <StaticEventCard key={event.id} event={event} index={index} />
+            ))}
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+function StaticEventCard({ event, index }: { event: OrderEvent; index: number }) {
+  return (
+    <div className="bg-card shadow-hard border-border relative flex min-h-[100px] flex-col rounded-sm border-2 p-6 pt-8 text-left">
+      {/* Year Tag */}
+      <div className="absolute -left-3 top-3 z-10 flex items-center">
+        <div className="bg-timeline-spine rounded px-2 py-1 text-white shadow-sm">
+          <span className="font-year whitespace-nowrap text-xs">{formatYear(event.year)}</span>
+        </div>
+      </div>
+
+      <div className="flex flex-1 items-start gap-4">
+        {/* Index Badge */}
+        <div className="flex min-w-[36px] flex-shrink-0 items-center justify-center sm:min-w-[32px]">
+          <div className="number-badge">{index + 1}</div>
+        </div>
+
+        {/* Text */}
+        <div className="min-w-0 flex-1">
+          <p className="font-event text-body-primary text-xl leading-relaxed">{event.text}</p>
+        </div>
+      </div>
     </div>
   );
 }

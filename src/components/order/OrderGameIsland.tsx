@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Preloaded, usePreloadedQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOrderGame } from "@/hooks/useOrderGame";
@@ -12,7 +12,7 @@ import { GameModeLayout } from "@/components/GameModeLayout";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { generateArchivalShareText } from "@/lib/order/shareCard";
-import type { ReadyState } from "@/types/orderGameState";
+import type { OrderEvent, ReadyState } from "@/types/orderGameState";
 
 interface OrderGameIslandProps {
   preloadedPuzzle: Preloaded<typeof api.orderPuzzles.getDailyOrderPuzzle>;
@@ -28,6 +28,16 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
     addToast,
   );
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+
+  const completedEvents = useMemo(() => {
+    if (gameState.status === "completed") {
+      const eventsById = new Map(gameState.puzzle.events.map((e) => [e.id, e]));
+      return gameState.correctOrder
+        .map((id) => eventsById.get(id))
+        .filter((e): e is OrderEvent => e !== undefined);
+    }
+    return undefined;
+  }, [gameState]);
 
   if (gameState.status === "loading-puzzle") {
     return (
@@ -86,6 +96,7 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
             score={gameState.score}
             puzzleNumber={gameState.puzzle.puzzleNumber}
             onShare={handleShare}
+            events={completedEvents}
           />
           {shareFeedback && (
             <p className="text-muted-foreground text-center text-sm" role="status">
