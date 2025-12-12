@@ -113,6 +113,42 @@ export const generateDailyPuzzle = internalMutation({
 });
 
 /**
+ * Compute the allowed date window for ensure operations
+ * Window: [yesterdayUTC, tomorrowUTC] - covers all timezone scenarios
+ *
+ * @returns Array of allowed date strings
+ */
+function getAllowedDateWindow(): string[] {
+  const now = new Date();
+
+  // Yesterday UTC
+  const yesterday = new Date(now);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+  // Today UTC
+  const todayStr = now.toISOString().slice(0, 10);
+
+  // Tomorrow UTC
+  const tomorrow = new Date(now);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+  return [yesterdayStr, todayStr, tomorrowStr];
+}
+
+/**
+ * Check if a date is within the allowed ensure window
+ *
+ * @param date - Date string (YYYY-MM-DD) to check
+ * @returns True if date is in allowed window
+ */
+function isDateInAllowedWindow(date: string): boolean {
+  const allowedDates = getAllowedDateWindow();
+  return allowedDates.includes(date);
+}
+
+/**
  * Public mutation to ensure today's puzzle exists
  *
  * Called by frontend on load to guarantee today's puzzle is available.
@@ -167,6 +203,171 @@ export const ensureTodaysPuzzle = mutation({
     console.warn(`Created puzzle #${nextPuzzleNumber} for ${today} with year ${selectedYear}`);
 
     return { status: "created", puzzle: newPuzzle };
+  },
+});
+
+/**
+ * Public mutation to ensure a puzzle exists for a specific date
+ *
+ * Supports local-date puzzle unlock: client passes their local date,
+ * server creates the puzzle if it doesn't exist and date is in allowed window.
+ *
+ * Window Guard: Only accepts dates in [yesterdayUTC, tomorrowUTC] to prevent
+ * far-future requests (anti-cheat) while supporting all timezone scenarios.
+ *
+ * @param date - Date string in YYYY-MM-DD format
+ * @returns Status and puzzle data, or error if date outside window
+ */
+export const ensurePuzzleForDate = mutation({
+  args: { date: v.string() },
+  handler: async (ctx, { date }) => {
+    // Window guard: reject dates outside [yesterdayUTC, tomorrowUTC]
+    if (!isDateInAllowedWindow(date)) {
+      console.error(`[ensurePuzzleForDate] Date ${date} outside allowed window, rejecting`);
+      throw new Error("Date out of allowed window");
+    }
+
+    // Check if puzzle already exists
+    const existingPuzzle = await ctx.db
+      .query("puzzles")
+      .withIndex("by_date", (q) => q.eq("date", date))
+      .first();
+
+    if (existingPuzzle) {
+      return { status: "already_exists" as const, puzzle: existingPuzzle };
+    }
+
+    // Generate puzzle for the requested date
+    console.warn(`[ensurePuzzleForDate] Generating puzzle for ${date}`);
+
+    // Get the highest puzzle number
+    const latestPuzzle = await ctx.db.query("puzzles").order("desc").first();
+    const nextPuzzleNumber = (latestPuzzle?.puzzleNumber || 0) + 1;
+
+    // Select a year with 6+ unused events and get random events from it
+    const { year: selectedYear, events: selectedEvents } = await selectYearForPuzzle(ctx);
+
+    const puzzleId = await ctx.db.insert("puzzles", {
+      puzzleNumber: nextPuzzleNumber,
+      date: date,
+      targetYear: selectedYear,
+      events: selectedEvents.map((e) => e.event),
+      playCount: 0,
+      avgGuesses: 0,
+      updatedAt: Date.now(),
+    });
+
+    // Mark events as used in Classic mode
+    for (const event of selectedEvents) {
+      await ctx.db.patch(event._id, {
+        classicPuzzleId: puzzleId,
+        updatedAt: Date.now(),
+      });
+    }
+
+    // Schedule historical context generation (non-blocking)
+    try {
+      await ctx.scheduler.runAfter(
+        0, // Run immediately
+        internal.actions.historicalContext.generateHistoricalContext,
+        {
+          puzzleId,
+          year: selectedYear,
+          events: selectedEvents.map((e) => e.event),
+        },
+      );
+
+      console.warn(
+        `Scheduled historical context generation for puzzle ${puzzleId} (year ${selectedYear})`,
+      );
+    } catch (schedulerError) {
+      console.error(
+        `[ensurePuzzleForDate] Failed to schedule context generation for puzzle ${puzzleId}:`,
+        schedulerError,
+      );
+    }
+
+    const newPuzzle = await ctx.db.get(puzzleId);
+
+    console.warn(`Created puzzle #${nextPuzzleNumber} for ${date} with year ${selectedYear}`);
+
+    return { status: "created" as const, puzzle: newPuzzle };
+  },
+});
+
+/**
+ * Internal mutation to pre-generate tomorrow's puzzle
+ *
+ * Called by cron to ensure ahead-UTC timezone users have their puzzle ready.
+ * Delegates to generateDailyPuzzle with tomorrow's UTC date.
+ */
+export const generateTomorrowPuzzle = internalMutation({
+  handler: async (ctx) => {
+    const tomorrow = new Date();
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const tomorrowDate = tomorrow.toISOString().slice(0, 10);
+
+    console.warn(`[generateTomorrowPuzzle] Pre-generating puzzle for ${tomorrowDate}`);
+
+    // Check if puzzle already exists
+    const existingPuzzle = await ctx.db
+      .query("puzzles")
+      .withIndex("by_date", (q) => q.eq("date", tomorrowDate))
+      .first();
+
+    if (existingPuzzle) {
+      console.warn(`[generateTomorrowPuzzle] Puzzle for ${tomorrowDate} already exists`);
+      return { status: "already_exists", puzzle: existingPuzzle };
+    }
+
+    // Get the highest puzzle number
+    const latestPuzzle = await ctx.db.query("puzzles").order("desc").first();
+    const nextPuzzleNumber = (latestPuzzle?.puzzleNumber || 0) + 1;
+
+    // Select a year with 6+ unused events
+    const { year: selectedYear, events: selectedEvents } = await selectYearForPuzzle(ctx);
+
+    const puzzleId = await ctx.db.insert("puzzles", {
+      puzzleNumber: nextPuzzleNumber,
+      date: tomorrowDate,
+      targetYear: selectedYear,
+      events: selectedEvents.map((e) => e.event),
+      playCount: 0,
+      avgGuesses: 0,
+      updatedAt: Date.now(),
+    });
+
+    // Mark events as used
+    for (const event of selectedEvents) {
+      await ctx.db.patch(event._id, {
+        classicPuzzleId: puzzleId,
+        updatedAt: Date.now(),
+      });
+    }
+
+    // Schedule historical context generation
+    try {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.actions.historicalContext.generateHistoricalContext,
+        {
+          puzzleId,
+          year: selectedYear,
+          events: selectedEvents.map((e) => e.event),
+        },
+      );
+    } catch (schedulerError) {
+      console.error(
+        `[generateTomorrowPuzzle] Failed to schedule context generation:`,
+        schedulerError,
+      );
+    }
+
+    console.warn(
+      `[generateTomorrowPuzzle] Created puzzle #${nextPuzzleNumber} for ${tomorrowDate}`,
+    );
+
+    return { status: "created", puzzleId, date: tomorrowDate };
   },
 });
 
