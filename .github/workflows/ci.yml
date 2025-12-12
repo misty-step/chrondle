@@ -401,9 +401,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-output
-          path: |
-            .next/
-            !.next/server/chunks/ssr/
+          path: .next/
           include-hidden-files: true
 
   e2e:
