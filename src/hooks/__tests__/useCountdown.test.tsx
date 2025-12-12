@@ -18,6 +18,10 @@ vi.mock("@/lib/displayFormatting", () => ({
   getTimeUntilMidnight: () => 3600000,
 }));
 
+vi.mock("@/lib/time/dailyDate", () => ({
+  getMillisUntilLocalMidnight: () => 3600000,
+}));
+
 import { useQuery } from "convex/react";
 import { useCountdown } from "../useCountdown";
 
@@ -39,9 +43,17 @@ describe("useCountdown", () => {
     globalThis.clearInterval = originalClearInterval;
   });
 
-  it("shows loading state", () => {
-    const { result, unmount } = renderHook(() => useCountdown());
+  it("shows loading state with serverMidnight strategy", () => {
+    // With serverMidnight strategy and no query result yet, should show loading
+    const { result, unmount } = renderHook(() => useCountdown({ strategy: "serverMidnight" }));
     expect(result.current.isLoading).toBe(true);
+    unmount();
+  });
+
+  it("never shows loading state with localMidnight strategy (default)", () => {
+    // Local midnight is computed client-side, no server query needed
+    const { result, unmount } = renderHook(() => useCountdown());
+    expect(result.current.isLoading).toBe(false);
     unmount();
   });
 });
