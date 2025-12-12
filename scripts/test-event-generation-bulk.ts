@@ -1,8 +1,5 @@
 #!/usr/bin/env tsx
 
-/* eslint-disable no-console */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { Command } from "commander";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api.js";

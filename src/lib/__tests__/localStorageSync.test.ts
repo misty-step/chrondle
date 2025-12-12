@@ -186,7 +186,6 @@ describe("localStorageSync", () => {
         isComplete: false,
         hasWon: false,
         timestamp: Date.now(),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = getStorageSnapshot("puzzle-1");

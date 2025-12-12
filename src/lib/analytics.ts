@@ -396,7 +396,6 @@ export class GameAnalytics {
 
     // Send to gtag if available (for production)
     if (typeof window !== "undefined" && "gtag" in window) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).gtag?.("event", event, {
         ...properties,
         user_id: userId,

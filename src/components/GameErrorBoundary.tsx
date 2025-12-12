@@ -109,7 +109,6 @@ export class GameErrorBoundary extends Component<Props, State> {
 
       // Send to analytics if available
       if (typeof window !== "undefined" && "gtag" in window) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).gtag?.("event", "exception", {
           description: `Game State Error: ${error.message}`,
           fatal: false,

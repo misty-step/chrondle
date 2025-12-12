@@ -75,18 +75,14 @@ export async function recordPuzzleCreation(
  * @param timeRange - Time window for metrics aggregation
  * @returns Unified metrics across all dimensions
  */
-export async function getMetrics(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ctx: any,
-  timeRange: TimeRange,
-): Promise<Metrics> {
+export async function getMetrics(ctx: any, timeRange: TimeRange): Promise<Metrics> {
   const now = Date.now();
   const startTime = calculateStartTime(now, timeRange);
 
   // Fetch generation logs for the time range
   const logs = await ctx.db
     .query("generation_logs")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     .withIndex("by_timestamp", (q: any) => q.gte("timestamp", startTime))
     .collect();
 

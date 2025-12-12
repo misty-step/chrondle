@@ -132,13 +132,12 @@ export function useOrderPuzzleData(
   }, [convexPuzzle, hasInitialData, initialData, puzzleNumber]);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizePuzzle(convexPuzzle: any): OrderPuzzle {
   return {
     id: (convexPuzzle._id || convexPuzzle.id) as Id<"orderPuzzles">,
     date: convexPuzzle.date,
     puzzleNumber: convexPuzzle.puzzleNumber,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     events: convexPuzzle.events.map((event: any) => ({
       id: event.id,
       year: event.year,

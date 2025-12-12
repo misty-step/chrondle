@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock internalAction to return the handler directly
 vi.mock("../../../_generated/server", () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   internalAction: (config: any) => ({ handler: config.handler }),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   action: (config: any) => ({ handler: config.handler }),
 }));
 
@@ -107,7 +106,6 @@ describe("generateDailyBatch integration", () => {
       runMutation: vi.fn().mockResolvedValue(undefined),
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await (generateDailyBatch as any).handler(ctx, {});
 
     expect(result.attemptedYears).toHaveLength(10);
@@ -127,7 +125,6 @@ describe("generateDailyBatch integration", () => {
       runMutation: vi.fn().mockResolvedValue(undefined),
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await (generateDailyBatch as any).handler(ctx, {});
 
     expect(result.failures).toBe(2);
@@ -139,7 +136,6 @@ describe("generateDailyBatch integration", () => {
       runMutation: vi.fn().mockResolvedValue(undefined),
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await (generateDailyBatch as any).handler(ctx, { targetCount: 500 });
 
     expect(result.attemptedYears).toHaveLength(50);

@@ -14,7 +14,7 @@ export const GameControls: React.FC<GameControlsProps> = React.memo(
       <div className={`absolute top-4 right-4 flex gap-3 ${className}`}>
         <button
           onClick={onHelpClick}
-          className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+          className="text-gray-500 transition hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400"
           aria-label="Help"
         >
           <svg
@@ -34,7 +34,7 @@ export const GameControls: React.FC<GameControlsProps> = React.memo(
         </button>
         <button
           onClick={onSettingsClick}
-          className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+          className="text-gray-500 transition hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400"
           aria-label="Settings"
         >
           <svg
@@ -67,6 +67,5 @@ GameControls.displayName = "GameControls";
 
 // why-did-you-render tracking
 if (process.env.NODE_ENV === "development") {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (GameControls as any).whyDidYouRender = true;
 }

@@ -1,6 +1,3 @@
-/* eslint-disable no-console */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 /**
  * Test script for OpenRouter Responses API integration
  * Validates API endpoint, response parsing, and context quality
@@ -82,7 +79,7 @@ async function runTests(): Promise<void> {
 
     // Test 1: Generate puzzle with historical context
     console.log("📋 Step 2: Generating test puzzle with historical context...");
-    const testDate = `2025-99-${Math.floor(Math.random() * 89) + 10}`; // Unique test date
+    const _testDate = `2025-99-${Math.floor(Math.random() * 89) + 10}`; // Unique test date (unused currently)
 
     let puzzle: any;
     try {

@@ -6,7 +6,7 @@ import { modules } from "../test.setup";
 import type { Id } from "../_generated/dataModel";
 
 // Type assertion for path-based API access
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const orderPlaysQueries = (api as any)["orderPlays/queries"];
 
 /**

@@ -6,11 +6,11 @@ import { modules } from "../test.setup";
 import type { Id } from "../_generated/dataModel";
 
 // Type assertion for path-based API access (works at runtime, not type-checked)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const puzzlesQueries = (api as any)["puzzles/queries"];
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const puzzlesMutations = (api as any)["puzzles/mutations"];
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const playsQueries = (api as any)["plays/queries"];
 
 /**

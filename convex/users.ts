@@ -1,7 +1,3 @@
-import { v } from "convex/values";
-import { mutation, internalMutation } from "./_generated/server";
-import { isConsecutiveDay, getUTCDateString } from "./lib/streakCalculation";
-
 // Re-export query functions for backward compatibility
 export { getCurrentUser, getUserByClerkId, userExists, getUserStats } from "./users/queries";
 

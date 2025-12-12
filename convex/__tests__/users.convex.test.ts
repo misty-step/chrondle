@@ -6,9 +6,9 @@ import { modules } from "../test.setup";
 import type { Id } from "../_generated/dataModel";
 
 // Type assertion for path-based API access
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const usersQueries = (api as any)["users/queries"];
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const usersMutations = (api as any)["users/mutations"];
 
 /**

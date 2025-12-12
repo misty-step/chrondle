@@ -97,7 +97,6 @@ async function OrderArchivePageContent({
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let archiveData: { puzzles: any[]; totalPages: number; totalCount: number; currentPage: number } =
     {
       puzzles: [],
@@ -117,7 +116,6 @@ async function OrderArchivePageContent({
   const { puzzles, totalPages, totalCount } = archiveData;
   const validPuzzles = Array.isArray(puzzles) ? puzzles : [];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const paginatedData: PuzzleCardData[] = validPuzzles.map((puzzle: any) => ({
     index: (puzzle?.puzzleNumber || 1) - 1,
     puzzleNumber: puzzle?.puzzleNumber || 0,
