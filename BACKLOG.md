@@ -1,9 +1,11 @@
 # BACKLOG
 
-Last groomed: 2025-11-25
+Last groomed: 2025-12-13
 Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-guardian, security-sentinel, performance-pathfinder, maintainability-maven, user-experience-advocate, product-visionary, design-systems-architect)
 
-**Recent Addition (2025-11-25):** Event & Puzzle Generation System Modernization deferred items added to "Soon" and "Later" sections. See TODO.md for approved Phase 1-3 implementation tasks (120 hours, 6 weeks).
+**Recent Addition (2025-12-13):** Incorporated external consultant security/architecture audit. Added privacy leak, Convex filter bug, boundary coupling, and timezone consistency items. Product/market analysis extracted to `docs/product/STRATEGY.md`.
+
+**Previous (2025-11-25):** Event & Puzzle Generation System Modernization deferred items added. See TODO.md for Phase 1-3 implementation tasks.
 
 ---
 
@@ -123,6 +125,51 @@ const user = await ctx.db
 
 ---
 
+### [SECURITY] HIGH - Privacy Leak in Play Read APIs
+
+**Files**: `convex/plays/queries.ts:28-94`, `convex/orderPlays/queries.ts:4-17`
+**Perspectives**: security-sentinel
+**Severity**: HIGH
+**Impact**: Any authenticated user can read any other user's play history by passing arbitrary userId
+**Attack Vector**: Call `getUserPlay` or `getOrderPlay` with another user's ID → read their scores, attempts, completion status
+**Code**:
+
+```typescript
+export const getUserPlay = query({
+  args: {
+    puzzleId: v.id("puzzles"),
+    userId: v.id("users"), // Client-controlled, no auth check!
+  },
+  handler: async (ctx, { puzzleId, userId }) => {
+    // NO VERIFICATION that userId matches authenticated user
+  },
+});
+```
+
+**Fix**: Create `getMyPlay(puzzleId)` variants deriving userId from `ctx.auth.getUserIdentity()`. Pattern exists in Order submission - use as reference.
+**Effort**: 1h | **Risk**: HIGH - Privacy violation
+**Acceptance**: Cannot fetch another user's play record; tests verify rejection
+
+---
+
+### [DATA INTEGRITY] MEDIUM - Convex Filter Bug (neq matches undefined)
+
+**Files**: `convex/plays/queries.ts:113`, `convex/orderPlays/queries.ts:27`
+**Perspectives**: data-integrity-guardian
+**Severity**: MEDIUM
+**Impact**: Completion stats include in-progress games (undefined treated as not-null)
+**Code**:
+
+```typescript
+.filter((q) => q.neq(q.field("completedAt"), null))  // BUG: also matches undefined!
+```
+
+**Fix**: Explicitly check for defined value: `.filter((q) => q.neq(q.field("completedAt"), undefined))`
+**Effort**: 15m | **Risk**: MEDIUM - Incorrect streak/history displays
+**Acceptance**: Verified via Convex test that undefined records are excluded
+
+---
+
 ### [UX] CRITICAL - Toast System Non-Functional
 
 **Files**: `src/components/ui/toaster.tsx`, `src/hooks/use-toast.ts`
@@ -170,12 +217,12 @@ export function Toaster() {
 
 ---
 
-### [PERFORMANCE] HIGH - getArchivePuzzles Full Table Scans
+### [PERFORMANCE] HIGH - Archive Full Table Scans (Classic + Order)
 
-**File**: `convex/puzzles/queries.ts:72-96`
+**Files**: `convex/puzzles/queries.ts:72-96`, `convex/orderPuzzles/queries.ts:67-92`
 **Perspectives**: performance-pathfinder
-**Impact**: Two full table scans per archive page load → 500ms query time
-**Code**:
+**Impact**: Two full table scans per archive page load → 500ms+ query time, scales linearly with puzzle count
+**Code** (both modes use identical anti-pattern):
 
 ```typescript
 const allPuzzles = await ctx.db.query("puzzles").collect(); // 1st scan
@@ -183,11 +230,11 @@ const puzzles = await ctx.db.query("puzzles").order("desc").collect(); // 2nd sc
 const paginatedPuzzles = puzzles.slice(startIndex, endIndex); // Manual pagination
 ```
 
-**User Impact**: Archive page load scales linearly with puzzle count
-**Fix**: Use Convex's built-in pagination with cursors
+**User Impact**: Archive page load becomes progressively slower as puzzles accumulate
+**Fix**: Create shared cursor-based pagination helper using Convex's built-in pagination, apply to both modes
 **Expected**: 500ms → 50ms (10x improvement)
 **Effort**: 2h | **Impact**: 9/10 - Major user-facing performance win
-**Acceptance**: Archive loads in <100ms, no full table scans
+**Acceptance**: Archive loads in <100ms, no full table scans, works for both Classic and Order modes
 
 ---
 
@@ -221,5 +268,46 @@ export function GET() {
 - Set up UptimeRobot or BetterUptime free tier for monitoring
   **Effort**: 15m | **Impact**: Downtime detection in < 5 minutes
   **Acceptance**: Health endpoint returns 200, uptime monitoring configured
+
+---
+
+## Soon (Next Sprint, 2-4 weeks)
+
+### [ARCHITECTURE] MEDIUM - Boundary Coupling (Backend ↔ Frontend)
+
+**File**: `convex/puzzles/mutations.ts:7-8`
+**Perspectives**: architecture-guardian
+**Problem**: Convex backend imports from `src/lib/scoring` - mixes frontend/backend build surfaces
+
+```typescript
+import { scoreRange } from "../../src/lib/scoring";
+```
+
+**Risk**: Build/deploy coupling, drift risk between frontend/backend logic
+**Fix Options**:
+
+1. Move scoring to `convex/lib/scoring.ts` (quick)
+2. Create `packages/domain/` workspace (proper, enables future modes)
+   **Effort**: 1-2h | **Risk**: MEDIUM - No runtime impact, but maintenance burden
+   **Acceptance**: Convex code never imports from `src/`
+
+---
+
+### [UX] HIGH - Timezone/Date Consistency
+
+**Problem**:
+
+- README claims specific timezone reset
+- Classic `getDailyPuzzle` uses UTC
+- Order `getOrderPuzzleByDate` accepts client local date
+  **Impact**: "my puzzle changed early/late" complaints, streak distrust
+  **Decision**: Standardize on **client local date** everywhere (more intuitive UX)
+  **Fix**:
+
+1. Update Classic to use `getByDate(clientDate)` pattern like Order
+2. Add visible countdown timer showing time until local midnight
+3. Update README to document local-date behavior
+   **Effort**: 2h | **Risk**: HIGH - User trust, streak integrity
+   **Acceptance**: Both modes use consistent local-date logic, countdown visible
 
 ---
