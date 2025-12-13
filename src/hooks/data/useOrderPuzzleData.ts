@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "convex/_generated/dataModel";
 import type { OrderPuzzle } from "@/types/orderGameState";
+import { getLocalDateString } from "@/lib/time/dailyDate";
 import { logger } from "@/lib/logger";
 
 interface ConvexOrderEvent {
@@ -27,15 +28,40 @@ interface UseOrderPuzzleDataReturn {
   error: Error | null;
 }
 
+/**
+ * Hook to fetch Order puzzle data from Convex
+ *
+ * Local Date Selection: For daily puzzles, this hook uses the client's local date
+ * to determine which puzzle to fetch. This ensures users see "today's puzzle"
+ * based on their timezone, not UTC.
+ */
 export function useOrderPuzzleData(
   puzzleNumber?: number,
   initialData?: unknown,
 ): UseOrderPuzzleDataReturn {
   const hasInitialData = initialData !== undefined;
 
-  const dailyPuzzle = useQuery(
-    api.orderPuzzles.getDailyOrderPuzzle,
-    puzzleNumber !== undefined || hasInitialData ? "skip" : undefined,
+  // Compute local date for daily puzzle selection
+  const [localDate, setLocalDate] = useState(() => getLocalDateString());
+
+  // Update local date when it changes (midnight boundary)
+  useEffect(() => {
+    const checkDate = () => {
+      const currentDate = getLocalDateString();
+      if (currentDate !== localDate) {
+        setLocalDate(currentDate);
+      }
+    };
+
+    const interval = setInterval(checkDate, 60000);
+    return () => clearInterval(interval);
+  }, [localDate]);
+
+  // Daily mode: fetch puzzle by local date
+  const isDaily = puzzleNumber === undefined && !hasInitialData;
+  const localPuzzle = useQuery(
+    api.orderPuzzles.getOrderPuzzleByDate,
+    isDaily ? { date: localDate } : "skip",
   ) as ConvexOrderPuzzle | null | undefined;
 
   const archivePuzzle = useQuery(
@@ -43,22 +69,25 @@ export function useOrderPuzzleData(
     puzzleNumber !== undefined && !hasInitialData ? { puzzleNumber } : "skip",
   ) as ConvexOrderPuzzle | null | undefined;
 
-  const ensurePuzzle = useMutation(api.orderPuzzles.ensureTodaysOrderPuzzle);
+  // Mutation for on-demand puzzle generation with date support
+  const ensurePuzzleForDate = useMutation(api.orderPuzzles.ensureOrderPuzzleForDate);
 
   useEffect(() => {
-    if (puzzleNumber === undefined && !hasInitialData && dailyPuzzle === null) {
-      logger.warn("[useOrderPuzzleData] No daily Order puzzle found, triggering generation");
-      ensurePuzzle().catch((err) => {
-        logger.error("[useOrderPuzzleData] Failed generating Order puzzle", err);
+    if (isDaily && localPuzzle === null) {
+      logger.warn(
+        `[useOrderPuzzleData] No Order puzzle found for local date ${localDate}, triggering ensure`,
+      );
+      ensurePuzzleForDate({ date: localDate }).catch((err) => {
+        logger.error("[useOrderPuzzleData] Failed ensuring Order puzzle for date", err);
       });
     }
-  }, [dailyPuzzle, hasInitialData, puzzleNumber, ensurePuzzle]);
+  }, [localPuzzle, isDaily, localDate, ensurePuzzleForDate]);
 
   const convexPuzzle = hasInitialData
     ? (initialData as ConvexOrderPuzzle | null | undefined)
     : puzzleNumber !== undefined
       ? archivePuzzle
-      : dailyPuzzle;
+      : localPuzzle;
 
   return useMemo<UseOrderPuzzleDataReturn>(() => {
     if (hasInitialData) {
@@ -103,13 +132,12 @@ export function useOrderPuzzleData(
   }, [convexPuzzle, hasInitialData, initialData, puzzleNumber]);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizePuzzle(convexPuzzle: any): OrderPuzzle {
   return {
     id: (convexPuzzle._id || convexPuzzle.id) as Id<"orderPuzzles">,
     date: convexPuzzle.date,
     puzzleNumber: convexPuzzle.puzzleNumber,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     events: convexPuzzle.events.map((event: any) => ({
       id: event.id,
       year: event.year,

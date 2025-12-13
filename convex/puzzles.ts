@@ -13,6 +13,7 @@
 // Re-export query functions for backward compatibility (until Phase 4 frontend migration)
 export {
   getDailyPuzzle,
+  getPuzzleByDate,
   getPuzzleById,
   getPuzzleByNumber,
   getArchivePuzzles,
@@ -26,7 +27,9 @@ export { submitGuess, submitRange } from "./puzzles/mutations";
 // Re-export generation functions for backward compatibility
 export {
   generateDailyPuzzle,
+  generateTomorrowPuzzle,
   ensureTodaysPuzzle,
+  ensurePuzzleForDate,
   manualGeneratePuzzle,
 } from "./puzzles/generation";
 

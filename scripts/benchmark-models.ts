@@ -1,6 +1,4 @@
 #!/usr/bin/env tsx
-/* eslint-disable no-console */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { createGemini3Client } from "../convex/lib/gemini3Client.js";
 import { createLLMClient } from "../convex/lib/llmClient.js";

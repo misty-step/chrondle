@@ -397,6 +397,9 @@ jobs:
           fi
           echo "✅ Bundle sizes within limits"
 
+      - name: Remove files with colons (incompatible with artifact upload)
+        run: find .next -name '*:*' -delete
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:

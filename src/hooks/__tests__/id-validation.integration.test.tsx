@@ -27,9 +27,8 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 describe("ID Validation Integration Tests", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleErrorSpy: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let consoleWarnSpy: any;
 
   beforeEach(() => {

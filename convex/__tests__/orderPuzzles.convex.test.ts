@@ -5,7 +5,6 @@ import schema from "../schema";
 import { modules } from "../test.setup";
 import type { Id } from "../_generated/dataModel";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const orderQueries = (api as any)["orderPuzzles/queries"];
 
 /**

@@ -87,7 +87,10 @@ const nextConfig: NextConfig = {
 
   // Image configuration for Clerk avatars
   images: {
-    domains: ["img.clerk.com", "www.gravatar.com"],
+    remotePatterns: [
+      { protocol: "https", hostname: "img.clerk.com" },
+      { protocol: "https", hostname: "www.gravatar.com" },
+    ],
   },
 
   // Enable source maps for Sentry

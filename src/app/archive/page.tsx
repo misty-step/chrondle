@@ -189,7 +189,6 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
 
   // Fetch archive puzzles from Convex with graceful degradation
   let archiveData: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     puzzles: any[]; // Will be properly typed from Convex
     totalPages: number;
     totalCount: number;

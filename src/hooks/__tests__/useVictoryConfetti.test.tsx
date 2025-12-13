@@ -172,9 +172,8 @@ describe("useVictoryConfetti", () => {
     });
 
     it("should NOT fire twice for the same victory", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let result: any;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       let rerender: any;
 
       await act(async () => {
@@ -347,9 +346,8 @@ describe("useVictoryConfetti", () => {
 
   describe("state reset", () => {
     it("should reset hasFiredConfetti when hasWon becomes false", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let result: any;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       let rerender: any;
 
       await act(async () => {
@@ -381,9 +379,8 @@ describe("useVictoryConfetti", () => {
     });
 
     it("should reset hasFiredConfetti when isGameComplete becomes false", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let result: any;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       let rerender: any;
 
       await act(async () => {

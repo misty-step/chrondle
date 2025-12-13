@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "convex/_generated/dataModel";
 import { PuzzleWithContext } from "@/types/puzzle";
+import { getLocalDateString } from "@/lib/time/dailyDate";
 import { logger } from "@/lib/logger";
 
 /**
@@ -34,12 +35,16 @@ interface UsePuzzleDataReturn {
  * This hook is completely orthogonal - it has no knowledge of authentication,
  * users, or any other concerns. Its single responsibility is fetching puzzle data.
  *
+ * Local Date Selection: For daily puzzles, this hook uses the client's local date
+ * to determine which puzzle to fetch. This ensures users see "today's puzzle"
+ * based on their timezone, not UTC.
+ *
  * @param puzzleNumber - Optional puzzle number for archive puzzles. If not provided, fetches today's daily puzzle.
  * @param initialData - Optional initial puzzle data to skip loading state (for SSR)
  * @returns Object containing puzzle data, loading state, and error state
  *
  * @example
- * // Fetch today's daily puzzle
+ * // Fetch today's daily puzzle (uses local date)
  * const { puzzle, isLoading, error } = usePuzzleData();
  *
  * @example
@@ -54,30 +59,45 @@ export function usePuzzleData(puzzleNumber?: number, initialData?: unknown): Use
   // If initial data is provided, skip queries and use it directly
   const shouldSkipQuery = initialData !== undefined;
 
-  // Fetch daily puzzle if no puzzle number provided and no initial data
-  const dailyPuzzle = useQuery(
-    api.puzzles.getDailyPuzzle,
-    puzzleNumber !== undefined || shouldSkipQuery ? "skip" : undefined,
+  // Compute local date for daily puzzle selection
+  // This is stable during the day and flips at local midnight
+  const [localDate, setLocalDate] = useState(() => getLocalDateString());
+
+  // Update local date when it changes (midnight boundary)
+  useEffect(() => {
+    const checkDate = () => {
+      const currentDate = getLocalDateString();
+      if (currentDate !== localDate) {
+        setLocalDate(currentDate);
+      }
+    };
+
+    // Check every minute for date changes (handles midnight crossing)
+    const interval = setInterval(checkDate, 60000);
+    return () => clearInterval(interval);
+  }, [localDate]);
+
+  // Daily mode: fetch puzzle by local date
+  const isDaily = puzzleNumber === undefined && !shouldSkipQuery;
+  const localPuzzle = useQuery(
+    api.puzzles.getPuzzleByDate,
+    isDaily ? { date: localDate } : "skip",
   ) as ConvexPuzzle | null | undefined;
 
-  // Mutation for on-demand puzzle generation
-  const ensurePuzzle = useMutation(api.puzzles.ensureTodaysPuzzle);
+  // Mutation for on-demand puzzle generation with date support
+  const ensurePuzzleForDate = useMutation(api.puzzles.ensurePuzzleForDate);
 
-  // Trigger on-demand generation if daily puzzle is null (not loading)
+  // Trigger on-demand generation if puzzle for local date is null
   useEffect(() => {
-    if (
-      puzzleNumber === undefined &&
-      !shouldSkipQuery &&
-      dailyPuzzle === null // null means query returned but no puzzle exists
-    ) {
-      // Trigger on-demand generation for today
-      logger.warn(`[usePuzzleData] No daily puzzle found, triggering on-demand generation`);
+    if (isDaily && localPuzzle === null) {
+      logger.warn(`[usePuzzleData] No puzzle found for local date ${localDate}, triggering ensure`);
 
-      ensurePuzzle().catch((error) => {
-        logger.error("[usePuzzleData] Failed to generate puzzle on-demand:", error);
+      ensurePuzzleForDate({ date: localDate }).catch((error) => {
+        // Log but don't break - could be outside window, will fallback
+        logger.error("[usePuzzleData] Failed to ensure puzzle for date:", error);
       });
     }
-  }, [dailyPuzzle, puzzleNumber, shouldSkipQuery, ensurePuzzle]);
+  }, [localPuzzle, isDaily, localDate, ensurePuzzleForDate]);
 
   // Fetch archive puzzle if puzzle number provided and no initial data
   const archivePuzzle = useQuery(
@@ -90,7 +110,7 @@ export function usePuzzleData(puzzleNumber?: number, initialData?: unknown): Use
     ? (initialData as ConvexPuzzle | null | undefined)
     : puzzleNumber !== undefined
       ? archivePuzzle
-      : dailyPuzzle;
+      : localPuzzle;
 
   // Memoize the return value to ensure stable references
   return useMemo<UsePuzzleDataReturn>(() => {

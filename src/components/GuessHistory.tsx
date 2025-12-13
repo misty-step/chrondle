@@ -110,6 +110,5 @@ GuessHistory.displayName = "GuessHistory";
 
 // why-did-you-render tracking
 if (process.env.NODE_ENV === "development") {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (GuessHistory as any).whyDidYouRender = true;
 }

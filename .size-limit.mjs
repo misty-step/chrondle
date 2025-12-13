@@ -1,26 +1,20 @@
 export default [
   {
-    name: "Main JS (App)",
-    path: ".next/static/chunks/main-app-*.js",
-    limit: "50 KB",
+    name: "All JS Chunks",
+    path: ".next/static/chunks/*.js",
+    limit: "800 KB",
+    gzip: true,
   },
   {
-    name: "Framework",
-    path: ".next/static/chunks/framework-*.js",
-    limit: "50 KB",
+    name: "Turbopack Runtime",
+    path: ".next/static/chunks/turbopack-*.js",
+    limit: "10 KB",
+    gzip: true,
   },
   {
-    name: "App Page",
-    path: ".next/static/chunks/app/page-*.js",
-    limit: "100 KB",
-  },
-  {
-    name: "Total First Load JS",
-    path: [
-      ".next/static/chunks/main-app-*.js",
-      ".next/static/chunks/framework-*.js",
-      ".next/static/chunks/app/page-*.js",
-    ],
-    limit: "170 KB",
+    name: "CSS Bundle",
+    path: ".next/static/chunks/*.css",
+    limit: "150 KB",
+    gzip: true,
   },
 ];

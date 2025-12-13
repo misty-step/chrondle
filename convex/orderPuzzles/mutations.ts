@@ -64,10 +64,76 @@ export const generateDailyOrderPuzzle = internalMutation({
 });
 
 /**
+ * Internal mutation to pre-generate tomorrow's Order puzzle
+ *
+ * Called by cron to ensure ahead-UTC timezone users have their puzzle ready.
+ */
+export const generateTomorrowOrderPuzzle = internalMutation({
+  handler: async (ctx): Promise<GenerationResult> => {
+    const tomorrow = new Date();
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const tomorrowDate = tomorrow.toISOString().slice(0, 10);
+
+    console.warn(`[generateTomorrowOrderPuzzle] Pre-generating Order puzzle for ${tomorrowDate}`);
+
+    return generateOrderPuzzleForDate(ctx, tomorrowDate);
+  },
+});
+
+/**
  * Public mutation so the frontend can guarantee Order puzzles exist on demand.
  */
 export const ensureTodaysOrderPuzzle = mutation({
   handler: async (ctx): Promise<GenerationResult> => generateOrderPuzzleForDate(ctx),
+});
+
+/**
+ * Compute the allowed date window for ensure operations
+ * Window: [yesterdayUTC, tomorrowUTC] - covers all timezone scenarios
+ */
+function getAllowedDateWindow(): string[] {
+  const now = new Date();
+
+  const yesterday = new Date(now);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+  const todayStr = now.toISOString().slice(0, 10);
+
+  const tomorrow = new Date(now);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+  return [yesterdayStr, todayStr, tomorrowStr];
+}
+
+function isDateInAllowedWindow(date: string): boolean {
+  return getAllowedDateWindow().includes(date);
+}
+
+/**
+ * Public mutation to ensure Order puzzle exists for a specific date
+ *
+ * Supports local-date puzzle unlock: client passes their local date,
+ * server creates the Order puzzle if it doesn't exist and date is in allowed window.
+ *
+ * Window Guard: Only accepts dates in [yesterdayUTC, tomorrowUTC] to prevent
+ * far-future requests (anti-cheat) while supporting all timezone scenarios.
+ *
+ * @param date - Date string in YYYY-MM-DD format
+ * @returns Status and puzzle data, or error if date outside window
+ */
+export const ensureOrderPuzzleForDate = mutation({
+  args: { date: v.string() },
+  handler: async (ctx, { date }): Promise<GenerationResult> => {
+    // Window guard: reject dates outside [yesterdayUTC, tomorrowUTC]
+    if (!isDateInAllowedWindow(date)) {
+      console.error(`[ensureOrderPuzzleForDate] Date ${date} outside allowed window, rejecting`);
+      throw new Error("Date out of allowed window");
+    }
+
+    return generateOrderPuzzleForDate(ctx, date);
+  },
 });
 
 import { withObservability } from "../lib/observability";

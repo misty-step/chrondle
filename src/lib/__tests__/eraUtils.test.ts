@@ -32,7 +32,6 @@ describe("eraUtils", () => {
     });
 
     describe("with negative input warning", () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let consoleSpy: any;
 
       beforeEach(() => {

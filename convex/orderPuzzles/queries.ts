@@ -4,6 +4,38 @@ import { query } from "../_generated/server";
 /**
  * Order Puzzle Retrieval Queries.
  * Mirrors Classic puzzle APIs while targeting the orderPuzzles table.
+ *
+ * Exports:
+ * - getOrderPuzzleByDate: Get Order puzzle for specific date (local date support)
+ * - getDailyOrderPuzzle: Get today's Order puzzle (UTC, backward compat)
+ * - getOrderPuzzleByNumber: Get Order puzzle by sequential number
+ * - getArchiveOrderPuzzles: Get paginated archive Order puzzles
+ */
+
+/**
+ * Get Order puzzle for a specific date
+ *
+ * Supports local-date puzzle selection: client passes their local date,
+ * server returns the Order puzzle for that date if it exists.
+ *
+ * @param date - Date string in YYYY-MM-DD format
+ * @returns Order puzzle document or null if not yet generated
+ */
+export const getOrderPuzzleByDate = query({
+  args: { date: v.string() },
+  handler: async (ctx, { date }) => {
+    return await ctx.db
+      .query("orderPuzzles")
+      .withIndex("by_date", (q) => q.eq("date", date))
+      .first();
+  },
+});
+
+/**
+ * Get today's Order puzzle using UTC date
+ *
+ * Wrapper for backward compatibility.
+ * For new code, prefer getOrderPuzzleByDate with client's local date.
  */
 export const getDailyOrderPuzzle = query({
   handler: async (ctx) => {

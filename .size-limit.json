@@ -1,43 +1,20 @@
 [
   {
-    "name": "Main Bundle (App + Framework)",
-    "path": ".next/static/chunks/app/**/*.js",
-    "limit": "300 KB",
+    "name": "All JS Chunks",
+    "path": ".next/static/chunks/*.js",
+    "limit": "800 KB",
     "gzip": true
   },
   {
-    "name": "Pages Bundle",
-    "path": ".next/static/chunks/pages/**/*.js",
-    "limit": "100 KB",
+    "name": "Turbopack Runtime",
+    "path": ".next/static/chunks/turbopack-*.js",
+    "limit": "10 KB",
     "gzip": true
   },
   {
-    "name": "Framework Bundle",
-    "path": ".next/static/chunks/framework-*.js",
-    "limit": "60 KB",
-    "gzip": true
-  },
-  {
-    "name": "Main App Bundle",
-    "path": ".next/static/chunks/main-*.js",
-    "limit": "50 KB",
-    "gzip": true
-  },
-  {
-    "name": "Webpack Runtime",
-    "path": ".next/static/chunks/webpack-*.js",
-    "limit": "5 KB",
-    "gzip": true
-  },
-  {
-    "name": "Total First Load JS",
-    "path": [
-      ".next/static/chunks/framework-*.js",
-      ".next/static/chunks/main-*.js",
-      ".next/static/chunks/pages/_app-*.js",
-      ".next/static/chunks/webpack-*.js"
-    ],
-    "limit": "300 KB",
+    "name": "CSS Bundle",
+    "path": ".next/static/chunks/*.css",
+    "limit": "150 KB",
     "gzip": true
   }
 ]

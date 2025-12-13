@@ -8,7 +8,8 @@ import { query } from "../_generated/server";
  * Deep Module Value: Hides database query complexity behind clean API
  *
  * Exports:
- * - getDailyPuzzle: Get today's puzzle
+ * - getDailyPuzzle: Get today's puzzle (UTC)
+ * - getPuzzleByDate: Get puzzle for specific date (local date support)
  * - getPuzzleById: Get puzzle by Convex ID
  * - getPuzzleByNumber: Get puzzle by sequential number
  * - getArchivePuzzles: Get paginated archive puzzles
@@ -17,7 +18,32 @@ import { query } from "../_generated/server";
  */
 
 /**
+ * Get puzzle for a specific date
+ *
+ * Supports local-date puzzle selection: client passes their local date,
+ * server returns the puzzle for that date if it exists.
+ *
+ * @param date - Date string in YYYY-MM-DD format
+ * @returns Puzzle document or null if not yet generated
+ */
+export const getPuzzleByDate = query({
+  args: { date: v.string() },
+  handler: async (ctx, { date }) => {
+    const puzzle = await ctx.db
+      .query("puzzles")
+      .withIndex("by_date", (q) => q.eq("date", date))
+      .first();
+
+    return puzzle;
+  },
+});
+
+/**
  * Get today's puzzle using UTC date
+ *
+ * Wrapper around getPuzzleByDate for backward compatibility.
+ * For new code, prefer getPuzzleByDate with client's local date.
+ *
  * @returns Today's puzzle or null if not yet generated
  */
 export const getDailyPuzzle = query({

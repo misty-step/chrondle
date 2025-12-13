@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Simple runtime prop validation for critical components
  * Provides development-time checks without complex type gymnastics

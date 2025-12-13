@@ -189,7 +189,6 @@ function mapThinkingLevel(level: "low" | "medium" | "high") {
 type JsonSchema = Record<string, unknown>;
 
 function zodToJsonSchema(schema: z.ZodTypeAny): JsonSchema {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const def: any = schema.def ?? schema._def;
   const type = schema.type ?? def.type;
 
@@ -303,7 +302,6 @@ function buildMessages(system: string, user: string): Array<{ role: Role; conten
   return messages;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function extractTextFromChatResponse(payload: any): { rawText: string; reasoningText?: string } {
   // Gemini 3 via OpenRouter may return either chat.completions shape or responses output shape.
   const choice = payload?.choices?.[0];
@@ -383,7 +381,7 @@ function extractJsonPayload(text: string): unknown {
 }
 
 function computeUsage(
-  payload: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  payload: any,
   rawText: string,
   reasoningText: string | undefined,
   systemPrompt: string,
@@ -443,7 +441,6 @@ function shouldRetry(error: ErrorWithStatus): boolean {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildResponseFormat(
   schema?: ZodSchema<unknown>,
   structuredOutputs = true,

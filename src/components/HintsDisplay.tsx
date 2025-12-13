@@ -388,6 +388,5 @@ HintsDisplay.displayName = "HintsDisplay";
 
 // why-did-you-render tracking
 if (process.env.NODE_ENV === "development") {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (HintsDisplay as any).whyDidYouRender = true;
 }

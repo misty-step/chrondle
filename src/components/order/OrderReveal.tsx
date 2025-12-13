@@ -4,12 +4,21 @@ import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Check, Share2 } from "lucide-react";
 import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
-import type { AttemptScore } from "@/types/orderGameState";
+import { NextPuzzleCountdownCard } from "@/components/game/NextPuzzleCountdownCard";
+import { TimelineReveal } from "@/components/order/TimelineReveal";
+import { useCountdown } from "@/hooks/useCountdown";
+import type { AttemptScore, OrderEvent } from "@/types/orderGameState";
 
 interface OrderRevealProps {
   score: AttemptScore;
   puzzleNumber: number;
   onShare?: () => void;
+  /** Whether this is an archive puzzle (hides countdown) */
+  isArchive?: boolean;
+  /** All events in the puzzle */
+  events?: OrderEvent[];
+  /** Event IDs in correct chronological order */
+  correctOrder?: string[];
 }
 
 /**
@@ -43,11 +52,29 @@ function getArchivalDisplay(attempts: number): {
   };
 }
 
-export function OrderReveal({ score, puzzleNumber, onShare }: OrderRevealProps) {
+export function OrderReveal({
+  score,
+  puzzleNumber,
+  onShare,
+  isArchive = false,
+  events,
+  correctOrder,
+}: OrderRevealProps) {
   const prefersReducedMotion = useReducedMotion();
   const [isShared, setIsShared] = useState(false);
 
+  // Only show countdown for daily puzzles (not archive)
+  const { timeString } = useCountdown({ strategy: "localMidnight" });
+
   const archivalDisplay = useMemo(() => getArchivalDisplay(score.attempts), [score.attempts]);
+
+  // Compute events in correct chronological order
+  const sortedEvents = useMemo(() => {
+    if (!events || !correctOrder) return [];
+    return correctOrder
+      .map((id) => events.find((e) => e.id === id))
+      .filter((e): e is OrderEvent => e !== undefined);
+  }, [events, correctOrder]);
   const attemptLabel = score.attempts === 1 ? "attempt" : "attempts";
 
   const handleShareClick = async () => {
@@ -88,6 +115,9 @@ export function OrderReveal({ score, puzzleNumber, onShare }: OrderRevealProps) 
           <Check className="text-feedback-success h-6 w-6" aria-hidden="true" />
         </div>
       </motion.div>
+
+      {/* Timeline Reveal - Show events in correct order with years */}
+      {sortedEvents.length > 0 && <TimelineReveal events={sortedEvents} />}
 
       {/* Share Card */}
       <motion.div
@@ -140,6 +170,9 @@ export function OrderReveal({ score, puzzleNumber, onShare }: OrderRevealProps) 
           </div>
         )}
       </motion.div>
+
+      {/* Countdown Card - only for daily puzzles */}
+      {!isArchive && <NextPuzzleCountdownCard timeString={timeString} />}
     </div>
   );
 }

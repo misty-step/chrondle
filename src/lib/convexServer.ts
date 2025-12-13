@@ -29,7 +29,7 @@ export async function fetchOrderPuzzleByNumber(
     date: convexPuzzle.date,
     puzzleNumber: convexPuzzle.puzzleNumber,
     seed: convexPuzzle.seed,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     events: convexPuzzle.events.map((event: any) => ({
       id: event.id,
       year: event.year,
