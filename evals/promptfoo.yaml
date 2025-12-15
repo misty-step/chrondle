@@ -1,0 +1,49 @@
+# Chrondle Event Generation Eval Suite
+# Run: pnpm evals
+# Compare prompts: pnpm evals:compare
+
+description: "Chrondle Generator prompt quality evaluation"
+
+providers:
+  - id: openrouter:google/gemini-3-pro-preview
+    config:
+      apiKey: ${OPENROUTER_API_KEY}
+      temperature: 0.8
+      max_tokens: 32000
+      headers:
+        HTTP-Referer: https://chrondle.com
+        X-Title: Chrondle Eval Suite
+
+prompts:
+  - file://prompts/generator.v1.txt
+
+defaultTest:
+  options:
+    provider:
+      id: openrouter:google/gemini-3-pro-preview
+
+tests: file://tests/years.yaml
+
+# Assertions applied to all tests
+defaultTest:
+  assert:
+    # JSON must parse
+    - type: is-json
+
+    # Custom assertions
+    - type: javascript
+      value: file://assertions/generator.assert.js
+
+    # Basic structure check
+    - type: javascript
+      value: |
+        const data = JSON.parse(output);
+        return data.candidates && Array.isArray(data.candidates) && data.candidates.length >= 12;
+
+# Output configuration
+outputPath: ./evals/results/latest.json
+
+# Concurrency for faster runs
+evaluateOptions:
+  maxConcurrency: 3
+  delay: 500
