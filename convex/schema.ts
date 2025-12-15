@@ -176,6 +176,30 @@ export default defineSchema({
     fallback_count: v.optional(v.number()),
     error_message: v.optional(v.string()),
     timestamp: v.number(),
+    // Quality scores from Critic stage (Phase 1: LLM Pipeline Quality)
+    quality_scores: v.optional(
+      v.object({
+        version: v.number(),
+        candidateCount: v.number(),
+        passCount: v.number(),
+        selectedCount: v.number(),
+        overall: v.number(), // 0..1 weighted composite
+        avg: v.object({
+          factual: v.number(),
+          leak_risk: v.number(),
+          ambiguity: v.number(),
+          guessability: v.number(),
+          diversity: v.optional(v.number()),
+        }),
+        selectedAvg: v.object({
+          factual: v.number(),
+          leak_risk: v.number(),
+          ambiguity: v.number(),
+          guessability: v.number(),
+          diversity: v.optional(v.number()),
+        }),
+      }),
+    ),
   })
     .index("by_timestamp", ["timestamp"])
     .index("by_status", ["status", "timestamp"])

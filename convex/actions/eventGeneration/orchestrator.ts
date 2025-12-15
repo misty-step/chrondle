@@ -13,6 +13,7 @@ import { selectWork } from "../../lib/coverageOrchestrator";
 import { logStageError, logStageSuccess } from "../../lib/logging";
 import { runAlertChecks } from "../../lib/alerts";
 import { RateLimiter } from "../../lib/rateLimiter";
+import { computeQualityScores, type QualityScores } from "../../lib/qualityScores";
 
 const MAX_TOTAL_ATTEMPTS = 4;
 const MAX_CRITIC_CYCLES = 2;
@@ -150,12 +151,14 @@ export type YearGenerationResult =
         selectedCount: number;
       };
       usage: UsageSummary;
+      qualityScores: QualityScores;
     }
   | {
       status: "failed";
       reason: FailureReason;
       metadata: PipelineMetadata;
       usage: UsageSummary;
+      qualityScores?: QualityScores;
     };
 
 interface PipelineDeps {
@@ -180,6 +183,8 @@ export async function runGenerationPipeline(
   let totalCycles = 0;
   let totalRevisions = 0;
   let totalDeterministicFailures = 0;
+  // Track last critique for quality score computation on failure
+  let lastCritiqueResults: CritiqueResult[] = [];
 
   while (attempts < MAX_TOTAL_ATTEMPTS) {
     attempts += 1;
@@ -203,12 +208,18 @@ export async function runGenerationPipeline(
         fallbackFrom: critique.llm.fallbackFrom,
       });
       totalDeterministicFailures += critique.deterministicFailures;
+      lastCritiqueResults = critique.results;
 
       const passingResults = critique.results.filter((result) => result.passed);
 
       if (passingResults.length >= MIN_REQUIRED_EVENTS) {
         const selected = selectTopEvents(critique.results);
         if (selected.length >= MIN_REQUIRED_EVENTS) {
+          // Compute quality scores from final critique
+          const qualityScores = computeQualityScores({
+            critiques: critique.results,
+            selected,
+          });
           return {
             status: "success",
             events: selected,
@@ -220,6 +231,7 @@ export async function runGenerationPipeline(
               selectedCount: selected.length,
             },
             usage,
+            qualityScores,
           };
         }
       }
@@ -240,6 +252,12 @@ export async function runGenerationPipeline(
     }
   }
 
+  // Compute quality scores from last critique (if available) for failed runs
+  const qualityScores =
+    lastCritiqueResults.length > 0
+      ? computeQualityScores({ critiques: lastCritiqueResults, selected: [] })
+      : undefined;
+
   return {
     status: "failed",
     reason: "insufficient_quality",
@@ -250,6 +268,7 @@ export async function runGenerationPipeline(
       deterministicFailures: totalDeterministicFailures,
     },
     usage,
+    qualityScores,
   };
 }
 
@@ -354,6 +373,7 @@ async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<Year
   logStageSuccess("Orchestrator", `Pipeline completed for ${year}`, {
     status: result.status,
     attempts: result.metadata.attempts,
+    qualityOverall: result.qualityScores?.overall,
   });
 
   await ctx.runMutation(internal.generationLogs.logGenerationAttempt, {
@@ -373,6 +393,7 @@ async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<Year
     cache_misses: result.usage.total.cacheMisses,
     fallback_count: result.usage.total.fallbacks,
     error_message: result.status === "failed" ? result.reason : undefined,
+    quality_scores: result.qualityScores,
   });
 
   if (result.status === "success") {
