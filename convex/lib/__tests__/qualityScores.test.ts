@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeQualityScores, type QualityScores } from "../qualityScores";
+import { computeQualityScores } from "../qualityScores";
 import type { CritiqueResult, CandidateEvent } from "../../actions/eventGeneration/schemas";
 
 /**

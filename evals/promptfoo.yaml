@@ -17,15 +17,13 @@ providers:
 prompts:
   - file://prompts/generator.v1.txt
 
-defaultTest:
-  options:
-    provider:
-      id: openrouter:google/gemini-3-pro-preview
-
 tests: file://tests/years.yaml
 
 # Assertions applied to all tests
 defaultTest:
+  options:
+    provider:
+      id: openrouter:google/gemini-3-pro-preview
   assert:
     # JSON must parse
     - type: is-json

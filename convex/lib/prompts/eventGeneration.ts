@@ -124,7 +124,7 @@ function compilePrompt(
   for (const [key, value] of Object.entries(vars)) {
     if (value !== undefined) {
       const strValue = typeof value === "object" ? JSON.stringify(value) : String(value);
-      result = result.replace(new RegExp(`{{${key}}}`, "g"), strValue);
+      result = result.replaceAll(`{{${key}}}`, strValue);
     }
   }
   return result;

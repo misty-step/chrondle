@@ -292,9 +292,7 @@ function computeAverageQualityScore(logs: readonly Doc<"generation_logs">[]): nu
   if (logs.length === 0) return 0;
 
   // Collect logs with quality_scores
-  const logsWithScores = logs.filter(
-    (log) => log.quality_scores !== undefined && log.quality_scores !== null,
-  );
+  const logsWithScores = logs.filter((log) => log.quality_scores != null);
 
   if (logsWithScores.length > 0) {
     // Use quality_scores.overall for logs that have it
@@ -303,9 +301,7 @@ function computeAverageQualityScore(logs: readonly Doc<"generation_logs">[]): nu
       0,
     );
     // For logs without scores, use success rate as fallback
-    const logsWithoutScores = logs.filter(
-      (log) => log.quality_scores === undefined || log.quality_scores === null,
-    );
+    const logsWithoutScores = logs.filter((log) => log.quality_scores == null);
     const successSum = logsWithoutScores.filter((log) => log.status === "success").length;
 
     // Weighted average: quality_scores for new logs, success rate for old
