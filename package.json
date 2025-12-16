@@ -50,7 +50,7 @@
     "changeset": "changeset",
     "changeset:version": "changeset version",
     "changeset:publish": "changeset publish",
-    "evals": "promptfoo eval -c evals/promptfoo.yaml",
+    "evals": "tsx scripts/run-evals.ts",
     "evals:view": "promptfoo view",
     "evals:compare": "promptfoo eval -c evals/promptfoo.yaml --prompts evals/prompts/generator.v1.txt,evals/prompts/generator.v2.txt",
     "langfuse:upload": "tsx scripts/upload-langfuse-prompts.ts"

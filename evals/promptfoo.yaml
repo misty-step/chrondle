@@ -7,12 +7,9 @@ description: "Chrondle Generator prompt quality evaluation"
 providers:
   - id: openrouter:google/gemini-3-pro-preview
     config:
-      apiKey: ${OPENROUTER_API_KEY}
       temperature: 0.8
       max_tokens: 32000
-      headers:
-        HTTP-Referer: https://chrondle.com
-        X-Title: Chrondle Eval Suite
+      showThinking: false
 
 prompts:
   - file://prompts/generator.v1.txt
