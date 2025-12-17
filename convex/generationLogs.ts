@@ -44,6 +44,30 @@ export const logGenerationAttempt = internalMutation({
     fallback_count: v.optional(v.number()),
     error_message: v.optional(v.string()),
     timestamp: v.optional(v.number()),
+    // Quality scores from Critic stage (optional for backward compat)
+    quality_scores: v.optional(
+      v.object({
+        version: v.number(),
+        candidateCount: v.number(),
+        passCount: v.number(),
+        selectedCount: v.number(),
+        overall: v.number(),
+        avg: v.object({
+          factual: v.number(),
+          leak_risk: v.number(),
+          ambiguity: v.number(),
+          guessability: v.number(),
+          diversity: v.optional(v.number()),
+        }),
+        selectedAvg: v.object({
+          factual: v.number(),
+          leak_risk: v.number(),
+          ambiguity: v.number(),
+          guessability: v.number(),
+          diversity: v.optional(v.number()),
+        }),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
     const timestamp = args.timestamp ?? Date.now();

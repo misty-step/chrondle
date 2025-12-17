@@ -13,6 +13,8 @@ import { selectWork } from "../../lib/coverageOrchestrator";
 import { logStageError, logStageSuccess } from "../../lib/logging";
 import { runAlertChecks } from "../../lib/alerts";
 import { RateLimiter } from "../../lib/rateLimiter";
+import { computeQualityScores, type QualityScores } from "../../lib/qualityScores";
+import { withLangfuseTrace, type TraceWrapper } from "../../lib/langfuseTracing";
 
 const MAX_TOTAL_ATTEMPTS = 4;
 const MAX_CRITIC_CYCLES = 2;
@@ -150,12 +152,14 @@ export type YearGenerationResult =
         selectedCount: number;
       };
       usage: UsageSummary;
+      qualityScores: QualityScores;
     }
   | {
       status: "failed";
       reason: FailureReason;
       metadata: PipelineMetadata;
       usage: UsageSummary;
+      qualityScores?: QualityScores;
     };
 
 interface PipelineDeps {
@@ -175,20 +179,68 @@ export async function runGenerationPipeline(
   deps: PipelineDeps = defaultDeps,
 ): Promise<YearGenerationResult> {
   const era = deriveEra(year);
+
+  return withLangfuseTrace(
+    {
+      name: "year-event-generation",
+      input: { year, era },
+      tags: ["chrondle", "event-generation"],
+      metadata: { year, era },
+    },
+    async (traceWrapper) => {
+      return runPipelineWithTracing(year, era, deps, traceWrapper);
+    },
+  );
+}
+
+/**
+ * Core pipeline logic with Langfuse tracing instrumentation.
+ */
+async function runPipelineWithTracing(
+  year: number,
+  era: Era,
+  deps: PipelineDeps,
+  traceWrapper: TraceWrapper,
+): Promise<YearGenerationResult> {
   const usage = createUsageSummary();
   let attempts = 0;
   let totalCycles = 0;
   let totalRevisions = 0;
   let totalDeterministicFailures = 0;
+  // Track last critique for quality score computation on failure
+  let lastCritiqueResults: CritiqueResult[] = [];
 
   while (attempts < MAX_TOTAL_ATTEMPTS) {
     attempts += 1;
+
+    // Generator span
+    const generatorSpan = traceWrapper.createSpan({
+      name: "generator",
+      input: { year, era, attempt: attempts },
+    });
 
     const generation = await deps.generator({ year, era });
     recordUsage(usage.generator, usage.total, generation.llm.usage, generation.llm.costUsd, {
       cacheHit: generation.llm.cacheHit,
       fallbackFrom: generation.llm.fallbackFrom,
     });
+
+    // Record generation in span
+    generatorSpan.createGeneration({
+      name: "generator-llm",
+      model: generation.llm.model,
+      usage: {
+        inputTokens: generation.llm.usage.inputTokens,
+        outputTokens: generation.llm.usage.outputTokens,
+        totalTokens: generation.llm.usage.totalTokens,
+      },
+      metadata: {
+        cacheHit: generation.llm.cacheHit,
+        fallbackFrom: generation.llm.fallbackFrom,
+        costUsd: generation.llm.costUsd,
+      },
+    });
+    generatorSpan.endSpan({ candidateCount: generation.candidates.length });
 
     let candidates = generation.candidates;
     let cycles = 0;
@@ -197,18 +249,65 @@ export async function runGenerationPipeline(
       cycles += 1;
       totalCycles += 1;
 
+      // Critic span
+      const criticSpan = traceWrapper.createSpan({
+        name: "critic",
+        input: { year, era, cycle: cycles, candidateCount: candidates.length },
+      });
+
       const critique = await deps.critic({ year, era, candidates });
       recordUsage(usage.critic, usage.total, critique.llm.usage, critique.llm.costUsd, {
         cacheHit: critique.llm.cacheHit,
         fallbackFrom: critique.llm.fallbackFrom,
       });
       totalDeterministicFailures += critique.deterministicFailures;
+      lastCritiqueResults = critique.results;
+
+      // Record critic generation
+      criticSpan.createGeneration({
+        name: "critic-llm",
+        model: critique.llm.model,
+        usage: {
+          inputTokens: critique.llm.usage.inputTokens,
+          outputTokens: critique.llm.usage.outputTokens,
+          totalTokens: critique.llm.usage.totalTokens,
+        },
+        metadata: {
+          cacheHit: critique.llm.cacheHit,
+          fallbackFrom: critique.llm.fallbackFrom,
+          costUsd: critique.llm.costUsd,
+          deterministicFailures: critique.deterministicFailures,
+        },
+      });
 
       const passingResults = critique.results.filter((result) => result.passed);
+      criticSpan.endSpan({
+        passCount: passingResults.length,
+        failCount: critique.results.length - passingResults.length,
+      });
 
       if (passingResults.length >= MIN_REQUIRED_EVENTS) {
         const selected = selectTopEvents(critique.results);
         if (selected.length >= MIN_REQUIRED_EVENTS) {
+          // Compute quality scores from final critique
+          const qualityScores = computeQualityScores({
+            critiques: critique.results,
+            selected,
+          });
+
+          // End trace with success
+          traceWrapper.endTrace({
+            status: "success",
+            selectedCount: selected.length,
+            qualityScores: {
+              overall: qualityScores.overall,
+              passCount: qualityScores.passCount,
+            },
+            totalCostUsd: usage.total.costUsd,
+            cacheHits: usage.total.cacheHits,
+            fallbacks: usage.total.fallbacks,
+          });
+
           return {
             status: "success",
             events: selected,
@@ -220,6 +319,7 @@ export async function runGenerationPipeline(
               selectedCount: selected.length,
             },
             usage,
+            qualityScores,
           };
         }
       }
@@ -229,6 +329,12 @@ export async function runGenerationPipeline(
         break;
       }
 
+      // Reviser span
+      const reviserSpan = traceWrapper.createSpan({
+        name: "reviser",
+        input: { year, era, failingCount: failingResults.length },
+      });
+
       const revision = await deps.reviser({ failing: failingResults, year, era });
       recordUsage(usage.reviser, usage.total, revision.llm.usage, revision.llm.costUsd, {
         cacheHit: revision.llm.cacheHit,
@@ -236,9 +342,44 @@ export async function runGenerationPipeline(
       });
       totalRevisions += 1;
 
+      // Record reviser generation
+      reviserSpan.createGeneration({
+        name: "reviser-llm",
+        model: revision.llm.model,
+        usage: {
+          inputTokens: revision.llm.usage.inputTokens,
+          outputTokens: revision.llm.usage.outputTokens,
+          totalTokens: revision.llm.usage.totalTokens,
+        },
+        metadata: {
+          cacheHit: revision.llm.cacheHit,
+          fallbackFrom: revision.llm.fallbackFrom,
+          costUsd: revision.llm.costUsd,
+        },
+      });
+      reviserSpan.endSpan({ rewriteCount: revision.rewrites.length });
+
       candidates = rebuildCandidateSet(critique.results, revision.rewrites);
     }
   }
+
+  // Compute quality scores from last critique (if available) for failed runs
+  const qualityScores =
+    lastCritiqueResults.length > 0
+      ? computeQualityScores({ critiques: lastCritiqueResults, selected: [] })
+      : undefined;
+
+  // End trace with failure
+  traceWrapper.endTrace({
+    status: "failed",
+    reason: "insufficient_quality",
+    qualityScores: qualityScores
+      ? { overall: qualityScores.overall, passCount: qualityScores.passCount }
+      : undefined,
+    totalCostUsd: usage.total.costUsd,
+    cacheHits: usage.total.cacheHits,
+    fallbacks: usage.total.fallbacks,
+  });
 
   return {
     status: "failed",
@@ -250,6 +391,7 @@ export async function runGenerationPipeline(
       deterministicFailures: totalDeterministicFailures,
     },
     usage,
+    qualityScores,
   };
 }
 
@@ -354,6 +496,7 @@ async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<Year
   logStageSuccess("Orchestrator", `Pipeline completed for ${year}`, {
     status: result.status,
     attempts: result.metadata.attempts,
+    qualityOverall: result.qualityScores?.overall,
   });
 
   await ctx.runMutation(internal.generationLogs.logGenerationAttempt, {
@@ -373,6 +516,7 @@ async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<Year
     cache_misses: result.usage.total.cacheMisses,
     fallback_count: result.usage.total.fallbacks,
     error_message: result.status === "failed" ? result.reason : undefined,
+    quality_scores: result.qualityScores,
   });
 
   if (result.status === "success") {

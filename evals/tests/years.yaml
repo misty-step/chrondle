@@ -1,0 +1,80 @@
+# Test years spanning different eras and documentation density
+# Ancient BCE, Ancient CE, Medieval, Early Modern, Modern, Contemporary
+
+# Ancient BCE - sparse documentation
+- vars:
+    year: -44
+    era: BCE
+    yearLabel: 44
+  description: "Ancient BCE - Caesar assassination year"
+
+- vars:
+    year: -323
+    era: BCE
+    yearLabel: 323
+  description: "Ancient BCE - Alexander the Great death"
+
+# Ancient CE - sparse documentation
+- vars:
+    year: 79
+    era: CE
+    yearLabel: 79
+  description: "Ancient CE - Vesuvius eruption year"
+
+- vars:
+    year: 476
+    era: CE
+    yearLabel: 476
+  description: "Ancient CE - Fall of Western Rome"
+
+# Medieval - moderate documentation
+- vars:
+    year: 1066
+    era: CE
+    yearLabel: 1066
+  description: "Medieval - Norman Conquest"
+
+- vars:
+    year: 1215
+    era: CE
+    yearLabel: 1215
+  description: "Medieval - Magna Carta"
+
+# Early Modern - improving documentation
+- vars:
+    year: 1492
+    era: CE
+    yearLabel: 1492
+  description: "Early Modern - Columbus voyage"
+
+- vars:
+    year: 1776
+    era: CE
+    yearLabel: 1776
+  description: "Early Modern - American independence"
+
+# Modern - good documentation
+- vars:
+    year: 1865
+    era: CE
+    yearLabel: 1865
+  description: "Modern - Civil War end, Lincoln"
+
+- vars:
+    year: 1969
+    era: CE
+    yearLabel: 1969
+  description: "Modern - Moon landing"
+
+# Contemporary - dense documentation
+- vars:
+    year: 1989
+    era: CE
+    yearLabel: 1989
+  description: "Contemporary - Berlin Wall"
+
+- vars:
+    year: 2001
+    era: CE
+    yearLabel: 2001
+  description: "Contemporary - 9/11"

@@ -224,6 +224,7 @@ function calculateCostMetrics(
 
 /**
  * Calculates quality metrics from generation logs.
+ * Uses quality_scores.overall when available, falls back to success rate.
  */
 function calculateQualityMetrics(logs: readonly Doc<"generation_logs">[]): QualityMetrics {
   if (logs.length === 0) {
@@ -254,8 +255,7 @@ function calculateQualityMetrics(logs: readonly Doc<"generation_logs">[]): Quali
     .map(([reason, count]) => ({ reason, count }));
 
   // Calculate quality trend (last 7 days)
-  // For now, use success rate as proxy for quality score
-  // TODO: Integrate actual quality scores when available from Critic stage
+  // Uses quality_scores.overall when available, falls back to success rate
   const DAY_MS = 24 * 60 * 60 * 1000;
   const now = Date.now();
   const qualityTrend: number[] = [];
@@ -266,17 +266,15 @@ function calculateQualityMetrics(logs: readonly Doc<"generation_logs">[]): Quali
     const dayLogs = logs.filter((log) => log.timestamp >= dayStart && log.timestamp < dayEnd);
 
     if (dayLogs.length > 0) {
-      const daySuccessRate =
-        dayLogs.filter((log) => log.status === "success").length / dayLogs.length;
-      qualityTrend.push(daySuccessRate);
+      const dayScore = computeAverageQualityScore(dayLogs);
+      qualityTrend.push(dayScore);
     } else {
       qualityTrend.push(0);
     }
   }
 
-  // Avg quality score (using success rate as proxy)
-  const avgQualityScore =
-    logs.length > 0 ? logs.filter((log) => log.status === "success").length / logs.length : 0;
+  // Average quality score across all logs
+  const avgQualityScore = computeAverageQualityScore(logs);
 
   return {
     avgQualityScore,
@@ -284,6 +282,35 @@ function calculateQualityMetrics(logs: readonly Doc<"generation_logs">[]): Quali
     topFailureReasons,
     qualityTrend,
   };
+}
+
+/**
+ * Computes average quality score from logs.
+ * Prefers quality_scores.overall when available, falls back to success rate.
+ */
+function computeAverageQualityScore(logs: readonly Doc<"generation_logs">[]): number {
+  if (logs.length === 0) return 0;
+
+  // Collect logs with quality_scores
+  const logsWithScores = logs.filter((log) => log.quality_scores != null);
+
+  if (logsWithScores.length > 0) {
+    // Use quality_scores.overall for logs that have it
+    const scoreSum = logsWithScores.reduce(
+      (sum, log) => sum + (log.quality_scores?.overall ?? 0),
+      0,
+    );
+    // For logs without scores, use success rate as fallback
+    const logsWithoutScores = logs.filter((log) => log.quality_scores == null);
+    const successSum = logsWithoutScores.filter((log) => log.status === "success").length;
+
+    // Weighted average: quality_scores for new logs, success rate for old
+    const totalScore = scoreSum + successSum;
+    return totalScore / logs.length;
+  }
+
+  // Fallback: use success rate as proxy (for logs before quality_scores)
+  return logs.filter((log) => log.status === "success").length / logs.length;
 }
 
 /**
