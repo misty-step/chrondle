@@ -10,22 +10,21 @@ export async function GET() {
   if (!convexClient) {
     return NextResponse.json(
       { status: "error", error: "Missing NEXT_PUBLIC_CONVEX_URL" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
   try {
     const convexStatus = await convexClient.query(api.health.systemCheck);
     if (convexStatus !== "ok") {
-        throw new Error("Convex system check failed");
+      throw new Error("Convex system check failed");
     }
 
     return NextResponse.json({ status: "ok", convex: "ok" }, { status: 200 });
-  } catch (error) {
-    console.error("Health check failed:", error);
+  } catch {
     return NextResponse.json(
       { status: "error", error: "Convex connectivity failed" },
-      { status: 503 }
+      { status: 503 },
     );
   }
 }
@@ -40,10 +39,10 @@ export async function HEAD() {
   try {
     const convexStatus = await convexClient.query(api.health.systemCheck);
     if (convexStatus !== "ok") {
-        return new NextResponse(null, { status: 503 });
+      return new NextResponse(null, { status: 503 });
     }
     return new NextResponse(null, { status: 200 });
-  } catch (error) {
+  } catch {
     return new NextResponse(null, { status: 503 });
   }
 }
