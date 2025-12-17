@@ -1,15 +1,19 @@
 "use node";
 /**
- * Langfuse Tracing Helpers
+ * Langfuse Tracing Helpers (v4)
  *
- * Safe wrappers for creating traces/spans/generations without coupling
- * pipeline code to SDK quirks. All helpers are non-throwing.
+ * Safe wrappers for creating traces/spans/generations using OpenTelemetry.
+ * All helpers are non-throwing - pipeline output > observability.
  *
  * @module convex/lib/langfuseTracing
  */
 
-import type { LangfuseTraceClient, LangfuseSpanClient } from "langfuse";
-import { isLangfuseConfigured, getLangfuse, flushLangfuse } from "./langfuse";
+import {
+  startActiveObservation,
+  startObservation,
+  updateActiveObservation,
+} from "@langfuse/tracing";
+import { isLangfuseConfigured, initLangfuseOtel } from "./instrumentation";
 
 /**
  * Trace configuration for event generation pipeline.
@@ -51,26 +55,34 @@ export interface GenerationConfig {
 }
 
 /**
- * Trace wrapper result containing trace client and helpers.
+ * Observation handle returned by startObservation in v4.
+ */
+interface ObservationHandle {
+  update: (data: Record<string, unknown>) => ObservationHandle;
+  end: () => void;
+}
+
+/**
+ * Trace wrapper result containing helpers for creating spans.
  */
 export interface TraceWrapper {
-  trace: LangfuseTraceClient | null;
+  trace: ObservationHandle | null;
   createSpan: (config: SpanConfig) => SpanWrapper;
   endTrace: (output?: unknown) => void;
 }
 
 /**
- * Span wrapper result containing span client and helpers.
+ * Span wrapper result containing helpers for creating generations.
  */
 export interface SpanWrapper {
-  span: LangfuseSpanClient | null;
+  span: ObservationHandle | null;
   createGeneration: (config: GenerationConfig) => void;
   endSpan: (output?: unknown) => void;
 }
 
 /**
  * Execute a function wrapped in a Langfuse trace.
- * Automatically handles trace creation, flushing, and error handling.
+ * Automatically handles trace creation and error handling.
  *
  * @example
  * const result = await withLangfuseTrace(
@@ -88,87 +100,71 @@ export async function withLangfuseTrace<T>(
   config: TraceConfig,
   fn: (wrapper: TraceWrapper) => Promise<T>,
 ): Promise<T> {
-  const wrapper = createTraceWrapper(config);
+  // Ensure OTel is initialized
+  initLangfuseOtel();
+
+  if (!isLangfuseConfigured()) {
+    return fn(createNoOpWrapper());
+  }
 
   try {
-    return await fn(wrapper);
-  } catch (error) {
-    // Record error in trace if available
-    if (wrapper.trace) {
-      try {
-        wrapper.trace.update({
+    return await startActiveObservation(
+      config.name,
+      async () => {
+        // Update the active observation with initial config
+        updateActiveObservation({
+          input: config.input,
           metadata: {
             ...config.metadata,
-            error: error instanceof Error ? error.message : String(error),
+            tags: config.tags,
+            userId: config.userId,
+            sessionId: config.sessionId,
           },
         });
-      } catch {
-        // Ignore trace update failures
-      }
-    }
-    throw error;
-  } finally {
-    await flushLangfuse();
+
+        const wrapper = createActiveWrapper();
+        return fn(wrapper);
+      },
+      { asType: "span" },
+    );
+  } catch (error) {
+    // If tracing setup fails, fall back to no-op
+    console.warn(
+      "[Langfuse] Trace failed, continuing without tracing:",
+      error instanceof Error ? error.message : error,
+    );
+    return fn(createNoOpWrapper());
   }
 }
 
 /**
- * Create a trace wrapper without executing a function.
- * Use when you need more control over trace lifecycle.
+ * Create a trace wrapper that uses the active observation context.
  */
-export function createTraceWrapper(config: TraceConfig): TraceWrapper {
-  if (!isLangfuseConfigured()) {
-    return createNoOpWrapper();
-  }
-
-  let trace: LangfuseTraceClient | null = null;
-
-  try {
-    const langfuse = getLangfuse();
-    trace = langfuse.trace({
-      name: config.name,
-      input: config.input,
-      metadata: config.metadata,
-      tags: config.tags,
-      userId: config.userId,
-      sessionId: config.sessionId,
-    });
-  } catch (error) {
-    console.warn(
-      "[Langfuse] Failed to create trace:",
-      error instanceof Error ? error.message : error,
-    );
-    return createNoOpWrapper();
-  }
-
+function createActiveWrapper(): TraceWrapper {
   return {
-    trace,
-    createSpan: (spanConfig: SpanConfig) => createSpanWrapper(trace!, spanConfig),
+    trace: null, // v4 uses context-based tracing, no explicit handle
+    createSpan: (config: SpanConfig) => createSpanWrapper(config),
     endTrace: (output?: unknown) => {
       try {
-        trace?.update({ output });
+        updateActiveObservation({ output });
       } catch {
-        // Ignore
+        // Ignore - non-throwing
       }
     },
   };
 }
 
 /**
- * Create a span wrapper from a parent trace or span.
+ * Create a span wrapper using v4 startObservation.
  */
-function createSpanWrapper(
-  parent: LangfuseTraceClient | LangfuseSpanClient,
-  config: SpanConfig,
-): SpanWrapper {
-  let span: LangfuseSpanClient | null = null;
+function createSpanWrapper(config: SpanConfig): SpanWrapper {
+  let observation: ObservationHandle | null = null;
 
   try {
-    span = parent.span({
-      name: config.name,
+    observation = startObservation(config.name, {
       input: config.input,
       metadata: config.metadata,
-    });
+    }) as ObservationHandle;
   } catch (error) {
     console.warn(
       "[Langfuse] Failed to create span:",
@@ -178,34 +174,44 @@ function createSpanWrapper(
   }
 
   return {
-    span,
+    span: observation,
     createGeneration: (genConfig: GenerationConfig) => {
       try {
-        span?.generation({
-          name: genConfig.name,
-          model: genConfig.model,
-          input: genConfig.input,
+        // In v4, generations are created as child observations with asType: "generation"
+        const gen = startObservation(
+          genConfig.name,
+          {
+            input: genConfig.input,
+            model: genConfig.model,
+            metadata: {
+              ...genConfig.metadata,
+              promptName: genConfig.promptName,
+              promptVersion: genConfig.promptVersion,
+            },
+          },
+          { asType: "generation" },
+        ) as ObservationHandle;
+
+        // Update with output and usage if provided
+        gen.update({
           output: genConfig.output,
-          usage: genConfig.usage
+          usageDetails: genConfig.usage
             ? {
                 input: genConfig.usage.inputTokens,
                 output: genConfig.usage.outputTokens,
                 total: genConfig.usage.totalTokens,
               }
             : undefined,
-          metadata: {
-            ...genConfig.metadata,
-            ...(genConfig.promptName ? { promptName: genConfig.promptName } : {}),
-            ...(genConfig.promptVersion ? { promptVersion: genConfig.promptVersion } : {}),
-          },
         });
+
+        gen.end();
       } catch {
         // Ignore generation creation failures
       }
     },
     endSpan: (output?: unknown) => {
       try {
-        span?.end({ output });
+        observation?.update({ output }).end();
       } catch {
         // Ignore
       }

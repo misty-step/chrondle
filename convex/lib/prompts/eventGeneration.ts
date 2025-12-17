@@ -8,7 +8,8 @@
  * @module convex/lib/prompts/eventGeneration
  */
 
-import { isLangfuseConfigured, getLangfuse } from "../langfuse";
+import { LangfuseClient } from "@langfuse/client";
+import { isLangfuseConfigured } from "../instrumentation";
 
 /**
  * Prompt identifiers for event generation pipeline.
@@ -102,6 +103,16 @@ REWRITING STRATEGIES:
 OUTPUT: Valid JSON with rewritten events.`,
 };
 
+// Lazy singleton for LangfuseClient
+let langfuseClient: LangfuseClient | null = null;
+
+function getLangfuseClient(): LangfuseClient {
+  if (!langfuseClient) {
+    langfuseClient = new LangfuseClient();
+  }
+  return langfuseClient;
+}
+
 /**
  * Get the effective prompt label from environment or default.
  */
@@ -156,9 +167,10 @@ export async function getEventPrompt(
   }
 
   try {
-    const langfuse = getLangfuse();
-    const prompt = await langfuse.getPrompt(promptId, undefined, { label: effectiveLabel });
-    // Convert vars to string-only for Langfuse compile
+    const client = getLangfuseClient();
+    const prompt = await client.prompt.get(promptId, { label: effectiveLabel });
+
+    // v4: prompt.compile() takes string-only vars
     const stringVars: Record<string, string> = {};
     for (const [key, value] of Object.entries(vars)) {
       if (value !== undefined) {

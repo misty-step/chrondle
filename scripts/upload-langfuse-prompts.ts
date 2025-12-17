@@ -5,7 +5,7 @@
  * Usage: pnpm tsx scripts/upload-langfuse-prompts.ts
  */
 
-import Langfuse from "langfuse";
+import { LangfuseClient } from "@langfuse/client";
 import * as fs from "fs";
 import * as path from "path";
 import * as dotenv from "dotenv";
@@ -40,7 +40,8 @@ async function main() {
   console.log("🔗 Connecting to Langfuse...");
   console.log(`   Host: ${host || "https://cloud.langfuse.com"}`);
 
-  const langfuse = new Langfuse({
+  // v4: Use LangfuseClient instead of Langfuse class
+  const langfuse = new LangfuseClient({
     publicKey,
     secretKey,
     baseUrl: host,
@@ -62,9 +63,8 @@ async function main() {
     console.log(`   Length: ${promptText.length} chars`);
 
     try {
-      // Create prompt via API
-      // Note: Langfuse SDK createPrompt is for creating prompts programmatically
-      await langfuse.createPrompt({
+      // v4: Create prompt via client.prompt.create()
+      await langfuse.prompt.create({
         name: config.name,
         prompt: promptText,
         labels: config.labels,
@@ -80,9 +80,6 @@ async function main() {
       }
     }
   }
-
-  // Flush any pending events
-  await langfuse.shutdownAsync();
 
   console.log("\n✨ Done!");
 }

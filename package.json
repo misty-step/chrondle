@@ -52,7 +52,6 @@
     "changeset:publish": "changeset publish",
     "evals": "tsx scripts/run-evals.ts",
     "evals:view": "promptfoo view",
-    "evals:compare": "promptfoo eval -c evals/promptfoo.yaml --prompts evals/prompts/generator.v1.txt,evals/prompts/generator.v2.txt",
     "langfuse:upload": "tsx scripts/upload-langfuse-prompts.ts"
   },
   "dependencies": {
@@ -61,7 +60,11 @@
     "@dnd-kit/modifiers": "^6.0.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@langfuse/client": "^4.4.10",
+    "@langfuse/otel": "^4.4.10",
+    "@langfuse/tracing": "^4.4.10",
     "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/sdk-node": "^0.208.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-progress": "^1.1.7",
@@ -78,7 +81,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.25.2",
-    "langfuse": "^3.38.6",
     "lucide-react": "^0.523.0",
     "motion": "^12.19.1",
     "next": "16.0.10",
