@@ -24,6 +24,7 @@ import type * as admin_events from "../admin/events.js";
 import type * as admin_puzzles from "../admin/puzzles.js";
 import type * as crons from "../crons.js";
 import type * as events from "../events.js";
+import type * as health from "../health.js";
 import type * as generationLogs from "../generationLogs.js";
 import type * as lib_alerts from "../lib/alerts.js";
 import type * as lib_auth from "../lib/auth.js";
@@ -93,6 +94,7 @@ declare const fullApi: ApiFromModules<{
   "admin/puzzles": typeof admin_puzzles;
   crons: typeof crons;
   events: typeof events;
+  health: typeof health;
   generationLogs: typeof generationLogs;
   "lib/alerts": typeof lib_alerts;
   "lib/auth": typeof lib_auth;
