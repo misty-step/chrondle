@@ -132,7 +132,7 @@ describe("generateArchivalShareText", () => {
       };
       const result = generateArchivalShareText(payload);
 
-      expect(result).toContain("https://www.chrondle.app");
+      expect(result).toContain("https://chrondle.app");
     });
 
     it("uses custom URL when provided", () => {
@@ -162,9 +162,10 @@ describe("generateArchivalShareText", () => {
       const result = generateArchivalShareText(payload);
 
       const expected = `Chrondle: Order #247
+
 🟩🟩🟩🟩🟩🟩
 
-https://www.chrondle.app`;
+https://chrondle.app`;
 
       expect(result).toBe(expected);
     });
@@ -182,11 +183,12 @@ https://www.chrondle.app`;
       const result = generateArchivalShareText(payload);
 
       const expected = `Chrondle: Order #247
+
 ⬜🟩⬜🟩⬜⬜
 ⬜🟩🟩🟩⬜🟩
 🟩🟩🟩🟩🟩🟩
 
-https://www.chrondle.app`;
+https://chrondle.app`;
 
       expect(result).toBe(expected);
     });

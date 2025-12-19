@@ -25,11 +25,11 @@ export interface ArchivalSharePayload {
  *
  * Example:
  * Chrondle: Order #247
+ *
  * ⬜🟩⬜🟩⬜⬜
- * ⬜🟩🟩🟩⬜🟩
  * 🟩🟩🟩🟩🟩🟩
  *
- * https://www.chrondle.app
+ * https://chrondle.app
  */
 export function generateArchivalShareText(payload: ArchivalSharePayload): string {
   const { puzzleNumber, attempts, url } = payload;
@@ -39,9 +39,9 @@ export function generateArchivalShareText(payload: ArchivalSharePayload): string
     .map((attempt) => attempt.feedback.map((f) => (f === "correct" ? "🟩" : "⬜")).join(""))
     .join("\n");
 
-  let shareText = `Chrondle: Order #${puzzleNumber}\n`;
+  let shareText = `Chrondle: Order #${puzzleNumber}\n\n`;
   shareText += `${progressLines}\n\n`;
-  shareText += url || "https://www.chrondle.app";
+  shareText += url || "https://chrondle.app";
 
   return shareText;
 }
