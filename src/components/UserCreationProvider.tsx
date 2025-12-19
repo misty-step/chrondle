@@ -6,7 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useMutationWithRetry } from "@/hooks/useMutationWithRetry";
 import { Doc, Id } from "../../convex/_generated/dataModel";
-import { useAnonymousGameState } from "@/hooks/useAnonymousGameState";
+import { getMigrationData, clearLocalGameState } from "@/lib/gameDataStore";
 import { logger } from "@/lib/logger";
 
 // Auth state machine states
@@ -167,9 +167,6 @@ export function UserCreationProvider({ children }: UserCreationProviderProps) {
   // Get current user for existence check
   const currentUserFromQuery = useQuery(api.users.getCurrentUser);
 
-  // Anonymous game state hook for migration
-  const anonymousGameState = useAnonymousGameState();
-
   // JIT user creation mutation with retry logic for transient errors
   const getOrCreateUser = useMutationWithRetry(api.users.getOrCreateCurrentUser, {
     maxRetries: 3,
@@ -228,18 +225,33 @@ export function UserCreationProvider({ children }: UserCreationProviderProps) {
 
           if (newUser) {
             // Migrate anonymous game state to the newly created user account
+            // CRITICAL: Use getMigrationData() which reads localStorage DIRECTLY
+            // without any auth check. This fixes the race condition where
+            // loadGameState() would return null because isAuthenticated had
+            // already flipped to true.
             try {
-              const anonymousState = anonymousGameState.loadGameState();
-              if (anonymousState && anonymousState.puzzleId && anonymousState.guesses.length > 0) {
-                await mergeAnonymousState({
-                  puzzleId: anonymousState.puzzleId as Id<"puzzles">,
-                  guesses: anonymousState.guesses,
-                  isComplete: anonymousState.isComplete,
-                  hasWon: anonymousState.hasWon,
-                });
+              const migrationData = getMigrationData();
+              if (migrationData && migrationData.puzzleId) {
+                const hasData = migrationData.guesses.length > 0 || migrationData.ranges.length > 0;
 
-                // Clear anonymous state after successful migration
-                anonymousGameState.clearAnonymousState();
+                if (hasData) {
+                  await mergeAnonymousState({
+                    puzzleId: migrationData.puzzleId as Id<"puzzles">,
+                    guesses: migrationData.guesses,
+                    ranges: migrationData.ranges,
+                    isComplete: migrationData.isComplete,
+                    hasWon: migrationData.hasWon,
+                  });
+
+                  // Clear local state after successful migration
+                  clearLocalGameState();
+
+                  logger.info("[UserCreationProvider] Successfully migrated anonymous state", {
+                    puzzleId: migrationData.puzzleId,
+                    guessCount: migrationData.guesses.length,
+                    rangeCount: migrationData.ranges.length,
+                  });
+                }
               }
             } catch (migrationError) {
               // Log migration error but don't fail the auth flow
@@ -273,13 +285,7 @@ export function UserCreationProvider({ children }: UserCreationProviderProps) {
     }
 
     createUserIfNeeded();
-  }, [
-    machineState.state,
-    currentUserFromQuery,
-    getOrCreateUser,
-    anonymousGameState,
-    mergeAnonymousState,
-  ]);
+  }, [machineState.state, currentUserFromQuery, getOrCreateUser, mergeAnonymousState]);
 
   // Derive loading state from state machine
   const userCreationLoading = machineState.state === "CREATING_USER";

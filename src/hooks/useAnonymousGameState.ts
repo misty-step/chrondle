@@ -4,6 +4,8 @@ import { GAME_CONFIG } from "@/lib/constants";
 import { gameStateStorage } from "@/lib/secureStorage";
 import { logger } from "@/lib/logger";
 
+import type { RangeGuess } from "@/types/range";
+
 /**
  * Game state structure for anonymous users
  * Stored in localStorage for persistence across sessions
@@ -11,6 +13,7 @@ import { logger } from "@/lib/logger";
 export interface AnonymousGameState {
   puzzleId: string;
   guesses: number[];
+  ranges?: RangeGuess[]; // Range guesses for new game mode
   isComplete: boolean;
   hasWon: boolean;
   timestamp: number;
@@ -116,7 +119,15 @@ export function useAnonymousGameState(): UseAnonymousGameStateReturn {
       return null;
     }
 
-    return stored;
+    // Normalize the stored data to match AnonymousGameState interface
+    return {
+      puzzleId: stored.puzzleId,
+      guesses: stored.guesses,
+      ranges: stored.ranges as RangeGuess[] | undefined,
+      isComplete: stored.isComplete,
+      hasWon: stored.hasWon,
+      timestamp: stored.timestamp,
+    };
   }, [isAuthenticated]);
 
   /**

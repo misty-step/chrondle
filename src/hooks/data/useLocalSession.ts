@@ -8,11 +8,18 @@ import {
   getServerSnapshot,
   updateStorage,
   clearStorage,
+  getRangesSnapshot,
 } from "@/lib/localStorageSync";
+import {
+  addRangeToLocalState,
+  updateLastRangeInLocalState,
+  removeLastRangeFromLocalState,
+} from "@/lib/gameDataStore";
 import type { RangeGuess } from "@/types/range";
 
-// Stable empty array reference to avoid infinite loops
+// Stable empty array references to avoid infinite loops
 const EMPTY_ARRAY: readonly number[] = Object.freeze([]);
+const EMPTY_RANGES_ARRAY: readonly RangeGuess[] = Object.freeze([]);
 
 /**
  * Return type for the useLocalSession hook
@@ -62,7 +69,7 @@ export function useLocalSession(
 ): UseLocalSessionReturn {
   // For authenticated users, use React state
   const [authenticatedGuesses, setAuthenticatedGuesses] = useState<number[]>([]);
-  const [sessionRangesState, setSessionRangesState] = useState<RangeGuess[]>([]);
+  const [authenticatedRanges, setAuthenticatedRanges] = useState<RangeGuess[]>([]);
 
   // For anonymous users, use localStorage via useSyncExternalStore
   // This ensures the state persists across navigation and syncs across tabs
@@ -83,18 +90,34 @@ export function useLocalSession(
     return EMPTY_ARRAY as number[];
   }, []);
 
+  // Snapshot for ranges - also from localStorage for anonymous users
+  const getRangesSnapshotCallback = useCallback(() => {
+    const { isAuthenticated: isAuth, puzzleId: pid } = stateRef.current;
+    // Only read from localStorage if not authenticated
+    if (!isAuth && pid) {
+      return getRangesSnapshot(pid);
+    }
+    // Return stable empty array for authenticated users or when no puzzle
+    return EMPTY_RANGES_ARRAY as RangeGuess[];
+  }, []);
+
   // Always call useSyncExternalStore (hooks must be called unconditionally)
   const storageGuesses = useSyncExternalStore(subscribeToStorage, getSnapshot, getServerSnapshot);
+  const storageRanges = useSyncExternalStore(
+    subscribeToStorage,
+    getRangesSnapshotCallback,
+    () => EMPTY_RANGES_ARRAY as RangeGuess[],
+  );
 
-  // Select the appropriate guesses based on authentication status
+  // Select the appropriate guesses/ranges based on authentication status
   const sessionGuesses = isAuthenticated ? authenticatedGuesses : storageGuesses;
-  const sessionRanges = sessionRangesState;
+  const sessionRanges = isAuthenticated ? authenticatedRanges : storageRanges;
 
-  // Reset authenticated guesses when puzzle changes
+  // Reset authenticated guesses/ranges when puzzle changes
   useEffect(() => {
     if (isAuthenticated && puzzleId) {
       setAuthenticatedGuesses([]);
-      setSessionRangesState([]);
+      setAuthenticatedRanges([]);
     }
   }, [puzzleId, isAuthenticated]);
 
@@ -154,33 +177,68 @@ export function useLocalSession(
     }
   }, [isAuthenticated, puzzleId]);
 
-  const addRange = useCallback((range: RangeGuess) => {
-    setSessionRangesState((prev) => {
-      if (prev.length >= GAME_CONFIG.MAX_GUESSES) {
-        return prev;
-      }
-      return [...prev, range];
-    });
-  }, []);
+  const addRange = useCallback(
+    (range: RangeGuess) => {
+      if (isAuthenticated) {
+        // For authenticated users, use React state
+        setAuthenticatedRanges((prev) => {
+          if (prev.length >= GAME_CONFIG.MAX_GUESSES) {
+            return prev;
+          }
+          return [...prev, range];
+        });
+      } else if (puzzleId) {
+        // For anonymous users, persist to localStorage
+        const currentRanges = getRangesSnapshot(puzzleId);
+        if (currentRanges.length >= GAME_CONFIG.MAX_GUESSES) {
+          return;
+        }
 
-  const replaceLastRange = useCallback((range: RangeGuess) => {
-    setSessionRangesState((prev) => {
-      if (prev.length === 0) {
-        return prev;
+        // Check if this range wins the game
+        const hasWon = targetYear !== undefined && range.score > 0;
+        const isComplete = hasWon || currentRanges.length + 1 >= GAME_CONFIG.MAX_GUESSES;
+
+        addRangeToLocalState(puzzleId, range, isComplete, hasWon);
       }
-      const next = [...prev];
-      next[next.length - 1] = range;
-      return next;
-    });
-  }, []);
+    },
+    [isAuthenticated, puzzleId, targetYear],
+  );
+
+  const replaceLastRange = useCallback(
+    (range: RangeGuess) => {
+      if (isAuthenticated) {
+        // For authenticated users, use React state
+        setAuthenticatedRanges((prev) => {
+          if (prev.length === 0) {
+            return prev;
+          }
+          const next = [...prev];
+          next[next.length - 1] = range;
+          return next;
+        });
+      } else if (puzzleId) {
+        // For anonymous users, update localStorage
+        updateLastRangeInLocalState(puzzleId, range);
+      }
+    },
+    [isAuthenticated, puzzleId],
+  );
 
   const removeLastRange = useCallback(() => {
-    setSessionRangesState((prev) => (prev.length ? prev.slice(0, -1) : prev));
-  }, []);
+    if (isAuthenticated) {
+      setAuthenticatedRanges((prev) => (prev.length ? prev.slice(0, -1) : prev));
+    } else if (puzzleId) {
+      removeLastRangeFromLocalState(puzzleId);
+    }
+  }, [isAuthenticated, puzzleId]);
 
   const clearRanges = useCallback(() => {
-    setSessionRangesState([]);
-  }, []);
+    if (isAuthenticated) {
+      setAuthenticatedRanges([]);
+    }
+    // For anonymous users, clearing ranges would need to preserve guesses
+    // This is typically not needed as we clear on puzzle change
+  }, [isAuthenticated]);
 
   // Mark game as complete (for anonymous users)
   const markComplete = useCallback(
