@@ -16,7 +16,7 @@ function createAttempt(feedback: Array<"correct" | "incorrect">): OrderAttempt {
 
 describe("generateArchivalShareText", () => {
   describe("header format", () => {
-    it("shows puzzle number with attempt count: Chrondle: Order #247 1/3", () => {
+    it("shows puzzle number: Chrondle: Order #247", () => {
       const payload: ArchivalSharePayload = {
         puzzleNumber: 247,
         score: { attempts: 1 },
@@ -26,21 +26,7 @@ describe("generateArchivalShareText", () => {
       };
       const result = generateArchivalShareText(payload);
 
-      expect(result).toContain("Chrondle: Order #247 1/3");
-    });
-
-    it("shows correct attempt count for multiple attempts", () => {
-      const payload: ArchivalSharePayload = {
-        puzzleNumber: 100,
-        score: { attempts: 2 },
-        attempts: [
-          createAttempt(["incorrect", "correct", "correct", "correct", "correct", "correct"]),
-          createAttempt(["correct", "correct", "correct", "correct", "correct", "correct"]),
-        ],
-      };
-      const result = generateArchivalShareText(payload);
-
-      expect(result).toContain("Chrondle: Order #100 2/3");
+      expect(result).toContain("Chrondle: Order #247");
     });
   });
 
@@ -146,7 +132,7 @@ describe("generateArchivalShareText", () => {
       };
       const result = generateArchivalShareText(payload);
 
-      expect(result).toContain("chrondle.app");
+      expect(result).toContain("https://chrondle.app");
     });
 
     it("uses custom URL when provided", () => {
@@ -175,10 +161,11 @@ describe("generateArchivalShareText", () => {
       };
       const result = generateArchivalShareText(payload);
 
-      const expected = `Chrondle: Order #247 1/3
+      const expected = `Chrondle: Order #247
+
 🟩🟩🟩🟩🟩🟩
 
-chrondle.app`;
+https://chrondle.app`;
 
       expect(result).toBe(expected);
     });
@@ -195,12 +182,13 @@ chrondle.app`;
       };
       const result = generateArchivalShareText(payload);
 
-      const expected = `Chrondle: Order #247 3/3
+      const expected = `Chrondle: Order #247
+
 ⬜🟩⬜🟩⬜⬜
 ⬜🟩🟩🟩⬜🟩
 🟩🟩🟩🟩🟩🟩
 
-chrondle.app`;
+https://chrondle.app`;
 
       expect(result).toBe(expected);
     });

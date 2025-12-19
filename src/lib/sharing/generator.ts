@@ -64,11 +64,12 @@ export function generateShareText(
     // Hints bar as main visual (like Wordle grid)
     const hintsBar = generateHintsBar(hintsUsed);
 
-    // Stats line: 🗓️ 2 years • 🎯 85/100
+    // Stats on separate lines
     const scoreEmoji = getScoreEmoji(totalScore, hasWon);
-    const statsLine = `🗓️ ${widthYears} ${yearLabel} • ${scoreEmoji} ${totalScore}/100`;
+    const rangeLine = `🗓️ ${widthYears} ${yearLabel}`;
+    const scoreLine = `${scoreEmoji} ${totalScore}/100`;
 
-    return `${header}\n${hintsBar}\n${statsLine}\n\nchrondle.app`;
+    return `${header}\n\n${hintsBar}\n${rangeLine}\n${scoreLine}\n\nhttps://chrondle.app`;
   } catch (error) {
     logger.error("Failed to generate share text:", error);
     return `Chrondle: Game complete\nchrondle.app`;

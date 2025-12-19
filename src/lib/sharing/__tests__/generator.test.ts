@@ -47,10 +47,10 @@ describe("generateShareText", () => {
       expect(result).toContain("🗓️ 1 year");
     });
 
-    it("combines range and score on one line with bullet separator", () => {
+    it("shows range and score on separate lines", () => {
       const ranges = [createRange(1900, 1914)];
       const result = generateShareText(ranges, 85, true, 347);
-      expect(result).toContain("🗓️ 15 years • ⭐ 85/100");
+      expect(result).toContain("🗓️ 15 years\n⭐ 85/100");
     });
   });
 
@@ -105,7 +105,13 @@ describe("generateShareText", () => {
       const ranges = [createRange(1950, 1950, 0)];
       const result = generateShareText(ranges, 100, true, 347);
 
-      const expected = `Chrondle #347\n⬜⬜⬜⬜⬜⬜\n🗓️ 1 year • 🎯 100/100\n\nchrondle.app`;
+      const expected = `Chrondle #347
+
+⬜⬜⬜⬜⬜⬜
+🗓️ 1 year
+🎯 100/100
+
+https://chrondle.app`;
 
       expect(result).toBe(expected);
     });
@@ -114,7 +120,13 @@ describe("generateShareText", () => {
       const ranges = [createRange(1950, 1960, 3)];
       const result = generateShareText(ranges, 70, true, 123);
 
-      const expected = `Chrondle #123\n🟩🟩🟩⬜⬜⬜\n🗓️ 11 years • 😎 70/100\n\nchrondle.app`;
+      const expected = `Chrondle #123
+
+🟩🟩🟩⬜⬜⬜
+🗓️ 11 years
+😎 70/100
+
+https://chrondle.app`;
 
       expect(result).toBe(expected);
     });

@@ -24,26 +24,24 @@ export interface ArchivalSharePayload {
  * Generates share text for Order mode.
  *
  * Example:
- * Chrondle: Order #247 2/3
+ * Chrondle: Order #247
+ *
  * ⬜🟩⬜🟩⬜⬜
  * 🟩🟩🟩🟩🟩🟩
  *
- * chrondle.app
+ * https://chrondle.app
  */
 export function generateArchivalShareText(payload: ArchivalSharePayload): string {
   const { puzzleNumber, attempts, url } = payload;
-  const maxAttempts = 3;
 
   // Build attempt progression - each attempt on its own row
   const progressLines = attempts
     .map((attempt) => attempt.feedback.map((f) => (f === "correct" ? "🟩" : "⬜")).join(""))
     .join("\n");
 
-  // Header with attempt count like Wordle "4/6"
-  const attemptCount = attempts.length;
-  let shareText = `Chrondle: Order #${puzzleNumber} ${attemptCount}/${maxAttempts}\n`;
+  let shareText = `Chrondle: Order #${puzzleNumber}\n\n`;
   shareText += `${progressLines}\n\n`;
-  shareText += url || "chrondle.app";
+  shareText += url || "https://chrondle.app";
 
   return shareText;
 }
