@@ -20,7 +20,7 @@ function getPrimaryRange(ranges: RangeGuess[]): RangeGuess | undefined {
 function generateHintsBar(hintsUsed: number): string {
   const maxHints = 6;
   const used = Math.min(Math.max(0, hintsUsed), maxHints);
-  return "⬛".repeat(used) + "⬜".repeat(maxHints - used);
+  return "🟩".repeat(used) + "⬜".repeat(maxHints - used);
 }
 
 function getScoreEmoji(score: number, hasWon: boolean): string {
@@ -61,17 +61,14 @@ export function generateShareText(
     // Header: Chrondle #96
     const header = `Chrondle${puzzleNumber ? ` #${puzzleNumber}` : ""}`;
 
-    // Range: 🗓️ 151 years
-    const rangeLine = `Range: 🗓️ ${widthYears} ${yearLabel}`;
+    // Hints bar as main visual (like Wordle grid)
+    const hintsBar = generateHintsBar(hintsUsed);
 
-    // Hints: ⬛⬛⬜⬜⬜⬜
-    const hintsLine = `Hints: ${generateHintsBar(hintsUsed)}`;
-
-    // Score: 🎯 100/100
+    // Stats line: 🗓️ 2 years • 🎯 85/100
     const scoreEmoji = getScoreEmoji(totalScore, hasWon);
-    const scoreLine = `Score: ${scoreEmoji} ${totalScore}/100`;
+    const statsLine = `🗓️ ${widthYears} ${yearLabel} • ${scoreEmoji} ${totalScore}/100`;
 
-    return `${header}\n${rangeLine}\n${hintsLine}\n${scoreLine}\n\nchrondle.app`;
+    return `${header}\n${hintsBar}\n${statsLine}\n\nchrondle.app`;
   } catch (error) {
     logger.error("Failed to generate share text:", error);
     return `Chrondle: Game complete\nchrondle.app`;
