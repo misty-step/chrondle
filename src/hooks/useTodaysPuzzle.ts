@@ -126,16 +126,27 @@ export function useTodaysPuzzle(options: UseTodaysPuzzleOptions = {}): UseTodays
   // Mutation for on-demand puzzle generation
   const ensurePuzzleForDate = useMutation(api.puzzles.ensurePuzzleForDate);
 
+  // Track which date we've already triggered generation for (prevents duplicate calls)
+  const generationTriggeredForRef = useRef<string | null>(null);
+
   // === TRIGGER ON-DEMAND GENERATION ===
 
   useEffect(() => {
     // Only trigger if we queried and got null (puzzle doesn't exist)
-    if (shouldQueryByDate && puzzleByDate === null) {
+    // Also check ref to prevent duplicate mutation calls before query updates
+    if (
+      shouldQueryByDate &&
+      puzzleByDate === null &&
+      generationTriggeredForRef.current !== localDate
+    ) {
+      generationTriggeredForRef.current = localDate;
       logger.warn(`[useTodaysPuzzle] No puzzle for local date ${localDate}, triggering ensure`);
 
       ensurePuzzleForDate({ date: localDate }).catch((error: unknown) => {
         // Log but don't break - could be outside window
         logger.error("[useTodaysPuzzle] Failed to ensure puzzle:", error);
+        // Reset so retry is possible on next effect run
+        generationTriggeredForRef.current = null;
       });
     }
   }, [puzzleByDate, shouldQueryByDate, localDate, ensurePuzzleForDate]);
@@ -205,10 +216,6 @@ export function useTodaysPuzzle(options: UseTodaysPuzzleOptions = {}): UseTodays
 
     // If preload matches local date, use it
     if (preloadMatchesLocalDate && preloadedPuzzle) {
-      if (!usedPreload) {
-        setUsedPreload(true);
-      }
-
       const normalizedPuzzle: TodaysPuzzle = {
         id: preloadedPuzzle._id as Id<"puzzles">,
         targetYear: preloadedPuzzle.targetYear,
@@ -276,10 +283,16 @@ export function useTodaysPuzzle(options: UseTodaysPuzzleOptions = {}): UseTodays
     preloadedPuzzle,
     puzzleByDate,
     localDate,
-    usedPreload,
     dateJustChanged,
     revalidate,
   ]);
+
+  // Track preload usage as a side effect (cannot be inside useMemo)
+  useEffect(() => {
+    if (preloadMatchesLocalDate && preloadedPuzzle && !usedPreload) {
+      setUsedPreload(true);
+    }
+  }, [preloadMatchesLocalDate, preloadedPuzzle, usedPreload]);
 
   // Log when preload doesn't match (debugging timezone issues)
   useEffect(() => {

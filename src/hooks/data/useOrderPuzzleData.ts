@@ -54,11 +54,21 @@ export function useOrderPuzzleData(
     isDaily ? { preloadedPuzzle: initialData as ConvexOrderPuzzle | null | undefined } : {},
   );
 
-  // For archive puzzles, fetch by puzzle number
+  // For archive puzzles, check if initial data matches requested puzzle number
+  const archiveInitialData = !isDaily
+    ? (initialData as ConvexOrderPuzzle | null | undefined)
+    : null;
+  const archiveInitialMatchesPuzzle =
+    archiveInitialData && archiveInitialData.puzzleNumber === puzzleNumber;
+
+  // For archive puzzles, fetch by puzzle number (skip if we already have matching initial data)
   const archivePuzzle = useQuery(
     api.orderPuzzles.getOrderPuzzleByNumber,
-    !isDaily ? { puzzleNumber } : "skip",
+    !isDaily && !archiveInitialMatchesPuzzle ? { puzzleNumber } : "skip",
   ) as ConvexOrderPuzzle | null | undefined;
+
+  // Use initial data if it matches, otherwise use query result
+  const archiveData = archiveInitialMatchesPuzzle ? archiveInitialData : archivePuzzle;
 
   return useMemo<UseOrderPuzzleDataReturn>(() => {
     // === DAILY PUZZLE MODE ===
@@ -105,11 +115,11 @@ export function useOrderPuzzleData(
 
     // === ARCHIVE PUZZLE MODE ===
 
-    if (archivePuzzle === undefined) {
+    if (archiveData === undefined) {
       return { puzzle: null, isLoading: true, error: null };
     }
 
-    if (archivePuzzle === null) {
+    if (archiveData === null) {
       return {
         puzzle: null,
         isLoading: false,
@@ -118,11 +128,11 @@ export function useOrderPuzzleData(
     }
 
     return {
-      puzzle: normalizePuzzle(archivePuzzle),
+      puzzle: normalizePuzzle(archiveData),
       isLoading: false,
       error: null,
     };
-  }, [isDaily, todaysPuzzle, archivePuzzle, puzzleNumber]);
+  }, [isDaily, todaysPuzzle, archiveData, puzzleNumber]);
 }
 
 function normalizePuzzle(convexPuzzle: ConvexOrderPuzzle): OrderPuzzle {

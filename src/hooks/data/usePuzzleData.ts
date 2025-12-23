@@ -68,11 +68,19 @@ export function usePuzzleData(puzzleNumber?: number, initialData?: unknown): Use
     isDaily ? { preloadedPuzzle: initialData as ConvexPuzzle | null | undefined } : {},
   );
 
-  // For archive puzzles, fetch by puzzle number
+  // For archive puzzles, check if initial data matches requested puzzle number
+  const archiveInitialData = !isDaily ? (initialData as ConvexPuzzle | null | undefined) : null;
+  const archiveInitialMatchesPuzzle =
+    archiveInitialData && archiveInitialData.puzzleNumber === puzzleNumber;
+
+  // For archive puzzles, fetch by puzzle number (skip if we already have matching initial data)
   const archivePuzzle = useQuery(
     api.puzzles.getPuzzleByNumber,
-    !isDaily ? { puzzleNumber } : "skip",
+    !isDaily && !archiveInitialMatchesPuzzle ? { puzzleNumber } : "skip",
   ) as ConvexPuzzle | null | undefined;
+
+  // Use initial data if it matches, otherwise use query result
+  const archiveData = archiveInitialMatchesPuzzle ? archiveInitialData : archivePuzzle;
 
   // Memoize the return value to ensure stable references
   return useMemo<UsePuzzleDataReturn>(() => {
@@ -121,7 +129,7 @@ export function usePuzzleData(puzzleNumber?: number, initialData?: unknown): Use
     // === ARCHIVE PUZZLE MODE ===
 
     // Handle loading state
-    if (archivePuzzle === undefined) {
+    if (archiveData === undefined) {
       return {
         puzzle: null,
         isLoading: true,
@@ -130,7 +138,7 @@ export function usePuzzleData(puzzleNumber?: number, initialData?: unknown): Use
     }
 
     // Handle null result (puzzle not found)
-    if (archivePuzzle === null) {
+    if (archiveData === null) {
       return {
         puzzle: null,
         isLoading: false,
@@ -140,11 +148,11 @@ export function usePuzzleData(puzzleNumber?: number, initialData?: unknown): Use
 
     // Normalize the puzzle data
     const normalizedPuzzle: PuzzleWithContext = {
-      id: archivePuzzle._id as Id<"puzzles">,
-      targetYear: archivePuzzle.targetYear,
-      events: archivePuzzle.events,
-      puzzleNumber: archivePuzzle.puzzleNumber,
-      historicalContext: archivePuzzle.historicalContext,
+      id: archiveData._id as Id<"puzzles">,
+      targetYear: archiveData.targetYear,
+      events: archiveData.events,
+      puzzleNumber: archiveData.puzzleNumber,
+      historicalContext: archiveData.historicalContext,
     };
 
     return {
@@ -152,5 +160,5 @@ export function usePuzzleData(puzzleNumber?: number, initialData?: unknown): Use
       isLoading: false,
       error: null,
     };
-  }, [isDaily, todaysPuzzle, archivePuzzle, puzzleNumber]);
+  }, [isDaily, todaysPuzzle, archiveData, puzzleNumber]);
 }

@@ -104,15 +104,26 @@ export function useTodaysOrderPuzzle(
 
   const ensurePuzzleForDate = useMutation(api.orderPuzzles.ensureOrderPuzzleForDate);
 
+  // Track which date we've already triggered generation for (prevents duplicate calls)
+  const generationTriggeredForRef = useRef<string | null>(null);
+
   // === TRIGGER ON-DEMAND GENERATION ===
   useEffect(() => {
-    if (shouldQueryByDate && puzzleByDate === null) {
+    // Also check ref to prevent duplicate mutation calls before query updates
+    if (
+      shouldQueryByDate &&
+      puzzleByDate === null &&
+      generationTriggeredForRef.current !== localDate
+    ) {
+      generationTriggeredForRef.current = localDate;
       logger.warn(
         `[useTodaysOrderPuzzle] No puzzle for local date ${localDate}, triggering ensure`,
       );
 
       ensurePuzzleForDate({ date: localDate }).catch((error: unknown) => {
         logger.error("[useTodaysOrderPuzzle] Failed to ensure puzzle:", error);
+        // Reset so retry is possible on next effect run
+        generationTriggeredForRef.current = null;
       });
     }
   }, [puzzleByDate, shouldQueryByDate, localDate, ensurePuzzleForDate]);
@@ -174,10 +185,6 @@ export function useTodaysOrderPuzzle(
     }
 
     if (preloadMatchesLocalDate && preloadedPuzzle) {
-      if (!usedPreload) {
-        setUsedPreload(true);
-      }
-
       const normalizedPuzzle: TodaysOrderPuzzle = {
         id: preloadedPuzzle._id as Id<"orderPuzzles">,
         date: preloadedPuzzle.date,
@@ -239,10 +246,16 @@ export function useTodaysOrderPuzzle(
     preloadedPuzzle,
     puzzleByDate,
     localDate,
-    usedPreload,
     dateJustChanged,
     revalidate,
   ]);
+
+  // Track preload usage as a side effect (cannot be inside useMemo)
+  useEffect(() => {
+    if (preloadMatchesLocalDate && preloadedPuzzle && !usedPreload) {
+      setUsedPreload(true);
+    }
+  }, [preloadMatchesLocalDate, preloadedPuzzle, usedPreload]);
 
   useEffect(() => {
     if (preloadedPuzzle?.date && !preloadMatchesLocalDate) {
