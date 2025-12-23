@@ -171,13 +171,26 @@ function getStreakFirstDay(lastDate: string, streakLength: number): string {
 }
 
 /**
+ * Range guess schema for validation
+ */
+const rangeGuessValidator = v.object({
+  start: v.number(),
+  end: v.number(),
+  hintsUsed: v.number(),
+  score: v.number(),
+  timestamp: v.number(),
+});
+
+/**
  * Merge anonymous game state when user authenticates
  *
  * Called during sign-in to migrate localStorage game progress to authenticated account.
  * Preserves more progress if both anonymous and authenticated played same puzzle.
+ * Now supports both legacy guesses and new range-based guesses.
  *
  * @param puzzleId - Puzzle being merged
- * @param guesses - Anonymous user's guesses
+ * @param guesses - Anonymous user's legacy guesses (numbers)
+ * @param ranges - Anonymous user's range guesses (new format)
  * @param isComplete - Whether anonymous user completed puzzle
  * @param hasWon - Whether anonymous user won
  * @returns Success status and message
@@ -186,10 +199,11 @@ export const mergeAnonymousState = mutation({
   args: {
     puzzleId: v.id("puzzles"),
     guesses: v.array(v.number()),
+    ranges: v.optional(v.array(rangeGuessValidator)),
     isComplete: v.boolean(),
     hasWon: v.boolean(),
   },
-  handler: async (ctx, { puzzleId, guesses, isComplete, hasWon }) => {
+  handler: async (ctx, { puzzleId, guesses, ranges, isComplete, hasWon }) => {
     // Check authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -207,7 +221,9 @@ export const mergeAnonymousState = mutation({
     }
 
     // Don't process empty game state
-    if (!guesses || guesses.length === 0) {
+    const hasGuesses = guesses && guesses.length > 0;
+    const hasRanges = ranges && ranges.length > 0;
+    if (!hasGuesses && !hasRanges) {
       return { success: true, message: "No anonymous state to merge" };
     }
 
@@ -218,13 +234,26 @@ export const mergeAnonymousState = mutation({
         .withIndex("by_user_puzzle", (q) => q.eq("userId", user._id).eq("puzzleId", puzzleId))
         .first();
 
+      // Calculate total score from ranges if available
+      const totalScore = ranges ? ranges.reduce((sum, r) => sum + r.score, 0) : undefined;
+
       if (existingPlay) {
-        // User already played this puzzle - merge guesses if anonymous had more progress
+        // User already played this puzzle - merge if anonymous had more progress
         const existingGuessCount = existingPlay.guesses?.length ?? 0;
-        if (guesses.length > existingGuessCount) {
-          // Anonymous user made more progress, update with their guesses
+        const existingRangeCount = existingPlay.ranges?.length ?? 0;
+        const anonymousGuessCount = guesses?.length ?? 0;
+        const anonymousRangeCount = ranges?.length ?? 0;
+
+        // Compare progress: more guesses/ranges = more progress
+        const anonymousHasMoreProgress =
+          anonymousGuessCount > existingGuessCount || anonymousRangeCount > existingRangeCount;
+
+        if (anonymousHasMoreProgress) {
+          // Anonymous user made more progress, update with their data
           await ctx.db.patch(existingPlay._id, {
-            guesses: guesses,
+            guesses: hasGuesses ? guesses : existingPlay.guesses,
+            ranges: hasRanges ? ranges : existingPlay.ranges,
+            totalScore: totalScore ?? existingPlay.totalScore,
             completedAt: isComplete && hasWon ? Date.now() : existingPlay.completedAt,
             updatedAt: Date.now(),
           });
@@ -235,7 +264,9 @@ export const mergeAnonymousState = mutation({
         await ctx.db.insert("plays", {
           userId: user._id,
           puzzleId: puzzleId,
-          guesses: guesses,
+          guesses: hasGuesses ? guesses : undefined,
+          ranges: hasRanges ? ranges : undefined,
+          totalScore,
           completedAt: isComplete && hasWon ? Date.now() : undefined,
           updatedAt: Date.now(),
         });
@@ -251,8 +282,9 @@ export const mergeAnonymousState = mutation({
             updatedAt: Date.now(),
           };
 
-          // Check if it was a perfect game (1 guess)
-          if (guesses.length === 1) {
+          // Check if it was a perfect game (1 guess or 1 range)
+          const totalAttempts = (guesses?.length ?? 0) + (ranges?.length ?? 0);
+          if (totalAttempts === 1) {
             updates.perfectGames = user.perfectGames + 1;
           }
 
@@ -272,7 +304,8 @@ export const mergeAnonymousState = mutation({
         error: errorMessage,
         userId: user._id,
         puzzleId,
-        guessCount: guesses.length,
+        guessCount: guesses?.length ?? 0,
+        rangeCount: ranges?.length ?? 0,
         timestamp: new Date().toISOString(),
       });
 

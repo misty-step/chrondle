@@ -13,11 +13,15 @@ const MOCK_ARRAYS: { [key: string]: number[] } = {
   oneGuess: [1950],
 };
 
+// Stable range array references for mocking
+const EMPTY_RANGES: Array<{ low: number; high: number; era: "AD" | "BC" }> = [];
+
 // Mock the localStorage sync utilities
 vi.mock("@/lib/localStorageSync", () => ({
   subscribeToStorage: vi.fn(() => () => {}),
   getStorageSnapshot: vi.fn(() => MOCK_ARRAYS.empty),
   getServerSnapshot: vi.fn(() => MOCK_ARRAYS.empty),
+  getRangesSnapshot: vi.fn(() => EMPTY_RANGES),
   updateStorage: vi.fn(),
   clearStorage: vi.fn(),
 }));
@@ -37,9 +41,7 @@ describe("useLocalSession", () => {
 
   describe("Anonymous Users (localStorage)", () => {
     it("should persist guesses to localStorage for anonymous users", () => {
-      const { result } = renderHook(() =>
-        useLocalSession("puzzle-123", false, 1969),
-      );
+      const { result } = renderHook(() => useLocalSession("puzzle-123", false, 1969));
 
       // Initially empty
       expect(result.current.sessionGuesses).toEqual([]);
@@ -60,9 +62,7 @@ describe("useLocalSession", () => {
 
     it("should read from localStorage via useSyncExternalStore", () => {
       // Mock existing guesses in storage
-      vi.mocked(localStorageSync.getStorageSnapshot).mockReturnValue(
-        MOCK_ARRAYS.twoGuesses,
-      );
+      vi.mocked(localStorageSync.getStorageSnapshot).mockReturnValue(MOCK_ARRAYS.twoGuesses);
 
       const { result } = renderHook(() => useLocalSession("puzzle-123", false));
 
@@ -71,9 +71,7 @@ describe("useLocalSession", () => {
     });
 
     it("should mark game as complete when winning guess is made", () => {
-      const { result } = renderHook(() =>
-        useLocalSession("puzzle-123", false, 1969),
-      );
+      const { result } = renderHook(() => useLocalSession("puzzle-123", false, 1969));
 
       // Add the winning guess
       act(() => {
@@ -91,13 +89,9 @@ describe("useLocalSession", () => {
 
     it("should mark game as complete after 6 guesses", () => {
       // Mock existing 5 guesses
-      vi.mocked(localStorageSync.getStorageSnapshot).mockReturnValue(
-        MOCK_ARRAYS.fiveGuesses,
-      );
+      vi.mocked(localStorageSync.getStorageSnapshot).mockReturnValue(MOCK_ARRAYS.fiveGuesses);
 
-      const { result } = renderHook(() =>
-        useLocalSession("puzzle-123", false, 1969),
-      );
+      const { result } = renderHook(() => useLocalSession("puzzle-123", false, 1969));
 
       // Add 6th guess (not winning)
       act(() => {
@@ -120,17 +114,13 @@ describe("useLocalSession", () => {
         result.current.clearGuesses();
       });
 
-      expect(vi.mocked(localStorageSync.clearStorage)).toHaveBeenCalledWith(
-        "puzzle-123",
-      );
+      expect(vi.mocked(localStorageSync.clearStorage)).toHaveBeenCalledWith("puzzle-123");
     });
   });
 
   describe("Authenticated Users (React State)", () => {
     it("should use React state for authenticated users", () => {
-      const { result } = renderHook(() =>
-        useLocalSession("puzzle-123", true, 1969),
-      );
+      const { result } = renderHook(() => useLocalSession("puzzle-123", true, 1969));
 
       // Initially empty
       expect(result.current.sessionGuesses).toEqual([]);
@@ -156,12 +146,9 @@ describe("useLocalSession", () => {
     });
 
     it("should reset authenticated state when puzzle changes", () => {
-      const { result, rerender } = renderHook(
-        ({ puzzleId }) => useLocalSession(puzzleId, true),
-        {
-          initialProps: { puzzleId: "puzzle-123" },
-        },
-      );
+      const { result, rerender } = renderHook(({ puzzleId }) => useLocalSession(puzzleId, true), {
+        initialProps: { puzzleId: "puzzle-123" },
+      });
 
       // Add a guess
       act(() => {
@@ -180,9 +167,7 @@ describe("useLocalSession", () => {
   describe("Max Guesses Validation", () => {
     it("should not add more than 6 guesses for anonymous users", () => {
       // Mock 6 existing guesses
-      vi.mocked(localStorageSync.getStorageSnapshot).mockReturnValue(
-        MOCK_ARRAYS.sixGuesses,
-      );
+      vi.mocked(localStorageSync.getStorageSnapshot).mockReturnValue(MOCK_ARRAYS.sixGuesses);
 
       const { result } = renderHook(() => useLocalSession("puzzle-123", false));
 
@@ -196,9 +181,7 @@ describe("useLocalSession", () => {
     });
 
     it("should not add duplicate guesses", () => {
-      vi.mocked(localStorageSync.getStorageSnapshot).mockReturnValue(
-        MOCK_ARRAYS.oneGuess,
-      );
+      vi.mocked(localStorageSync.getStorageSnapshot).mockReturnValue(MOCK_ARRAYS.oneGuess);
 
       const { result } = renderHook(() => useLocalSession("puzzle-123", false));
 

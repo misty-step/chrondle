@@ -330,11 +330,24 @@ export function createTypedStorage<T>(key: string, schema: StorageSchema<T>) {
 }
 
 /**
+ * Zod schema for range guesses (matches RangeGuess interface)
+ */
+export const rangeGuessSchema = z.object({
+  start: z.number().int().min(-10000).max(3000),
+  end: z.number().int().min(-10000).max(3000),
+  hintsUsed: z.number().int().min(0).max(6),
+  score: z.number().int().min(0),
+  timestamp: z.number().int().positive(),
+});
+
+/**
  * Zod schema for anonymous game state
+ * Now includes ranges for the range-based game mode
  */
 export const anonymousGameStateSchema = z.object({
   puzzleId: z.string().min(1).max(100),
   guesses: z.array(z.number().int().min(-10000).max(3000)).max(6),
+  ranges: z.array(rangeGuessSchema).max(6).optional(), // Range guesses for new game mode
   isComplete: z.boolean(),
   hasWon: z.boolean(),
   timestamp: z.number().int().positive(),
