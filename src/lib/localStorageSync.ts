@@ -5,6 +5,7 @@
 
 import { gameStateStorage } from "@/lib/secureStorage";
 import type { AnonymousGameState } from "@/hooks/useAnonymousGameState";
+import type { RangeGuess } from "@/types/range";
 
 /**
  * Storage key for session guesses
@@ -40,7 +41,9 @@ export function subscribeToStorage(callback: () => void): () => void {
 
 // Cache for array references to avoid infinite loops in useSyncExternalStore
 const EMPTY_ARRAY: readonly number[] = Object.freeze([]);
+const EMPTY_RANGES_ARRAY: readonly RangeGuess[] = Object.freeze([]);
 let lastSnapshot: { puzzleId: string | null; guesses: number[] } | null = null;
+let lastRangesSnapshot: { puzzleId: string | null; ranges: RangeGuess[] } | null = null;
 
 /**
  * Get snapshot of storage state
@@ -114,6 +117,78 @@ function arraysEqual(a: number[], b: number[]): boolean {
  */
 export function getServerSnapshot(): number[] {
   return EMPTY_ARRAY as number[];
+}
+
+/**
+ * Helper to check if two range arrays are equal
+ */
+function rangesEqual(a: RangeGuess[], b: RangeGuess[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (
+      a[i].start !== b[i].start ||
+      a[i].end !== b[i].end ||
+      a[i].hintsUsed !== b[i].hintsUsed ||
+      a[i].score !== b[i].score
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Get snapshot of ranges from storage state
+ * Returns the current ranges from localStorage for the given puzzle
+ * Caches the array reference to avoid infinite loops
+ */
+export function getRangesSnapshot(puzzleId: string | null): RangeGuess[] {
+  // Check cache first to avoid unnecessary localStorage reads
+  if (lastRangesSnapshot && lastRangesSnapshot.puzzleId === puzzleId) {
+    if (!puzzleId) {
+      return EMPTY_RANGES_ARRAY as RangeGuess[];
+    }
+
+    // Don't try to read localStorage on server
+    if (typeof window === "undefined") {
+      return EMPTY_RANGES_ARRAY as RangeGuess[];
+    }
+
+    const state = gameStateStorage.get();
+    if (state && state.puzzleId === puzzleId) {
+      const ranges = (state.ranges as RangeGuess[]) || [];
+      if (rangesEqual(lastRangesSnapshot.ranges, ranges)) {
+        return lastRangesSnapshot.ranges;
+      }
+      // Update cache with new ranges
+      lastRangesSnapshot = { puzzleId, ranges };
+      return ranges;
+    }
+  }
+
+  if (!puzzleId) {
+    lastRangesSnapshot = { puzzleId: null, ranges: EMPTY_RANGES_ARRAY as RangeGuess[] };
+    return EMPTY_RANGES_ARRAY as RangeGuess[];
+  }
+
+  // Don't try to read localStorage on server
+  if (typeof window === "undefined") {
+    return EMPTY_RANGES_ARRAY as RangeGuess[];
+  }
+
+  const state = gameStateStorage.get();
+
+  // Only return ranges if they're for the current puzzle
+  if (state && state.puzzleId === puzzleId) {
+    const ranges = (state.ranges as RangeGuess[]) || [];
+    // Update cache
+    lastRangesSnapshot = { puzzleId, ranges };
+    return ranges;
+  }
+
+  // Cache the empty result
+  lastRangesSnapshot = { puzzleId, ranges: EMPTY_RANGES_ARRAY as RangeGuess[] };
+  return EMPTY_RANGES_ARRAY as RangeGuess[];
 }
 
 /**
