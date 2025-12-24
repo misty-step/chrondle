@@ -230,21 +230,41 @@ export function getEraDescription(era: Era): string {
   return era === "BC" ? "Before Christ" : "Anno Domini";
 }
 
+const MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
 /**
  * Formats a date string into a readable format
- * @param dateString - Date string (e.g., "2025-11-10" or ISO format)
- * @returns Formatted date string (e.g., "Nov 10, 2025")
+ *
+ * IMPORTANT: Parses YYYY-MM-DD directly without using Date objects.
+ * Using `new Date("2025-12-24")` would interpret it as midnight UTC,
+ * then convert to local timezone, shifting the date backward for
+ * users west of UTC. Direct parsing avoids this timezone bug.
+ *
+ * @param dateString - Date string in YYYY-MM-DD format
+ * @returns Formatted date string (e.g., "Dec 24, 2025")
  */
 export function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    const month = date.toLocaleDateString("en-US", { month: "short" });
-    const day = date.getDate();
-    const year = date.getFullYear();
-    return `${month} ${day}, ${year}`;
-  } catch {
-    return dateString;
+  // Parse YYYY-MM-DD directly - no Date object, no timezone issues
+  const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const [, year, month, day] = match;
+    return `${MONTH_NAMES[parseInt(month, 10) - 1]} ${parseInt(day, 10)}, ${year}`;
   }
+  // Fallback: return as-is if not YYYY-MM-DD format
+  return dateString;
 }
 
 /**
