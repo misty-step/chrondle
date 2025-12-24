@@ -14,6 +14,7 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { NavbarButton } from "@/components/ui/NavbarButton";
 import { getStreakColorClasses } from "@/lib/ui/streak-styling";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/displayFormatting";
 
 // Constants
 const HEARTBEAT_DELAY_MS = 2000;
@@ -23,6 +24,7 @@ interface AppHeaderProps {
   currentStreak?: number;
   isDebugMode?: boolean;
   puzzleNumber?: number;
+  puzzleDate?: string;
   isArchive?: boolean;
   mode?: "classic" | "order";
 }
@@ -31,6 +33,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   currentStreak,
   isDebugMode = false,
   puzzleNumber,
+  puzzleDate,
   isArchive = false,
   mode = "classic",
 }) => {
@@ -73,7 +76,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <span className="bg-border hidden h-4 w-px sm:inline" aria-hidden="true" />
               <ModeDropdown className="hidden sm:inline-flex" />
 
-              {/* Puzzle Number */}
+              {/* Puzzle Number and Date */}
               {puzzleNumber && (
                 <>
                   <span className="bg-border hidden h-4 w-px sm:inline" aria-hidden="true" />
@@ -84,6 +87,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     )}
                   >
                     {`#${puzzleNumber}`}
+                    {puzzleDate && (
+                      <span className="text-muted-foreground/60 ml-1.5 hidden text-xs sm:inline">
+                        • {formatDate(puzzleDate)}
+                      </span>
+                    )}
                   </span>
                 </>
               )}

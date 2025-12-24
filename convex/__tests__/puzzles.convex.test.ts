@@ -190,6 +190,88 @@ describe("puzzles/queries", () => {
       expect(result.puzzles).toHaveLength(0);
       expect(result.totalCount).toBe(1);
     });
+
+    it("filters out puzzles after maxDate when provided", async () => {
+      const t = convexTest(schema, modules);
+
+      // Seed puzzles for Dec 23, 24, 25
+      await t.run(async (ctx) => {
+        await ctx.db.insert("puzzles", {
+          puzzleNumber: 133,
+          date: "2025-12-23",
+          targetYear: 1800,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 10,
+          avgGuesses: 3.0,
+          updatedAt: Date.now(),
+        });
+        await ctx.db.insert("puzzles", {
+          puzzleNumber: 134,
+          date: "2025-12-24",
+          targetYear: 1900,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 10,
+          avgGuesses: 3.0,
+          updatedAt: Date.now(),
+        });
+        await ctx.db.insert("puzzles", {
+          puzzleNumber: 135,
+          date: "2025-12-25",
+          targetYear: 2000,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 10,
+          avgGuesses: 3.0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      // Query with maxDate = Dec 24 (should exclude Dec 25)
+      const result = await t.query(api.puzzles.getArchivePuzzles, {
+        page: 1,
+        pageSize: 10,
+        maxDate: "2025-12-24",
+      });
+
+      expect(result.totalCount).toBe(2); // Only Dec 23 and Dec 24
+      expect(result.puzzles).toHaveLength(2);
+      expect(result.puzzles.map((p: { puzzleNumber: number }) => p.puzzleNumber)).toEqual([
+        134, 133,
+      ]);
+    });
+
+    it("returns all puzzles when maxDate is not provided (backward compat)", async () => {
+      const t = convexTest(schema, modules);
+
+      await t.run(async (ctx) => {
+        await ctx.db.insert("puzzles", {
+          puzzleNumber: 134,
+          date: "2025-12-24",
+          targetYear: 1900,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 10,
+          avgGuesses: 3.0,
+          updatedAt: Date.now(),
+        });
+        await ctx.db.insert("puzzles", {
+          puzzleNumber: 135,
+          date: "2025-12-25",
+          targetYear: 2000,
+          events: ["E1", "E2", "E3", "E4", "E5", "E6"],
+          playCount: 10,
+          avgGuesses: 3.0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      // Query without maxDate (backward compatible)
+      const result = await t.query(api.puzzles.getArchivePuzzles, {
+        page: 1,
+        pageSize: 10,
+      });
+
+      expect(result.totalCount).toBe(2); // Both puzzles
+      expect(result.puzzles).toHaveLength(2);
+    });
   });
 
   describe("getTotalPuzzles", () => {

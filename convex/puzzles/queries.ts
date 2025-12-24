@@ -99,14 +99,21 @@ export const getArchivePuzzles = query({
   args: {
     page: v.number(),
     pageSize: v.number(),
+    maxDate: v.optional(v.string()), // YYYY-MM-DD: filter out puzzles after this date
   },
-  handler: async (ctx, { page, pageSize }) => {
-    // Get total count
-    const allPuzzles = await ctx.db.query("puzzles").collect();
-    const totalCount = allPuzzles.length;
+  handler: async (ctx, { page, pageSize, maxDate }) => {
+    // Use DB-level filtering with by_date index when maxDate provided
+    const puzzles = maxDate
+      ? await ctx.db
+          .query("puzzles")
+          .withIndex("by_date", (q) => q.lte("date", maxDate))
+          .collect()
+      : await ctx.db.query("puzzles").collect();
 
-    // Get puzzles sorted by puzzle number (newest first)
-    const puzzles = await ctx.db.query("puzzles").order("desc").collect();
+    // Sort by puzzleNumber descending (index returns date order)
+    puzzles.sort((a, b) => (b.puzzleNumber ?? 0) - (a.puzzleNumber ?? 0));
+
+    const totalCount = puzzles.length;
 
     // Manual pagination
     const startIndex = (page - 1) * pageSize;

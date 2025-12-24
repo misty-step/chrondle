@@ -11,6 +11,7 @@ interface GameModeLayoutProps {
   children: ReactNode;
   mode: "classic" | "order";
   puzzleNumber?: number;
+  puzzleDate?: string;
   isArchive?: boolean;
   className?: string;
 
@@ -78,6 +79,7 @@ export function GameModeLayout({
   children,
   mode,
   puzzleNumber,
+  puzzleDate,
   isArchive = false,
   className,
   backgroundAnimation,
@@ -111,6 +113,7 @@ export function GameModeLayout({
           currentStreak={currentStreak}
           isDebugMode={isDebugMode}
           puzzleNumber={puzzleNumber}
+          puzzleDate={puzzleDate}
           isArchive={isArchive}
           mode={mode}
         />
