@@ -47,6 +47,9 @@ export interface Puzzle {
 
   /** Sequential puzzle number for display (e.g., "Puzzle #42") */
   puzzleNumber: number;
+
+  /** ISO date string (YYYY-MM-DD) when this puzzle was scheduled */
+  date?: string;
 }
 
 /**

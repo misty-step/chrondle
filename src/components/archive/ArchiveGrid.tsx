@@ -15,6 +15,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Check } from "lucide-react";
 import { getLocalDateString } from "@/lib/time/dailyDate";
+import { formatDate } from "@/lib/displayFormatting";
 
 interface PuzzleData {
   puzzleNumber: number;
@@ -64,9 +65,16 @@ export function ArchiveGrid({ puzzles, linkPrefix = "/archive/puzzle" }: Archive
             }`}
           >
             <div className="flex items-start justify-between">
-              <span className="text-muted-foreground font-mono text-sm">
-                Puzzle #{puzzle.puzzleNumber}
-              </span>
+              <div className="flex flex-col">
+                <span className="text-muted-foreground font-mono text-sm">
+                  Puzzle #{puzzle.puzzleNumber}
+                </span>
+                {puzzle.date && (
+                  <span className="text-muted-foreground/60 text-xs">
+                    {formatDate(puzzle.date)}
+                  </span>
+                )}
+              </div>
               {puzzle.isCompleted && <Check className="h-4 w-4 text-green-600" />}
             </div>
 

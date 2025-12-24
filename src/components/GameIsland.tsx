@@ -101,19 +101,24 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
     };
   }, [chrondle.gameState, deferredGameState, chrondle.submitRange, chrondle.resetGame]);
 
-  // Store puzzle number once loaded to prevent flashing during state transitions
+  // Store puzzle number and date once loaded to prevent flashing during state transitions
   const [stablePuzzleNumber, setStablePuzzleNumber] = useState<number | undefined>(undefined);
+  const [stablePuzzleDate, setStablePuzzleDate] = useState<string | undefined>(undefined);
 
-  // Update stable puzzle number when we get a valid puzzle
+  // Update stable puzzle number and date when we get a valid puzzle
   useEffect(() => {
     if (gameLogic.gameState.puzzle?.puzzleNumber) {
       setStablePuzzleNumber(gameLogic.gameState.puzzle.puzzleNumber);
     }
-  }, [gameLogic.gameState.puzzle?.puzzleNumber]);
+    if (gameLogic.gameState.puzzle?.date) {
+      setStablePuzzleDate(gameLogic.gameState.puzzle.date);
+    }
+  }, [gameLogic.gameState.puzzle?.puzzleNumber, gameLogic.gameState.puzzle?.date]);
 
-  // Only show puzzle number if we're past the initial puzzle loading
+  // Only show puzzle info if we're past the initial puzzle loading
   const puzzleNumber =
     chrondle.gameState.status !== "loading-puzzle" ? stablePuzzleNumber : undefined;
+  const puzzleDate = chrondle.gameState.status !== "loading-puzzle" ? stablePuzzleDate : undefined;
 
   // Streak system
   const { streakData, updateStreak, hasNewAchievement, newAchievement, clearNewAchievement } =
@@ -207,6 +212,7 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
     <GameModeLayout
       mode="classic"
       puzzleNumber={puzzleNumber}
+      puzzleDate={puzzleDate}
       currentStreak={streakData.currentStreak}
       isDebugMode={debugMode}
       backgroundAnimation={
