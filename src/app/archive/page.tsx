@@ -8,8 +8,9 @@ import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronLeft, ChevronRight, History, BarChart } from "lucide-react";
+import { ChevronLeft, ChevronRight, History, BarChart } from "lucide-react";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
+import { ArchiveGrid } from "@/components/archive/ArchiveGrid";
 import { UserCreationHandler } from "@/components/UserCreationHandler";
 import { LoadingShell } from "@/components/LoadingShell";
 import { logger } from "@/lib/logger";
@@ -17,6 +18,7 @@ import { logger } from "@/lib/logger";
 interface PuzzleCardData {
   index: number;
   puzzleNumber: number;
+  date?: string;
   firstHint: string;
   isCompleted: boolean;
 }
@@ -245,6 +247,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
     return {
       index: (puzzle?.puzzleNumber || 1) - 1, // 0-based index for compatibility
       puzzleNumber: puzzle?.puzzleNumber || 0,
+      date: puzzle?.date,
       firstHint: (puzzle?.events && puzzle.events[0]) || "Historical event puzzle",
       isCompleted,
     };
@@ -358,33 +361,8 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
             </div>
           ) : (
             <>
-              {/* Actual archive grid */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-                {paginatedData.map((puzzle) => (
-                  <Link key={puzzle.puzzleNumber} href={`/archive/puzzle/${puzzle.puzzleNumber}`}>
-                    <Card
-                      className={`flex h-36 cursor-pointer flex-col gap-2 p-3 transition-all hover:shadow-md sm:h-[10rem] sm:p-4 ${
-                        puzzle.isCompleted
-                          ? "border-green-600/30 bg-green-600/5 hover:border-green-600/50"
-                          : "hover:border-primary"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <span className="text-muted-foreground font-mono text-sm">
-                          Puzzle #{puzzle.puzzleNumber}
-                        </span>
-                        {puzzle.isCompleted && <Check className="h-4 w-4 text-green-600" />}
-                      </div>
-
-                      <p className="text-foreground flex-1 overflow-hidden text-sm">
-                        <span className="line-clamp-3">{puzzle.firstHint}</span>
-                      </p>
-
-                      <div className="text-muted-foreground mt-auto text-xs">Play puzzle →</div>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
+              {/* Archive grid - filters by local date to hide future puzzles */}
+              <ArchiveGrid puzzles={paginatedData} />
 
               {/* Pagination controls */}
               {totalPages > 1 && (

@@ -49,19 +49,14 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
 
   // Adapt to old interface for compatibility
   const gameLogic = useMemo(() => {
-    // We have puzzle data from server preload, so treat it as available
-    // even during auth/progress loading
-    const puzzleData = puzzle
+    // Use timezone-corrected puzzle from gameState, not raw preload.
+    // The preload uses UTC; useTodaysPuzzle validates against local date.
+    const puzzleData = isReady(chrondle.gameState)
       ? {
-          ...puzzle,
-          year: puzzle.targetYear, // old interface used 'year'
+          ...chrondle.gameState.puzzle,
+          year: chrondle.gameState.puzzle.targetYear,
         }
-      : isReady(chrondle.gameState)
-        ? {
-            ...chrondle.gameState.puzzle,
-            year: chrondle.gameState.puzzle.targetYear,
-          }
-        : null;
+      : null;
 
     // Extract guesses and completion status when ready
     const guesses = isReady(chrondle.gameState) ? chrondle.gameState.guesses : [];
@@ -73,9 +68,9 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
     const isAuthLoading = chrondle.gameState.status === "loading-auth";
     const isProgressLoading = chrondle.gameState.status === "loading-progress";
 
-    // Only consider it "loading" for UI purposes if puzzle is actually loading
-    // Auth and progress can load in the background without disabling the game
-    const isLoading = isPuzzleLoading;
+    // Show loading while puzzle loads or during timezone correction.
+    // Auth and progress can load in the background without disabling the game.
+    const isLoading = isPuzzleLoading || puzzleData === null;
     const totalScore = isReady(chrondle.gameState) ? chrondle.gameState.totalScore : 0;
     const remainingAttempts = isReady(deferredGameState)
       ? deferredGameState.remainingAttempts
@@ -104,7 +99,7 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
       submitRange: chrondle.submitRange,
       resetGame: chrondle.resetGame,
     };
-  }, [puzzle, chrondle.gameState, deferredGameState, chrondle.submitRange, chrondle.resetGame]);
+  }, [chrondle.gameState, deferredGameState, chrondle.submitRange, chrondle.resetGame]);
 
   // Store puzzle number once loaded to prevent flashing during state transitions
   const [stablePuzzleNumber, setStablePuzzleNumber] = useState<number | undefined>(undefined);
