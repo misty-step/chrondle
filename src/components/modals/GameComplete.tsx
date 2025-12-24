@@ -165,31 +165,6 @@ export function GameComplete({
   const displayedFinalScore = hasWon ? finalRangeScore : 0;
   const outcomeCopy = buildOutcomeCopy(hasWon, primaryRange, targetYear);
 
-  const { shareGame, shareStatus, isSharing } = useShareGame(
-    ranges,
-    totalScore,
-    hasWon,
-    puzzleNumber,
-    {
-      targetYear,
-    },
-  );
-
-  const shareButtonLabel = (() => {
-    if (isSharing) return "Sharing…";
-    if (shareStatus === "success") return "Copied!";
-    if (shareStatus === "error") return "Try again";
-    return "Share";
-  })();
-
-  // Share button stays vermilion - feedback via icon + animation, not color change
-  const shareButtonIcon = (() => {
-    if (shareStatus === "success")
-      return <Check className="size-4 animate-[check-in_250ms_ease-out_forwards]" />;
-    if (shareStatus === "error") return <AlertCircle className="size-4" />;
-    return null;
-  })();
-
   const showTargetMarker = Boolean(
     primaryRange && typeof targetYear === "number" && Number.isFinite(targetYear),
   );
@@ -210,6 +185,33 @@ export function GameComplete({
           ? ("later" as const)
           : ("inside" as const)
       : null;
+
+  const { shareGame, shareStatus, isSharing } = useShareGame(
+    ranges,
+    totalScore,
+    hasWon,
+    puzzleNumber,
+    {
+      targetYear,
+      missDistance,
+      missDirection,
+    },
+  );
+
+  const shareButtonLabel = (() => {
+    if (isSharing) return "Sharing…";
+    if (shareStatus === "success") return "Copied!";
+    if (shareStatus === "error") return "Try again";
+    return "Share";
+  })();
+
+  // Share button stays vermilion - feedback via icon + animation, not color change
+  const shareButtonIcon = (() => {
+    if (shareStatus === "success")
+      return <Check className="size-4 animate-[check-in_250ms_ease-out_forwards]" />;
+    if (shareStatus === "error") return <AlertCircle className="size-4" />;
+    return null;
+  })();
 
   const windowYears = primaryRange ? primaryRange.end - primaryRange.start + 1 : 0;
 

@@ -11,6 +11,8 @@ interface UseShareGameOptions {
   onSuccess?: () => void;
   onError?: () => void;
   targetYear?: number;
+  missDistance?: number | null;
+  missDirection?: "earlier" | "later" | "inside" | null;
 }
 
 export function useShareGame(
@@ -20,12 +22,14 @@ export function useShareGame(
   puzzleNumber?: number,
   options?: UseShareGameOptions,
 ) {
-  const { onSuccess, onError, targetYear } = options || {};
+  const { onSuccess, onError, targetYear, missDistance, missDirection } = options || {};
   const { share, canShare, shareMethod, isSharing } = useWebShare();
   const [shareStatus, setShareStatus] = useState<ShareStatus>("idle");
 
   const shareText = generateShareText(ranges, totalScore, hasWon, puzzleNumber, {
     targetYear,
+    missDistance,
+    missDirection,
   });
 
   // Reset status after delay

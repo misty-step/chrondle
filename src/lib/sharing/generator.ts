@@ -8,6 +8,8 @@ import { logger } from "@/lib/logger";
 
 interface ShareTextOptions {
   targetYear?: number;
+  missDistance?: number | null;
+  missDirection?: "earlier" | "later" | "inside" | null;
 }
 
 function getPrimaryRange(ranges: RangeGuess[]): RangeGuess | undefined {
@@ -37,7 +39,7 @@ export function generateShareText(
   totalScore: number,
   hasWon: boolean,
   puzzleNumber?: number,
-  _options: ShareTextOptions = {},
+  options: ShareTextOptions = {},
 ): string {
   try {
     if (
@@ -67,7 +69,19 @@ export function generateShareText(
     // Stats on separate lines
     const scoreEmoji = getScoreEmoji(totalScore, hasWon);
     const rangeLine = `🗓️ ${widthYears} ${yearLabel}`;
-    const scoreLine = `${scoreEmoji} ${totalScore}/100`;
+    let scoreLine: string;
+
+    if (
+      !hasWon &&
+      options.missDistance !== undefined &&
+      options.missDistance !== null &&
+      options.missDirection
+    ) {
+      const direction = options.missDirection === "earlier" ? "early" : "late";
+      scoreLine = `${scoreEmoji} ${options.missDistance}y ${direction}`;
+    } else {
+      scoreLine = `${scoreEmoji} ${totalScore}/100`;
+    }
 
     return `${header}\n\n${hintsBar}\n${rangeLine}\n${scoreLine}\n\nhttps://chrondle.app`;
   } catch (error) {
