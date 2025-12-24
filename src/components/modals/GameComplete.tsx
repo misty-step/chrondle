@@ -165,6 +165,22 @@ export function GameComplete({
   const displayedFinalScore = hasWon ? finalRangeScore : 0;
   const outcomeCopy = buildOutcomeCopy(hasWon, primaryRange, targetYear);
 
+  const showTargetMarker = Boolean(
+    primaryRange && typeof targetYear === "number" && Number.isFinite(targetYear),
+  );
+  let missDistance: number | null = null;
+  let missDirection: "earlier" | "later" | null = null;
+
+  if (!hasWon && showTargetMarker && primaryRange && typeof targetYear === "number") {
+    if (targetYear < primaryRange.start) {
+      missDistance = primaryRange.start - targetYear;
+      missDirection = "earlier";
+    } else if (targetYear > primaryRange.end) {
+      missDistance = targetYear - primaryRange.end;
+      missDirection = "later";
+    }
+  }
+
   const { shareGame, shareStatus, isSharing } = useShareGame(
     ranges,
     totalScore,
@@ -172,6 +188,8 @@ export function GameComplete({
     puzzleNumber,
     {
       targetYear,
+      missDistance,
+      missDirection,
     },
   );
 
@@ -189,27 +207,6 @@ export function GameComplete({
     if (shareStatus === "error") return <AlertCircle className="size-4" />;
     return null;
   })();
-
-  const showTargetMarker = Boolean(
-    primaryRange && typeof targetYear === "number" && Number.isFinite(targetYear),
-  );
-  const missDistance =
-    showTargetMarker && primaryRange && typeof targetYear === "number"
-      ? targetYear < primaryRange.start
-        ? primaryRange.start - targetYear
-        : targetYear > primaryRange.end
-          ? targetYear - primaryRange.end
-          : 0
-      : null;
-
-  const missDirection =
-    showTargetMarker && primaryRange && typeof targetYear === "number"
-      ? targetYear < primaryRange.start
-        ? ("earlier" as const)
-        : targetYear > primaryRange.end
-          ? ("later" as const)
-          : ("inside" as const)
-      : null;
 
   const windowYears = primaryRange ? primaryRange.end - primaryRange.start + 1 : 0;
 

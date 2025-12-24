@@ -9,7 +9,7 @@ interface RangeProximityProps {
   rangeEnd: number;
   targetYear?: number;
   missDistance?: number | null;
-  missDirection?: "earlier" | "later" | "inside" | null;
+  missDirection?: "earlier" | "later" | null;
   windowYears: number;
   children?: React.ReactNode;
 }

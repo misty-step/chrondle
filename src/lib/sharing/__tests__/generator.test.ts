@@ -100,6 +100,96 @@ describe("generateShareText", () => {
     });
   });
 
+  describe("Loss with Proximity", () => {
+    it("shows 'Xy early' for earlier miss", () => {
+      const ranges = [createRange(1950, 1960, 2)];
+      const result = generateShareText(ranges, 0, false, 347, {
+        missDistance: 5,
+        missDirection: "earlier",
+      });
+      expect(result).toContain("🫠 5y early");
+    });
+
+    it("shows 'Xy late' for later miss", () => {
+      const ranges = [createRange(1950, 1960, 2)];
+      const result = generateShareText(ranges, 0, false, 347, {
+        missDistance: 3,
+        missDirection: "later",
+      });
+      expect(result).toContain("🫠 3y late");
+    });
+
+    it("shows '0y early' for zero distance at start edge", () => {
+      const ranges = [createRange(1950, 1960, 2)];
+      const result = generateShareText(ranges, 0, false, 347, {
+        missDistance: 0,
+        missDirection: "earlier",
+      });
+      expect(result).toContain("🫠 0y early");
+    });
+
+    it("falls back to score when missDistance not provided", () => {
+      const ranges = [createRange(1950, 1960, 2)];
+      const result = generateShareText(ranges, 0, false, 347);
+      expect(result).toContain("🫠 0/100");
+    });
+
+    it("falls back to score when missDirection is null", () => {
+      const ranges = [createRange(1950, 1960, 2)];
+      const result = generateShareText(ranges, 0, false, 347, {
+        missDistance: 5,
+        missDirection: null,
+      });
+      expect(result).toContain("🫠 0/100");
+    });
+
+    it("keeps win format unchanged when hasWon is true", () => {
+      const ranges = [createRange(1950, 1960, 2)];
+      const result = generateShareText(ranges, 75, true, 347, {
+        missDistance: 5,
+        missDirection: "earlier",
+      });
+      expect(result).toContain("😎 75/100");
+      expect(result).not.toContain("5y early");
+    });
+
+    it("generates correct full text for loss with earlier miss", () => {
+      const ranges = [createRange(1950, 1960, 3)];
+      const result = generateShareText(ranges, 0, false, 123, {
+        missDistance: 7,
+        missDirection: "earlier",
+      });
+
+      const expected = `Chrondle #123
+
+🟩🟩🟩⬜⬜⬜
+🗓️ 11 years
+🫠 7y early
+
+https://chrondle.app`;
+
+      expect(result).toBe(expected);
+    });
+
+    it("generates correct full text for loss with later miss", () => {
+      const ranges = [createRange(1950, 1960, 1)];
+      const result = generateShareText(ranges, 0, false, 42, {
+        missDistance: 2,
+        missDirection: "later",
+      });
+
+      const expected = `Chrondle #42
+
+🟩⬜⬜⬜⬜⬜
+🗓️ 11 years
+🫠 2y late
+
+https://chrondle.app`;
+
+      expect(result).toBe(expected);
+    });
+  });
+
   describe("Full Examples", () => {
     it("generates correct text for perfect win", () => {
       const ranges = [createRange(1950, 1950, 0)];
