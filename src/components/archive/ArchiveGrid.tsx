@@ -31,27 +31,28 @@ interface ArchiveGridProps {
 }
 
 export function ArchiveGrid({ puzzles, linkPrefix = "/archive/puzzle" }: ArchiveGridProps) {
-  // Track local date for filtering (client-only)
-  const [localDate, setLocalDate] = useState<string | null>(null);
+  // Track client mount to prevent hydration flicker
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setLocalDate(getLocalDateString());
+    setIsClient(true);
   }, []);
 
   // Filter puzzles to only show those up to user's local date
   const filteredPuzzles = useMemo(() => {
-    if (!localDate) {
-      // During SSR/hydration, show all (server rendered this)
-      return puzzles;
-    }
+    if (!isClient) return []; // SSR: render nothing to prevent flicker
 
+    const localDate = getLocalDateString();
     return puzzles.filter((p) => {
       // No date = show (legacy data)
       if (!p.date) return true;
       // Only show puzzles dated <= user's local date
       return p.date <= localDate;
     });
-  }, [puzzles, localDate]);
+  }, [puzzles, isClient]);
+
+  // Render nothing during SSR to prevent hydration mismatch
+  if (!isClient) return null;
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
