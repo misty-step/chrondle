@@ -168,23 +168,18 @@ export function GameComplete({
   const showTargetMarker = Boolean(
     primaryRange && typeof targetYear === "number" && Number.isFinite(targetYear),
   );
-  const missDistance =
-    showTargetMarker && primaryRange && typeof targetYear === "number"
-      ? targetYear < primaryRange.start
-        ? primaryRange.start - targetYear
-        : targetYear > primaryRange.end
-          ? targetYear - primaryRange.end
-          : 0
-      : null;
+  let missDistance: number | null = null;
+  let missDirection: "earlier" | "later" | null = null;
 
-  const missDirection =
-    showTargetMarker && primaryRange && typeof targetYear === "number"
-      ? targetYear < primaryRange.start
-        ? ("earlier" as const)
-        : targetYear > primaryRange.end
-          ? ("later" as const)
-          : ("inside" as const)
-      : null;
+  if (!hasWon && showTargetMarker && primaryRange && typeof targetYear === "number") {
+    if (targetYear < primaryRange.start) {
+      missDistance = primaryRange.start - targetYear;
+      missDirection = "earlier";
+    } else if (targetYear > primaryRange.end) {
+      missDistance = targetYear - primaryRange.end;
+      missDirection = "later";
+    }
+  }
 
   const { shareGame, shareStatus, isSharing } = useShareGame(
     ranges,

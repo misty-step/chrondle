@@ -9,7 +9,7 @@ import { logger } from "@/lib/logger";
 interface ShareTextOptions {
   targetYear?: number;
   missDistance?: number | null;
-  missDirection?: "earlier" | "later" | "inside" | null;
+  missDirection?: "earlier" | "later" | null;
 }
 
 function getPrimaryRange(ranges: RangeGuess[]): RangeGuess | undefined {

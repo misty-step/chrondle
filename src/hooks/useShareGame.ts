@@ -12,7 +12,7 @@ interface UseShareGameOptions {
   onError?: () => void;
   targetYear?: number;
   missDistance?: number | null;
-  missDirection?: "earlier" | "later" | "inside" | null;
+  missDirection?: "earlier" | "later" | null;
 }
 
 export function useShareGame(
