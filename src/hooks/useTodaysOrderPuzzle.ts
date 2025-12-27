@@ -25,15 +25,7 @@ import { Id } from "convex/_generated/dataModel";
 import { getLocalDateString } from "@/lib/time/dailyDate";
 import { useOnTabFocus } from "@/hooks/useVisibilityChange";
 import { logger } from "@/lib/logger";
-
-/**
- * Event structure in Order puzzle
- */
-interface OrderEvent {
-  id: string;
-  year: number;
-  text: string;
-}
+import type { OrderEvent } from "@/types/orderGameState";
 
 /**
  * Order puzzle data structure from Convex
