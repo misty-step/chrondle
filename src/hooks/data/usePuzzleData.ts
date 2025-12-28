@@ -102,6 +102,9 @@ export function usePuzzleData(puzzleNumber?: number, initialData?: unknown): Use
         };
       }
 
+      // Defensive: useTodaysPuzzle returns isLoading=true while triggering on-demand
+      // generation, so this branch only fires on unexpected state (e.g., generation
+      // mutation fails silently without setting error). Kept for robustness.
       if (!todaysPuzzle.puzzle) {
         return {
           puzzle: null,

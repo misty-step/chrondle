@@ -1,7 +1,7 @@
 # Convex Backend Architecture
 
-**Last Updated**: 2025-10-16
-**Refactoring Complete**: Phases 2-5 (God Object Elimination)
+**Last Updated**: 2025-12-27
+**Architecture Status**: Deep Modules + Dual Game Modes + Observability
 
 ## Overview
 
@@ -153,17 +153,86 @@ convex/streaks/
 - Breaks (resets to 0) on failed puzzle
 - Unchanged if already played today
 
-### System Utilities (53 lines in 1 module)
+### Order Mode System (New in Dec 2025)
+
+```
+convex/orderPuzzles/
+├── queries.ts          ~100 lines   Order puzzle retrieval by date/number
+├── mutations.ts        ~500 lines   Order play submission, scoring
+└── generation.ts       ~180 lines   Daily Order puzzle generation
+
+convex/orderPlays/
+└── queries.ts           27 lines   Order play history
+```
+
+**Responsibilities**:
+
+- **queries.ts**: Fetch Order puzzles by date or puzzle number
+- **mutations.ts**: Submit ordering attempts, calculate scores, persist plays
+- **generation.ts**: Generate daily Order puzzles from events
+
+**Order Mode Game Rules**:
+
+- Players arrange 5 historical events in chronological order
+- Golf-style scoring: fewer attempts = better score
+- Events selected from different years for clear ordering
+
+### Observability System (New in Dec 2025)
+
+```
+convex/lib/observability/
+├── metricsService.ts   ~350 lines   Metrics collection and aggregation
+├── metricsCollector.ts ~140 lines   Metric ingestion pipeline
+├── alertEngine.ts      ~280 lines   Threshold monitoring and alerting
+├── emailNotifier.ts    ~220 lines   Email notification delivery
+└── sentryNotifier.ts   ~120 lines   Sentry error reporting integration
+```
+
+**Responsibilities**:
+
+- Real-time metrics for event generation pipeline
+- Configurable alert thresholds (cost, failure rate, latency)
+- Multi-channel notifications (email, Sentry)
+- Dashboard data for monitoring LLM costs and quality
+
+### Event Generation Pipeline (LLM-Powered)
+
+```
+convex/actions/eventGeneration/
+├── orchestrator.ts     ~500 lines   Batch generation coordination
+├── generator.ts        ~350 lines   LLM event generation (Gemini 3)
+├── critic.ts           ~380 lines   Quality validation and scoring
+├── reviser.ts          ~180 lines   Event improvement via LLM feedback
+├── schemas.ts           ~60 lines   Zod schemas for structured outputs
+└── values.ts            ~20 lines   Constants and configuration
+```
+
+**Responsibilities**:
+
+- **orchestrator.ts**: Coordinate batch event generation with rate limiting
+- **generator.ts**: Generate historical events via Gemini 3 / GPT-5
+- **critic.ts**: Validate events for accuracy, uniqueness, quality
+- **reviser.ts**: Improve rejected events based on critic feedback
+- **schemas.ts**: Type-safe LLM response parsing
+
+### System Utilities
 
 ```
 convex/system/
 └── scheduling.ts        53 lines   Cron schedule queries
+
+convex/
+├── health.ts            ~10 lines   Health check endpoint
+├── crons.ts             ~50 lines   Scheduled task definitions
+└── observability.ts    ~120 lines   Metrics wrapper for mutations
 ```
 
 **Responsibilities**:
 
 - Provide next midnight UTC for countdown timer
 - Support puzzle generation scheduling
+- Health endpoint for monitoring
+- Observability wrapper for tracking mutation performance
 
 ## API Surface
 
@@ -264,81 +333,65 @@ ctx.runMutation(internal.users.updateUserStats, { ... });
        └─> Update user record
 ```
 
-## Refactoring Metrics
+## Architecture Metrics
 
-### Before Refactoring (God Objects)
-
-```
-convex/puzzles.ts:        690 lines   (9 functions - queries, mutations, generation, cron)
-convex/users.ts:          732 lines   (12 functions - CRUD, auth, migration, stats)
-Total god object code:  1,422 lines
-```
-
-### After Refactoring (Focused Modules)
+### Current State (Dec 2025)
 
 ```
-Barrel files:              60 lines   (2 files with re-exports)
-Focused modules:        1,786 lines   (11 modules, average 162 lines)
-Total code:             1,846 lines   (+424 lines from documentation/headers)
-
-Module size range:      53-437 lines
-Average module size:       162 lines
-Functions per module:      1-6 functions
+Total backend code:     ~23,600 lines   (convex/ directory)
+Module count:                30+        (focused modules)
+Test coverage:            1,757 tests   (129 test files)
+Game modes:                   2         (Classic + Order)
 ```
 
-### Improvements
+### Architecture Achievements
 
-✅ **God objects eliminated**: 1,422 lines → 60 lines of barrel files (96% reduction)
-✅ **Module boundaries clear**: 11 focused modules with single responsibilities
-✅ **Zero breaking changes**: Barrel files maintain backward compatibility
-✅ **Deep modules created**: Simple interfaces (1-6 functions) hiding complex logic
-✅ **Test coverage maintained**: 500/500 tests passing after refactoring
-✅ **Type safety preserved**: Zero TypeScript errors across all modules
+✅ **Deep modules**: Simple interfaces hiding complex LLM pipelines
+✅ **Dual game modes**: Classic (year guessing) + Order (chronological sorting)
+✅ **Full observability**: Metrics, alerts, cost tracking for LLM operations
+✅ **LLM pipeline**: Generator → Critic → Reviser with structured outputs
+✅ **Type safety**: Zod schemas for LLM responses, strict TypeScript throughout
+✅ **1,757 tests passing**: Comprehensive coverage across all modules
 
-### Code Organization
+### Key Module Groups
 
-| Module                 | Lines | Functions | Responsibility          | Interface Complexity |
-| ---------------------- | ----- | --------- | ----------------------- | -------------------- |
-| puzzles/queries.ts     | 129   | 4         | Read-only puzzle access | Low                  |
-| puzzles/mutations.ts   | 115   | 1         | Guess submission        | Low                  |
-| puzzles/generation.ts  | 264   | 3         | Daily puzzle creation   | Medium               |
-| puzzles/context.ts     | 53    | 1         | AI context updates      | Low                  |
-| plays/queries.ts       | 111   | 4         | Play history            | Low                  |
-| plays/statistics.ts    | 53    | 1         | Play aggregation        | Low                  |
-| users/queries.ts       | 157   | 4         | User retrieval          | Low                  |
-| users/mutations.ts     | 206   | 4         | User CRUD               | Low                  |
-| users/statistics.ts    | 100   | 1         | User stats              | Low                  |
-| migration/anonymous.ts | 437   | 4         | Anonymous merge         | Medium               |
-| streaks/mutations.ts   | 108   | 1         | Streak tracking         | Low                  |
-| system/scheduling.ts   | 53    | 1         | Cron schedule           | Low                  |
-
-**Target Met**: 10/12 modules under 150 lines (83% success rate)
-**Outliers**: generation.ts (264L - complex puzzle algorithm), anonymous.ts (437L - comprehensive security validation)
+| Group            | Modules                      | Lines  | Responsibility                 |
+| ---------------- | ---------------------------- | ------ | ------------------------------ |
+| Classic Puzzles  | puzzles/, plays/             | ~700   | Daily year-guessing game       |
+| Order Mode       | orderPuzzles/, orderPlays/   | ~800   | Chronological ordering game    |
+| Users            | users/, migration/, streaks/ | ~900   | Auth, stats, anonymous merge   |
+| Event Generation | actions/eventGeneration/     | ~1,500 | LLM-powered event creation     |
+| Observability    | lib/observability/           | ~1,100 | Metrics, alerts, notifications |
+| Core Lib         | lib/                         | ~2,000 | Shared utilities, clients      |
 
 ## Testing Strategy
 
-### Automated Tests (500 tests across 27 files)
+### Automated Tests (1,757 tests across 129 files)
 
 ```
-✅ Core game logic:        22 tests   (deriveGameState, validation)
-✅ Secure storage:          21 tests   (localStorage encryption)
-✅ React hooks:             39 tests   (useChrondle, useStreak, etc.)
-✅ Archive streaks:         15 tests   (archive puzzles don't affect streaks)
-✅ Anonymous merge:         13 tests   (streak validation, merge logic)
-✅ Integration tests:       18 tests   (full user flows)
+✅ Core game logic:        ~200 tests  (deriveGameState, scoring, validation)
+✅ Order mode:             ~150 tests  (ordering, scoring, persistence)
+✅ React hooks:            ~300 tests  (useChrondle, useOrderGame, etc.)
+✅ Convex mutations:       ~250 tests  (puzzles, users, plays)
+✅ Event generation:       ~100 tests  (LLM pipeline, critic, reviser)
+✅ Observability:          ~150 tests  (metrics, alerts, notifications)
+✅ Integration tests:      ~200 tests  (full user flows, E2E)
 ```
 
 ### Manual Smoke Tests (User Verification Required)
 
 ```
-⏳ Daily puzzle loads and is playable
-⏳ Archive page displays completed puzzles
-⏳ Guess submission works and updates stats
+⏳ Classic mode: Daily puzzle loads and is playable
+⏳ Classic mode: Range submission works and updates stats
+⏳ Order mode: Daily puzzle loads with 5 events
+⏳ Order mode: Drag-to-reorder and submit works
+⏳ Archive page displays completed puzzles (both modes)
 ⏳ Streaks update correctly for daily puzzles
-⏳ Anonymous play works
+⏳ Anonymous play works (both modes)
 ⏳ Sign-in merges anonymous data
 ⏳ Webhook creates users
 ⏳ Historical context generates for new puzzles
+⏳ LLM event generation produces valid events
 ```
 
 ## Database Schema
@@ -346,7 +399,7 @@ Functions per module:      1-6 functions
 ### Tables
 
 ```typescript
-// puzzles table
+// puzzles table (Classic mode)
 {
   _id: Id<"puzzles">,
   puzzleNumber: number,           // Sequential puzzle number (1, 2, 3...)
@@ -357,12 +410,30 @@ Functions per module:      1-6 functions
   createdAt: number,
 }
 
+// orderPuzzles table (Order mode)
+{
+  _id: Id<"orderPuzzles">,
+  puzzleNumber: number,           // Sequential, mirrors Classic numbering
+  date: string,                   // ISO date (YYYY-MM-DD)
+  events: [{                      // 5 events to order chronologically
+    id: string,
+    year: number,
+    text: string,
+  }],
+  seed: string,                   // Deterministic shuffle seed
+  updatedAt: number,
+}
+
 // events table
 {
   _id: Id<"events">,
   year: number,                   // Year this event occurred
   title: string,                  // Event description
   recognizability: number,        // 1-5 scale (5 = most recognizable)
+  metadata?: {                    // Optional enrichment
+    difficulty?: number,          // 1-5 difficulty rating
+    categories?: string[],        // Semantic categories
+  },
 }
 
 // users table
@@ -379,13 +450,35 @@ Functions per module:      1-6 functions
   updatedAt: number,
 }
 
-// plays table
+// plays table (Classic mode)
 {
   _id: Id<"plays">,
   userId: Id<"users">,
   puzzleId: Id<"puzzles">,
-  guesses: number[],              // Years guessed
-  completedAt?: number,           // Timestamp when completed
+  guesses: number[],              // Years guessed (legacy)
+  ranges: [{                      // Range submissions (current)
+    start: number,
+    end: number,
+    score: number,
+  }],
+  completedAt?: number,
+  updatedAt: number,
+}
+
+// orderPlays table (Order mode)
+{
+  _id: Id<"orderPlays">,
+  userId: Id<"users">,
+  puzzleId: Id<"orderPuzzles">,
+  ordering: string[],             // Final ordering (event ids)
+  attempts: [{                    // All attempts with feedback
+    ordering: string[],
+    feedback: string[],           // "correct" | "incorrect" per position
+    pairsCorrect: number,
+    totalPairs: number,
+    timestamp: number,
+  }],
+  completedAt?: number,
   updatedAt: number,
 }
 ```
@@ -396,10 +489,19 @@ Functions per module:      1-6 functions
 // users table
 by_clerk: ["clerkId"]; // Fast lookup by Clerk authentication ID
 
-// plays table
+// plays table (Classic)
 by_user: ["userId"]; // All plays for a user
 by_puzzle: ["puzzleId"]; // All plays for a puzzle
-by_user_puzzle: ["userId", "puzzleId"]; // Unique constraint - one play per user per puzzle
+by_user_puzzle: ["userId", "puzzleId"]; // Unique constraint
+
+// orderPuzzles table
+by_number: ["puzzleNumber"]; // Lookup by puzzle number
+by_date: ["date"]; // Lookup by date
+
+// orderPlays table
+by_user: ["userId"]; // All Order plays for a user
+by_puzzle: ["puzzleId"]; // All Order plays for a puzzle
+by_user_puzzle: ["userId", "puzzleId"]; // Unique constraint
 ```
 
 ## Deployment Considerations
@@ -462,22 +564,18 @@ npx convex run events:getEventCount
 
 ### Potential Optimizations
 
-1. **Puzzle Caching**: Cache today's puzzle in memory to reduce database reads
-2. **Event Indexing**: Add index on events.year for faster puzzle generation
-3. **Batch Stats Updates**: Aggregate stat updates to reduce write operations
+1. **Event Pool Health**: Monitor per-era event coverage, backfill gaps
+2. **LLM Cost Optimization**: Tune batch sizes, implement caching for similar prompts
+3. **Puzzle Caching**: Cache today's puzzle in memory to reduce database reads
 4. **Historical Context Prefetch**: Generate context before puzzle goes live
 
-### Module Candidates for Further Splitting
+### Observability Already Implemented ✅
 
-- **puzzles/generation.ts** (264 lines): Could extract event selection algorithm to `puzzles/selection.ts`
-- **migration/anonymous.ts** (437 lines): Could split validation into `migration/validation.ts`
-
-### Monitoring & Observability
-
-- Track puzzle generation success rate
-- Monitor AI context generation latency
-- Alert on failed cron jobs
-- Track anonymous merge validation failures
+- Real-time metrics for event generation pipeline
+- LLM cost tracking and alerting
+- Failure rate monitoring with thresholds
+- Email and Sentry notifications for alerts
+- Generation log storage for debugging
 
 ## Contributing
 
@@ -506,4 +604,4 @@ npx convex run events:getEventCount
 
 ---
 
-**This architecture achieves the Deep Modules ideal: Simple, powerful interfaces hiding complex implementation details. The refactoring eliminated god objects while maintaining zero breaking changes for the frontend.**
+**This architecture achieves the Deep Modules ideal: Simple, powerful interfaces hiding complex implementation details. Dual game modes (Classic + Order), LLM-powered event generation, and full observability all coexist with clean module boundaries.**
