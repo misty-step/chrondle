@@ -56,7 +56,9 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
           ...chrondle.gameState.puzzle,
           year: chrondle.gameState.puzzle.targetYear,
         }
-      : null;
+      : puzzle
+        ? { ...puzzle, year: puzzle.targetYear }
+        : null;
 
     // Extract guesses and completion status when ready
     const guesses = isReady(chrondle.gameState) ? chrondle.gameState.guesses : [];
@@ -99,7 +101,7 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
       submitRange: chrondle.submitRange,
       resetGame: chrondle.resetGame,
     };
-  }, [chrondle.gameState, deferredGameState, chrondle.submitRange, chrondle.resetGame]);
+  }, [chrondle.gameState, deferredGameState, chrondle.submitRange, chrondle.resetGame, puzzle]);
 
   // Store puzzle number and date once loaded to prevent flashing during state transitions
   const [stablePuzzleNumber, setStablePuzzleNumber] = useState<number | undefined>(undefined);

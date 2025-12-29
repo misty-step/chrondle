@@ -25,6 +25,7 @@ export type AuthCtx = {
  */
 export async function requireAdmin(ctx: AuthCtx) {
   const identity = await ctx.auth.getUserIdentity();
+
   if (!identity) {
     throw new ConvexError("Unauthorized");
   }

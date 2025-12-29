@@ -1,4 +1,4 @@
- 
+/* eslint-disable */
 /**
  * Generated `api` utility.
  *
@@ -24,14 +24,17 @@ import type * as admin_events from "../admin/events.js";
 import type * as admin_puzzles from "../admin/puzzles.js";
 import type * as crons from "../crons.js";
 import type * as events from "../events.js";
-import type * as health from "../health.js";
 import type * as generationLogs from "../generationLogs.js";
+import type * as health from "../health.js";
 import type * as lib_alerts from "../lib/alerts.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_coverageOrchestrator from "../lib/coverageOrchestrator.js";
 import type * as lib_errorSanitization from "../lib/errorSanitization.js";
 import type * as lib_eventValidation from "../lib/eventValidation.js";
 import type * as lib_gemini3Client from "../lib/gemini3Client.js";
+import type * as lib_instrumentation from "../lib/instrumentation.js";
+import type * as lib_langfuse from "../lib/langfuse.js";
+import type * as lib_langfuseTracing from "../lib/langfuseTracing.js";
 import type * as lib_llmClient from "../lib/llmClient.js";
 import type * as lib_logging from "../lib/logging.js";
 import type * as lib_migrationHelpers from "../lib/migrationHelpers.js";
@@ -43,8 +46,10 @@ import type * as lib_observability_sentryNotifier from "../lib/observability/sen
 import type * as lib_observability from "../lib/observability.js";
 import type * as lib_orderScoring from "../lib/orderScoring.js";
 import type * as lib_orderValidation from "../lib/orderValidation.js";
+import type * as lib_prompts_eventGeneration from "../lib/prompts/eventGeneration.js";
 import type * as lib_puzzleHelpers from "../lib/puzzleHelpers.js";
 import type * as lib_puzzleType from "../lib/puzzleType.js";
+import type * as lib_qualityScores from "../lib/qualityScores.js";
 import type * as lib_qualityValidator from "../lib/qualityValidator.js";
 import type * as lib_rateLimiter from "../lib/rateLimiter.js";
 import type * as lib_responsesClient from "../lib/responsesClient.js";
@@ -94,14 +99,17 @@ declare const fullApi: ApiFromModules<{
   "admin/puzzles": typeof admin_puzzles;
   crons: typeof crons;
   events: typeof events;
-  health: typeof health;
   generationLogs: typeof generationLogs;
+  health: typeof health;
   "lib/alerts": typeof lib_alerts;
   "lib/auth": typeof lib_auth;
   "lib/coverageOrchestrator": typeof lib_coverageOrchestrator;
   "lib/errorSanitization": typeof lib_errorSanitization;
   "lib/eventValidation": typeof lib_eventValidation;
   "lib/gemini3Client": typeof lib_gemini3Client;
+  "lib/instrumentation": typeof lib_instrumentation;
+  "lib/langfuse": typeof lib_langfuse;
+  "lib/langfuseTracing": typeof lib_langfuseTracing;
   "lib/llmClient": typeof lib_llmClient;
   "lib/logging": typeof lib_logging;
   "lib/migrationHelpers": typeof lib_migrationHelpers;
@@ -113,8 +121,10 @@ declare const fullApi: ApiFromModules<{
   "lib/observability": typeof lib_observability;
   "lib/orderScoring": typeof lib_orderScoring;
   "lib/orderValidation": typeof lib_orderValidation;
+  "lib/prompts/eventGeneration": typeof lib_prompts_eventGeneration;
   "lib/puzzleHelpers": typeof lib_puzzleHelpers;
   "lib/puzzleType": typeof lib_puzzleType;
+  "lib/qualityScores": typeof lib_qualityScores;
   "lib/qualityValidator": typeof lib_qualityValidator;
   "lib/rateLimiter": typeof lib_rateLimiter;
   "lib/responsesClient": typeof lib_responsesClient;
