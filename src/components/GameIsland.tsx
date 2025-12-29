@@ -13,6 +13,7 @@ import { useCountdown } from "@/hooks/useCountdown";
 import { useVictoryConfetti } from "@/hooks/useVictoryConfetti";
 import { useScreenReaderAnnouncements } from "@/hooks/useScreenReaderAnnouncements";
 import { logger } from "@/lib/logger";
+import { getLocalDateString } from "@/lib/time/dailyDate";
 import { GAME_CONFIG } from "@/lib/constants";
 import { AchievementModal, LazyModalWrapper } from "@/components/LazyModals";
 import { GameLayout, LiveAnnouncer, BackgroundAnimation } from "@/components/LazyComponents";
@@ -51,12 +52,16 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
   const gameLogic = useMemo(() => {
     // Use timezone-corrected puzzle from gameState, not raw preload.
     // The preload uses UTC; useTodaysPuzzle validates against local date.
+    // Only use preload as fallback if it matches the client's local date.
+    const localDate = getLocalDateString();
+    const preloadMatchesLocalDate = puzzle?.date === localDate;
+
     const puzzleData = isReady(chrondle.gameState)
       ? {
           ...chrondle.gameState.puzzle,
           year: chrondle.gameState.puzzle.targetYear,
         }
-      : puzzle
+      : puzzle && preloadMatchesLocalDate
         ? { ...puzzle, year: puzzle.targetYear }
         : null;
 
