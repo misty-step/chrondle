@@ -1,5 +1,6 @@
 import { DatabaseWriter, QueryCtx } from "../_generated/server";
 import { Doc, Id } from "../_generated/dataModel";
+import { hasObviousRedundancy } from "./puzzleQuality";
 
 /**
  * Puzzle Helpers - Database Operations for Puzzles
@@ -139,10 +140,25 @@ export async function selectYearForPuzzle(ctx: QueryCtx): Promise<{
   // Randomly select 6 events from the year's available events
   // Using Fisher-Yates shuffle for proper randomness (uniform distribution)
   const shuffled = fisherYatesShuffle(yearEvents);
-  const selectedEvents = shuffled.slice(0, 6);
 
-  if (selectedEvents.length < 6) {
-    throw new Error(`Not enough events for year ${randomYear.year}`);
+  // Try to find 6 non-redundant events
+  // If first selection has obvious redundancy, try reshuffling up to 3 times
+  const MAX_ATTEMPTS = 3;
+  let selectedEvents: Doc<"events">[] = [];
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const candidates = attempt === 0 ? shuffled : fisherYatesShuffle(yearEvents);
+    selectedEvents = candidates.slice(0, 6);
+
+    if (selectedEvents.length < 6) {
+      throw new Error(`Not enough events for year ${randomYear.year}`);
+    }
+
+    // Quick redundancy check - no LLM call, just word overlap detection
+    const hints = selectedEvents.map((e) => e.event);
+    if (!hasObviousRedundancy(hints)) {
+      break; // Good set found
+    }
   }
 
   return {
