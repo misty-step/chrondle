@@ -14,19 +14,14 @@ import { useScreenReaderAnnouncements } from "@/hooks/useScreenReaderAnnouncemen
 import { formatYear } from "@/lib/displayFormatting";
 import { ConfettiRef } from "@/components/magicui/confetti";
 import { fetchTotalPuzzles } from "@/lib/puzzleData";
-import type { Puzzle } from "@/types/puzzle";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 
 interface ClassicArchivePuzzleClientProps {
   puzzleNumber: number;
-  initialPuzzle: Puzzle;
 }
 
-export function ClassicArchivePuzzleClient({
-  puzzleNumber,
-  initialPuzzle,
-}: ClassicArchivePuzzleClientProps) {
+export function ClassicArchivePuzzleClient({ puzzleNumber }: ClassicArchivePuzzleClientProps) {
   const router = useRouter();
   const confettiRef = useRef<ConfettiRef>(null);
   const [announcement, setAnnouncement] = useState("");
@@ -42,8 +37,8 @@ export function ClassicArchivePuzzleClient({
       .catch((err) => logger.error("[ClassicArchive] Failed to fetch total puzzle count", err));
   }, []);
 
-  // Use the game hook with server-provided puzzle to avoid flashes
-  const chrondle = useRangeGame(puzzleNumber, initialPuzzle);
+  // Use the game hook - fetches archive puzzle by number client-side
+  const chrondle = useRangeGame(puzzleNumber);
   const gameState = chrondle.gameState;
 
   const isLoading =
