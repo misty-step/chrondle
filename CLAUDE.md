@@ -47,38 +47,58 @@
 - BC/AD format enforced (never BCE/CE) via `enforceADBC()` post-processing
 - File: `convex/actions/historicalContext.ts`
 
-**Event Generation Infrastructure (Gemini 3):**
+**Event Generation (Simplified Architecture):**
 
-- **Client:** `convex/lib/gemini3Client.ts` – Deep module that wraps OpenRouter Gemini 3 APIs behind a single `generate<T>()` call. Hides thinking-token options, cache headers, structured outputs, retries, and fallback logic.
-- **Models:** Defaults to `google/gemini-3-pro-preview` (Generator) with optional `fallbackModel` (`openai/gpt-5-mini`) when Gemini 3 is unhealthy.
-- **Thinking Tokens:** `thinking_level` (`"low" | "medium" | "high"`) maps to Gemini reasoning settings; reasoning tokens are tracked in `usage.reasoningTokens` but priced at ~$0. They should increase quality, not cost.
-- **Context Caching:** When `cache_system_prompt` is true, the client derives a deterministic cache key via `buildCacheKey(systemPrompt, stage)` and sends `X-Cache-Key`/`X-Cache-TTL` headers. Cache hits are surfaced via `metadata.cacheHit` and `metadata.cacheStatus` and reflected in `cost.cacheSavingsUsd`.
-- **Structured Outputs:** If a Zod schema is provided, the client converts it to JSON Schema (`response_format`) and parses/validates the response. Callers should only ever see typed, validated data – JSON parsing errors are handled inside the client.
-- **Usage & Cost:** All calls return `usage` (input/output/reasoning/total tokens) and `cost` (input/output/reasoning/cacheSavings/total, in USD). Use this for cost dashboards and alert thresholds.
-- **Fallback:** On repeated 429/5xx/network failures (after retries + backoff), `generate<T>()` automatically falls back from the Gemini 3 model to the configured `fallbackModel`, tagging `metadata.fallbackFrom` so we can track fallbacks over time.
-- **Where It’s Used:** Generator, Critic, Reviser stages in `convex/actions/eventGeneration/*` and scripts that backfill/benchmark events.
+The event generation system follows Ousterhout's deep module principles with two main modules:
 
-### Gemini 3 Troubleshooting
+- **Event Generator** (`convex/lib/eventGenerator.ts`): Single LLM call that generates AND self-validates events. No separate critique/revise stages.
+
+  - `generateEvents(year, era, count)` → `QualityEvent[]`
+  - LLM validates events before returning (no year leakage, proper nouns, ≤20 words)
+  - Deterministic safety net catches obvious failures post-generation
+
+- **Puzzle Critic** (`convex/lib/puzzleCritic.ts`): Validates 6 hints as a cohesive puzzle set.
+
+  - `critiquePuzzle(hints, year)` → `PuzzleQuality`
+  - Checks: redundancy, vagueness, diversity, difficulty curve
+  - Uses Gemini Flash (cheap/fast) for evaluation
+
+- **Puzzle Quality** (`convex/lib/puzzleQuality.ts`): Pure functions for fast pre-filtering.
+
+  - `hasObviousRedundancy(hints)` → quick word-overlap check, no LLM
+  - `selectDiverseHints(events)` → picks hints maximizing category diversity
+
+- **Simple Pipeline** (`convex/actions/eventGeneration/simplePipeline.ts`): Streamlined orchestration.
+  - `generateYearEventsSimple(year)` → generates events, filters, imports to DB
+  - No retry loops or complex state machines
+
+**LLM Client:** `convex/lib/gemini3Client.ts` – Deep module wrapping OpenRouter APIs.
+
+- `generate<T>()` with Zod schema validation, retries, fallback, caching
+- Models: `google/gemini-3-pro-preview` (generator), `google/gemini-3-flash-preview` (critic)
+- Fallback: `openai/gpt-5-mini` on repeated failures
+
+### Event Generation Troubleshooting
+
+**Symptom:** Generated events have quality issues
+
+- Check: LLM prompt in `eventGenerator.ts` SYSTEM_PROMPT
+- Action: Update self-validation rules in the prompt; add patterns to `passesValidation()` safety net
+
+**Symptom:** Puzzles have redundant hints
+
+- Check: `puzzleQuality.ts` `hasObviousRedundancy()` threshold (currently 60% word overlap)
+- Action: Lower threshold or use `critiquePuzzle()` for LLM-based semantic redundancy check
 
 **Symptom:** Frequent 429s / rate-limit errors
 
-- Check: `convex/lib/rateLimiter.ts` config and orchestrator batch sizes.
-- Action: Lower `targetCount` in `generateDailyBatch` or adjust `RateLimiter` tokens/burst; verify OpenRouter limits.
-
-**Symptom:** Spiking cost or unexpected token usage
-
-- Check: `result.usage` and `result.cost` from `gemini3Client`. Look for large `inputTokens` (oversized prompts) or `outputTokens` (overly verbose schemas/prompts).
-- Action: Tighten prompts, reduce batch sizes, or switch some stages to a cheaper model (e.g., Flash) via `options.model`.
-
-**Symptom:** Silent shape mismatches / runtime errors in pipelines
-
-- Check: Zod schemas in `convex/actions/eventGeneration/schemas.ts` and the corresponding `generate<T>` calls.
-- Action: Keep schemas and prompts in lockstep; if outputs change, update Zod + tests before touching callers.
+- Check: `convex/lib/rateLimiter.ts` config
+- Action: Reduce batch sizes; verify OpenRouter limits
 
 **Symptom:** Gemini 3 outages
 
-- Check: Alerting around failure rate / fallbacks. If `fallbackFrom` spikes, treat Gemini as degraded.
-- Action: Temporarily pin `model` to GPT-5-mini in env/config for critical paths, then revert once Gemini stabilizes.
+- Check: `fallbackFrom` in response metadata
+- Action: Temporarily pin `model` to GPT-5-mini in `eventGenerator.ts`
 
 ---
 
@@ -141,6 +161,7 @@ vi.mock("motion/react", () => ({
 
 ## References
 
+- **Event Generation:** `docs/EVENT_GENERATION.md` (architecture, usage, extension guide)
 - **Detailed Patterns:** `.claude/context.md` (1,246 lines of discovered patterns)
 - **Backlog:** `BACKLOG.md` (prioritized issues + estimates)
 - **README:** Deployment, setup, architecture overview
