@@ -20,17 +20,21 @@ export interface LoadingPuzzleState {
 /**
  * Game is loading authentication state
  * Occurs when: Puzzle loaded but auth state not yet determined
+ * Puzzle is included so UI can display it while auth loads in background
  */
 export interface LoadingAuthState {
   status: "loading-auth";
+  puzzle: Puzzle; // Puzzle available - just waiting for auth
 }
 
 /**
  * Game is loading user progress data
  * Occurs when: Puzzle and auth loaded, fetching user's play history
+ * Puzzle is included so UI can display it while progress loads in background
  */
 export interface LoadingProgressState {
   status: "loading-progress";
+  puzzle: Puzzle; // Puzzle available - just waiting for progress
 }
 
 /**
@@ -188,5 +192,38 @@ export function getLoadingMessage(state: GameState): string | null {
       return "Loading your progress...";
     default:
       return null;
+  }
+}
+
+/**
+ * Extract puzzle from any state that has it
+ *
+ * Puzzle is available in:
+ * - loading-auth (puzzle loaded, waiting for auth)
+ * - loading-progress (puzzle loaded, waiting for progress)
+ * - ready (all data loaded)
+ *
+ * Puzzle is NOT available in:
+ * - loading-puzzle (still fetching)
+ * - error (failed to load)
+ *
+ * @param state - The current game state
+ * @returns The puzzle if available, undefined otherwise
+ *
+ * @example
+ * const puzzle = getPuzzle(gameState);
+ * if (puzzle) {
+ *   // Can render puzzle content even during auth/progress loading
+ *   return <PuzzleDisplay puzzle={puzzle} />;
+ * }
+ */
+export function getPuzzle(state: GameState): Puzzle | undefined {
+  switch (state.status) {
+    case "loading-auth":
+    case "loading-progress":
+    case "ready":
+      return state.puzzle;
+    default:
+      return undefined;
   }
 }

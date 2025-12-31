@@ -145,13 +145,15 @@ export function deriveGameState(sources: DataSources): GameState {
     }
 
     // Priority 2: Check if auth is loading
+    // Include puzzle so UI can display it while auth loads in background
     if (auth.isLoading) {
-      return { status: "loading-auth" };
+      return { status: "loading-auth", puzzle: puzzle.puzzle };
     }
 
     // Priority 3: Check if progress is loading (only matters if authenticated)
+    // Include puzzle so UI can display it while progress loads in background
     if (auth.isAuthenticated && progress.isLoading) {
-      return { status: "loading-progress" };
+      return { status: "loading-progress", puzzle: puzzle.puzzle };
     }
 
     // At this point, all necessary data is loaded
