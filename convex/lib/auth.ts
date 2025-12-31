@@ -5,6 +5,9 @@ import { ConvexError } from "convex/values";
 export type AuthIdentity = {
   subject?: string;
   email?: string;
+  // Clerk JWT uses snake_case for metadata fields
+  public_metadata?: Record<string, unknown>;
+  // Legacy/alternative paths (kept for compatibility)
   publicMetadata?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   [key: string]: unknown;
@@ -30,7 +33,9 @@ export async function requireAdmin(ctx: AuthCtx) {
     throw new ConvexError("Unauthorized");
   }
 
+  // Clerk uses snake_case (public_metadata), but check all paths for robustness
   const role =
+    (identity.public_metadata?.role as string | undefined) ??
     (identity.publicMetadata?.role as string | undefined) ??
     (identity.metadata?.role as string | undefined);
 

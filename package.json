@@ -6,8 +6,8 @@
   "packageManager": "pnpm@9.1.0",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "dev": "next dev --turbopack",
-    "dev:full": "concurrently \"npx convex dev\" \"pnpm run dev\"",
+    "dev": "concurrently \"npx convex dev\" \"next dev --turbopack\"",
+    "dev:next": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
