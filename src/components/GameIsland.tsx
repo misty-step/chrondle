@@ -1,13 +1,19 @@
 "use client";
 
-// This is the main client-side island that contains all game interactivity
-// It receives preloaded puzzle data from the server and handles all client-side state
+/**
+ * GameIsland - Main Client-Side Game Component
+ *
+ * Deep module that orchestrates all game interactivity.
+ * No props required - fetches puzzle by local date internally.
+ *
+ * Architecture: No SSR preload. Always fetches by local date.
+ * This eliminates timezone mismatch bugs at the cost of a brief
+ * loading skeleton on first render.
+ */
 
 import { useState, useEffect, useCallback, useRef, useMemo, useDeferredValue, lazy } from "react";
-import { usePreloadedQuery, Preloaded } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { useRangeGame } from "@/hooks/useRangeGame";
-import { isReady } from "@/types/gameState";
+import { isReady, getPuzzle } from "@/types/gameState";
 import { useStreak } from "@/hooks/useStreak";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useVictoryConfetti } from "@/hooks/useVictoryConfetti";
@@ -26,99 +32,70 @@ const AnalyticsDashboard = lazy(() =>
   })),
 );
 
-interface GameIslandProps {
-  preloadedPuzzle: Preloaded<typeof api.puzzles.getDailyPuzzle>;
-}
-
-export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
-  // Use the preloaded puzzle data - this seamlessly hydrates and subscribes to updates
-  const puzzle = usePreloadedQuery(preloadedPuzzle);
-
+export function GameIsland() {
   // Debug state
   const [debugMode, setDebugMode] = useState(false);
 
   // Confetti ref for victory celebration
   const confettiRef = useRef<ConfettiRef>(null);
 
-  // Use the Chrondle hook with preloaded puzzle data
-  // This eliminates the loading state for puzzle data
-  const chrondle = useRangeGame(undefined, puzzle);
+  // Core game hook - fetches puzzle by local date, no preload
+  const { gameState, submitRange, resetGame } = useRangeGame();
 
   // Defer non-critical state values for better performance
-  const deferredGameState = useDeferredValue(chrondle.gameState);
+  const deferredGameState = useDeferredValue(gameState);
 
-  // Adapt to old interface for compatibility
+  // Derive display state from gameState
+  // Use getPuzzle() to show puzzle during auth/progress loading (no flash)
   const gameLogic = useMemo(() => {
-    // Use timezone-corrected puzzle from gameState, not raw preload.
-    // The preload uses UTC; useTodaysPuzzle validates against local date.
-    const puzzleData = isReady(chrondle.gameState)
-      ? {
-          ...chrondle.gameState.puzzle,
-          year: chrondle.gameState.puzzle.targetYear,
-        }
-      : null;
-
-    // Extract guesses and completion status when ready
-    const guesses = isReady(chrondle.gameState) ? chrondle.gameState.guesses : [];
-    const ranges = isReady(chrondle.gameState) ? chrondle.gameState.ranges : [];
-    const isGameOver = isReady(chrondle.gameState) ? chrondle.gameState.isComplete : false;
-
-    // More granular loading states
-    const isPuzzleLoading = chrondle.gameState.status === "loading-puzzle";
-    const isAuthLoading = chrondle.gameState.status === "loading-auth";
-    const isProgressLoading = chrondle.gameState.status === "loading-progress";
-
-    // Show loading while puzzle loads or during timezone correction.
-    // Auth and progress can load in the background without disabling the game.
-    const isLoading = isPuzzleLoading || puzzleData === null;
-    const totalScore = isReady(chrondle.gameState) ? chrondle.gameState.totalScore : 0;
-    const remainingAttempts = isReady(deferredGameState)
-      ? deferredGameState.remainingAttempts
-      : GAME_CONFIG.MAX_GUESSES;
+    const ready = isReady(gameState);
+    const deferredReady = isReady(deferredGameState);
+    const puzzle = getPuzzle(gameState);
 
     return {
-      gameState: {
-        puzzle: puzzleData,
-        guesses,
-        ranges,
-        isGameOver,
-        totalScore,
-      },
-      isLoading,
-      isPuzzleLoading,
-      isAuthLoading,
-      isProgressLoading,
-      error: chrondle.gameState.status === "error" ? chrondle.gameState.error : null,
-      // Use deferred values for non-critical display properties
-      isGameComplete: isReady(deferredGameState) ? deferredGameState.isComplete : false,
-      hasWon: isReady(deferredGameState) ? deferredGameState.hasWon : false,
-      remainingGuesses: isReady(deferredGameState)
-        ? deferredGameState.remainingGuesses
+      // Core game state for GameLayout
+      // Puzzle is available during loading-auth and loading-progress (no flash!)
+      gameState: puzzle
+        ? {
+            puzzle: { ...puzzle, year: puzzle.targetYear },
+            guesses: ready ? gameState.guesses : [],
+            ranges: ready ? gameState.ranges : [],
+            isGameOver: ready ? gameState.isComplete : false,
+            totalScore: ready ? gameState.totalScore : 0,
+          }
+        : {
+            puzzle: null,
+            guesses: [],
+            ranges: [],
+            isGameOver: false,
+            totalScore: 0,
+          },
+
+      // Loading state - only loading-puzzle blocks the UI
+      isLoading: gameState.status === "loading-puzzle",
+
+      // Error state
+      error: gameState.status === "error" ? gameState.error : null,
+
+      // Completion state (use deferred for non-critical)
+      isGameComplete: deferredReady ? deferredGameState.isComplete : false,
+      hasWon: deferredReady ? deferredGameState.hasWon : false,
+
+      // Remaining attempts
+      remainingAttempts: deferredReady
+        ? deferredGameState.remainingAttempts
         : GAME_CONFIG.MAX_GUESSES,
-      remainingAttempts,
-      submitRange: chrondle.submitRange,
-      resetGame: chrondle.resetGame,
+
+      // Actions
+      submitRange,
+      resetGame,
     };
-  }, [chrondle.gameState, deferredGameState, chrondle.submitRange, chrondle.resetGame]);
+  }, [gameState, deferredGameState, submitRange, resetGame]);
 
-  // Store puzzle number and date once loaded to prevent flashing during state transitions
-  const [stablePuzzleNumber, setStablePuzzleNumber] = useState<number | undefined>(undefined);
-  const [stablePuzzleDate, setStablePuzzleDate] = useState<string | undefined>(undefined);
-
-  // Update stable puzzle number and date when we get a valid puzzle
-  useEffect(() => {
-    if (gameLogic.gameState.puzzle?.puzzleNumber) {
-      setStablePuzzleNumber(gameLogic.gameState.puzzle.puzzleNumber);
-    }
-    if (gameLogic.gameState.puzzle?.date) {
-      setStablePuzzleDate(gameLogic.gameState.puzzle.date);
-    }
-  }, [gameLogic.gameState.puzzle?.puzzleNumber, gameLogic.gameState.puzzle?.date]);
-
-  // Only show puzzle info if we're past the initial puzzle loading
-  const puzzleNumber =
-    chrondle.gameState.status !== "loading-puzzle" ? stablePuzzleNumber : undefined;
-  const puzzleDate = chrondle.gameState.status !== "loading-puzzle" ? stablePuzzleDate : undefined;
+  // Puzzle info for header - show as soon as puzzle is available (not just when ready)
+  const puzzle = getPuzzle(gameState);
+  const puzzleNumber = puzzle?.puzzleNumber;
+  const puzzleDate = puzzle?.date;
 
   // Streak system
   const { streakData, updateStreak, hasNewAchievement, newAchievement, clearNewAchievement } =
@@ -136,7 +113,6 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
   // Handle game over with streak updates
   const handleGameOver = useCallback(
     (won: boolean, attemptCount: number) => {
-      // logger.gameComplete is not available, use logger.info instead
       logger.info(`Game complete: ${won ? "Won" : "Lost"} in ${attemptCount} range attempts`);
 
       // Update streak (dual-mode):
@@ -191,9 +167,6 @@ export function GameIsland({ preloadedPuzzle }: GameIslandProps) {
     lastRangeCount: screenReaderLastRangeCount,
     setLastRangeCount: setScreenReaderLastRangeCount,
   });
-
-  // Swipe navigation would need proper props - disabling for now
-  // TODO: Implement proper swipe navigation if needed
 
   // Check for debug mode on mount
   useEffect(() => {

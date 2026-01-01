@@ -1,10 +1,8 @@
 // Server component: renders the Classic Chrondle experience.
+// No SSR preload - GameIsland fetches puzzle by local date client-side.
 
-import { preloadQuery } from "convex/nextjs";
-import { api } from "@/lib/convexServer";
 import { GameIsland } from "@/components/GameIsland";
 
-export default async function ClassicPage() {
-  const preloadedPuzzle = await preloadQuery(api.puzzles.getDailyPuzzle);
-  return <GameIsland preloadedPuzzle={preloadedPuzzle} />;
+export default function ClassicPage() {
+  return <GameIsland />;
 }

@@ -39,10 +39,12 @@ const loadingPuzzleState: LoadingPuzzleState = {
 
 const loadingAuthState: LoadingAuthState = {
   status: "loading-auth",
+  puzzle: mockPuzzle, // Puzzle is available during auth loading
 };
 
 const loadingProgressState: LoadingProgressState = {
   status: "loading-progress",
+  puzzle: mockPuzzle, // Puzzle is available during progress loading
 };
 
 const readyState: ReadyState = {

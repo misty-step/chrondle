@@ -252,6 +252,7 @@ function formatYear(year: number): string {
 
 // Helper: Get event span string
 function getEventSpan(events: Array<{ year: number }>): string {
+  if (!events || events.length === 0) return "No events";
   const years = events.map((e) => e.year);
   const minYear = Math.min(...years);
   const maxYear = Math.max(...years);

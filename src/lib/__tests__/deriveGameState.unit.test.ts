@@ -57,7 +57,7 @@ describe("deriveGameState", () => {
       expect(state).toEqual({ status: "loading-puzzle" });
     });
 
-    it("should return loading-auth when auth is loading (after puzzle loads)", () => {
+    it("should return loading-auth with puzzle when auth is loading (after puzzle loads)", () => {
       const sources = createDataSources({
         auth: {
           userId: null,
@@ -67,10 +67,12 @@ describe("deriveGameState", () => {
       });
 
       const state = deriveGameState(sources);
-      expect(state).toEqual({ status: "loading-auth" });
+      // Puzzle is included so UI can display it while auth loads
+      expect(state.status).toBe("loading-auth");
+      expect(state).toHaveProperty("puzzle");
     });
 
-    it("should return loading-progress when progress is loading (authenticated user)", () => {
+    it("should return loading-progress with puzzle when progress is loading (authenticated user)", () => {
       const sources = createDataSources({
         auth: {
           userId: "user-123",
@@ -84,7 +86,9 @@ describe("deriveGameState", () => {
       });
 
       const state = deriveGameState(sources);
-      expect(state).toEqual({ status: "loading-progress" });
+      // Puzzle is included so UI can display it while progress loads
+      expect(state.status).toBe("loading-progress");
+      expect(state).toHaveProperty("puzzle");
     });
 
     it("should prioritize puzzle loading over auth loading", () => {

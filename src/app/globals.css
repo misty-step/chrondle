@@ -348,6 +348,11 @@ html.dark {
   --color-feedback-earlier: var(--feedback-earlier);
   --color-feedback-later: var(--feedback-later);
 
+  /* Semantic Text Colors (for text-text-primary, text-text-secondary utilities) */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+
   /* Legacy/Chart Colors */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
