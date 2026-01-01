@@ -29,7 +29,6 @@ export interface UseRangeGameReturn extends UseGameActionsReturn {
  * than something to initialize imperatively.
  *
  * @param puzzleNumber - Optional puzzle number for archive puzzles
- * @param initialPuzzle - Optional initial puzzle data (for SSR/preloading)
  * @returns Combined game state and action handlers
  *
  * @example
@@ -44,15 +43,11 @@ export interface UseRangeGameReturn extends UseGameActionsReturn {
  * @example
  * // For archive puzzle
  * const { gameState, submitGuess } = useRangeGame(42);
- *
- * @example
- * // With preloaded puzzle data from server
- * const { gameState, submitGuess } = useRangeGame(undefined, serverPuzzle);
  */
-export function useRangeGame(puzzleNumber?: number, initialPuzzle?: unknown): UseRangeGameReturn {
+export function useRangeGame(puzzleNumber?: number): UseRangeGameReturn {
   // Compose all orthogonal data sources
   // Hooks must be called unconditionally due to React rules
-  const puzzle = usePuzzleData(puzzleNumber, initialPuzzle);
+  const puzzle = usePuzzleData(puzzleNumber);
   const auth = useAuthState();
 
   // Defensive validation: Only pass userId if it's a valid Convex ID format
