@@ -68,6 +68,24 @@ export default defineSchema({
     historicalContext: v.optional(v.string()), // AI-generated narrative (3000-4000 chars)
     historicalContextGeneratedAt: v.optional(v.number()), // Unix timestamp when context was generated
     updatedAt: v.number(), // For stats updates
+    /**
+     * Puzzle composition quality from Judge LLM.
+     * Populated async after puzzle creation.
+     * Ordering: hints are ordered Hard → Easy based on judge recommendation.
+     */
+    puzzleQuality: v.optional(
+      v.object({
+        qualityScore: v.number(), // 0-1 overall quality
+        composition: v.object({
+          topicDiversity: v.number(),
+          geographicSpread: v.number(),
+          difficultyGradient: v.number(),
+          guessability: v.number(),
+        }),
+        orderingRationale: v.optional(v.string()), // Why hints are in this order
+        judgedAt: v.number(), // Timestamp when judged
+      }),
+    ),
   })
     .index("by_number", ["puzzleNumber"])
     .index("by_date", ["date"]),

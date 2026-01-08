@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, internalMutation } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { selectYearForPuzzle } from "../lib/puzzleHelpers";
+import { isPuzzleJudgeEnabled } from "../lib/featureFlags";
 
 /**
  * Puzzle Generation Module
@@ -73,6 +74,30 @@ export const generateDailyPuzzle = internalMutation({
         classicPuzzleId: puzzleId,
         updatedAt: Date.now(),
       });
+    }
+
+    // Schedule puzzle composition optimization (non-blocking)
+    // This will judge the puzzle and reorder hints Hard → Easy
+    if (isPuzzleJudgeEnabled()) {
+      try {
+        await ctx.scheduler.runAfter(
+          0, // Run immediately
+          internal.actions.puzzleComposition.optimizePuzzle.optimizePuzzleComposition,
+          {
+            puzzleId,
+            year: selectedYear,
+            events: selectedEvents.map((e) => e.event),
+          },
+        );
+        console.warn(
+          `Scheduled puzzle composition optimization for puzzle ${puzzleId} (year ${selectedYear})`,
+        );
+      } catch (schedulerError) {
+        console.error(
+          `[generateDailyPuzzle] Failed to schedule composition optimization for puzzle ${puzzleId}:`,
+          schedulerError,
+        );
+      }
     }
 
     // Schedule historical context generation (non-blocking)
@@ -198,6 +223,26 @@ export const ensureTodaysPuzzle = mutation({
       });
     }
 
+    // Schedule puzzle composition optimization (non-blocking)
+    if (isPuzzleJudgeEnabled()) {
+      try {
+        await ctx.scheduler.runAfter(
+          0,
+          internal.actions.puzzleComposition.optimizePuzzle.optimizePuzzleComposition,
+          {
+            puzzleId,
+            year: selectedYear,
+            events: selectedEvents.map((e) => e.event),
+          },
+        );
+      } catch (schedulerError) {
+        console.error(
+          `[ensureTodaysPuzzle] Failed to schedule composition optimization:`,
+          schedulerError,
+        );
+      }
+    }
+
     const newPuzzle = await ctx.db.get(puzzleId);
 
     console.warn(`Created puzzle #${nextPuzzleNumber} for ${today} with year ${selectedYear}`);
@@ -263,6 +308,26 @@ export const ensurePuzzleForDate = mutation({
         classicPuzzleId: puzzleId,
         updatedAt: Date.now(),
       });
+    }
+
+    // Schedule puzzle composition optimization (non-blocking)
+    if (isPuzzleJudgeEnabled()) {
+      try {
+        await ctx.scheduler.runAfter(
+          0,
+          internal.actions.puzzleComposition.optimizePuzzle.optimizePuzzleComposition,
+          {
+            puzzleId,
+            year: selectedYear,
+            events: selectedEvents.map((e) => e.event),
+          },
+        );
+      } catch (schedulerError) {
+        console.error(
+          `[ensurePuzzleForDate] Failed to schedule composition optimization:`,
+          schedulerError,
+        );
+      }
     }
 
     // Schedule historical context generation (non-blocking)
@@ -343,6 +408,26 @@ export const generateTomorrowPuzzle = internalMutation({
         classicPuzzleId: puzzleId,
         updatedAt: Date.now(),
       });
+    }
+
+    // Schedule puzzle composition optimization (non-blocking)
+    if (isPuzzleJudgeEnabled()) {
+      try {
+        await ctx.scheduler.runAfter(
+          0,
+          internal.actions.puzzleComposition.optimizePuzzle.optimizePuzzleComposition,
+          {
+            puzzleId,
+            year: selectedYear,
+            events: selectedEvents.map((e) => e.event),
+          },
+        );
+      } catch (schedulerError) {
+        console.error(
+          `[generateTomorrowPuzzle] Failed to schedule composition optimization:`,
+          schedulerError,
+        );
+      }
     }
 
     // Schedule historical context generation
