@@ -14,7 +14,7 @@
  * Disable by setting PUZZLE_JUDGE_ENABLED=false or 0
  */
 export function isPuzzleJudgeEnabled(): boolean {
-  const flag = process.env.PUZZLE_JUDGE_ENABLED;
+  const flag = process.env.PUZZLE_JUDGE_ENABLED?.toLowerCase();
   // Enabled by default unless explicitly disabled
   return flag !== "false" && flag !== "0";
 }

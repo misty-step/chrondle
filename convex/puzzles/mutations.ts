@@ -321,8 +321,19 @@ export const updatePuzzleEvents = internalMutation({
       throw new Error(`Puzzle ${puzzleId} not found`);
     }
 
-    // Only update if puzzle hasn't been played yet (to avoid confusion)
-    // For safety, we always update - the ordering is deterministic
+    // Check if puzzle has been played - don't update mid-game
+    const existingPlay = await ctx.db
+      .query("plays")
+      .withIndex("by_puzzle", (q) => q.eq("puzzleId", puzzleId))
+      .first();
+
+    if (existingPlay) {
+      console.log(
+        `[updatePuzzleEvents] Skipping update for puzzle ${puzzleId} - already has plays`,
+      );
+      return;
+    }
+
     await ctx.db.patch(puzzleId, {
       events,
       puzzleQuality,

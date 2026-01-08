@@ -19,6 +19,53 @@ import { isPuzzleJudgeEnabled } from "../lib/featureFlags";
  * - selectYearForPuzzle: Imported from lib/puzzleHelpers.ts
  */
 
+import type { Id } from "../_generated/dataModel";
+import type { GenericMutationCtx, GenericDataModel } from "convex/server";
+
+type SchedulerCtx = Pick<GenericMutationCtx<GenericDataModel>, "scheduler">;
+
+interface ScheduleOptimizationParams {
+  puzzleId: Id<"puzzles">;
+  year: number;
+  events: string[];
+  source: string;
+}
+
+/**
+ * Schedule puzzle optimization tasks (composition judge + historical context)
+ * Extracted helper to DRY up generation functions
+ */
+async function schedulePuzzleOptimization(
+  ctx: SchedulerCtx,
+  params: ScheduleOptimizationParams,
+): Promise<void> {
+  const { puzzleId, year, events, source } = params;
+
+  // Schedule puzzle composition optimization (non-blocking)
+  if (isPuzzleJudgeEnabled()) {
+    try {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.actions.puzzleComposition.optimizePuzzle.optimizePuzzleComposition,
+        { puzzleId, year, events },
+      );
+    } catch (schedulerError) {
+      console.error(`[${source}] Failed to schedule composition optimization:`, schedulerError);
+    }
+  }
+
+  // Schedule historical context generation (non-blocking)
+  try {
+    await ctx.scheduler.runAfter(0, internal.actions.historicalContext.generateHistoricalContext, {
+      puzzleId,
+      year,
+      events,
+    });
+  } catch (schedulerError) {
+    console.error(`[${source}] Failed to schedule context generation:`, schedulerError);
+  }
+}
+
 /**
  * Internal mutation for cron job to generate daily puzzle
  *
@@ -76,52 +123,13 @@ export const generateDailyPuzzle = internalMutation({
       });
     }
 
-    // Schedule puzzle composition optimization (non-blocking)
-    // This will judge the puzzle and reorder hints Hard → Easy
-    if (isPuzzleJudgeEnabled()) {
-      try {
-        await ctx.scheduler.runAfter(
-          0, // Run immediately
-          internal.actions.puzzleComposition.optimizePuzzle.optimizePuzzleComposition,
-          {
-            puzzleId,
-            year: selectedYear,
-            events: selectedEvents.map((e) => e.event),
-          },
-        );
-        console.warn(
-          `Scheduled puzzle composition optimization for puzzle ${puzzleId} (year ${selectedYear})`,
-        );
-      } catch (schedulerError) {
-        console.error(
-          `[generateDailyPuzzle] Failed to schedule composition optimization for puzzle ${puzzleId}:`,
-          schedulerError,
-        );
-      }
-    }
-
-    // Schedule historical context generation (non-blocking)
-    try {
-      await ctx.scheduler.runAfter(
-        0, // Run immediately
-        internal.actions.historicalContext.generateHistoricalContext,
-        {
-          puzzleId,
-          year: selectedYear,
-          events: selectedEvents.map((e) => e.event),
-        },
-      );
-
-      console.warn(
-        `Scheduled historical context generation for puzzle ${puzzleId} (year ${selectedYear})`,
-      );
-    } catch (schedulerError) {
-      // Log but don't fail puzzle creation - graceful degradation
-      console.error(
-        `[generateDailyPuzzle] Failed to schedule context generation for puzzle ${puzzleId}:`,
-        schedulerError,
-      );
-    }
+    // Schedule optimization tasks (composition judge + historical context)
+    await schedulePuzzleOptimization(ctx, {
+      puzzleId,
+      year: selectedYear,
+      events: selectedEvents.map((e) => e.event),
+      source: "generateDailyPuzzle",
+    });
 
     console.warn(`Created puzzle #${nextPuzzleNumber} for ${targetDate} with year ${selectedYear}`);
 
@@ -223,25 +231,13 @@ export const ensureTodaysPuzzle = mutation({
       });
     }
 
-    // Schedule puzzle composition optimization (non-blocking)
-    if (isPuzzleJudgeEnabled()) {
-      try {
-        await ctx.scheduler.runAfter(
-          0,
-          internal.actions.puzzleComposition.optimizePuzzle.optimizePuzzleComposition,
-          {
-            puzzleId,
-            year: selectedYear,
-            events: selectedEvents.map((e) => e.event),
-          },
-        );
-      } catch (schedulerError) {
-        console.error(
-          `[ensureTodaysPuzzle] Failed to schedule composition optimization:`,
-          schedulerError,
-        );
-      }
-    }
+    // Schedule optimization tasks (composition judge + historical context)
+    await schedulePuzzleOptimization(ctx, {
+      puzzleId,
+      year: selectedYear,
+      events: selectedEvents.map((e) => e.event),
+      source: "ensureTodaysPuzzle",
+    });
 
     const newPuzzle = await ctx.db.get(puzzleId);
 
@@ -310,47 +306,13 @@ export const ensurePuzzleForDate = mutation({
       });
     }
 
-    // Schedule puzzle composition optimization (non-blocking)
-    if (isPuzzleJudgeEnabled()) {
-      try {
-        await ctx.scheduler.runAfter(
-          0,
-          internal.actions.puzzleComposition.optimizePuzzle.optimizePuzzleComposition,
-          {
-            puzzleId,
-            year: selectedYear,
-            events: selectedEvents.map((e) => e.event),
-          },
-        );
-      } catch (schedulerError) {
-        console.error(
-          `[ensurePuzzleForDate] Failed to schedule composition optimization:`,
-          schedulerError,
-        );
-      }
-    }
-
-    // Schedule historical context generation (non-blocking)
-    try {
-      await ctx.scheduler.runAfter(
-        0, // Run immediately
-        internal.actions.historicalContext.generateHistoricalContext,
-        {
-          puzzleId,
-          year: selectedYear,
-          events: selectedEvents.map((e) => e.event),
-        },
-      );
-
-      console.warn(
-        `Scheduled historical context generation for puzzle ${puzzleId} (year ${selectedYear})`,
-      );
-    } catch (schedulerError) {
-      console.error(
-        `[ensurePuzzleForDate] Failed to schedule context generation for puzzle ${puzzleId}:`,
-        schedulerError,
-      );
-    }
+    // Schedule optimization tasks (composition judge + historical context)
+    await schedulePuzzleOptimization(ctx, {
+      puzzleId,
+      year: selectedYear,
+      events: selectedEvents.map((e) => e.event),
+      source: "ensurePuzzleForDate",
+    });
 
     const newPuzzle = await ctx.db.get(puzzleId);
 
@@ -410,43 +372,13 @@ export const generateTomorrowPuzzle = internalMutation({
       });
     }
 
-    // Schedule puzzle composition optimization (non-blocking)
-    if (isPuzzleJudgeEnabled()) {
-      try {
-        await ctx.scheduler.runAfter(
-          0,
-          internal.actions.puzzleComposition.optimizePuzzle.optimizePuzzleComposition,
-          {
-            puzzleId,
-            year: selectedYear,
-            events: selectedEvents.map((e) => e.event),
-          },
-        );
-      } catch (schedulerError) {
-        console.error(
-          `[generateTomorrowPuzzle] Failed to schedule composition optimization:`,
-          schedulerError,
-        );
-      }
-    }
-
-    // Schedule historical context generation
-    try {
-      await ctx.scheduler.runAfter(
-        0,
-        internal.actions.historicalContext.generateHistoricalContext,
-        {
-          puzzleId,
-          year: selectedYear,
-          events: selectedEvents.map((e) => e.event),
-        },
-      );
-    } catch (schedulerError) {
-      console.error(
-        `[generateTomorrowPuzzle] Failed to schedule context generation:`,
-        schedulerError,
-      );
-    }
+    // Schedule optimization tasks (composition judge + historical context)
+    await schedulePuzzleOptimization(ctx, {
+      puzzleId,
+      year: selectedYear,
+      events: selectedEvents.map((e) => e.event),
+      source: "generateTomorrowPuzzle",
+    });
 
     console.warn(
       `[generateTomorrowPuzzle] Created puzzle #${nextPuzzleNumber} for ${tomorrowDate}`,

@@ -129,9 +129,8 @@ export const judgePuzzle = internalAction({
 export async function judgePuzzleComposition(params: JudgeParams): Promise<JudgeActionResult> {
   const { year, era, events } = params;
 
-  if (events.length < 6) {
-    throw new Error(`Need at least 6 events, got ${events.length}`);
-  }
+  // Use centralized validation
+  validateJudgeInput({ year, era, events });
 
   const llmClient = params.llmClient ?? getJudgeClient();
   let response;
@@ -231,13 +230,9 @@ function enforceApprovalThresholds(judgment: PuzzleJudgment): PuzzleJudgment {
       issues.push(`Quality score ${computedScore.toFixed(2)} below 0.6 threshold`);
     }
     if (!meetsComponentThresholds) {
-      const lowComponents = [];
-      if (composition.topicDiversity < MIN_COMPONENT_SCORE) lowComponents.push("topicDiversity");
-      if (composition.geographicSpread < MIN_COMPONENT_SCORE)
-        lowComponents.push("geographicSpread");
-      if (composition.difficultyGradient < MIN_COMPONENT_SCORE)
-        lowComponents.push("difficultyGradient");
-      if (composition.guessability < MIN_COMPONENT_SCORE) lowComponents.push("guessability");
+      const lowComponents = (
+        Object.keys(QUALITY_WEIGHTS) as (keyof typeof QUALITY_WEIGHTS)[]
+      ).filter((key) => composition[key] < MIN_COMPONENT_SCORE);
       issues.push(`Low scores: ${lowComponents.join(", ")}`);
     }
   }
