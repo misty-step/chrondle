@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation } from "../_generated/server";
+import { mutation, internalMutation } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
 import { updatePuzzleStats } from "../lib/puzzleHelpers";
 import { updateUserStreak } from "../lib/streakHelpers";
@@ -283,5 +283,65 @@ export const submitRange = mutation({
       attemptsRemaining: Math.max(0, MAX_ATTEMPTS - initialRanges.length),
       targetYear: puzzle.targetYear,
     };
+  },
+});
+
+/**
+ * Internal mutation to update puzzle events and quality after Judge evaluation
+ *
+ * Called by optimizePuzzleComposition action to:
+ * - Reorder events based on Judge's Hard → Easy recommendation
+ * - Store quality scores for analytics
+ *
+ * @param puzzleId - Puzzle to update
+ * @param events - Reordered events (Hard → Easy)
+ * @param puzzleQuality - Quality scores from Judge
+ */
+export const updatePuzzleEvents = internalMutation({
+  args: {
+    puzzleId: v.id("puzzles"),
+    events: v.array(v.string()),
+    puzzleQuality: v.object({
+      qualityScore: v.number(),
+      composition: v.object({
+        topicDiversity: v.number(),
+        geographicSpread: v.number(),
+        difficultyGradient: v.number(),
+        guessability: v.number(),
+      }),
+      orderingRationale: v.optional(v.string()),
+      judgedAt: v.number(),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const { puzzleId, events, puzzleQuality } = args;
+
+    const puzzle = await ctx.db.get(puzzleId);
+    if (!puzzle) {
+      throw new Error(`Puzzle ${puzzleId} not found`);
+    }
+
+    // Check if puzzle has been played - don't update mid-game
+    const existingPlay = await ctx.db
+      .query("plays")
+      .withIndex("by_puzzle", (q) => q.eq("puzzleId", puzzleId))
+      .first();
+
+    if (existingPlay) {
+      console.log(
+        `[updatePuzzleEvents] Skipping update for puzzle ${puzzleId} - already has plays`,
+      );
+      return;
+    }
+
+    await ctx.db.patch(puzzleId, {
+      events,
+      puzzleQuality,
+      updatedAt: Date.now(),
+    });
+
+    console.log(
+      `[updatePuzzleEvents] Updated puzzle ${puzzleId} with quality score ${puzzleQuality.qualityScore.toFixed(2)}`,
+    );
   },
 });
