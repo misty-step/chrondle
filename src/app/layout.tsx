@@ -32,8 +32,6 @@ export const metadata: Metadata = {
     title: "Chrondle",
   },
   openGraph: {
-    title: "Chrondle - The Daily History Game",
-    description: "Guess the year of the historical event in this daily puzzle game.",
     url: "https://chrondle.app",
     siteName: "Chrondle",
     images: [
@@ -49,8 +47,6 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Chrondle - The Daily History Game",
-    description: "Guess the year of the historical event in this daily puzzle game.",
     images: ["/og-image.png"],
   },
 };
