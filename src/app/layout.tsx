@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   title: "Chrondle - The Daily History Game",
   description: "Guess the year of the historical event in this daily puzzle game.",
   manifest: "/site.webmanifest",
+  metadataBase: new URL("https://chrondle.app"),
   icons: {
     icon: [
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
@@ -29,6 +30,28 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "default",
     title: "Chrondle",
+  },
+  openGraph: {
+    title: "Chrondle - The Daily History Game",
+    description: "Guess the year of the historical event in this daily puzzle game.",
+    url: "https://chrondle.app",
+    siteName: "Chrondle",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Chrondle - The Daily History Game",
+      },
+    ],
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Chrondle - The Daily History Game",
+    description: "Guess the year of the historical event in this daily puzzle game.",
+    images: ["/og-image.png"],
   },
 };
 

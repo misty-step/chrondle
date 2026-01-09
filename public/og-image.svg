@@ -1,0 +1,46 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f0e8"/>
+      <stop offset="100%" style="stop-color:#e8e0d0"/>
+    </linearGradient>
+    <pattern id="noise" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+      <rect width="100" height="100" fill="url(#bgGrad)"/>
+      <filter id="noiseFilter">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/>
+        <feColorMatrix type="saturate" values="0"/>
+      </filter>
+      <rect width="100" height="100" filter="url(#noiseFilter)" opacity="0.08"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+
+  <!-- Decorative cross pattern (archival style) -->
+  <g fill="none" stroke="#1d1d1f" stroke-width="1" opacity="0.08">
+    <path d="M60 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z"/>
+    <path d="M1140 596v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z"/>
+    <path d="M60 596v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z"/>
+    <path d="M1140 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z"/>
+  </g>
+
+  <!-- Logo circles -->
+  <g transform="translate(600, 250)">
+    <circle cx="-90" cy="0" r="34" fill="none" stroke="#1d1d1f" stroke-width="12"/>
+    <circle cx="0" cy="0" r="34" fill="none" stroke="#1d1d1f" stroke-width="12"/>
+    <circle cx="90" cy="0" r="44" fill="#ea5a1b"/>
+  </g>
+
+  <!-- Title -->
+  <text x="600" y="380" font-family="Georgia, serif" font-size="72" font-weight="700" fill="#1d1d1f" text-anchor="middle" letter-spacing="8">CHRONDLE</text>
+
+  <!-- Tagline -->
+  <text x="600" y="440" font-family="Georgia, serif" font-size="28" fill="#4a4a4a" text-anchor="middle" font-style="italic">The Daily History Game</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="500" font-family="Arial, sans-serif" font-size="20" fill="#6a6a6a" text-anchor="middle" letter-spacing="2">GUESS THE YEAR FROM SIX HISTORICAL CLUES</text>
+
+  <!-- Decorative line -->
+  <line x1="400" y1="540" x2="800" y2="540" stroke="#ea5a1b" stroke-width="3"/>
+</svg>
