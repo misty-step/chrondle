@@ -405,12 +405,12 @@ describe("puzzles/mutations", () => {
     it("creates new play record on first guess", async () => {
       const t = convexTest(schema, modules);
 
-      let userId: Id<"users">;
       let puzzleId: Id<"puzzles">;
+      const clerkId = "guess_test_1";
 
       await t.run(async (ctx) => {
-        userId = await ctx.db.insert("users", {
-          clerkId: "guess_test_1",
+        await ctx.db.insert("users", {
+          clerkId,
           email: "guess@test.com",
           currentStreak: 0,
           longestStreak: 0,
@@ -430,11 +430,13 @@ describe("puzzles/mutations", () => {
         });
       });
 
-      const result = await t.mutation(puzzlesMutations.submitGuess, {
-        puzzleId: puzzleId!,
-        userId: userId!,
-        guess: 1970,
-      });
+      // Use withIdentity to mock authentication - server derives userId from auth
+      const result = await t
+        .withIdentity({ subject: clerkId })
+        .mutation(puzzlesMutations.submitGuess, {
+          puzzleId: puzzleId!,
+          guess: 1970,
+        });
 
       expect(result.correct).toBe(false);
       expect(result.guesses).toEqual([1970]);
@@ -444,12 +446,12 @@ describe("puzzles/mutations", () => {
     it("returns correct: true on exact match", async () => {
       const t = convexTest(schema, modules);
 
-      let userId: Id<"users">;
       let puzzleId: Id<"puzzles">;
+      const clerkId = "guess_test_2";
 
       await t.run(async (ctx) => {
-        userId = await ctx.db.insert("users", {
-          clerkId: "guess_test_2",
+        await ctx.db.insert("users", {
+          clerkId,
           email: "correct@test.com",
           currentStreak: 0,
           longestStreak: 0,
@@ -469,11 +471,12 @@ describe("puzzles/mutations", () => {
         });
       });
 
-      const result = await t.mutation(puzzlesMutations.submitGuess, {
-        puzzleId: puzzleId!,
-        userId: userId!,
-        guess: 1945,
-      });
+      const result = await t
+        .withIdentity({ subject: clerkId })
+        .mutation(puzzlesMutations.submitGuess, {
+          puzzleId: puzzleId!,
+          guess: 1945,
+        });
 
       expect(result.correct).toBe(true);
       expect(result.guesses).toEqual([1945]);
@@ -484,10 +487,11 @@ describe("puzzles/mutations", () => {
 
       let userId: Id<"users">;
       let puzzleId: Id<"puzzles">;
+      const clerkId = "guess_test_3";
 
       await t.run(async (ctx) => {
         userId = await ctx.db.insert("users", {
-          clerkId: "guess_test_3",
+          clerkId,
           email: "completed@test.com",
           currentStreak: 0,
           longestStreak: 0,
@@ -517,9 +521,8 @@ describe("puzzles/mutations", () => {
       });
 
       await expect(
-        t.mutation(puzzlesMutations.submitGuess, {
+        t.withIdentity({ subject: clerkId }).mutation(puzzlesMutations.submitGuess, {
           puzzleId: puzzleId!,
-          userId: userId!,
           guess: 2001,
         }),
       ).rejects.toThrow("Puzzle already completed");
@@ -530,10 +533,11 @@ describe("puzzles/mutations", () => {
 
       let userId: Id<"users">;
       let puzzleId: Id<"puzzles">;
+      const clerkId = "guess_test_4";
 
       await t.run(async (ctx) => {
         userId = await ctx.db.insert("users", {
-          clerkId: "guess_test_4",
+          clerkId,
           email: "maxed@test.com",
           currentStreak: 0,
           longestStreak: 0,
@@ -562,9 +566,8 @@ describe("puzzles/mutations", () => {
       });
 
       await expect(
-        t.mutation(puzzlesMutations.submitGuess, {
+        t.withIdentity({ subject: clerkId }).mutation(puzzlesMutations.submitGuess, {
           puzzleId: puzzleId!,
-          userId: userId!,
           guess: 1990,
         }),
       ).rejects.toThrow("Maximum attempts reached");
@@ -575,12 +578,12 @@ describe("puzzles/mutations", () => {
     it("creates play record with correct range on first submission", async () => {
       const t = convexTest(schema, modules);
 
-      let userId: Id<"users">;
       let puzzleId: Id<"puzzles">;
+      const clerkId = "range_test_1";
 
       await t.run(async (ctx) => {
-        userId = await ctx.db.insert("users", {
-          clerkId: "range_test_1",
+        await ctx.db.insert("users", {
+          clerkId,
           email: "range@test.com",
           currentStreak: 0,
           longestStreak: 0,
@@ -600,13 +603,14 @@ describe("puzzles/mutations", () => {
         });
       });
 
-      const result = await t.mutation(puzzlesMutations.submitRange, {
-        puzzleId: puzzleId!,
-        userId: userId!,
-        start: 1960,
-        end: 1980,
-        hintsUsed: 0,
-      });
+      const result = await t
+        .withIdentity({ subject: clerkId })
+        .mutation(puzzlesMutations.submitRange, {
+          puzzleId: puzzleId!,
+          start: 1960,
+          end: 1980,
+          hintsUsed: 0,
+        });
 
       expect(result.contained).toBe(true);
       expect(result.range.start).toBe(1960);
@@ -618,12 +622,12 @@ describe("puzzles/mutations", () => {
     it("normalizes inverted range bounds", async () => {
       const t = convexTest(schema, modules);
 
-      let userId: Id<"users">;
       let puzzleId: Id<"puzzles">;
+      const clerkId = "range_test_2";
 
       await t.run(async (ctx) => {
-        userId = await ctx.db.insert("users", {
-          clerkId: "range_test_2",
+        await ctx.db.insert("users", {
+          clerkId,
           email: "inverted@test.com",
           currentStreak: 0,
           longestStreak: 0,
@@ -644,13 +648,14 @@ describe("puzzles/mutations", () => {
       });
 
       // Submit with end < start (inverted)
-      const result = await t.mutation(puzzlesMutations.submitRange, {
-        puzzleId: puzzleId!,
-        userId: userId!,
-        start: 1950, // Higher value first
-        end: 1940, // Lower value second
-        hintsUsed: 1,
-      });
+      const result = await t
+        .withIdentity({ subject: clerkId })
+        .mutation(puzzlesMutations.submitRange, {
+          puzzleId: puzzleId!,
+          start: 1950, // Higher value first
+          end: 1940, // Lower value second
+          hintsUsed: 1,
+        });
 
       // Should be normalized to 1940-1950
       expect(result.range.start).toBe(1940);
@@ -661,12 +666,12 @@ describe("puzzles/mutations", () => {
     it("returns contained: false when target not in range", async () => {
       const t = convexTest(schema, modules);
 
-      let userId: Id<"users">;
       let puzzleId: Id<"puzzles">;
+      const clerkId = "range_test_3";
 
       await t.run(async (ctx) => {
-        userId = await ctx.db.insert("users", {
-          clerkId: "range_test_3",
+        await ctx.db.insert("users", {
+          clerkId,
           email: "miss@test.com",
           currentStreak: 0,
           longestStreak: 0,
@@ -686,13 +691,14 @@ describe("puzzles/mutations", () => {
         });
       });
 
-      const result = await t.mutation(puzzlesMutations.submitRange, {
-        puzzleId: puzzleId!,
-        userId: userId!,
-        start: 1980,
-        end: 2000,
-        hintsUsed: 2,
-      });
+      const result = await t
+        .withIdentity({ subject: clerkId })
+        .mutation(puzzlesMutations.submitRange, {
+          puzzleId: puzzleId!,
+          start: 1980,
+          end: 2000,
+          hintsUsed: 2,
+        });
 
       expect(result.contained).toBe(false);
       expect(result.totalScore).toBe(0);
@@ -704,10 +710,11 @@ describe("puzzles/mutations", () => {
 
       let userId: Id<"users">;
       let puzzleId: Id<"puzzles">;
+      const clerkId = "range_test_4";
 
       await t.run(async (ctx) => {
         userId = await ctx.db.insert("users", {
-          clerkId: "range_test_4",
+          clerkId,
           email: "multi@test.com",
           currentStreak: 0,
           longestStreak: 0,
@@ -736,13 +743,14 @@ describe("puzzles/mutations", () => {
         });
       });
 
-      const result = await t.mutation(puzzlesMutations.submitRange, {
-        puzzleId: puzzleId!,
-        userId: userId!,
-        start: 1960,
-        end: 1975,
-        hintsUsed: 1,
-      });
+      const result = await t
+        .withIdentity({ subject: clerkId })
+        .mutation(puzzlesMutations.submitRange, {
+          puzzleId: puzzleId!,
+          start: 1960,
+          end: 1975,
+          hintsUsed: 1,
+        });
 
       expect(result.ranges).toHaveLength(2);
       expect(result.attemptsRemaining).toBe(4);
@@ -752,12 +760,12 @@ describe("puzzles/mutations", () => {
     it("throws error on non-existent puzzle", async () => {
       const t = convexTest(schema, modules);
 
-      let userId: Id<"users">;
       let fakePuzzleId: Id<"puzzles">;
+      const clerkId = "range_test_5";
 
       await t.run(async (ctx) => {
-        userId = await ctx.db.insert("users", {
-          clerkId: "range_test_5",
+        await ctx.db.insert("users", {
+          clerkId,
           email: "nopuzzle@test.com",
           currentStreak: 0,
           longestStreak: 0,
@@ -780,9 +788,8 @@ describe("puzzles/mutations", () => {
       });
 
       await expect(
-        t.mutation(puzzlesMutations.submitRange, {
+        t.withIdentity({ subject: clerkId }).mutation(puzzlesMutations.submitRange, {
           puzzleId: fakePuzzleId!,
-          userId: userId!,
           start: 1960,
           end: 1980,
           hintsUsed: 0,

@@ -76,18 +76,33 @@ async function handlePostRangeSubmission(
  * - Managing user streaks (daily puzzles only)
  * - Enforcing MAX_ATTEMPTS limit
  *
+ * Security: userId is derived from auth context, not client args.
+ *
  * @param puzzleId - Puzzle being played
- * @param userId - Authenticated user
  * @param guess - Year guess
  * @returns Guess result with correctness and updated state
  */
 export const submitGuess = mutation({
   args: {
     puzzleId: v.id("puzzles"),
-    userId: v.id("users"),
     guess: v.number(),
   },
   handler: async (ctx, args) => {
+    // Security: derive userId from auth context, never trust client
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user) {
+      throw new Error("User not found");
+    }
+    const userId = user._id;
+
     // Get the puzzle to check the target year
     const puzzle = await ctx.db.get(args.puzzleId);
     if (!puzzle) {
@@ -97,7 +112,7 @@ export const submitGuess = mutation({
     // Check if play record exists
     const existingPlay = await ctx.db
       .query("plays")
-      .withIndex("by_user_puzzle", (q) => q.eq("userId", args.userId).eq("puzzleId", args.puzzleId))
+      .withIndex("by_user_puzzle", (q) => q.eq("userId", userId).eq("puzzleId", args.puzzleId))
       .first();
 
     const isCorrect = args.guess === puzzle.targetYear;
@@ -129,7 +144,7 @@ export const submitGuess = mutation({
 
         // Update streak with error handling to prevent breaking puzzle submission
         try {
-          await updateUserStreak(ctx, args.userId, true, puzzle.date);
+          await updateUserStreak(ctx, userId, true, puzzle.date);
         } catch (error) {
           console.error("[submitGuess] Streak update failed (non-critical):", error);
           // Continue - puzzle submission still succeeds even if streak update fails
@@ -137,7 +152,7 @@ export const submitGuess = mutation({
       } else if (updatedGuesses.length >= MAX_ATTEMPTS) {
         // Game lost - reset streak to 0 (only for today's daily puzzle)
         try {
-          await updateUserStreak(ctx, args.userId, false, puzzle.date);
+          await updateUserStreak(ctx, userId, false, puzzle.date);
         } catch (error) {
           console.error("[submitGuess] Streak update failed (non-critical):", error);
           // Continue - puzzle submission still succeeds even if streak update fails
@@ -152,7 +167,7 @@ export const submitGuess = mutation({
     } else {
       // Create new play record
       await ctx.db.insert("plays", {
-        userId: args.userId,
+        userId,
         puzzleId: args.puzzleId,
         guesses: [args.guess],
         completedAt: isCorrect ? Date.now() : undefined,
@@ -162,7 +177,7 @@ export const submitGuess = mutation({
       // Update puzzle stats and streak
       if (isCorrect) {
         await updatePuzzleStats(ctx, args.puzzleId);
-        await updateUserStreak(ctx, args.userId, true, puzzle.date);
+        await updateUserStreak(ctx, userId, true, puzzle.date);
       }
       // Note: For new play records, we never have MAX_ATTEMPTS on first submission
       // Loss streak reset only happens in the existing play path above
@@ -179,12 +194,26 @@ export const submitGuess = mutation({
 export const submitRange = mutation({
   args: {
     puzzleId: v.id("puzzles"),
-    userId: v.id("users"),
     start: v.number(),
     end: v.number(),
     hintsUsed: v.number(),
   },
   handler: async (ctx, args) => {
+    // Security: derive userId from auth context, never trust client
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user) {
+      throw new Error("User not found");
+    }
+    const userId = user._id;
+
     const puzzle = await ctx.db.get(args.puzzleId);
     if (!puzzle) {
       throw new Error("Puzzle not found");
@@ -212,7 +241,7 @@ export const submitRange = mutation({
 
     const existingPlay = await ctx.db
       .query("plays")
-      .withIndex("by_user_puzzle", (q) => q.eq("userId", args.userId).eq("puzzleId", args.puzzleId))
+      .withIndex("by_user_puzzle", (q) => q.eq("userId", userId).eq("puzzleId", args.puzzleId))
       .first();
 
     if (existingPlay) {
@@ -241,14 +270,7 @@ export const submitRange = mutation({
         updatedAt: timestamp,
       });
 
-      await handlePostRangeSubmission(
-        ctx,
-        args.userId,
-        args.puzzleId,
-        puzzle.date,
-        contained,
-        hasLost,
-      );
+      await handlePostRangeSubmission(ctx, userId, args.puzzleId, puzzle.date, contained, hasLost);
 
       return {
         contained,
@@ -264,7 +286,7 @@ export const submitRange = mutation({
     const totalScore = score;
 
     await ctx.db.insert("plays", {
-      userId: args.userId,
+      userId,
       puzzleId: args.puzzleId,
       guesses: [],
       ranges: initialRanges,
@@ -273,7 +295,7 @@ export const submitRange = mutation({
       updatedAt: timestamp,
     });
 
-    await handlePostRangeSubmission(ctx, args.userId, args.puzzleId, puzzle.date, contained, false);
+    await handlePostRangeSubmission(ctx, userId, args.puzzleId, puzzle.date, contained, false);
 
     return {
       contained,
