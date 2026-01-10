@@ -169,13 +169,12 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
           return false;
         }
 
-        // Validate and assert IDs with proper error handling
+        // Validate and assert puzzle ID
         const validPuzzleId = assertConvexId(puzzle.puzzle.id, "puzzles");
-        const validUserId = assertConvexId(auth.userId, "users");
 
+        // Server derives userId from auth context for security
         await submitGuessMutation({
           puzzleId: validPuzzleId,
-          userId: validUserId,
           guess,
         });
 
@@ -325,11 +324,10 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
 
       try {
         const validPuzzleId = assertConvexId(puzzle.puzzle.id, "puzzles");
-        const validUserId = assertConvexId(auth.userId, "users");
 
+        // Server derives userId from auth context for security
         const result = await submitRangeMutation({
           puzzleId: validPuzzleId,
-          userId: validUserId,
           start,
           end,
           hintsUsed: hintLevel,

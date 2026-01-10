@@ -199,8 +199,11 @@ describe("ID Validation Integration Tests", () => {
   });
 
   describe("useGameActions ID Validation", () => {
-    it("should handle Clerk ID format in submitGuess with proper error", async () => {
-      const mockSubmitGuess = vi.fn();
+    it("should call mutation even with Clerk ID format (server handles auth)", async () => {
+      // Note: With the security fix, userId is no longer passed to the server.
+      // The client doesn't validate userId format - it just checks if userId is truthy.
+      // The server derives userId from auth context for security.
+      const mockSubmitGuess = vi.fn().mockResolvedValue({ success: true });
       mockUseMutation.mockReturnValue(mockSubmitGuess);
 
       const sources: DataSources = {
@@ -215,7 +218,7 @@ describe("ID Validation Integration Tests", () => {
           error: null,
         },
         auth: {
-          userId: "user_2gFqK5X7B8hM9nL0P3rT6vY1dZ4w", // Clerk ID format
+          userId: "user_2gFqK5X7B8hM9nL0P3rT6vY1dZ4w", // Clerk ID format - client doesn't validate
           isAuthenticated: true,
           isLoading: false,
         },
@@ -234,28 +237,22 @@ describe("ID Validation Integration Tests", () => {
 
       const success = await result.current.submitGuess(1969);
 
-      // Should still return true (optimistic update)
+      // Should return true (mutation succeeded)
       expect(success).toBe(true);
 
       // Should have called addGuess for optimistic update
       expect(sources.session.addGuess).toHaveBeenCalledWith(1969);
 
-      // Should not have called the mutation (validation failed)
-      expect(mockSubmitGuess).not.toHaveBeenCalled();
-
-      // Should show authentication error toast
-      expect(mockAddToast).toHaveBeenCalledWith({
-        title: "Authentication Error",
-        description: "There was an issue with your user session. Please refresh the page.",
-        variant: "destructive",
+      // Mutation SHOULD be called - server handles auth, not client
+      // userId is no longer passed to the server
+      expect(mockSubmitGuess).toHaveBeenCalledWith({
+        puzzleId: "jh7k3n4m8p9q2r5s6t1u0v3w4x8y9z0a",
+        guess: 1969,
       });
 
-      // Should log validation error
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "[ERROR] Invalid ID format detected:",
-        expect.any(String),
-        "for type:",
-        "users",
+      // No client-side validation errors
+      expect(consoleErrorSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Invalid ID format"),
       );
     });
 
@@ -296,10 +293,9 @@ describe("ID Validation Integration Tests", () => {
 
       expect(success).toBe(true);
 
-      // Should have called the mutation with valid IDs
+      // Should have called the mutation with valid puzzle ID (userId derived on server)
       expect(mockSubmitGuess).toHaveBeenCalledWith({
         puzzleId: "jh7k3n4m8p9q2r5s6t1u0v3w4x8y9z0a",
-        userId: "ab2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q",
         guess: 1969,
       });
 
