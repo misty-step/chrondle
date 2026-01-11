@@ -99,14 +99,6 @@ export function RangeInput({
 
   // --- Slider Interaction Logic ---
 
-  const handleStartInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setStartInput(e.target.value);
-  };
-
-  const handleEndInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEndInput(e.target.value);
-  };
-
   const handleStartEraChange = (era: Era) => {
     setStartEra(era);
     const parsed = parseInt(startInput, 10);
@@ -261,7 +253,7 @@ export function RangeInput({
                   inputMode="numeric"
                   value={startInput}
                   onChange={(e) => {
-                    handleStartInputChange(e);
+                    setStartInput(e.target.value);
                     if (startError) setStartError(null);
                   }}
                   onBlur={applyStartYear}
@@ -318,7 +310,7 @@ export function RangeInput({
                   inputMode="numeric"
                   value={endInput}
                   onChange={(e) => {
-                    handleEndInputChange(e);
+                    setEndInput(e.target.value);
                     if (endError) setEndError(null);
                   }}
                   onBlur={applyEndYear}
