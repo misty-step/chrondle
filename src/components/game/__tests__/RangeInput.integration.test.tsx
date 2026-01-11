@@ -247,6 +247,123 @@ describe("RangeInput", () => {
     });
   });
 
+  describe("Validation Error Messages", () => {
+    it("shows error message when start year is out of valid range", () => {
+      renderRangeInput();
+
+      const startInput = screen.getByLabelText(/from year/i);
+
+      // Enter a year way outside the valid range (e.g., 5000 BC when max is 3000 BC)
+      fireEvent.change(startInput, { target: { value: "5000" } });
+      fireEvent.blur(startInput);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      // Should show error message with valid range
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+      expect(screen.getByText(/valid range/i)).toBeInTheDocument();
+    });
+
+    it("shows error message when end year is out of valid range", () => {
+      renderRangeInput();
+
+      const endInput = screen.getByLabelText(/to year/i);
+
+      // Enter a year in the future (e.g., 3000 AD when max is 2025 AD)
+      fireEvent.change(endInput, { target: { value: "3000" } });
+      fireEvent.blur(endInput);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      // Should show error message with valid range
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+      expect(screen.getByText(/valid range/i)).toBeInTheDocument();
+    });
+
+    it("shows error message for invalid input (non-numeric)", () => {
+      renderRangeInput();
+
+      const startInput = screen.getByLabelText(/from year/i);
+
+      // Enter non-numeric value
+      fireEvent.change(startInput, { target: { value: "abc" } });
+      fireEvent.blur(startInput);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      // Should show error message
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+      expect(screen.getByText(/enter a valid year/i)).toBeInTheDocument();
+    });
+
+    it("clears error message when valid input is entered", () => {
+      renderRangeInput();
+
+      const startInput = screen.getByLabelText(/from year/i);
+
+      // First, create an error
+      fireEvent.change(startInput, { target: { value: "5000" } });
+      fireEvent.blur(startInput);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      // Error should be visible
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+
+      // Start typing - error should clear
+      fireEvent.change(startInput, { target: { value: "1" } });
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      // Error should be gone (cleared on change)
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("sets aria-invalid attribute on invalid input", () => {
+      renderRangeInput();
+
+      const startInput = screen.getByLabelText(/from year/i);
+
+      // Enter invalid value
+      fireEvent.change(startInput, { target: { value: "5000" } });
+      fireEvent.blur(startInput);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      // aria-invalid should be true
+      expect(startInput).toHaveAttribute("aria-invalid", "true");
+    });
+
+    it("preserves invalid input so user sees what they typed", () => {
+      renderRangeInput();
+
+      const startInput = screen.getByLabelText(/from year/i);
+
+      // Enter out-of-range value
+      fireEvent.change(startInput, { target: { value: "5000" } });
+      fireEvent.blur(startInput);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      // Input should still show 5000, not reset to previous value
+      expect(startInput).toHaveValue("5000");
+    });
+  });
+
   describe("Commit Functionality", () => {
     it("commits the current range and resets state", () => {
       const handleCommit = vi.fn();

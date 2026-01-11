@@ -67,6 +67,8 @@ export function RangeInput({
   const [endInput, setEndInput] = useState(String(endEraYear.year));
   const [startEra, setStartEra] = useState<Era>(startEraYear.era);
   const [endEra, setEndEra] = useState<Era>(endEraYear.era);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [endError, setEndError] = useState<string | null>(null);
 
   useEffect(() => {
     const start = convertFromInternalYear(range[0]);
@@ -96,14 +98,6 @@ export function RangeInput({
   }, [minYear, maxYear, updateRange]);
 
   // --- Slider Interaction Logic ---
-
-  const handleStartInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setStartInput(e.target.value);
-  };
-
-  const handleEndInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEndInput(e.target.value);
-  };
 
   const handleStartEraChange = (era: Era) => {
     setStartEra(era);
@@ -136,14 +130,18 @@ export function RangeInput({
       if (internalYear >= minYear && internalYear <= maxYear) {
         updateRange([internalYear, Math.max(internalYear, range[1])]);
         setHasBeenModified(true);
+        setStartError(null);
       } else {
-        const current = convertFromInternalYear(range[0]);
-        setStartInput(String(current.year));
-        setStartEra(current.era);
+        setStartError(formatValidRangeMessage());
+        // Keep the invalid input visible so user sees what they typed
       }
-    } else {
+    } else if (startInput.trim() === "") {
+      // Empty input - reset silently
       const current = convertFromInternalYear(range[0]);
       setStartInput(String(current.year));
+      setStartError(null);
+    } else {
+      setStartError("Enter a valid year");
     }
   };
 
@@ -154,14 +152,18 @@ export function RangeInput({
       if (internalYear >= minYear && internalYear <= maxYear) {
         updateRange([Math.min(range[0], internalYear), internalYear]);
         setHasBeenModified(true);
+        setEndError(null);
       } else {
-        const current = convertFromInternalYear(range[1]);
-        setEndInput(String(current.year));
-        setEndEra(current.era);
+        setEndError(formatValidRangeMessage());
+        // Keep the invalid input visible so user sees what they typed
       }
-    } else {
+    } else if (endInput.trim() === "") {
+      // Empty input - reset silently
       const current = convertFromInternalYear(range[1]);
       setEndInput(String(current.year));
+      setEndError(null);
+    } else {
+      setEndError("Enter a valid year");
     }
   };
 
@@ -181,6 +183,11 @@ export function RangeInput({
       return `${Math.abs(internalYear)} BC`;
     }
     return `${internalYear} AD`;
+  };
+
+  // Format valid range message for errors
+  const formatValidRangeMessage = () => {
+    return `Valid range: ${formatYearDisplay(minYear)} to ${formatYearDisplay(maxYear)}`;
   };
 
   return (
@@ -245,7 +252,10 @@ export function RangeInput({
                   type="text"
                   inputMode="numeric"
                   value={startInput}
-                  onChange={handleStartInputChange}
+                  onChange={(e) => {
+                    setStartInput(e.target.value);
+                    if (startError) setStartError(null);
+                  }}
                   onBlur={applyStartYear}
                   onKeyDown={(e) => handleInputKeyDown(e, applyStartYear)}
                   disabled={disabled}
@@ -253,8 +263,11 @@ export function RangeInput({
                     "ledger-entry-line w-full px-2 pt-1 pb-2 text-center font-mono text-3xl font-semibold tabular-nums",
                     "text-body-primary placeholder:text-muted-foreground/50",
                     "disabled:cursor-not-allowed disabled:opacity-50",
+                    startError && "border-feedback-error text-feedback-error border-b-2",
                   )}
                   aria-label="Start year"
+                  aria-invalid={!!startError}
+                  aria-describedby={startError ? "start-year-error" : undefined}
                 />
               </div>
               <EraToggle
@@ -264,6 +277,16 @@ export function RangeInput({
                 size="sm"
               />
             </div>
+            {startError && (
+              <p
+                id="start-year-error"
+                className="text-feedback-error mt-2 flex items-center gap-1.5 text-xs font-medium"
+                role="alert"
+              >
+                <span aria-hidden="true">⚠</span>
+                {startError}
+              </p>
+            )}
           </div>
 
           {/* Arrow Separator */}
@@ -286,7 +309,10 @@ export function RangeInput({
                   type="text"
                   inputMode="numeric"
                   value={endInput}
-                  onChange={handleEndInputChange}
+                  onChange={(e) => {
+                    setEndInput(e.target.value);
+                    if (endError) setEndError(null);
+                  }}
                   onBlur={applyEndYear}
                   onKeyDown={(e) => handleInputKeyDown(e, applyEndYear)}
                   disabled={disabled}
@@ -294,8 +320,11 @@ export function RangeInput({
                     "ledger-entry-line w-full px-2 pt-1 pb-2 text-center font-mono text-3xl font-semibold tabular-nums",
                     "text-body-primary placeholder:text-muted-foreground/50",
                     "disabled:cursor-not-allowed disabled:opacity-50",
+                    endError && "border-feedback-error text-feedback-error border-b-2",
                   )}
                   aria-label="End year"
+                  aria-invalid={!!endError}
+                  aria-describedby={endError ? "end-year-error" : undefined}
                 />
               </div>
               <EraToggle
@@ -305,6 +334,16 @@ export function RangeInput({
                 size="sm"
               />
             </div>
+            {endError && (
+              <p
+                id="end-year-error"
+                className="text-feedback-error mt-2 flex items-center gap-1.5 text-xs font-medium"
+                role="alert"
+              >
+                <span aria-hidden="true">⚠</span>
+                {endError}
+              </p>
+            )}
           </div>
         </div>
 
