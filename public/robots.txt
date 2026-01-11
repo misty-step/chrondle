@@ -2,7 +2,6 @@
 # Allow search engine crawlers
 
 User-agent: *
-Allow: /
 
 # Sitemap location
 Sitemap: https://chrondle.app/sitemap.xml

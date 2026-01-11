@@ -39,13 +39,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${BASE_URL}/legal/privacy`,
-      lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.3,
     },
     {
       url: `${BASE_URL}/legal/terms`,
-      lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.3,
     },
@@ -69,23 +67,18 @@ async function fetchPuzzleRoutes(): Promise<MetadataRoute.Sitemap> {
     const { count } = await client.query(api.puzzles.getTotalPuzzles);
 
     // Generate routes for all archive puzzles
-    const routes: MetadataRoute.Sitemap = [];
-    for (let puzzleNumber = 1; puzzleNumber <= count; puzzleNumber++) {
-      // Classic archive puzzle
-      routes.push({
+    return Array.from({ length: count }, (_, i) => i + 1).flatMap((puzzleNumber) => [
+      {
         url: `${BASE_URL}/archive/puzzle/${puzzleNumber}`,
-        changeFrequency: "never",
+        changeFrequency: "never" as const,
         priority: 0.6,
-      });
-      // Order archive puzzle
-      routes.push({
+      },
+      {
         url: `${BASE_URL}/archive/order/${puzzleNumber}`,
-        changeFrequency: "never",
+        changeFrequency: "never" as const,
         priority: 0.6,
-      });
-    }
-
-    return routes;
+      },
+    ]);
   } catch (error) {
     logger.error("Failed to fetch puzzle count for sitemap:", error);
     return [];
