@@ -12,6 +12,7 @@ import { query } from "../_generated/server";
  * - getUserByClerkId: Get user by Clerk ID (for webhooks/internal use)
  * - userExists: Check if user exists by Clerk ID
  * - getUserStats: Get user statistics with recent play history
+ * - hasArchiveAccess: Check if user has paid archive access
  *
  * Dependencies:
  * - Convex auth: getUserIdentity() for authentication
@@ -160,5 +161,53 @@ export const getUserStats = query({
           ? Math.round((plays.filter((p) => p.completedAt).length / user.totalPlays) * 100)
           : 0,
     };
+  },
+});
+
+/**
+ * Check if user has paid archive access
+ *
+ * Returns true if:
+ * - User is authenticated
+ * - User has active subscription
+ * - Subscription hasn't expired
+ *
+ * Used for server-side entitlement gating on archive pages.
+ */
+export const hasArchiveAccess = query({
+  args: {
+    clerkId: v.optional(v.string()),
+  },
+  handler: async (ctx, { clerkId }) => {
+    // Determine target clerkId
+    let targetClerkId = clerkId;
+    if (!targetClerkId) {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        return false;
+      }
+      targetClerkId = identity.subject;
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk", (q) => q.eq("clerkId", targetClerkId))
+      .first();
+
+    if (!user) {
+      return false;
+    }
+
+    // Check subscription status
+    if (user.subscriptionStatus !== "active") {
+      return false;
+    }
+
+    // Check if subscription has expired
+    if (user.subscriptionEndDate && user.subscriptionEndDate < Date.now()) {
+      return false;
+    }
+
+    return true;
   },
 });

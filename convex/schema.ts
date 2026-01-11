@@ -173,7 +173,14 @@ export default defineSchema({
     totalPlays: v.number(),
     perfectGames: v.number(), // Guessed in 1 try
     updatedAt: v.number(), // For streak updates
-  }).index("by_clerk", ["clerkId"]),
+    // Stripe subscription fields
+    stripeCustomerId: v.optional(v.string()), // Stripe customer ID (set on first checkout)
+    subscriptionStatus: v.optional(v.string()), // 'active' | 'canceled' | 'past_due' | null
+    subscriptionPlan: v.optional(v.string()), // 'monthly' | 'annual' | null
+    subscriptionEndDate: v.optional(v.number()), // Unix timestamp when current period ends
+  })
+    .index("by_clerk", ["clerkId"])
+    .index("by_stripe", ["stripeCustomerId"]),
 
   // Event generation logs (for autonomous event pipeline monitoring)
   generation_logs: defineTable({
