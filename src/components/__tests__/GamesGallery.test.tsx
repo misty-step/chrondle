@@ -25,6 +25,14 @@ vi.mock("@/lib/modePreference", () => ({
   setModePreferenceCookie: vi.fn(),
 }));
 
+// Mock WelcomeModal to avoid localStorage complexity in GamesGallery tests
+vi.mock("@/components/WelcomeModal", () => ({
+  WelcomeModal: function MockWelcomeModal() {
+    return null;
+  },
+  WELCOME_SEEN_KEY: "chrondle_seen_welcome",
+}));
+
 // Mock motion/react - use function syntax for React access
 vi.mock("motion/react", () => {
   // Use factory function that returns mocks
@@ -95,6 +103,18 @@ vi.mock("lucide-react", () => ({
   },
   Moon: function Moon() {
     return React.createElement("span", { "data-testid": "moon" }, "☽");
+  },
+  Calendar: function Calendar() {
+    return React.createElement("span", { "data-testid": "calendar" }, "📅");
+  },
+  Target: function Target() {
+    return React.createElement("span", { "data-testid": "target" }, "🎯");
+  },
+  Lightbulb: function Lightbulb() {
+    return React.createElement("span", { "data-testid": "lightbulb" }, "💡");
+  },
+  XIcon: function XIcon() {
+    return React.createElement("span", { "data-testid": "x-icon" }, "✕");
   },
 }));
 

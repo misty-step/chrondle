@@ -8,6 +8,7 @@ import { ArrowRight, Crosshair, Shuffle, GripHorizontal, Crown, Sun, Moon } from
 import { setModePreferenceCookie, type ModeKey } from "@/lib/modePreference";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/SessionThemeProvider";
+import { WelcomeModal, WELCOME_SEEN_KEY } from "@/components/WelcomeModal";
 
 // --- Configuration ---
 
@@ -71,6 +72,21 @@ export function GamesGallery() {
   const [activeKey, setActiveKey] = useState<ModeKey | null>("classic");
   const { currentTheme, toggle, isMounted } = useTheme();
   const [isMobile, setIsMobile] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  // Check if first-time visitor on mount (after hydration)
+  useEffect(() => {
+    if (!isMounted) return;
+    const hasSeenWelcome = localStorage.getItem(WELCOME_SEEN_KEY);
+    if (!hasSeenWelcome) {
+      setShowWelcome(true);
+    }
+  }, [isMounted]);
+
+  const handleWelcomeDismiss = useCallback(() => {
+    localStorage.setItem(WELCOME_SEEN_KEY, "true");
+    setShowWelcome(false);
+  }, []);
 
   // Mobile detection for responsive layout adjustments
   useEffect(() => {
@@ -94,6 +110,8 @@ export function GamesGallery() {
 
   return (
     <main className="bg-background relative flex h-[100dvh] w-full flex-col overflow-hidden md:flex-row">
+      <WelcomeModal open={showWelcome} onDismiss={handleWelcomeDismiss} />
+
       {/* --- Branding Anchor with Theme Toggle --- */}
       <div
         className={cn(
