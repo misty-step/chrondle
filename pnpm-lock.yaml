@@ -74,6 +74,9 @@ importers:
       '@sentry/nextjs':
         specifier: ^10.27.0
         version: 10.27.0(@opentelemetry/context-async-hooks@2.2.0(@opentelemetry/api@1.9.0))(@opentelemetry/core@2.2.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))(next@16.0.10(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(webpack@5.103.0)
+      '@stripe/stripe-js':
+        specifier: ^8.6.1
+        version: 8.6.1
       '@types/canvas-confetti':
         specifier: ^1.9.0
         version: 1.9.0
@@ -119,6 +122,9 @@ importers:
       resend:
         specifier: ^6.5.2
         version: 6.5.2
+      stripe:
+        specifier: ^20.1.2
+        version: 20.1.2(@types/node@20.19.1)
       svix:
         specifier: ^1.69.0
         version: 1.69.0
@@ -3219,6 +3225,10 @@ packages:
 
   '@stablelib/base64@1.0.1':
     resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
+
+  '@stripe/stripe-js@8.6.1':
+    resolution: {integrity: sha512-UJ05U2062XDgydbUcETH1AoRQLNhigQ2KmDn1BG8sC3xfzu6JKg95Qt6YozdzFpxl1Npii/02m2LEWFt1RYjVA==}
+    engines: {node: '>=12.16'}
 
   '@swc/core-darwin-arm64@1.15.5':
     resolution: {integrity: sha512-RvdpUcXrIz12yONzOdQrJbEnq23cOc2IHOU1eB8kPxPNNInlm4YTzZEA3zf3PusNpZZLxwArPVLCg0QsFQoTYw==}
@@ -8107,6 +8117,15 @@ packages:
 
   strip-literal@3.0.0:
     resolution: {integrity: sha512-TcccoMhJOM3OebGhSBEmp3UZ2SfDMZUEBdRA/9ynfLi8yYajyWX3JiXArcJt4Umh4vISpspkQIY8ZZoCqjbviA==}
+
+  stripe@20.1.2:
+    resolution: {integrity: sha512-qU+lQRRJnTxmyvglYBPE24/IepncmywsAg0GDTsTdP2pb+3e3RdREHJZjKgqCmv0phPxN/nmgNPnIPPH8w0P4A==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      '@types/node': '>=16'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
 
   strnum@2.1.2:
     resolution: {integrity: sha512-l63NF9y/cLROq/yqKXSLtcMeeyOfnSQlfMSlzFt/K73oIaD8DGaQWd7Z34X9GPiKqP5rbSh84Hl4bOlLcjiSrQ==}
@@ -13150,6 +13169,8 @@ snapshots:
   '@socket.io/component-emitter@3.1.2': {}
 
   '@stablelib/base64@1.0.1': {}
+
+  '@stripe/stripe-js@8.6.1': {}
 
   '@swc/core-darwin-arm64@1.15.5':
     optional: true
@@ -18736,6 +18757,12 @@ snapshots:
   strip-literal@3.0.0:
     dependencies:
       js-tokens: 9.0.1
+
+  stripe@20.1.2(@types/node@20.19.1):
+    dependencies:
+      qs: 6.14.1
+    optionalDependencies:
+      '@types/node': 20.19.1
 
   strnum@2.1.2: {}
 
