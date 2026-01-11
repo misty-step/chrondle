@@ -1,0 +1,13 @@
+# Chrondle robots.txt
+# Allow search engine crawlers
+
+User-agent: *
+
+# Sitemap location
+Sitemap: https://chrondle.app/sitemap.xml
+
+# Disallow auth and admin pages
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /admin
+Disallow: /api/
