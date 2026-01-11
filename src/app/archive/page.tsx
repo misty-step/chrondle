@@ -189,6 +189,19 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
   }
   // Convex queries complete
 
+  // Check archive access (subscription status)
+  let hasArchiveAccess = false;
+  if (clerkUser && convexUser) {
+    try {
+      hasArchiveAccess = await client.query(api.users.hasArchiveAccess, {
+        clerkId: clerkUser.id,
+      });
+    } catch (error) {
+      logger.warn("[Archive] hasArchiveAccess check failed:", error);
+      hasArchiveAccess = false;
+    }
+  }
+
   // Fetch archive puzzles from Convex with graceful degradation
   let archiveData: {
     puzzles: any[]; // Will be properly typed from Convex
@@ -362,7 +375,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
           ) : (
             <>
               {/* Archive grid - filters by local date to hide future puzzles */}
-              <ArchiveGrid puzzles={paginatedData} />
+              <ArchiveGrid puzzles={paginatedData} hasAccess={hasArchiveAccess} />
 
               {/* Pagination controls */}
               {totalPages > 1 && (
