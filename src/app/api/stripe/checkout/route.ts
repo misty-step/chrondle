@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
-import { stripe, PRICES, PricePlan, getAppOrigin } from "@/lib/stripe";
+import { getStripe, PRICES, PricePlan, getAppOrigin } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
 
 /**
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const cancelUrl = `${origin}/pricing`;
 
     // Create Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [

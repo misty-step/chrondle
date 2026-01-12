@@ -1,15 +1,24 @@
 import Stripe from "stripe";
 
+let _stripe: Stripe | null = null;
+
 /**
- * Server-side Stripe client singleton
- *
- * Usage: Import in API routes and server components only.
- * For client-side, use @stripe/stripe-js with NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.
+ * Get the Stripe client singleton.
+ * Lazy-initialized to allow builds without STRIPE_SECRET_KEY.
  */
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-12-15.clover",
-  typescript: true,
-});
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) {
+      throw new Error("STRIPE_SECRET_KEY is not configured. Add it to your environment variables.");
+    }
+    _stripe = new Stripe(key, {
+      apiVersion: "2025-12-15.clover",
+      typescript: true,
+    });
+  }
+  return _stripe;
+}
 
 /**
  * Price IDs from Stripe Dashboard

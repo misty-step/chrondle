@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { api, requireConvexClient } from "@/lib/convexServer";
-import { stripe, getAppOrigin } from "@/lib/stripe";
+import { getStripe, getAppOrigin } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
 
 /**
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     const returnUrl = `${getAppOrigin(req)}/archive`;
 
     // Create portal session
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: convexUser.stripeCustomerId,
       return_url: returnUrl,
     });
