@@ -9,8 +9,11 @@ const isProtectedRoute = createRouteMatcher([
 // Define routes that should always be public
 const isPublicRoute = createRouteMatcher([
   "/", // Home page (today's puzzle)
-  "/archive(.*)", // Archive routes (temporarily public for testing)
+  "/archive(.*)", // Archive browsing (puzzles gated by subscription)
+  "/pricing(.*)", // Pricing page
   "/api/historical-context(.*)", // Historical context API
+  "/api/stripe/checkout(.*)", // Stripe checkout (auth checked in handler)
+  "/api/webhooks/stripe(.*)", // Stripe webhooks
   "/sign-in(.*)",
   "/sign-up(.*)",
 ]);
