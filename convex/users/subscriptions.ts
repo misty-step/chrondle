@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation } from "../_generated/server";
+import { mutation, query } from "../_generated/server";
 
 /**
  * Subscription Mutations - Stripe Integration
@@ -123,7 +123,7 @@ export const clearSubscription = mutation({
 /**
  * Get subscription status for current user (client-callable)
  */
-export const getSubscriptionStatus = mutation({
+export const getSubscriptionStatus = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {

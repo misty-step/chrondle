@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
-import { stripe, PRICES, PricePlan } from "@/lib/stripe";
+import { stripe, PRICES, PricePlan, getAppOrigin } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
 
 /**
@@ -40,8 +40,7 @@ export async function POST(req: NextRequest) {
     )?.emailAddress;
 
     // Build success/cancel URLs
-    const origin =
-      req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const origin = getAppOrigin(req);
     const successUrl = `${origin}/archive?checkout=success`;
     const cancelUrl = `${origin}/pricing`;
 

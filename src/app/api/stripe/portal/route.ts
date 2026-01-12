@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "convex/_generated/api";
-import { stripe } from "@/lib/stripe";
-import { getEnvVar } from "@/lib/env";
+import { api, requireConvexClient } from "@/lib/convexServer";
+import { stripe, getAppOrigin } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
 
 /**
@@ -20,14 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get Convex client
-    const convexUrl = getEnvVar("NEXT_PUBLIC_CONVEX_URL");
-    if (!convexUrl) {
-      logger.error("[portal] NEXT_PUBLIC_CONVEX_URL not configured");
-      return NextResponse.json({ error: "Configuration error" }, { status: 500 });
-    }
-
-    const convexClient = new ConvexHttpClient(convexUrl);
+    const convexClient = requireConvexClient();
 
     // Get user's Stripe customer ID from Convex
     const convexUser = await convexClient.query(api.users.getUserByClerkId, {
@@ -40,9 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build return URL
-    const origin =
-      req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const returnUrl = `${origin}/archive`;
+    const returnUrl = `${getAppOrigin(req)}/archive`;
 
     // Create portal session
     const session = await stripe.billingPortal.sessions.create({

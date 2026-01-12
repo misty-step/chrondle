@@ -2,10 +2,27 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "convex/_generated/api";
+import { api, requireConvexClient } from "@/lib/convexServer";
 import { stripe } from "@/lib/stripe";
-import { getEnvVar, isProduction } from "@/lib/env";
+import { getEnvVar } from "@/lib/env";
 import { logger } from "@/lib/logger";
+
+type SubscriptionStatus = "active" | "canceled" | "past_due" | "trialing" | null;
+
+/** Map Stripe status to our simplified status */
+const STATUS_MAP: Record<string, SubscriptionStatus> = {
+  active: "active",
+  past_due: "past_due",
+  canceled: "canceled",
+  unpaid: "canceled",
+  trialing: "trialing",
+};
+
+/** Extract period end from subscription, with 30-day fallback */
+function getSubscriptionPeriodEnd(subscription: Stripe.Subscription): number {
+  const periodEnd = subscription.items.data[0]?.current_period_end;
+  return periodEnd ?? Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+}
 
 /**
  * POST /api/webhooks/stripe
@@ -14,17 +31,13 @@ import { logger } from "@/lib/logger";
  * Events: checkout.session.completed, customer.subscription.updated/deleted, invoice.payment_failed
  */
 export async function POST(req: NextRequest) {
-  // Validate Convex URL
-  const convexUrl = getEnvVar("NEXT_PUBLIC_CONVEX_URL");
-  if (!convexUrl) {
+  let convexClient: ConvexHttpClient;
+  try {
+    convexClient = requireConvexClient();
+  } catch {
     logger.error("[stripe-webhook] NEXT_PUBLIC_CONVEX_URL not configured");
-    return NextResponse.json(
-      { error: isProduction() ? "Service unavailable" : "NEXT_PUBLIC_CONVEX_URL not configured" },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
   }
-
-  const convexClient = new ConvexHttpClient(convexUrl);
 
   // Get raw body for signature verification
   const body = await req.text();
@@ -126,10 +139,7 @@ async function handleCheckoutCompleted(client: ConvexHttpClient, session: Stripe
       expand: ["items.data"],
     });
     const plan = (subscription.metadata.plan as "monthly" | "annual") || "monthly";
-    // Get current_period_end from the first subscription item
-    const firstItem = subscription.items.data[0];
-    const periodEnd =
-      firstItem?.current_period_end ?? Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+    const periodEnd = getSubscriptionPeriodEnd(subscription);
 
     await client.mutation(api.users.updateSubscription, {
       stripeCustomerId,
@@ -153,31 +163,8 @@ async function handleSubscriptionUpdated(
 ) {
   const stripeCustomerId = subscription.customer as string;
   const plan = (subscription.metadata.plan as "monthly" | "annual") || "monthly";
-
-  // Map Stripe status to our simplified status
-  let subscriptionStatus: "active" | "canceled" | "past_due" | "trialing" | null;
-  switch (subscription.status) {
-    case "active":
-      subscriptionStatus = "active";
-      break;
-    case "past_due":
-      subscriptionStatus = "past_due";
-      break;
-    case "canceled":
-    case "unpaid":
-      subscriptionStatus = "canceled";
-      break;
-    case "trialing":
-      subscriptionStatus = "trialing";
-      break;
-    default:
-      subscriptionStatus = null;
-  }
-
-  // Get current_period_end from the first subscription item
-  const firstItem = subscription.items.data[0];
-  const periodEnd =
-    firstItem?.current_period_end ?? Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+  const subscriptionStatus = STATUS_MAP[subscription.status] ?? null;
+  const periodEnd = getSubscriptionPeriodEnd(subscription);
 
   await client.mutation(api.users.updateSubscription, {
     stripeCustomerId,

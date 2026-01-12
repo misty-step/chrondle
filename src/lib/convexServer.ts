@@ -6,11 +6,27 @@ import type { Puzzle } from "@/types/puzzle";
 
 export { api };
 
+/**
+ * Get Convex client, returning null if not configured.
+ * Use this for pages that can gracefully degrade without Convex.
+ */
 export function getConvexClient(): ConvexHttpClient | null {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
   if (!url) {
     // Return null instead of throwing - allows pages to handle missing env var gracefully
     return null;
+  }
+  return new ConvexHttpClient(url);
+}
+
+/**
+ * Get Convex client, throwing if not configured.
+ * Use this for API routes where Convex is required.
+ */
+export function requireConvexClient(): ConvexHttpClient {
+  const url = process.env.NEXT_PUBLIC_CONVEX_URL;
+  if (!url) {
+    throw new Error("NEXT_PUBLIC_CONVEX_URL not configured");
   }
   return new ConvexHttpClient(url);
 }

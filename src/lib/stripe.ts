@@ -23,13 +23,9 @@ export const PRICES = {
 export type PricePlan = keyof typeof PRICES;
 
 /**
- * Check if a user has active archive access based on subscription status
+ * Get the app origin from request headers.
+ * Falls back to NEXT_PUBLIC_APP_URL or localhost.
  */
-export function hasActiveSubscription(
-  subscriptionStatus: string | undefined | null,
-  subscriptionEndDate: number | undefined | null,
-): boolean {
-  if (subscriptionStatus !== "active") return false;
-  if (subscriptionEndDate && subscriptionEndDate < Date.now()) return false;
-  return true;
+export function getAppOrigin(req: Request): string {
+  return req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 }

@@ -354,3 +354,176 @@ describe("users/statistics", () => {
     });
   });
 });
+
+describe("users/queries - hasArchiveAccess", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-01-15T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  describe("hasArchiveAccess", () => {
+    it("returns true for active subscription with future expiry", async () => {
+      const t = convexTest(schema, modules);
+      const futureDate = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days ahead
+
+      await t.run(async (ctx) => {
+        await ctx.db.insert("users", {
+          clerkId: "clerk_active_sub",
+          email: "active@example.com",
+          subscriptionStatus: "active",
+          subscriptionPlan: "monthly",
+          subscriptionEndDate: futureDate,
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
+        clerkId: "clerk_active_sub",
+      });
+
+      expect(hasAccess).toBe(true);
+    });
+
+    it("returns true for active subscription with no expiry date", async () => {
+      const t = convexTest(schema, modules);
+
+      await t.run(async (ctx) => {
+        await ctx.db.insert("users", {
+          clerkId: "clerk_no_expiry",
+          email: "noexpiry@example.com",
+          subscriptionStatus: "active",
+          subscriptionPlan: "annual",
+          // No subscriptionEndDate
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
+        clerkId: "clerk_no_expiry",
+      });
+
+      expect(hasAccess).toBe(true);
+    });
+
+    it("returns false for active subscription with expired date", async () => {
+      const t = convexTest(schema, modules);
+      const pastDate = Date.now() - 24 * 60 * 60 * 1000; // 1 day ago
+
+      await t.run(async (ctx) => {
+        await ctx.db.insert("users", {
+          clerkId: "clerk_expired_sub",
+          email: "expired@example.com",
+          subscriptionStatus: "active",
+          subscriptionPlan: "monthly",
+          subscriptionEndDate: pastDate,
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
+        clerkId: "clerk_expired_sub",
+      });
+
+      expect(hasAccess).toBe(false);
+    });
+
+    it("returns false for canceled subscription", async () => {
+      const t = convexTest(schema, modules);
+      const futureDate = Date.now() + 30 * 24 * 60 * 60 * 1000;
+
+      await t.run(async (ctx) => {
+        await ctx.db.insert("users", {
+          clerkId: "clerk_canceled_sub",
+          email: "canceled@example.com",
+          subscriptionStatus: "canceled",
+          subscriptionPlan: "monthly",
+          subscriptionEndDate: futureDate,
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
+        clerkId: "clerk_canceled_sub",
+      });
+
+      expect(hasAccess).toBe(false);
+    });
+
+    it("returns false for past_due subscription", async () => {
+      const t = convexTest(schema, modules);
+
+      await t.run(async (ctx) => {
+        await ctx.db.insert("users", {
+          clerkId: "clerk_past_due",
+          email: "pastdue@example.com",
+          subscriptionStatus: "past_due",
+          subscriptionPlan: "annual",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
+        clerkId: "clerk_past_due",
+      });
+
+      expect(hasAccess).toBe(false);
+    });
+
+    it("returns false for user without subscription", async () => {
+      const t = convexTest(schema, modules);
+
+      await t.run(async (ctx) => {
+        await ctx.db.insert("users", {
+          clerkId: "clerk_no_sub",
+          email: "nosub@example.com",
+          // No subscription fields
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
+        clerkId: "clerk_no_sub",
+      });
+
+      expect(hasAccess).toBe(false);
+    });
+
+    it("returns false for nonexistent user", async () => {
+      const t = convexTest(schema, modules);
+
+      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
+        clerkId: "clerk_nonexistent",
+      });
+
+      expect(hasAccess).toBe(false);
+    });
+  });
+});

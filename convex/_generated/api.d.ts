@@ -83,6 +83,7 @@ import type * as system_scheduling from "../system/scheduling.js";
 import type * as users_mutations from "../users/mutations.js";
 import type * as users_queries from "../users/queries.js";
 import type * as users_statistics from "../users/statistics.js";
+import type * as users_subscriptions from "../users/subscriptions.js";
 import type * as users from "../users.js";
 
 /**
@@ -164,6 +165,7 @@ declare const fullApi: ApiFromModules<{
   "users/mutations": typeof users_mutations;
   "users/queries": typeof users_queries;
   "users/statistics": typeof users_statistics;
+  "users/subscriptions": typeof users_subscriptions;
   users: typeof users;
 }>;
 export declare const api: FilterApi<
