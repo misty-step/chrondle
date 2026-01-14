@@ -18,10 +18,32 @@ const STATUS_MAP: Record<string, SubscriptionStatus> = {
   trialing: "trialing",
 };
 
-/** Extract period end from subscription, with 30-day fallback */
+/**
+ * Extract customer ID from Stripe object (string | Customer | DeletedCustomer | null)
+ * Returns the customer ID string, or null if invalid
+ */
+function extractCustomerId(
+  customer: string | Stripe.Customer | Stripe.DeletedCustomer | null,
+): string | null {
+  if (typeof customer === "string") {
+    return customer;
+  }
+  if (customer && "id" in customer) {
+    return customer.id;
+  }
+  return null;
+}
+
+/**
+ * Extract period end from subscription's first item.
+ * In Stripe API 2025+, current_period_end is on SubscriptionItem, not Subscription.
+ */
 function getSubscriptionPeriodEnd(subscription: Stripe.Subscription): number {
-  const periodEnd = subscription.items.data[0]?.current_period_end;
-  return periodEnd ?? Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+  const firstItem = subscription.items.data[0];
+  if (!firstItem?.current_period_end) {
+    throw new Error(`Subscription ${subscription.id} missing current_period_end`);
+  }
+  return firstItem.current_period_end;
 }
 
 /**
@@ -114,7 +136,7 @@ export async function POST(req: NextRequest) {
  */
 async function handleCheckoutCompleted(client: ConvexHttpClient, session: Stripe.Checkout.Session) {
   const clerkId = session.client_reference_id;
-  const stripeCustomerId = session.customer as string;
+  const stripeCustomerId = extractCustomerId(session.customer);
 
   if (!clerkId) {
     logger.error("[stripe-webhook] checkout.session.completed missing client_reference_id");
@@ -122,8 +144,10 @@ async function handleCheckoutCompleted(client: ConvexHttpClient, session: Stripe
   }
 
   if (!stripeCustomerId) {
-    logger.error("[stripe-webhook] checkout.session.completed missing customer");
-    throw new Error("Missing customer");
+    logger.error(
+      `[stripe-webhook] checkout.session.completed has invalid customer: ${JSON.stringify(session.customer)}`,
+    );
+    throw new Error("Invalid or missing customer");
   }
 
   // Link Stripe customer to Convex user
@@ -161,7 +185,15 @@ async function handleSubscriptionUpdated(
   client: ConvexHttpClient,
   subscription: Stripe.Subscription,
 ) {
-  const stripeCustomerId = subscription.customer as string;
+  const stripeCustomerId = extractCustomerId(subscription.customer);
+
+  if (!stripeCustomerId) {
+    logger.error(
+      `[stripe-webhook] customer.subscription.updated has invalid customer: ${JSON.stringify(subscription.customer)}`,
+    );
+    throw new Error("Invalid or missing customer");
+  }
+
   const plan = (subscription.metadata.plan as "monthly" | "annual") || "monthly";
   const subscriptionStatus = STATUS_MAP[subscription.status] ?? null;
   const periodEnd = getSubscriptionPeriodEnd(subscription);
@@ -187,7 +219,14 @@ async function handleSubscriptionDeleted(
   client: ConvexHttpClient,
   subscription: Stripe.Subscription,
 ) {
-  const stripeCustomerId = subscription.customer as string;
+  const stripeCustomerId = extractCustomerId(subscription.customer);
+
+  if (!stripeCustomerId) {
+    logger.error(
+      `[stripe-webhook] customer.subscription.deleted has invalid customer: ${JSON.stringify(subscription.customer)}`,
+    );
+    throw new Error("Invalid or missing customer");
+  }
 
   await client.mutation(api.users.clearSubscription, {
     stripeCustomerId,
@@ -202,7 +241,14 @@ async function handleSubscriptionDeleted(
  * Marks subscription as past_due when payment fails.
  */
 async function handlePaymentFailed(client: ConvexHttpClient, invoice: Stripe.Invoice) {
-  const stripeCustomerId = invoice.customer as string;
+  const stripeCustomerId = extractCustomerId(invoice.customer);
+
+  if (!stripeCustomerId) {
+    logger.error(
+      `[stripe-webhook] invoice.payment_failed has invalid customer: ${JSON.stringify(invoice.customer)}`,
+    );
+    throw new Error("Invalid or missing customer");
+  }
 
   // Only update if this is a subscription-related invoice
   const billingReason = invoice.billing_reason;

@@ -119,7 +119,7 @@ describe("users/subscriptions", () => {
       });
     });
 
-    it("handles null status (clears subscription)", async () => {
+    it("handles null status (sets to null in db)", async () => {
       const t = convexTest(schema, modules);
 
       await t.run(async (ctx) => {
@@ -142,8 +142,16 @@ describe("users/subscriptions", () => {
         subscriptionStatus: null,
       });
 
-      // Note: null status doesn't clear the field, it sets undefined
-      // This matches the webhook handler behavior
+      // Verify null status is stored and optional fields unchanged
+      await t.run(async (ctx) => {
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_stripe", (q) => q.eq("stripeCustomerId", "cus_null123"))
+          .first();
+        expect(user?.subscriptionStatus).toBeNull();
+        // Plan should remain unchanged (not passed in args)
+        expect(user?.subscriptionPlan).toBe("annual");
+      });
     });
 
     it("throws error when Stripe customer not found", async () => {

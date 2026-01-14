@@ -19,9 +19,9 @@ export default async function ArchiveOrderPuzzlePage(props: ArchiveOrderPuzzlePa
   // Server-side entitlement check
   const user = await currentUser();
 
-  // If not logged in, redirect to sign-in then pricing
+  // If not logged in, redirect to sign-in then back to this puzzle
   if (!user) {
-    redirect(`/sign-in?redirect_url=/pricing`);
+    redirect(`/sign-in?redirect_url=/archive/order/${parsedNumber}`);
   }
 
   const client = getConvexClient();

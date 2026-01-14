@@ -175,9 +175,17 @@ export default defineSchema({
     updatedAt: v.number(), // For streak updates
     // Stripe subscription fields
     stripeCustomerId: v.optional(v.string()), // Stripe customer ID (set on first checkout)
-    subscriptionStatus: v.optional(v.string()), // 'active' | 'canceled' | 'past_due' | null
-    subscriptionPlan: v.optional(v.string()), // 'monthly' | 'annual' | null
-    subscriptionEndDate: v.optional(v.number()), // Unix timestamp when current period ends
+    subscriptionStatus: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("canceled"),
+        v.literal("past_due"),
+        v.literal("trialing"),
+        v.null(),
+      ),
+    ),
+    subscriptionPlan: v.optional(v.union(v.literal("monthly"), v.literal("annual"), v.null())),
+    subscriptionEndDate: v.optional(v.number()), // Unix timestamp (ms) when current period ends
   })
     .index("by_clerk", ["clerkId"])
     .index("by_stripe", ["stripeCustomerId"]),

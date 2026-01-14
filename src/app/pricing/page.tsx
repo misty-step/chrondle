@@ -33,12 +33,24 @@ export default function PricingPage() {
         body: JSON.stringify({ plan }),
       });
 
-      const data = await response.json();
+      // Handle non-JSON and error responses
+      let data: { url?: string; error?: string } | null = null;
+      try {
+        data = await response.json();
+      } catch {
+        // Non-JSON response
+      }
 
-      if (data.url) {
+      if (!response.ok) {
+        logger.error("Checkout session request failed:", response.status, data);
+        setLoading(null);
+        return;
+      }
+
+      if (data?.url) {
         window.location.href = data.url;
       } else {
-        logger.error("Failed to create checkout session:", data.error);
+        logger.error("Failed to create checkout session:", data?.error);
         setLoading(null);
       }
     } catch (error) {
@@ -103,7 +115,7 @@ export default function PricingPage() {
           {/* Annual Plan */}
           <Card className="border-primary relative flex flex-col border-2">
             <div className="bg-primary text-background absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-xs font-bold tracking-wider uppercase">
-              Save 17%
+              Save 16%
             </div>
             <CardHeader>
               <CardTitle className="text-xl">Annual</CardTitle>

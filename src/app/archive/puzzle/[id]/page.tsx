@@ -21,21 +21,25 @@ export default async function ArchiveClassicPuzzlePage(props: PageProps) {
   // Server-side entitlement check
   const user = await currentUser();
 
-  // If not logged in, redirect to sign-in then pricing
+  // If not logged in, redirect to sign-in then back to this puzzle
   if (!user) {
-    redirect(`/sign-in?redirect_url=/pricing`);
+    redirect(`/sign-in?redirect_url=/archive/puzzle/${puzzleNumber}`);
   }
 
   // Check archive access via Convex
   const client = getConvexClient();
-  if (client) {
-    const hasAccess = await client.query(api.users.hasArchiveAccess, {
-      clerkId: user.id,
-    });
 
-    if (!hasAccess) {
-      redirect("/pricing");
-    }
+  // If Convex client unavailable, don't allow access - paywall requires verification
+  if (!client) {
+    notFound();
+  }
+
+  const hasAccess = await client.query(api.users.hasArchiveAccess, {
+    clerkId: user.id,
+  });
+
+  if (!hasAccess) {
+    redirect("/pricing");
   }
 
   return (

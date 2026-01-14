@@ -20,16 +20,20 @@ export function getStripe(): Stripe {
   return _stripe;
 }
 
-/**
- * Price IDs from Stripe Dashboard
- * Set these in environment variables after creating products/prices in Stripe.
- */
-export const PRICES = {
-  monthly: process.env.STRIPE_PRICE_MONTHLY!, // $0.99/month
-  annual: process.env.STRIPE_PRICE_ANNUAL!, // $9.99/year
-} as const;
+export type PricePlan = "monthly" | "annual";
 
-export type PricePlan = keyof typeof PRICES;
+/**
+ * Get validated price ID from environment.
+ * Throws if price ID is not configured (fail fast on misconfiguration).
+ */
+export function getPriceId(plan: PricePlan): string {
+  const envKey = plan === "monthly" ? "STRIPE_PRICE_MONTHLY" : "STRIPE_PRICE_ANNUAL";
+  const priceId = process.env[envKey];
+  if (!priceId) {
+    throw new Error(`${envKey} is not configured. Add it to your environment variables.`);
+  }
+  return priceId;
+}
 
 /**
  * Get the app origin from request headers.

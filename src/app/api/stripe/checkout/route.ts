@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
-import { getStripe, PRICES, PricePlan, getAppOrigin } from "@/lib/stripe";
+import { getStripe, getPriceId, PricePlan, getAppOrigin } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
 
 /**
@@ -28,11 +28,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const priceId = PRICES[plan];
-    if (!priceId) {
-      logger.error(`[checkout] Missing price ID for plan: ${plan}`);
-      return NextResponse.json({ error: "Price configuration error" }, { status: 500 });
-    }
+    // getPriceId throws if env var not configured
+    const priceId = getPriceId(plan);
 
     // Get user's primary email
     const email = user.emailAddresses.find(

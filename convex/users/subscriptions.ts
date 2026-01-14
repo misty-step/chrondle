@@ -7,8 +7,15 @@ import { mutation, query } from "../_generated/server";
  * Mutations called by webhook handler.
  * Mutations update user subscription state based on Stripe events.
  *
- * Note: Using public mutations (not internal) to allow HTTP client calls from
- * Next.js API routes. Webhook signature verification happens in the API route.
+ * SECURITY NOTE: These mutations are public (not internalMutation) to allow
+ * HTTP client calls from Next.js API routes where Stripe webhook signature
+ * verification occurs. While technically callable from any Convex client,
+ * the attack surface is limited:
+ * - stripeCustomerId is only set via linkStripeCustomer (requires valid clerkId)
+ * - An attacker would need to know a user's stripeCustomerId to tamper
+ *
+ * FUTURE: Consider moving to httpAction with signature verification in Convex,
+ * or adding a shared secret parameter validated server-side.
  */
 
 /**
@@ -76,12 +83,32 @@ export const updateSubscription = mutation({
       throw new Error(`No user found for Stripe customer: ${args.stripeCustomerId}`);
     }
 
-    await ctx.db.patch(user._id, {
-      subscriptionStatus: args.subscriptionStatus ?? undefined,
-      subscriptionPlan: args.subscriptionPlan ?? undefined,
-      subscriptionEndDate: args.subscriptionEndDate ?? undefined,
-      updatedAt: Date.now(),
-    });
+    // Build patch object, properly handling null vs undefined:
+    // - null: explicitly clear the field (convert to undefined for Convex)
+    // - undefined: don't update the field
+    type SubscriptionStatus = "active" | "canceled" | "past_due" | "trialing" | null;
+    type SubscriptionPlan = "monthly" | "annual" | null;
+
+    const patch: {
+      subscriptionStatus?: SubscriptionStatus;
+      subscriptionPlan?: SubscriptionPlan;
+      subscriptionEndDate?: number;
+      updatedAt: number;
+    } = { updatedAt: Date.now() };
+
+    // subscriptionStatus is required in args, always update
+    patch.subscriptionStatus = args.subscriptionStatus;
+
+    // Optional fields: only include if explicitly provided
+    // Convert null to undefined (Convex doesn't store null for optional numbers)
+    if (args.subscriptionPlan !== undefined) {
+      patch.subscriptionPlan = args.subscriptionPlan;
+    }
+    if (args.subscriptionEndDate !== undefined) {
+      patch.subscriptionEndDate = args.subscriptionEndDate ?? undefined;
+    }
+
+    await ctx.db.patch(user._id, patch);
 
     console.log(
       `[subscriptions] Updated user ${user._id}: status=${args.subscriptionStatus}, plan=${args.subscriptionPlan}`,
