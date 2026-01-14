@@ -125,7 +125,9 @@ jobs:
             ${{ runner.os }}-convex-
 
       - name: Generate Convex files
-        if: steps.convex-cache.outputs.cache-hit != 'true'
+        # Skip if files exist (either from git or cache restore-key fallback)
+        # Only run codegen when files are completely missing
+        if: steps.convex-cache.outputs.cache-hit != 'true' && hashFiles('convex/_generated/api.js') == ''
         run: npx convex codegen
         env:
           CONVEX_DEPLOYMENT: fleet-goldfish-183
