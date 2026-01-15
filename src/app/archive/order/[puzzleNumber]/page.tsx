@@ -35,9 +35,14 @@ export default async function ArchiveOrderPuzzlePage(props: ArchiveOrderPuzzlePa
   }
 
   // Check archive access via Convex
-  const hasAccess = await client.query(api.users.hasArchiveAccess, {
-    clerkId: user.id,
-  });
+  let hasAccess = false;
+  try {
+    hasAccess = await client.query(api.users.hasArchiveAccess, {
+      clerkId: user.id,
+    });
+  } catch (error) {
+    logger.warn("[ArchiveOrderPuzzle] hasArchiveAccess check failed:", error);
+  }
 
   if (!hasAccess) {
     redirect("/pricing");

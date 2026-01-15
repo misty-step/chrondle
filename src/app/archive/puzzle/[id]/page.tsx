@@ -3,6 +3,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { api, getConvexClient } from "@/lib/convexServer";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { ClassicArchivePuzzleClient } from "@/components/classic/ClassicArchivePuzzleClient";
+import { logger } from "@/lib/logger";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -34,9 +35,14 @@ export default async function ArchiveClassicPuzzlePage(props: PageProps) {
     notFound();
   }
 
-  const hasAccess = await client.query(api.users.hasArchiveAccess, {
-    clerkId: user.id,
-  });
+  let hasAccess = false;
+  try {
+    hasAccess = await client.query(api.users.hasArchiveAccess, {
+      clerkId: user.id,
+    });
+  } catch (error) {
+    logger.warn("[ArchiveClassicPuzzle] hasArchiveAccess check failed:", error);
+  }
 
   if (!hasAccess) {
     redirect("/pricing");

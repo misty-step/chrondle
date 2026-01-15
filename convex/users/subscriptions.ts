@@ -172,7 +172,7 @@ export const getSubscriptionStatus = query({
       subscriptionPlan: user.subscriptionPlan,
       subscriptionEndDate: user.subscriptionEndDate,
       hasArchiveAccess:
-        user.subscriptionStatus === "active" &&
+        (user.subscriptionStatus === "active" || user.subscriptionStatus === "trialing") &&
         (!user.subscriptionEndDate || user.subscriptionEndDate > Date.now()),
     };
   },

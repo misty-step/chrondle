@@ -198,8 +198,8 @@ export const hasArchiveAccess = query({
       return false;
     }
 
-    // Check subscription status
-    if (user.subscriptionStatus !== "active") {
+    // Check subscription status (active or trialing grants access)
+    if (user.subscriptionStatus !== "active" && user.subscriptionStatus !== "trialing") {
       return false;
     }
 
