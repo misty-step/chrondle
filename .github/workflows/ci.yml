@@ -114,23 +114,8 @@ jobs:
 
       - name: Verify Convex files
         uses: ./.github/actions/verify-convex
-
-      - name: Cache Convex generated files
-        id: convex-cache
-        uses: actions/cache@v4
-        with:
-          path: convex/_generated
-          key: ${{ runner.os }}-convex-${{ hashFiles('convex/schema.ts', 'convex/**/*.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-convex-
-
-      - name: Generate Convex files
-        # Skip if files exist (either from git or cache restore-key fallback)
-        # Only run codegen when files are completely missing
-        if: steps.convex-cache.outputs.cache-hit != 'true' && hashFiles('convex/_generated/api.js') == ''
-        run: npx convex codegen
-        env:
-          CONVEX_DEPLOYMENT: fleet-goldfish-183
+        # NOTE: convex/_generated files are committed to git.
+        # DO NOT cache them - caching causes stale type definitions.
 
       - name: Run linting
         if: matrix.check == 'lint'
@@ -327,25 +312,8 @@ jobs:
 
       - name: Verify Convex files
         uses: ./.github/actions/verify-convex
-
-      - name: Cache Convex generated files
-        id: convex-cache
-        uses: actions/cache@v4
-        with:
-          path: convex/_generated
-          key: ${{ runner.os }}-convex-${{ hashFiles('convex/schema.ts', 'convex/**/*.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-convex-
-
-      - name: Generate Convex files
-        # Skip if files exist (either from git or cache restore-key fallback)
-        # Only run codegen when files are completely missing
-        # Matches the condition in quality-checks job for consistency
-        if: steps.convex-cache.outputs.cache-hit != 'true' && hashFiles('convex/_generated/api.js') == ''
-        run: npx convex codegen
-        env:
-          # Server-side only: Used to identify which Convex deployment to generate types for
-          CONVEX_DEPLOYMENT: fleet-goldfish-183
+        # NOTE: convex/_generated files are committed to git.
+        # DO NOT cache them - caching causes stale type definitions.
 
       - name: Build application
         run: pnpm build
