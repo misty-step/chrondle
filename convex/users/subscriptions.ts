@@ -1,21 +1,17 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { internalMutation, query } from "../_generated/server";
 
 /**
- * Subscription Mutations - Stripe Integration
+ * Subscription Mutations - Stripe Integration (INTERNAL)
  *
- * Mutations called by webhook handler.
- * Mutations update user subscription state based on Stripe events.
+ * These are internalMutation - NOT callable from browsers or external clients.
+ * Only callable from other Convex functions (actions, mutations).
  *
- * SECURITY NOTE: These mutations are public (not internalMutation) to allow
- * HTTP client calls from Next.js API routes where Stripe webhook signature
- * verification occurs. While technically callable from any Convex client,
- * the attack surface is limited:
- * - stripeCustomerId is only set via linkStripeCustomer (requires valid clerkId)
- * - An attacker would need to know a user's stripeCustomerId to tamper
+ * External access goes through the processWebhookEvent action in
+ * convex/stripe/webhookAction.ts which validates the shared secret.
  *
- * FUTURE: Consider moving to httpAction with signature verification in Convex,
- * or adding a shared secret parameter validated server-side.
+ * This architecture follows Ousterhout's "define errors out of existence":
+ * by making mutations internal, unauthorized access is physically impossible.
  */
 
 /**
@@ -23,7 +19,7 @@ import { mutation, query } from "../_generated/server";
  *
  * Uses clerkId to find user since stripeCustomerId doesn't exist yet.
  */
-export const linkStripeCustomer = mutation({
+export const linkStripeCustomer = internalMutation({
   args: {
     clerkId: v.string(),
     stripeCustomerId: v.string(),
@@ -59,7 +55,7 @@ export const linkStripeCustomer = mutation({
  *
  * Handles: checkout.session.completed, customer.subscription.updated/deleted
  */
-export const updateSubscription = mutation({
+export const updateSubscription = internalMutation({
   args: {
     stripeCustomerId: v.string(),
     subscriptionStatus: v.union(
@@ -120,7 +116,7 @@ export const updateSubscription = mutation({
 /**
  * Clear subscription (called when subscription is fully canceled/deleted)
  */
-export const clearSubscription = mutation({
+export const clearSubscription = internalMutation({
   args: {
     stripeCustomerId: v.string(),
   },
@@ -167,7 +163,7 @@ export const getSubscriptionStatus = query({
     }
 
     return {
-      stripeCustomerId: user.stripeCustomerId,
+      // Note: stripeCustomerId intentionally NOT exposed to prevent subscription tampering
       subscriptionStatus: user.subscriptionStatus,
       subscriptionPlan: user.subscriptionPlan,
       subscriptionEndDate: user.subscriptionEndDate,

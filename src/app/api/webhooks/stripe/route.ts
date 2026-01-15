@@ -20,23 +20,17 @@ const STATUS_MAP: Record<string, SubscriptionStatus> = {
 
 /**
  * Extract customer ID from Stripe object (string | Customer | DeletedCustomer | null)
- * Returns the customer ID string, or null if invalid
  */
 function extractCustomerId(
   customer: string | Stripe.Customer | Stripe.DeletedCustomer | null,
 ): string | null {
-  if (typeof customer === "string") {
-    return customer;
-  }
-  if (customer && "id" in customer) {
-    return customer.id;
-  }
+  if (typeof customer === "string") return customer;
+  if (customer && "id" in customer) return customer.id;
   return null;
 }
 
 /**
- * Extract period end from subscription's first item.
- * In Stripe API 2025+, current_period_end is on SubscriptionItem, not Subscription.
+ * Extract period end from subscription (throws if missing)
  */
 function getSubscriptionPeriodEnd(subscription: Stripe.Subscription): number {
   const firstItem = subscription.items.data[0];
@@ -49,8 +43,12 @@ function getSubscriptionPeriodEnd(subscription: Stripe.Subscription): number {
 /**
  * POST /api/webhooks/stripe
  *
- * Handles Stripe webhook events for subscription lifecycle.
- * Events: checkout.session.completed, customer.subscription.updated/deleted, invoice.payment_failed
+ * Stripe webhook handler. Verifies signature then delegates to Convex action.
+ *
+ * Security Model:
+ * 1. Stripe signature verification (cryptographic proof from Stripe)
+ * 2. Shared secret validation (in Convex action)
+ * 3. Internal mutations (physically unreachable from browsers)
  */
 export async function POST(req: NextRequest) {
   let convexClient: ConvexHttpClient;
@@ -59,6 +57,13 @@ export async function POST(req: NextRequest) {
   } catch {
     logger.error("[stripe-webhook] NEXT_PUBLIC_CONVEX_URL not configured");
     return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+  }
+
+  // Get shared secret for Convex action
+  const syncSecret = getEnvVar("STRIPE_SYNC_SECRET");
+  if (!syncSecret) {
+    logger.error("[stripe-webhook] STRIPE_SYNC_SECRET not configured");
+    return NextResponse.json({ error: "Sync secret not configured" }, { status: 500 });
   }
 
   // Get raw body for signature verification
@@ -77,7 +82,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
   }
 
-  // Verify webhook signature
+  // Verify Stripe signature
   let event: Stripe.Event;
   try {
     event = getStripe().webhooks.constructEvent(body, signature, webhookSecret);
@@ -90,28 +95,115 @@ export async function POST(req: NextRequest) {
   logger.info(`[stripe-webhook] Received event: ${event.type} (${event.id})`);
 
   try {
+    // Process event and call Convex action
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        await handleCheckoutCompleted(convexClient, session);
+        const clerkId = session.client_reference_id;
+        const stripeCustomerId = extractCustomerId(session.customer);
+
+        if (!clerkId) {
+          throw new Error("checkout.session.completed missing client_reference_id");
+        }
+        if (!stripeCustomerId) {
+          throw new Error("checkout.session.completed missing customer");
+        }
+
+        // Get subscription details if present
+        let subscriptionStatus: SubscriptionStatus = null;
+        let subscriptionPlan: "monthly" | "annual" | null = null;
+        let subscriptionEndDate: number | null = null;
+
+        const subscriptionId = session.subscription as string;
+        if (subscriptionId) {
+          const subscription = await getStripe().subscriptions.retrieve(subscriptionId, {
+            expand: ["items.data"],
+          });
+          subscriptionStatus = "active";
+          subscriptionPlan = (subscription.metadata.plan as "monthly" | "annual") || "monthly";
+          subscriptionEndDate = getSubscriptionPeriodEnd(subscription) * 1000;
+        }
+
+        await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
+          secret: syncSecret,
+          eventType: "checkout.session.completed",
+          payload: {
+            clerkId,
+            stripeCustomerId,
+            subscriptionStatus,
+            subscriptionPlan,
+            subscriptionEndDate,
+          },
+        });
         break;
       }
 
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionUpdated(convexClient, subscription);
+        const stripeCustomerId = extractCustomerId(subscription.customer);
+
+        if (!stripeCustomerId) {
+          throw new Error("customer.subscription.updated missing customer");
+        }
+
+        const subscriptionStatus = STATUS_MAP[subscription.status] ?? null;
+        const subscriptionPlan = (subscription.metadata.plan as "monthly" | "annual") || "monthly";
+        const subscriptionEndDate = getSubscriptionPeriodEnd(subscription) * 1000;
+
+        await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
+          secret: syncSecret,
+          eventType: "customer.subscription.updated",
+          payload: {
+            stripeCustomerId,
+            subscriptionStatus,
+            subscriptionPlan,
+            subscriptionEndDate,
+          },
+        });
         break;
       }
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionDeleted(convexClient, subscription);
+        const stripeCustomerId = extractCustomerId(subscription.customer);
+
+        if (!stripeCustomerId) {
+          throw new Error("customer.subscription.deleted missing customer");
+        }
+
+        await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
+          secret: syncSecret,
+          eventType: "customer.subscription.deleted",
+          payload: { stripeCustomerId },
+        });
         break;
       }
 
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
-        await handlePaymentFailed(convexClient, invoice);
+        const stripeCustomerId = extractCustomerId(invoice.customer);
+
+        if (!stripeCustomerId) {
+          throw new Error("invoice.payment_failed missing customer");
+        }
+
+        // Only handle subscription-related invoices
+        const billingReason = invoice.billing_reason;
+        if (
+          billingReason &&
+          [
+            "subscription_create",
+            "subscription_cycle",
+            "subscription_update",
+            "subscription_threshold",
+          ].includes(billingReason)
+        ) {
+          await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
+            secret: syncSecret,
+            eventType: "invoice.payment_failed",
+            payload: { stripeCustomerId },
+          });
+        }
         break;
       }
 
@@ -123,151 +215,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     logger.error(`[stripe-webhook] Error processing ${event.type}: ${message}`);
-    // Return 200 to acknowledge receipt (Stripe will retry on 4xx/5xx)
-    // Log error for investigation but don't block webhook delivery
+    // Return 200 to acknowledge receipt - Stripe will retry on 4xx/5xx
     return NextResponse.json({ received: true, error: message });
   }
-}
-
-/**
- * Handle checkout.session.completed
- *
- * Links Stripe customer to user and activates subscription.
- */
-async function handleCheckoutCompleted(client: ConvexHttpClient, session: Stripe.Checkout.Session) {
-  const clerkId = session.client_reference_id;
-  const stripeCustomerId = extractCustomerId(session.customer);
-
-  if (!clerkId) {
-    logger.error("[stripe-webhook] checkout.session.completed missing client_reference_id");
-    throw new Error("Missing client_reference_id");
-  }
-
-  if (!stripeCustomerId) {
-    logger.error(
-      `[stripe-webhook] checkout.session.completed has invalid customer: ${JSON.stringify(session.customer)}`,
-    );
-    throw new Error("Invalid or missing customer");
-  }
-
-  // Link Stripe customer to Convex user
-  await client.mutation(api.users.linkStripeCustomer, {
-    clerkId,
-    stripeCustomerId,
-  });
-
-  // Get subscription details
-  const subscriptionId = session.subscription as string;
-  if (subscriptionId) {
-    const subscription = await getStripe().subscriptions.retrieve(subscriptionId, {
-      expand: ["items.data"],
-    });
-    const plan = (subscription.metadata.plan as "monthly" | "annual") || "monthly";
-    const periodEnd = getSubscriptionPeriodEnd(subscription);
-
-    await client.mutation(api.users.updateSubscription, {
-      stripeCustomerId,
-      subscriptionStatus: "active",
-      subscriptionPlan: plan,
-      subscriptionEndDate: periodEnd * 1000, // Convert to ms
-    });
-  }
-
-  logger.info(`[stripe-webhook] Checkout completed for clerkId: ${clerkId}`);
-}
-
-/**
- * Handle customer.subscription.updated
- *
- * Updates subscription status and period end date.
- */
-async function handleSubscriptionUpdated(
-  client: ConvexHttpClient,
-  subscription: Stripe.Subscription,
-) {
-  const stripeCustomerId = extractCustomerId(subscription.customer);
-
-  if (!stripeCustomerId) {
-    logger.error(
-      `[stripe-webhook] customer.subscription.updated has invalid customer: ${JSON.stringify(subscription.customer)}`,
-    );
-    throw new Error("Invalid or missing customer");
-  }
-
-  const plan = (subscription.metadata.plan as "monthly" | "annual") || "monthly";
-  const subscriptionStatus = STATUS_MAP[subscription.status] ?? null;
-  const periodEnd = getSubscriptionPeriodEnd(subscription);
-
-  await client.mutation(api.users.updateSubscription, {
-    stripeCustomerId,
-    subscriptionStatus,
-    subscriptionPlan: plan,
-    subscriptionEndDate: periodEnd * 1000,
-  });
-
-  logger.info(
-    `[stripe-webhook] Subscription updated for customer: ${stripeCustomerId}, status: ${subscriptionStatus}`,
-  );
-}
-
-/**
- * Handle customer.subscription.deleted
- *
- * Clears subscription when fully canceled.
- */
-async function handleSubscriptionDeleted(
-  client: ConvexHttpClient,
-  subscription: Stripe.Subscription,
-) {
-  const stripeCustomerId = extractCustomerId(subscription.customer);
-
-  if (!stripeCustomerId) {
-    logger.error(
-      `[stripe-webhook] customer.subscription.deleted has invalid customer: ${JSON.stringify(subscription.customer)}`,
-    );
-    throw new Error("Invalid or missing customer");
-  }
-
-  await client.mutation(api.users.clearSubscription, {
-    stripeCustomerId,
-  });
-
-  logger.info(`[stripe-webhook] Subscription deleted for customer: ${stripeCustomerId}`);
-}
-
-/**
- * Handle invoice.payment_failed
- *
- * Marks subscription as past_due when payment fails.
- */
-async function handlePaymentFailed(client: ConvexHttpClient, invoice: Stripe.Invoice) {
-  const stripeCustomerId = extractCustomerId(invoice.customer);
-
-  if (!stripeCustomerId) {
-    logger.error(
-      `[stripe-webhook] invoice.payment_failed has invalid customer: ${JSON.stringify(invoice.customer)}`,
-    );
-    throw new Error("Invalid or missing customer");
-  }
-
-  // Only update if this is a subscription-related invoice
-  const billingReason = invoice.billing_reason;
-  if (
-    !billingReason ||
-    ![
-      "subscription_create",
-      "subscription_cycle",
-      "subscription_update",
-      "subscription_threshold",
-    ].includes(billingReason)
-  ) {
-    return;
-  }
-
-  await client.mutation(api.users.updateSubscription, {
-    stripeCustomerId,
-    subscriptionStatus: "past_due",
-  });
-
-  logger.info(`[stripe-webhook] Payment failed for customer: ${stripeCustomerId}`);
 }

@@ -18,13 +18,8 @@ export {
 // Re-export statistics functions for backward compatibility
 export { updateUserStats } from "./users/statistics";
 
-// Re-export subscription functions
-export {
-  linkStripeCustomer,
-  updateSubscription,
-  clearSubscription,
-  getSubscriptionStatus,
-} from "./users/subscriptions";
+// Re-export subscription query (mutations are internal, accessed via stripe/webhookAction)
+export { getSubscriptionStatus } from "./users/subscriptions";
 
 // Re-export migration functions for backward compatibility
 export { mergeAnonymousState, mergeAnonymousStreak } from "./migration/anonymous";
