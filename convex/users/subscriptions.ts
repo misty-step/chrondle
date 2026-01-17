@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, query } from "../_generated/server";
+import { checkArchiveAccess } from "./helpers";
 
 /**
  * Subscription Mutations - Stripe Integration (INTERNAL)
@@ -167,9 +168,7 @@ export const getSubscriptionStatus = query({
       subscriptionStatus: user.subscriptionStatus,
       subscriptionPlan: user.subscriptionPlan,
       subscriptionEndDate: user.subscriptionEndDate,
-      hasArchiveAccess:
-        (user.subscriptionStatus === "active" || user.subscriptionStatus === "trialing") &&
-        (!user.subscriptionEndDate || user.subscriptionEndDate > Date.now()),
+      hasArchiveAccess: checkArchiveAccess(user),
     };
   },
 });

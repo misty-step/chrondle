@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import { checkArchiveAccess } from "./helpers";
 
 /**
  * User Queries - Read-Only User Access
@@ -198,16 +199,6 @@ export const hasArchiveAccess = query({
       return false;
     }
 
-    // Check subscription status (active or trialing grants access)
-    if (user.subscriptionStatus !== "active" && user.subscriptionStatus !== "trialing") {
-      return false;
-    }
-
-    // Check if subscription has expired
-    if (user.subscriptionEndDate && user.subscriptionEndDate < Date.now()) {
-      return false;
-    }
-
-    return true;
+    return checkArchiveAccess(user);
   },
 });

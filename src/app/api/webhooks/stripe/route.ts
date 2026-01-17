@@ -42,7 +42,9 @@ function extractSubscriptionId(
 
 /**
  * Extract period end from subscription items (throws if missing)
- * Note: In newer Stripe API versions, current_period_end is on SubscriptionItem, not Subscription
+ *
+ * Note: In the Stripe API version used by this project, current_period_end
+ * is on SubscriptionItem, not the top-level Subscription object.
  */
 function getSubscriptionPeriodEnd(subscription: Stripe.Subscription): number {
   const firstItem = subscription.items?.data?.[0];

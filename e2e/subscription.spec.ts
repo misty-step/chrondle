@@ -107,8 +107,8 @@ test.describe("Archive Paywall - Unauthenticated @paywall", () => {
 
 test.describe("Archive Paywall - Authenticated No Subscription @authenticated", () => {
   test.skip(
-    !TEST_USER.email || !TEST_USER.password,
-    "Requires TEST_USER_EMAIL and TEST_USER_PASSWORD",
+    !TEST_USER.email || !TEST_USER.password || !TEST_USER.clerkId,
+    "Requires TEST_USER_EMAIL, TEST_USER_PASSWORD, and TEST_USER_CLERK_ID",
   );
 
   test.beforeEach(async ({ page }) => {
@@ -153,8 +153,8 @@ test.describe("Archive Paywall - Authenticated No Subscription @authenticated", 
 
 test.describe("Checkout Flow @checkout", () => {
   test.skip(
-    !TEST_USER.email || !TEST_USER.password,
-    "Requires TEST_USER_EMAIL and TEST_USER_PASSWORD",
+    !TEST_USER.email || !TEST_USER.password || !TEST_USER.clerkId,
+    "Requires TEST_USER_EMAIL, TEST_USER_PASSWORD, and TEST_USER_CLERK_ID",
   );
 
   test.beforeEach(async ({ page }) => {
