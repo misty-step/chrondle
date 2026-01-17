@@ -385,13 +385,18 @@ export const importYearEventsWithMetadata = internalMutation({
   handler: async (ctx, { year, events }) => {
     const results = [];
 
+    // Fetch all existing events for this year in a single query (O(1) instead of O(n))
+    const existingEventsForYear = await ctx.db
+      .query("events")
+      .withIndex("by_year", (q) => q.eq("year", year))
+      .collect();
+
+    // Store in a Map for O(1) lookups by event text
+    const existingEventsMap = new Map(existingEventsForYear.map((e) => [e.event, e]));
+
     for (const { event, metadata } of events) {
-      // Check if this exact event already exists
-      const existing = await ctx.db
-        .query("events")
-        .withIndex("by_year", (q) => q.eq("year", year))
-        .filter((q) => q.eq(q.field("event"), event))
-        .first();
+      // Check if this exact event already exists (O(1) Map lookup)
+      const existing = existingEventsMap.get(event);
 
       if (existing) {
         // Update metadata if provided and event lacks it

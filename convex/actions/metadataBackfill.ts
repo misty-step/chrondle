@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { z } from "zod";
 import { action, internalAction, type ActionCtx } from "../_generated/server";
 import { internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
 import { createGemini3Client, type Gemini3Client } from "../lib/gemini3Client";
 import { logStageError, logStageSuccess } from "../lib/logging";
 
@@ -84,7 +85,7 @@ function getBackfillClient(): Gemini3Client {
 }
 
 interface EventToBackfill {
-  _id: string;
+  _id: Id<"events">;
   year: number;
   event: string;
 }
@@ -95,7 +96,54 @@ interface BackfillResult {
   processed: number;
   updated?: number;
   errors?: number;
+  mismatches?: number;
   costUsd?: number;
+}
+
+/**
+ * Normalize text for comparison - lowercase and collapse whitespace
+ */
+function normalizeText(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+type MetadataResult = { event_text: string; metadata: z.infer<typeof MetadataSchema> };
+
+/**
+ * Find matching metadata result by event_text
+ * Returns the matching result or undefined if no match found
+ */
+function findMatchingMetadata(
+  eventText: string,
+  responseData: MetadataResult[],
+  usedIndices: Set<number>,
+): { result: MetadataResult; index: number } | undefined {
+  const normalizedTarget = normalizeText(eventText);
+
+  // First pass: exact match after normalization
+  for (let i = 0; i < responseData.length; i++) {
+    if (usedIndices.has(i)) continue;
+
+    const normalizedResponse = normalizeText(responseData[i].event_text);
+    if (normalizedResponse === normalizedTarget) {
+      return { result: responseData[i], index: i };
+    }
+  }
+
+  // Second pass: substring containment (handles truncation/expansion by LLM)
+  for (let i = 0; i < responseData.length; i++) {
+    if (usedIndices.has(i)) continue;
+
+    const normalizedResponse = normalizeText(responseData[i].event_text);
+    if (
+      normalizedResponse.includes(normalizedTarget) ||
+      normalizedTarget.includes(normalizedResponse)
+    ) {
+      return { result: responseData[i], index: i };
+    }
+  }
+
+  return undefined;
 }
 
 /**
@@ -150,34 +198,40 @@ Return a JSON array with one object per event, in the same order:
         stage: "metadata-backfill",
         batchSize: eventsToBackfill.length,
       },
-      options: {
-        thinking_level: "low",
-        structured_outputs: true,
-        model: "google/gemini-3-flash-preview",
-        cache_system_prompt: true,
-        cache_ttl_seconds: 86_400,
-        maxOutputTokens: 16_000,
-        temperature: 0.2,
-      },
+      // Options configured in getBackfillClient() - no overrides needed
     });
 
-    // Match responses to events and update
+    // Match responses to events by event_text, not array index
+    // LLMs can reorder, omit, or duplicate entries - matching by content prevents silent data corruption
     let updated = 0;
     let errors = 0;
+    let mismatches = 0;
+    const usedIndices = new Set<number>();
 
-    for (let i = 0; i < eventsToBackfill.length; i++) {
-      const eventToUpdate = eventsToBackfill[i];
-      const metadataResult = response.data[i];
+    for (const eventToUpdate of eventsToBackfill) {
+      const match = findMatchingMetadata(eventToUpdate.event, response.data, usedIndices);
 
-      if (!metadataResult) {
-        errors++;
+      if (!match) {
+        // No matching metadata found - log warning and skip to avoid applying wrong metadata
+        logStageError("MetadataBackfill", new Error("No matching metadata in LLM response"), {
+          eventId: eventToUpdate._id,
+          event: eventToUpdate.event,
+          responseCount: response.data.length,
+          availableTexts: response.data
+            .filter((_, i) => !usedIndices.has(i))
+            .map((r) => r.event_text.slice(0, 50)),
+        });
+        mismatches++;
         continue;
       }
 
+      // Mark this response index as used to prevent duplicate matches
+      usedIndices.add(match.index);
+
       try {
         await ctx.runMutation(internal.events.updateEventMetadata, {
-          eventId: eventToUpdate._id as never,
-          metadata: metadataResult.metadata,
+          eventId: eventToUpdate._id,
+          metadata: match.result.metadata,
         });
         updated++;
       } catch (updateError) {
@@ -193,6 +247,7 @@ Return a JSON array with one object per event, in the same order:
       processed: eventsToBackfill.length,
       updated,
       errors,
+      mismatches,
       costUsd: response.cost.totalUsd,
     });
 
@@ -201,6 +256,7 @@ Return a JSON array with one object per event, in the same order:
       processed: eventsToBackfill.length,
       updated,
       errors,
+      mismatches,
       costUsd: response.cost.totalUsd,
     };
   } catch (error) {
