@@ -74,8 +74,6 @@ import type * as puzzles_context from "../puzzles/context.js";
 import type * as puzzles_generation from "../puzzles/generation.js";
 import type * as puzzles_mutations from "../puzzles/mutations.js";
 import type * as puzzles_queries from "../puzzles/queries.js";
-import type * as stripe_reconciliation from "../stripe/reconciliation.js";
-import type * as stripe_reconciliationQueries from "../stripe/reconciliationQueries.js";
 import type * as stripe_webhookAction from "../stripe/webhookAction.js";
 import type * as system_scheduling from "../system/scheduling.js";
 import type * as users from "../users.js";
@@ -158,8 +156,6 @@ declare const fullApi: ApiFromModules<{
   "puzzles/generation": typeof puzzles_generation;
   "puzzles/mutations": typeof puzzles_mutations;
   "puzzles/queries": typeof puzzles_queries;
-  "stripe/reconciliation": typeof stripe_reconciliation;
-  "stripe/reconciliationQueries": typeof stripe_reconciliationQueries;
   "stripe/webhookAction": typeof stripe_webhookAction;
   "system/scheduling": typeof system_scheduling;
   users: typeof users;
