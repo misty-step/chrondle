@@ -33,18 +33,20 @@ echo "🔍 Stripe Webhook Configuration Check"
 echo "======================================"
 echo ""
 
-# Check for Stripe CLI
-if ! command -v stripe &> /dev/null; then
-    echo -e "${RED}❌ Stripe CLI not installed${NC}"
-    echo "   Install: brew install stripe/stripe-cli/stripe"
-    exit 1
-fi
+# Check for required dependencies
+for cmd in stripe jq curl; do
+    if ! command -v "$cmd" &> /dev/null; then
+        echo -e "${RED}❌ Required tool '$cmd' not installed${NC}"
+        echo "   Install: brew install $cmd (macOS) or apt-get install $cmd (Linux)"
+        exit 1
+    fi
+done
 
 # Check for API key
 if [[ -z "${STRIPE_SECRET_KEY:-}" ]]; then
-    # Try to load from .env.production
+    # Try to load from .env.production (strict match to avoid commented lines)
     if [[ -f ".env.production" ]]; then
-        STRIPE_SECRET_KEY=$(grep STRIPE_SECRET_KEY .env.production | cut -d= -f2 | tr -d '"' | tr -d "'" | tr -d '\n')
+        STRIPE_SECRET_KEY=$(grep "^STRIPE_SECRET_KEY=" .env.production | head -n 1 | cut -d= -f2- | tr -d '"' | tr -d "'" | tr -d '\n')
     fi
 fi
 
