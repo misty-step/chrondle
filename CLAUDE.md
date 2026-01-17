@@ -139,6 +139,54 @@ vi.mock("motion/react", () => ({
 3. **Perf tests:** CI needs 1.5× local threshold (25ms vs 16ms)
 4. **BC/AD:** Internal = negative numbers (BC), positive (AD)
 
+## Stripe Webhooks (Incident 2026-01-17)
+
+**Critical:** Stripe does NOT follow redirects for POST requests.
+
+**Canonical URL required:** `https://www.chrondle.app/api/webhooks/stripe` (NOT `chrondle.app`)
+
+**Before any webhook changes:**
+
+```bash
+# Verify no redirects (expect 4xx or 5xx, NOT 3xx)
+curl -s -o /dev/null -w "%{http_code}" -I -X POST "https://www.chrondle.app/api/webhooks/stripe"
+
+# Full diagnostic
+./scripts/verify-webhook-config.sh
+```
+
+**Verification checklist (use `/stripe-health` skill):**
+
+1. Single endpoint per URL (no duplicates)
+2. URL returns non-3xx status
+3. Required events enabled: `checkout.session.completed`, `customer.subscription.*`
+4. `pending_webhooks` count decreasing after resends
+
+**After any webhook fix:**
+
+```bash
+# Resend event and watch logs
+stripe events resend evt_xxx --webhook-endpoint we_xxx
+vercel logs chrondle.app --json | grep webhook
+
+# Verify delivery metric decreased
+stripe events retrieve evt_xxx | jq '.pending_webhooks'
+```
+
+**Silent failure architecture:** Webhooks fail silently. No logs = request never arrived (network/redirect issue, not code).
+
+**See:** `INCIDENT-2026-01-17T.md` for full postmortem
+
+## Billing Preflight Checklist
+
+**Before deploying any billing changes:** Run `/billing-preflight`
+
+Or manually:
+
+1. `~/.claude/skills/billing-security/scripts/verify-webhook-url.sh https://www.chrondle.app/api/webhooks/stripe`
+2. `~/.claude/skills/billing-security/scripts/verify-env-parity.sh`
+3. `python3 ~/.claude/skills/billing-security/scripts/audit-stripe-config.py --domain chrondle.app`
+
 ## References
 
 - **Detailed Patterns:** `.claude/context.md` (1,246 lines of discovered patterns)

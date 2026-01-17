@@ -77,6 +77,7 @@ import type * as puzzles_queries from "../puzzles/queries.js";
 import type * as stripe_webhookAction from "../stripe/webhookAction.js";
 import type * as system_scheduling from "../system/scheduling.js";
 import type * as users from "../users.js";
+import type * as users_helpers from "../users/helpers.js";
 import type * as users_mutations from "../users/mutations.js";
 import type * as users_queries from "../users/queries.js";
 import type * as users_statistics from "../users/statistics.js";
@@ -158,6 +159,7 @@ declare const fullApi: ApiFromModules<{
   "stripe/webhookAction": typeof stripe_webhookAction;
   "system/scheduling": typeof system_scheduling;
   users: typeof users;
+  "users/helpers": typeof users_helpers;
   "users/mutations": typeof users_mutations;
   "users/queries": typeof users_queries;
   "users/statistics": typeof users_statistics;
