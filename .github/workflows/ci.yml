@@ -477,7 +477,6 @@ jobs:
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
 
       - name: Validate Stripe configuration
-        if: ${{ secrets.STRIPE_SECRET_KEY != '' }}
         run: node scripts/verify-stripe-config.mjs
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}

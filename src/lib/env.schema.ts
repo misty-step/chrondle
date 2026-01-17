@@ -31,7 +31,7 @@ export const envSchemas = {
   STRIPE_PRICE_ANNUAL: z.string().startsWith("price_"),
 
   // Convex
-  CONVEX_DEPLOY_KEY: z.string().regex(/^prod:|dev:/, "Must start with prod: or dev:"),
+  CONVEX_DEPLOY_KEY: z.string().regex(/^(prod|dev):/, "Must start with prod: or dev:"),
 
   // Optional: Observability
   OPENROUTER_API_KEY: z.string().startsWith("sk-or-").optional(),

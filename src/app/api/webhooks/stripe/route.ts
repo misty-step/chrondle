@@ -30,10 +30,22 @@ function extractCustomerId(
 }
 
 /**
- * Extract period end from subscription (throws if missing)
+ * Extract subscription ID from Stripe object (string | Subscription | null)
+ */
+function extractSubscriptionId(
+  subscription: string | Stripe.Subscription | null | undefined,
+): string | null {
+  if (typeof subscription === "string") return subscription;
+  if (subscription && "id" in subscription) return subscription.id;
+  return null;
+}
+
+/**
+ * Extract period end from subscription items (throws if missing)
+ * Note: In newer Stripe API versions, current_period_end is on SubscriptionItem, not Subscription
  */
 function getSubscriptionPeriodEnd(subscription: Stripe.Subscription): number {
-  const firstItem = subscription.items.data[0];
+  const firstItem = subscription.items?.data?.[0];
   if (!firstItem?.current_period_end) {
     throw new Error(`Subscription ${subscription.id} missing current_period_end`);
   }
@@ -114,7 +126,7 @@ export async function POST(req: NextRequest) {
         let subscriptionPlan: "monthly" | "annual" | null = null;
         let subscriptionEndDate: number | null = null;
 
-        const subscriptionId = session.subscription as string;
+        const subscriptionId = extractSubscriptionId(session.subscription);
         if (subscriptionId) {
           const subscription = await getStripe().subscriptions.retrieve(subscriptionId, {
             expand: ["items.data"],

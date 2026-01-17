@@ -143,6 +143,13 @@ async function main() {
   const requireLive = process.argv.includes("--live");
   const mode = requireLive ? "LIVE" : "TEST/LIVE";
 
+  // Skip validation gracefully if Stripe secrets aren't configured
+  // This allows CI to run without Stripe secrets in fork PRs
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.log("\n⏭️  Skipping Stripe validation (STRIPE_SECRET_KEY not configured)\n");
+    process.exit(0);
+  }
+
   console.log(`\n🔍 Validating Stripe Configuration (${mode} mode)\n`);
 
   // Step 1: Check environment variables
