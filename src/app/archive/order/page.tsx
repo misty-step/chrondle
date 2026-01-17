@@ -126,6 +126,20 @@ async function OrderArchivePageContent({
   }));
 
   const completedCount = completedPuzzleIds.size;
+
+  // Check archive access (subscription status)
+  let hasArchiveAccess = false;
+  if (clerkUser && convexUser) {
+    try {
+      hasArchiveAccess = await client.query(api.users.hasArchiveAccess, {
+        clerkId: clerkUser.id,
+      });
+    } catch (error) {
+      logger.warn("[OrderArchive] hasArchiveAccess check failed:", error);
+      hasArchiveAccess = false;
+    }
+  }
+
   const authState = {
     hasClerkUser: !!clerkUser,
     hasConvexUser: !!convexUser,
@@ -206,7 +220,11 @@ async function OrderArchivePageContent({
           ) : (
             <>
               {/* Archive grid - filters by local date to hide future puzzles */}
-              <ArchiveGrid puzzles={paginatedData} linkPrefix="/archive/order" />
+              <ArchiveGrid
+                puzzles={paginatedData}
+                linkPrefix="/archive/order"
+                hasAccess={hasArchiveAccess}
+              />
 
               {/* Pagination controls */}
               {totalPages > 1 && (
