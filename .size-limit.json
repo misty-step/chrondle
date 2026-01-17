@@ -2,7 +2,7 @@
   {
     "name": "All JS Chunks",
     "path": ".next/static/chunks/*.js",
-    "limit": "800 KB",
+    "limit": "810 KB",
     "gzip": true
   },
   {

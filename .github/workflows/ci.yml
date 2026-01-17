@@ -114,21 +114,8 @@ jobs:
 
       - name: Verify Convex files
         uses: ./.github/actions/verify-convex
-
-      - name: Cache Convex generated files
-        id: convex-cache
-        uses: actions/cache@v4
-        with:
-          path: convex/_generated
-          key: ${{ runner.os }}-convex-${{ hashFiles('convex/schema.ts', 'convex/**/*.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-convex-
-
-      - name: Generate Convex files
-        if: steps.convex-cache.outputs.cache-hit != 'true'
-        run: npx convex codegen
-        env:
-          CONVEX_DEPLOYMENT: fleet-goldfish-183
+        # NOTE: convex/_generated files are committed to git.
+        # DO NOT cache them - caching causes stale type definitions.
 
       - name: Run linting
         if: matrix.check == 'lint'
@@ -325,22 +312,8 @@ jobs:
 
       - name: Verify Convex files
         uses: ./.github/actions/verify-convex
-
-      - name: Cache Convex generated files
-        id: convex-cache
-        uses: actions/cache@v4
-        with:
-          path: convex/_generated
-          key: ${{ runner.os }}-convex-${{ hashFiles('convex/schema.ts', 'convex/**/*.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-convex-
-
-      - name: Generate Convex files
-        if: steps.convex-cache.outputs.cache-hit != 'true'
-        run: npx convex codegen
-        env:
-          # Server-side only: Used to identify which Convex deployment to generate types for
-          CONVEX_DEPLOYMENT: fleet-goldfish-183
+        # NOTE: convex/_generated files are committed to git.
+        # DO NOT cache them - caching causes stale type definitions.
 
       - name: Build application
         run: pnpm build
@@ -465,6 +438,52 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # Verify environment configuration before merge
+  # Validates format and presence of required env vars
+  verify-environment:
+    name: Verify Environment Config
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && (github.base_ref == 'master' || github.base_ref == 'main')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate CI environment configuration
+        run: node scripts/verify-env-config.mjs ci
+        env:
+          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+
+      - name: Validate production environment configuration
+        run: node scripts/verify-env-config.mjs production
+        env:
+          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_SYNC_SECRET: ${{ secrets.STRIPE_SYNC_SECRET }}
+          STRIPE_PRICE_MONTHLY: ${{ secrets.STRIPE_PRICE_MONTHLY }}
+          STRIPE_PRICE_ANNUAL: ${{ secrets.STRIPE_PRICE_ANNUAL }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+
+      - name: Validate Stripe configuration
+        run: node scripts/verify-stripe-config.mjs
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PRICE_MONTHLY: ${{ secrets.STRIPE_PRICE_MONTHLY }}
+          STRIPE_PRICE_ANNUAL: ${{ secrets.STRIPE_PRICE_ANNUAL }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
 
   # Verify production secrets are configured before merge
   # Prevents post-merge deploy failures due to missing secrets
