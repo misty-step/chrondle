@@ -175,7 +175,38 @@ stripe events retrieve evt_xxx | jq '.pending_webhooks'
 
 **Silent failure architecture:** Webhooks fail silently. No logs = request never arrived (network/redirect issue, not code).
 
+**Automated reconciliation:** Daily cron at 06:00 UTC detects Stripe/DB drift (see `convex/stripe/reconciliation.ts`).
+
 **See:** `INCIDENT-2026-01-17T.md` for full postmortem
+
+## Billing Preflight Checklist
+
+**Before deploying any billing changes:**
+
+1. **Webhook URL** - Must not redirect (Stripe ignores 3xx for POST)
+
+   ```bash
+   ~/.claude/skills/billing-security/scripts/verify-webhook-url.sh https://www.chrondle.app/api/webhooks/stripe
+   ```
+
+2. **Env parity** - Same secrets on Vercel AND Convex
+
+   ```bash
+   ~/.claude/skills/billing-security/scripts/verify-env-parity.sh
+   ```
+
+3. **Full audit** - Endpoints, events, delivery status
+
+   ```bash
+   python3 ~/.claude/skills/billing-security/scripts/audit-stripe-config.py --domain chrondle.app
+   ```
+
+4. **Code patterns** - Always `.trim()` env vars, validate key format
+
+**Commands:**
+
+- `/billing-preflight` - Full pre-deploy checklist
+- `/reconcile-subscriptions` - Manual Stripe/DB sync audit
 
 ## References
 

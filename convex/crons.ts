@@ -53,4 +53,19 @@ crons.daily(
   {},
 );
 
+/**
+ * Stripe/DB Reconciliation
+ *
+ * Runs daily to detect drift between Stripe subscription state and database.
+ * Catches missed webhooks before they cause customer-facing issues.
+ *
+ * Timing: 06:00 UTC (after daily activity settles, before business hours)
+ */
+crons.daily(
+  "reconcile Stripe subscriptions",
+  { hourUTC: 6, minuteUTC: 0 },
+  internal.stripe.reconciliation.runReconciliation,
+  {},
+);
+
 export default crons;
