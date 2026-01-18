@@ -274,7 +274,7 @@ export const backfillEventMetadata = internalAction({
     batchSize: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<BackfillResult> => {
-    const batchSize = Math.min(args.batchSize ?? 20, 50);
+    const batchSize = Math.max(1, Math.min(args.batchSize ?? 20, 50));
     return runBackfillBatch(ctx, batchSize);
   },
 });
@@ -302,7 +302,7 @@ export const triggerMetadataBackfill = action({
     }
 
     // Run backfill using shared logic
-    const batchSize = Math.min(args.batchSize ?? 20, 50);
+    const batchSize = Math.max(1, Math.min(args.batchSize ?? 20, 50));
     return runBackfillBatch(ctx, batchSize);
   },
 });
@@ -326,7 +326,7 @@ export const backfillAllEvents = internalAction({
   },
   handler: async (ctx, args): Promise<FullBackfillResult> => {
     const maxBatches = args.maxBatches ?? 10;
-    const batchSize = Math.min(args.batchSize ?? 20, 50);
+    const batchSize = Math.max(1, Math.min(args.batchSize ?? 20, 50));
 
     let totalProcessed = 0;
     let totalUpdated = 0;
