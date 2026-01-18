@@ -9,6 +9,9 @@ on:
 jobs:
   quality-checks:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write  # Required for vitest-coverage-report-action to post PR comments
     strategy:
       matrix:
         check: [lint, type-check, test]
