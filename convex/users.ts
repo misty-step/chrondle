@@ -8,12 +8,8 @@ export {
 } from "./users/queries";
 
 // Re-export mutation functions for backward compatibility
-export {
-  createUser,
-  createUserFromWebhook,
-  getOrCreateCurrentUser,
-  updateUsername,
-} from "./users/mutations";
+// Note: createUser is internal-only, called via clerk/webhookAction
+export { getOrCreateCurrentUser, updateUsername } from "./users/mutations";
 
 // Re-export statistics functions for backward compatibility
 export { updateUserStats } from "./users/statistics";
