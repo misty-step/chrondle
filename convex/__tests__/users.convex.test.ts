@@ -96,11 +96,12 @@ describe("users/queries", () => {
 });
 
 describe("users/mutations", () => {
-  describe("createUserFromWebhook", () => {
+  describe("createUser (internal)", () => {
     it("creates new user with initial stats", async () => {
       const t = convexTest(schema, modules);
 
-      const userId = await t.mutation(usersMutations.createUserFromWebhook, {
+      // Use internal mutation (called via clerk webhook action)
+      const userId = await t.mutation(internal.users.mutations.createUser, {
         clerkId: "new_user_clerk_id",
         email: "newuser@example.com",
       });
@@ -136,8 +137,8 @@ describe("users/mutations", () => {
         });
       });
 
-      // Try to create same user via webhook
-      const returnedId = await t.mutation(usersMutations.createUserFromWebhook, {
+      // Try to create same user via internal mutation
+      const returnedId = await t.mutation(internal.users.mutations.createUser, {
         clerkId: "existing_clerk_id",
         email: "different@example.com", // Different email shouldn't matter
       });

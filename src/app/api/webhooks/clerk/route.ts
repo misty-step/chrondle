@@ -6,6 +6,8 @@ import { ConvexHttpClient } from "convex/browser";
 import { getEnvVar, isProduction } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
+type ClerkEventType = "user.created" | "user.updated";
+
 export async function POST(req: Request) {
   // Validate Convex URL configuration with graceful error handling
   const convexUrl = getEnvVar("NEXT_PUBLIC_CONVEX_URL");
@@ -63,6 +65,13 @@ export async function POST(req: Request) {
     });
   }
 
+  // Validate sync secret
+  const syncSecret = getEnvVar("CLERK_SYNC_SECRET");
+  if (!syncSecret) {
+    logger.error("CLERK_SYNC_SECRET is not configured");
+    return new Response("Error: Sync secret not configured", { status: 500 });
+  }
+
   // Handle the webhook
   const eventType = evt.type;
 
@@ -79,10 +88,14 @@ export async function POST(req: Request) {
     }
 
     try {
-      // Create or update user in Convex
-      await convexClient.mutation(api.users.createUserFromWebhook, {
-        clerkId: id,
-        email: primaryEmail.email_address,
+      // Create or update user via internal action (not public mutation)
+      await convexClient.action(api.clerk.webhookAction.processWebhookEvent, {
+        secret: syncSecret,
+        eventType: eventType as ClerkEventType,
+        payload: {
+          clerkId: id,
+          email: primaryEmail.email_address,
+        },
       });
 
       return new Response("User synced successfully", { status: 200 });

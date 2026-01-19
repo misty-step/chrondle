@@ -9,7 +9,6 @@ import { mutation, internalMutation } from "../_generated/server";
  *
  * Exports:
  * - createUser: Internal mutation for user creation (called by webhooks)
- * - createUserFromWebhook: Public mutation for Clerk webhook
  * - getOrCreateCurrentUser: JIT user creation for authenticated users
  * - updateUsername: Update user's display name
  *
@@ -25,44 +24,6 @@ import { mutation, internalMutation } from "../_generated/server";
  * Returns existing user ID if user already exists.
  */
 export const createUser = internalMutation({
-  args: {
-    clerkId: v.string(),
-    email: v.string(),
-  },
-  handler: async (ctx, { clerkId, email }) => {
-    // Check if user already exists
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_clerk", (q) => q.eq("clerkId", clerkId))
-      .first();
-
-    if (existing) {
-      return existing._id;
-    }
-
-    // Create new user with schema-compliant fields
-    const userId = await ctx.db.insert("users", {
-      clerkId,
-      email,
-      username: undefined, // Optional, can be set later
-      currentStreak: 0,
-      longestStreak: 0,
-      totalPlays: 0,
-      perfectGames: 0,
-      updatedAt: Date.now(),
-    });
-
-    return userId;
-  },
-});
-
-/**
- * Public mutation for webhook to create user
- *
- * Identical to createUser but public for webhook access.
- * Returns existing user ID if user already exists.
- */
-export const createUserFromWebhook = mutation({
   args: {
     clerkId: v.string(),
     email: v.string(),
