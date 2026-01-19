@@ -15,6 +15,7 @@ import type * as actions_eventGeneration_reviser from "../actions/eventGeneratio
 import type * as actions_eventGeneration_schemas from "../actions/eventGeneration/schemas.js";
 import type * as actions_eventGeneration_values from "../actions/eventGeneration/values.js";
 import type * as actions_historicalContext from "../actions/historicalContext.js";
+import type * as actions_metadataBackfill from "../actions/metadataBackfill.js";
 import type * as actions_puzzleComposition_composer from "../actions/puzzleComposition/composer.js";
 import type * as actions_puzzleComposition_index from "../actions/puzzleComposition/index.js";
 import type * as actions_puzzleComposition_judge from "../actions/puzzleComposition/judge.js";
@@ -97,6 +98,7 @@ declare const fullApi: ApiFromModules<{
   "actions/eventGeneration/schemas": typeof actions_eventGeneration_schemas;
   "actions/eventGeneration/values": typeof actions_eventGeneration_values;
   "actions/historicalContext": typeof actions_historicalContext;
+  "actions/metadataBackfill": typeof actions_metadataBackfill;
   "actions/puzzleComposition/composer": typeof actions_puzzleComposition_composer;
   "actions/puzzleComposition/index": typeof actions_puzzleComposition_index;
   "actions/puzzleComposition/judge": typeof actions_puzzleComposition_judge;
