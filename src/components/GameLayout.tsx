@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { GameInstructions } from "@/components/GameInstructions";
 import { RangeInput } from "@/components/game/RangeInput";
 import { HintIndicator } from "@/components/game/HintIndicator";
@@ -8,7 +8,7 @@ import { Confetti, ConfettiRef } from "@/components/magicui/confetti";
 import { GameComplete } from "@/components/modals/GameComplete";
 import { validateGameLayoutProps } from "@/lib/propValidation";
 import { motion, AnimatePresence } from "motion/react";
-import { cn } from "@/lib/utils";
+import { cn, seededRandom } from "@/lib/utils";
 import type { RangeGuess } from "@/types/range";
 
 export interface GameLayoutProps {
@@ -109,6 +109,14 @@ export function GameLayout(props: GameLayoutProps) {
     }
   }, [gameState.ranges]); // Dependent on the whole array to catch changes in length or content
 
+  const stampRotation = useMemo(() => {
+    if (!lastGuessStamp?.timestamp) {
+      return 0;
+    }
+    // seededRandom returns [0, 1), scale to [-2, 2] for slight rotation variance
+    return seededRandom(lastGuessStamp.timestamp) * 4 - 2;
+  }, [lastGuessStamp?.timestamp]);
+
   const targetYear = gameState.puzzle?.year ?? 0;
   const totalScore = gameState.totalScore ?? 0;
   const puzzleNumber = gameState.puzzle?.puzzleNumber;
@@ -140,7 +148,7 @@ export function GameLayout(props: GameLayoutProps) {
             >
               <motion.div
                 initial={{ scale: 2, opacity: 0, rotate: -15 }}
-                animate={{ scale: 1, opacity: 1, rotate: Math.random() * 4 - 2 }} // Slight random rotation
+                animate={{ scale: 1, opacity: 1, rotate: stampRotation }} // Slight random rotation
                 exit={{ opacity: 0, scale: 1.1, transition: { duration: 0.3 } }}
                 transition={{
                   type: "spring",
