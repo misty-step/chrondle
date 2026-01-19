@@ -8,7 +8,7 @@ import { Confetti, ConfettiRef } from "@/components/magicui/confetti";
 import { GameComplete } from "@/components/modals/GameComplete";
 import { validateGameLayoutProps } from "@/lib/propValidation";
 import { motion, AnimatePresence } from "motion/react";
-import { cn } from "@/lib/utils";
+import { cn, seededRandom } from "@/lib/utils";
 import type { RangeGuess } from "@/types/range";
 
 export interface GameLayoutProps {
@@ -113,9 +113,8 @@ export function GameLayout(props: GameLayoutProps) {
     if (!lastGuessStamp?.timestamp) {
       return 0;
     }
-
-    const normalized = Math.sin(lastGuessStamp.timestamp) * 10000;
-    return (normalized - Math.floor(normalized)) * 4 - 2;
+    // seededRandom returns [0, 1), scale to [-2, 2] for slight rotation variance
+    return seededRandom(lastGuessStamp.timestamp) * 4 - 2;
   }, [lastGuessStamp?.timestamp]);
 
   const targetYear = gameState.puzzle?.year ?? 0;

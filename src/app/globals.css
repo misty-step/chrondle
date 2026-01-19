@@ -130,6 +130,9 @@
   --feedback-later: var(--feedback-info);
   --feedback-correct: var(--feedback-success);
 
+  /* --- DECORATIVE (Non-semantic visual accents) --- */
+  --decorative-gold: oklch(0.82 0.17 90); /* Celebration confetti, awards */
+
   /* --- ELEVATION SYSTEM --- */
   --elevation-navbar-bg: oklch(0.99 0.005 85); /* Bright white editorial header */
   --elevation-navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); /* Strong editorial shadow */
@@ -237,6 +240,9 @@ html.dark {
   --timeline-era-label: var(--color-ink-700);
   --locked-badge: var(--color-vermilion-500);
   --locked-badge-bg: oklch(from var(--locked-badge) l c h / 0.15);
+
+  /* DECORATIVE - Dark Mode */
+  --decorative-gold: oklch(0.78 0.16 85); /* Slightly warmer gold for dark backgrounds */
 
   /* ELEVATION SYSTEM - Dark Mode */
   --elevation-navbar-bg: oklch(0.22 0.025 250); /* Elevated header */
@@ -839,7 +845,7 @@ body {
     /* Paper grain texture (subtle analog warmth) */
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"),
     /* Warm gradient with subtle vignette */
-      radial-gradient(ellipse at center, oklch(0.95 0.02 85) 0%, oklch(0.91 0.02 75) 100%);
+    radial-gradient(ellipse at center, oklch(0.95 0.02 85) 0%, oklch(0.91 0.02 75) 100%);
   background-attachment: fixed;
 }
 
@@ -849,6 +855,6 @@ html.dark body {
     /* Visible noise texture (lifted for texture visibility) */
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"),
     /* Lifted void with warm amber vignette */
-      radial-gradient(ellipse at center, oklch(0.15 0.02 60) 0%, oklch(0.12 0.015 55) 100%);
+    radial-gradient(ellipse at center, oklch(0.15 0.02 60) 0%, oklch(0.12 0.015 55) 100%);
   background-attachment: fixed;
 }

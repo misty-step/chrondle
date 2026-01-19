@@ -1,16 +1,16 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { seededRandom } from "@/lib/utils";
 
 interface CelebrationProps {
   trigger?: boolean;
   duration?: number;
 }
 
-const seededRandom = (seed: number) => {
-  const normalized = Math.sin(seed) * 10000;
-  return normalized - Math.floor(normalized);
-};
+// Constants for deterministic particle generation
+const BASE_SEED = 1337;
+const SEED_MULTIPLIER = 97; // Prime number for better distribution
 
 export const Celebration: React.FC<CelebrationProps> = ({ trigger = false, duration = 3000 }) => {
   const [isActive, setIsActive] = useState(false);
@@ -39,11 +39,11 @@ export const Celebration: React.FC<CelebrationProps> = ({ trigger = false, durat
       "var(--primary)",
       "var(--feedback-success)",
       "var(--feedback-correct)",
-      "#FFD700",
+      "var(--decorative-gold)",
     ];
 
     return Array.from({ length: 50 }, (_, index) => {
-      const baseSeed = 1337 + index * 97;
+      const baseSeed = BASE_SEED + index * SEED_MULTIPLIER;
       return {
         "--delay": `${seededRandom(baseSeed) * 0.5}s`,
         "--duration": `${1 + seededRandom(baseSeed + 1) * 2}s`,
