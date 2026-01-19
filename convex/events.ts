@@ -316,6 +316,124 @@ export const getEventPoolStats = query({
   },
 });
 
+// Import event with full metadata from generation pipeline
+export const importEventWithMetadata = internalMutation({
+  args: {
+    year: v.number(),
+    event: v.string(),
+    metadata: v.optional(
+      v.object({
+        difficulty: v.optional(v.number()),
+        category: v.optional(v.array(v.string())),
+        era: v.optional(v.string()),
+        fame_level: v.optional(v.number()),
+        tags: v.optional(v.array(v.string())),
+      }),
+    ),
+  },
+  handler: async (ctx, { year, event, metadata }) => {
+    // Check if this exact event already exists
+    const existing = await ctx.db
+      .query("events")
+      .withIndex("by_year", (q) => q.eq("year", year))
+      .filter((q) => q.eq(q.field("event"), event))
+      .first();
+
+    if (existing) {
+      // If metadata is provided and event exists without it, update the metadata
+      if (metadata && !existing.metadata) {
+        await ctx.db.patch(existing._id, {
+          metadata,
+          updatedAt: Date.now(),
+        });
+        return { updated: true, id: existing._id };
+      }
+      return { skipped: true, id: existing._id };
+    }
+
+    // Create new event with metadata
+    const id = await ctx.db.insert("events", {
+      year,
+      event,
+      metadata,
+      updatedAt: Date.now(),
+    });
+
+    return { created: true, id };
+  },
+});
+
+// Batch import events with metadata for a year
+export const importYearEventsWithMetadata = internalMutation({
+  args: {
+    year: v.number(),
+    events: v.array(
+      v.object({
+        event: v.string(),
+        metadata: v.optional(
+          v.object({
+            difficulty: v.optional(v.number()),
+            category: v.optional(v.array(v.string())),
+            era: v.optional(v.string()),
+            fame_level: v.optional(v.number()),
+            tags: v.optional(v.array(v.string())),
+          }),
+        ),
+      }),
+    ),
+  },
+  handler: async (ctx, { year, events }) => {
+    const results = [];
+
+    // Fetch all existing events for this year in a single query (O(1) instead of O(n))
+    const existingEventsForYear = await ctx.db
+      .query("events")
+      .withIndex("by_year", (q) => q.eq("year", year))
+      .collect();
+
+    // Store in a Map for O(1) lookups by event text
+    const existingEventsMap = new Map(existingEventsForYear.map((e) => [e.event, e]));
+
+    for (const { event, metadata } of events) {
+      // Check if this exact event already exists (O(1) Map lookup)
+      const existing = existingEventsMap.get(event);
+
+      if (existing) {
+        // Update metadata if provided and event lacks it
+        if (metadata && !existing.metadata) {
+          await ctx.db.patch(existing._id, {
+            metadata,
+            updatedAt: Date.now(),
+          });
+          results.push({ event, updated: true, id: existing._id });
+        } else {
+          results.push({ event, skipped: true, id: existing._id });
+        }
+        continue;
+      }
+
+      // Create new event with metadata
+      const id = await ctx.db.insert("events", {
+        year,
+        event,
+        metadata,
+        updatedAt: Date.now(),
+      });
+
+      results.push({ event, created: true, id });
+    }
+
+    return {
+      year,
+      total: events.length,
+      created: results.filter((r) => r.created).length,
+      updated: results.filter((r) => r.updated).length,
+      skipped: results.filter((r) => r.skipped).length,
+      results,
+    };
+  },
+});
+
 // Delete a single event (if not used in a puzzle)
 export const deleteEvent = internalMutation({
   args: {

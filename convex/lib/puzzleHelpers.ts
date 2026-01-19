@@ -10,7 +10,14 @@ import { Doc, Id } from "../_generated/dataModel";
  * Exports:
  * - updatePuzzleStats: Update puzzle statistics after completion
  * - selectYearForPuzzle: Select a random year with sufficient events for puzzle generation
+ * - selectDiverseEvents: Select 6 events maximizing topic diversity
  */
+
+// Maximum events from any single category (prevents Augustus-style puzzles)
+const MAX_EVENTS_PER_CATEGORY = 2;
+
+// Minimum categories required for a diverse puzzle
+const MIN_CATEGORIES_FOR_DIVERSITY = 3;
 
 /**
  * Fisher-Yates shuffle algorithm for true randomness
@@ -136,10 +143,8 @@ export async function selectYearForPuzzle(ctx: QueryCtx): Promise<{
     .filter((q) => q.eq(q.field("classicPuzzleId"), undefined))
     .collect();
 
-  // Randomly select 6 events from the year's available events
-  // Using Fisher-Yates shuffle for proper randomness (uniform distribution)
-  const shuffled = fisherYatesShuffle(yearEvents);
-  const selectedEvents = shuffled.slice(0, 6);
+  // Use diversity-aware selection to maximize topic variety
+  const selectedEvents = selectDiverseEvents(yearEvents, 6);
 
   if (selectedEvents.length < 6) {
     throw new Error(`Not enough events for year ${randomYear.year}`);
@@ -150,4 +155,149 @@ export async function selectYearForPuzzle(ctx: QueryCtx): Promise<{
     events: selectedEvents,
     availableEvents: randomYear.availableEvents,
   };
+}
+
+/**
+ * Selects events to maximize topic diversity.
+ *
+ * Algorithm:
+ * 1. Group events by their primary category
+ * 2. Select at most MAX_EVENTS_PER_CATEGORY from each category
+ * 3. Prioritize events with metadata, fall back to random for uncategorized
+ * 4. Order by difficulty (hardest first) for optimal hint progression
+ *
+ * This prevents "Augustus puzzles" where all hints test the same knowledge.
+ *
+ * @param events - Pool of available events
+ * @param count - Number of events to select (typically 6)
+ * @returns Selected events ordered by difficulty (hardest first)
+ */
+export function selectDiverseEvents<T extends Doc<"events">>(events: T[], count: number): T[] {
+  if (events.length <= count) {
+    // Not enough events, return all sorted by difficulty
+    return sortByDifficulty(events);
+  }
+
+  // Separate events with and without category metadata
+  const categorized: T[] = [];
+  const uncategorized: T[] = [];
+
+  for (const event of events) {
+    const categories = event.metadata?.category;
+    if (categories && categories.length > 0) {
+      categorized.push(event);
+    } else {
+      uncategorized.push(event);
+    }
+  }
+
+  // Group categorized events by their primary category
+  const byCategory = new Map<string, T[]>();
+  for (const event of categorized) {
+    const primaryCategory = event.metadata?.category?.[0] ?? "unknown";
+    const existing = byCategory.get(primaryCategory) ?? [];
+    existing.push(event);
+    byCategory.set(primaryCategory, existing);
+  }
+
+  // Select events using round-robin across categories
+  const selected: T[] = [];
+  const categoryQueues = new Map<string, T[]>();
+
+  // Shuffle events within each category for randomness
+  for (const [category, categoryEvents] of byCategory) {
+    categoryQueues.set(category, fisherYatesShuffle(categoryEvents));
+  }
+
+  // Round-robin selection: take one from each category until we have enough
+  // or hit MAX_EVENTS_PER_CATEGORY for each
+  const categoryUsage = new Map<string, number>();
+  let iteration = 0;
+  const maxIterations = count * 10; // Safety limit
+
+  while (selected.length < count && iteration < maxIterations) {
+    iteration++;
+    let madeProgress = false;
+
+    for (const [category, queue] of categoryQueues) {
+      if (selected.length >= count) break;
+
+      const usage = categoryUsage.get(category) ?? 0;
+      if (usage >= MAX_EVENTS_PER_CATEGORY) continue;
+
+      const event = queue.shift();
+      if (event) {
+        selected.push(event);
+        categoryUsage.set(category, usage + 1);
+        madeProgress = true;
+      }
+    }
+
+    // If no progress made from categorized events, break to use uncategorized
+    if (!madeProgress) break;
+  }
+
+  // If still need more events, fill from uncategorized pool (randomized)
+  if (selected.length < count && uncategorized.length > 0) {
+    const shuffledUncategorized = fisherYatesShuffle(uncategorized);
+    const needed = count - selected.length;
+    selected.push(...shuffledUncategorized.slice(0, needed));
+  }
+
+  // Final fallback: if still not enough, take any remaining categorized events
+  if (selected.length < count) {
+    const selectedIds = new Set(selected.map((e) => e._id));
+    const remaining = events.filter((e) => !selectedIds.has(e._id));
+    const shuffledRemaining = fisherYatesShuffle(remaining);
+    selected.push(...shuffledRemaining.slice(0, count - selected.length));
+  }
+
+  // Sort by difficulty: hardest first for optimal hint progression
+  return sortByDifficulty(selected.slice(0, count));
+}
+
+/**
+ * Sorts events by difficulty (hardest first).
+ * Events without difficulty metadata are placed in the middle (assumed difficulty 3).
+ */
+function sortByDifficulty<T extends Doc<"events">>(events: T[]): T[] {
+  return [...events].sort((a, b) => {
+    const diffA = a.metadata?.difficulty ?? 3;
+    const diffB = b.metadata?.difficulty ?? 3;
+    return diffB - diffA; // Higher difficulty first (harder hints first)
+  });
+}
+
+/**
+ * Computes diversity score for a set of events.
+ * Used to evaluate puzzle quality before creation.
+ *
+ * @param events - Events to evaluate
+ * @returns Diversity score 0-1 (1 = perfectly diverse)
+ */
+export function computeDiversityScore(events: Doc<"events">[]): number {
+  if (events.length === 0) return 0;
+
+  // Count unique categories
+  const categories = new Set<string>();
+  let categorizedCount = 0;
+
+  for (const event of events) {
+    const eventCategories = event.metadata?.category ?? [];
+    for (const cat of eventCategories) {
+      categories.add(cat);
+    }
+    if (eventCategories.length > 0) {
+      categorizedCount++;
+    }
+  }
+
+  // Score based on:
+  // 1. Number of unique categories (target: at least 3 for 6 events)
+  // 2. Metadata coverage (how many events have categories)
+  const categoryScore = Math.min(1, categories.size / MIN_CATEGORIES_FOR_DIVERSITY);
+  const coverageScore = categorizedCount / events.length;
+
+  // Weight category diversity higher
+  return 0.7 * categoryScore + 0.3 * coverageScore;
 }

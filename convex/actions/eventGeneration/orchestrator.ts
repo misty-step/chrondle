@@ -520,8 +520,12 @@ async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<Year
   });
 
   if (result.status === "success") {
-    const payload = result.events.map((event) => event.event_text);
-    await ctx.runMutation(internal.events.importYearEvents, {
+    // Import events with full metadata to enable diversity-aware puzzle selection
+    const payload = result.events.map((event) => ({
+      event: event.event_text,
+      metadata: event.metadata,
+    }));
+    await ctx.runMutation(internal.events.importYearEventsWithMetadata, {
       year,
       events: payload,
     });
