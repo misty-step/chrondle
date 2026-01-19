@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { GameInstructions } from "@/components/GameInstructions";
 import { RangeInput } from "@/components/game/RangeInput";
 import { HintIndicator } from "@/components/game/HintIndicator";
@@ -109,6 +109,15 @@ export function GameLayout(props: GameLayoutProps) {
     }
   }, [gameState.ranges]); // Dependent on the whole array to catch changes in length or content
 
+  const stampRotation = useMemo(() => {
+    if (!lastGuessStamp?.timestamp) {
+      return 0;
+    }
+
+    const normalized = Math.sin(lastGuessStamp.timestamp) * 10000;
+    return (normalized - Math.floor(normalized)) * 4 - 2;
+  }, [lastGuessStamp?.timestamp]);
+
   const targetYear = gameState.puzzle?.year ?? 0;
   const totalScore = gameState.totalScore ?? 0;
   const puzzleNumber = gameState.puzzle?.puzzleNumber;
@@ -140,7 +149,7 @@ export function GameLayout(props: GameLayoutProps) {
             >
               <motion.div
                 initial={{ scale: 2, opacity: 0, rotate: -15 }}
-                animate={{ scale: 1, opacity: 1, rotate: Math.random() * 4 - 2 }} // Slight random rotation
+                animate={{ scale: 1, opacity: 1, rotate: stampRotation }} // Slight random rotation
                 exit={{ opacity: 0, scale: 1.1, transition: { duration: 0.3 } }}
                 transition={{
                   type: "spring",
