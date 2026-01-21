@@ -9,12 +9,11 @@
 
 ## Maker Comment
 
-Hey Product Hunt, I am the maker of Chrondle. It is a daily history game where
-you submit a year range, unlock up to six hints, and score by how tight the
-range is. There are two modes (Classic and Order), a growing archive of 150+
-puzzles, and a retro-archival visual style. Built for quick mobile play, plus
-deeper dives if you want to chase perfect scores. I would love feedback on the
-scoring feel and the hint pacing.
+Hey Product Hunt, I am Phaedrus, maker of Chrondle. Daily history game: submit
+a year range, unlock up to six hints, score on tightness. Two modes (Classic
+and Order), 150+ archive puzzles, retro-archival visual style. Built for quick
+mobile play, deeper dives if you want perfect scores. Feedback welcome on
+scoring feel and hint pacing.
 
 ## Gallery Assets (1270x760)
 
