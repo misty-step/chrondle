@@ -44,7 +44,11 @@ Alternates:
 
 ## Maker Comment
 
-Hey Product Hunt! We built Chrondle to make history feel like a daily game. Each day you get six curated clues tied to one year. Instead of a single guess, you submit a year range and get scored on how tight (and accurate) the range is. There are two modes: Classic (year range) and Order (timeline ordering). We obsessed over a retro-archival feel and mobile speed. If you love Wordle-style puzzles or history trivia, we would love your feedback.
+Hey Product Hunt, I am Phaedrus, maker of Chrondle. Daily history game: submit
+a year range, unlock up to six hints, score on tightness. Two modes (Classic
+and Order), 150+ archive puzzles, retro-archival visual style. Built for quick
+mobile play, deeper dives if you want perfect scores. Feedback welcome on
+scoring feel and hint pacing.
 
 ## Gallery Assets
 
