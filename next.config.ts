@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -57,7 +58,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: blob: https://img.clerk.com https://www.gravatar.com", // Clerk avatar CDN and Gravatar fallback
               "font-src 'self' data: https://fonts.gstatic.com", // Required for Google Fonts
               "worker-src 'self' blob:", // Required for Clerk and canvas-confetti web workers
-              "connect-src 'self' wss://fleet-goldfish-183.convex.cloud https://fleet-goldfish-183.convex.cloud https://openrouter.ai https://query.wikidata.org https://api.wikimedia.org https://healthy-doe-23.clerk.accounts.dev https://clerk.chrondle.app https://clerk-telemetry.com https://vitals.vercel-insights.com https://vercel-insights.com", // Convex production URL and Vercel analytics
+              "connect-src 'self' wss://fleet-goldfish-183.convex.cloud https://fleet-goldfish-183.convex.cloud https://openrouter.ai https://query.wikidata.org https://api.wikimedia.org https://healthy-doe-23.clerk.accounts.dev https://clerk.chrondle.app https://clerk-telemetry.com https://vitals.vercel-insights.com https://vercel-insights.com https://*.ingest.sentry.io", // Convex, Vercel analytics, Sentry
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -97,4 +98,26 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: true,
 };
 
-export default withBundleAnalyzer(nextConfig);
+// Sentry configuration for source map uploads and error tracking
+const sentryConfig = withSentryConfig(withBundleAnalyzer(nextConfig), {
+  // Sentry organization and project (from env vars)
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Only print logs in CI builds
+  silent: !process.env.CI,
+
+  // Disable Sentry telemetry
+  telemetry: false,
+
+  // Auto-instrument Vercel cron jobs
+  automaticVercelMonitors: true,
+
+  // Source map configuration
+  sourcemaps: {
+    // Delete source maps after upload (don't expose in production)
+    deleteSourcemapsAfterUpload: true,
+  },
+});
+
+export default sentryConfig;

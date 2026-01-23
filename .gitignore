@@ -126,3 +126,4 @@ playwright-report/
 # convex/_generated/  # ← DO NOT UNCOMMENT THIS LINE!
 backups/
 test-results/
+.env*.local
