@@ -104,7 +104,7 @@ A smoother puzzle experience with faster animations!
 - 🐛 **Fixed** score not updating after correct guess`;
 
 async function synthesize(changelog) {
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
   const res = await fetch(url, {
     method: 'POST',
