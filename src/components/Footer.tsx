@@ -16,13 +16,20 @@ export function Footer() {
 
       <LayoutContainer className="relative">
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
-          {/* Left: Brand & Copyright */}
+          {/* Left: Brand, Version & Copyright */}
           <div className="flex items-baseline gap-3">
             <Link
               href="/"
               className="font-display text-primary text-xl font-medium tracking-tight transition-opacity hover:opacity-80"
             >
               Chrondle
+            </Link>
+            <Link
+              href="/releases"
+              className="text-muted-foreground/60 hover:text-muted-foreground font-serif text-xs transition-colors"
+              title="View releases"
+            >
+              v{process.env.NEXT_PUBLIC_APP_VERSION}
             </Link>
             <span className="text-muted-foreground/60 font-serif text-xs">
               © {new Date().getFullYear()}
