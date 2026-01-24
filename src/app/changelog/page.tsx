@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Markdown from "react-markdown";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { LayoutContainer } from "@/components/LayoutContainer";
@@ -33,7 +34,8 @@ interface GroupedReleases {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function fetchReleases(): Promise<Release[]> {
-  const res = await fetch("https://api.github.com/repos/misty-step/chrondle/releases?per_page=50", {
+  const repo = process.env.GITHUB_REPOSITORY || "misty-step/chrondle";
+  const res = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=50`, {
     headers: {
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
@@ -107,10 +109,19 @@ function ReleaseCard({ release }: { release: Release }) {
         <time className="text-muted-foreground text-sm whitespace-nowrap">{date}</time>
       </header>
       {userNotes && (
-        <div
-          className="prose-sm dark:prose-invert prose-headings:text-base prose-headings:font-medium"
-          dangerouslySetInnerHTML={{ __html: markdownToHtml(userNotes) }}
-        />
+        <div className="prose-sm dark:prose-invert prose-headings:text-base prose-headings:font-medium">
+          <Markdown
+            components={{
+              a: ({ children, href }) => (
+                <a href={href} target="_blank" rel="noopener noreferrer">
+                  {children}
+                </a>
+              ),
+            }}
+          >
+            {userNotes}
+          </Markdown>
+        </div>
       )}
     </article>
   );
@@ -128,30 +139,6 @@ function VersionGroup({ group }: { group: GroupedReleases }) {
         ))}
       </div>
     </section>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Markdown Rendering (minimal, safe subset)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function markdownToHtml(md: string): string {
-  return (
-    md
-      // Headers
-      .replace(/^### (.+)$/gm, "<h4>$1</h4>")
-      .replace(/^## (.+)$/gm, "<h3>$1</h3>")
-      // Bold
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      // Lists
-      .replace(/^- (.+)$/gm, "<li>$1</li>")
-      .replace(/(<li>.*<\/li>\n?)+/g, "<ul>$&</ul>")
-      // Links
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-      // Paragraphs (lines not already wrapped)
-      .replace(/^(?!<[hul]|<li)(.+)$/gm, "<p>$1</p>")
-      // Clean up empty paragraphs
-      .replace(/<p>\s*<\/p>/g, "")
   );
 }
 

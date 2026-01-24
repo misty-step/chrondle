@@ -106,9 +106,12 @@ A smoother puzzle experience with faster animations!
 async function synthesize(changelog) {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
-  const res = await fetch(`${url}?key=${GEMINI_API_KEY}`, {
+  const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': GEMINI_API_KEY,
+    },
     body: JSON.stringify({
       contents: [
         {

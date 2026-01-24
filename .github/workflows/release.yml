@@ -57,7 +57,7 @@ jobs:
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm semantic-release
+        run: pnpm exec semantic-release
 
   synthesize:
     name: Synthesize Release Notes
