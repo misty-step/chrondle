@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
 import { withSentryConfig } from "@sentry/nextjs";
+import { readFileSync } from "fs";
+
+// Read version from package.json at build time
+const packageJson = JSON.parse(readFileSync("./package.json", "utf8"));
+const appVersion = packageJson.version;
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -8,6 +13,10 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const nextConfig: NextConfig = {
+  // Expose version to client
+  env: {
+    NEXT_PUBLIC_APP_VERSION: appVersion,
+  },
   // Server Actions are enabled by default in Next.js 15
   // No experimental configuration needed
 

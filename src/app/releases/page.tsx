@@ -5,7 +5,7 @@ import { Footer } from "@/components/Footer";
 import { LayoutContainer } from "@/components/LayoutContainer";
 
 export const metadata: Metadata = {
-  title: "Changelog | Chrondle",
+  title: "Releases | Chrondle",
   description: "See what's new in Chrondle - the daily history game.",
 };
 
@@ -96,16 +96,7 @@ function ReleaseCard({ release }: { release: Release }) {
   return (
     <article className="border-border border-b py-6 last:border-b-0">
       <header className="mb-3 flex items-baseline justify-between gap-4">
-        <h3 className="text-lg font-semibold">
-          <a
-            href={release.html_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-primary transition-colors"
-          >
-            {release.name || release.tag_name}
-          </a>
-        </h3>
+        <h3 className="text-lg font-semibold">{release.name || release.tag_name}</h3>
         <time className="text-muted-foreground text-sm whitespace-nowrap">{date}</time>
       </header>
       {userNotes && (
@@ -146,7 +137,7 @@ function VersionGroup({ group }: { group: GroupedReleases }) {
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default async function ChangelogPage() {
+export default async function ReleasesPage() {
   const releases = await fetchReleases();
   const grouped = groupByMinorVersion(releases);
 
@@ -156,7 +147,7 @@ export default async function ChangelogPage() {
       <main className="flex-1 py-12">
         <LayoutContainer className="max-w-2xl">
           <header className="mb-8">
-            <h1 className="text-3xl font-bold">Changelog</h1>
+            <h1 className="text-3xl font-bold">Releases</h1>
             <p className="text-muted-foreground mt-2">
               See what&apos;s new in Chrondle. We ship improvements regularly.
             </p>
