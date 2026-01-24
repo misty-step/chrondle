@@ -159,8 +159,15 @@ async function main() {
     return;
   }
 
+  // Guard against empty release body
+  const technicalNotes = (release.body ?? '').trim();
+  if (!technicalNotes) {
+    console.error('Release body is empty; cannot synthesize notes');
+    process.exit(1);
+  }
+
   // Synthesize user-friendly notes
-  const userNotes = await synthesize(release.body);
+  const userNotes = await synthesize(technicalNotes);
   if (!userNotes) {
     console.error('LLM returned empty response');
     process.exit(1);
@@ -172,7 +179,7 @@ async function main() {
 <details>
 <summary>Technical Changelog</summary>
 
-${release.body}
+${technicalNotes}
 </details>`;
 
   // Update release
