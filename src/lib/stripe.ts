@@ -8,7 +8,8 @@ let _stripe: Stripe | null = null;
  */
 export function getStripe(): Stripe {
   if (!_stripe) {
-    const key = process.env.STRIPE_SECRET_KEY;
+    // CRITICAL: Trim to prevent signature verification failures from trailing whitespace
+    const key = process.env.STRIPE_SECRET_KEY?.trim();
     if (!key) {
       throw new Error("STRIPE_SECRET_KEY is not configured. Add it to your environment variables.");
     }

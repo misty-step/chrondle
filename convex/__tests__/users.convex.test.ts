@@ -444,7 +444,7 @@ describe("users/queries - hasArchiveAccess", () => {
       expect(hasAccess).toBe(false);
     });
 
-    it("returns false for canceled subscription", async () => {
+    it("returns true for canceled subscription within grace period", async () => {
       const t = convexTest(schema, modules);
       const futureDate = Date.now() + 30 * 24 * 60 * 60 * 1000;
 
@@ -465,6 +465,32 @@ describe("users/queries - hasArchiveAccess", () => {
 
       const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
         clerkId: "clerk_canceled_sub",
+      });
+
+      expect(hasAccess).toBe(true);
+    });
+
+    it("returns false for canceled subscription after grace period", async () => {
+      const t = convexTest(schema, modules);
+      const pastDate = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+      await t.run(async (ctx) => {
+        await ctx.db.insert("users", {
+          clerkId: "clerk_canceled_sub_past",
+          email: "canceled.past@example.com",
+          subscriptionStatus: "canceled",
+          subscriptionPlan: "monthly",
+          subscriptionEndDate: pastDate,
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
+        clerkId: "clerk_canceled_sub_past",
       });
 
       expect(hasAccess).toBe(false);

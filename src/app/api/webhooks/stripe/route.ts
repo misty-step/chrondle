@@ -140,6 +140,8 @@ export async function POST(req: NextRequest) {
 
         await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
           secret: syncSecret,
+          eventId: event.id,
+          eventTimestamp: event.created,
           eventType: "checkout.session.completed",
           payload: {
             clerkId,
@@ -166,6 +168,8 @@ export async function POST(req: NextRequest) {
 
         await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
           secret: syncSecret,
+          eventId: event.id,
+          eventTimestamp: event.created,
           eventType: "customer.subscription.updated",
           payload: {
             stripeCustomerId,
@@ -187,6 +191,8 @@ export async function POST(req: NextRequest) {
 
         await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
           secret: syncSecret,
+          eventId: event.id,
+          eventTimestamp: event.created,
           eventType: "customer.subscription.deleted",
           payload: { stripeCustomerId },
         });
@@ -214,6 +220,8 @@ export async function POST(req: NextRequest) {
         ) {
           await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
             secret: syncSecret,
+            eventId: event.id,
+            eventTimestamp: event.created,
             eventType: "invoice.payment_failed",
             payload: { stripeCustomerId },
           });

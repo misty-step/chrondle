@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { currentUser } from "@clerk/nextjs/server";
+import { requireConvexClient, api } from "@/lib/convexServer";
 import { getStripe, getPriceId, PricePlan, getAppOrigin } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
 
@@ -41,6 +43,36 @@ export async function POST(req: NextRequest) {
     const successUrl = `${origin}/archive?checkout=success`;
     const cancelUrl = `${origin}/pricing`;
 
+    // Check if user has remaining trial time (business model: honor trial on upgrade)
+    let trialEnd: number | undefined;
+    try {
+      const convex = requireConvexClient();
+      const dbUser = await convex.query(api.users.queries.getUserByClerkId, {
+        clerkId: user.id,
+      });
+      if (dbUser?.trialEndsAt && dbUser.trialEndsAt > Date.now()) {
+        // Convert ms to seconds for Stripe (Stripe uses Unix timestamps in seconds)
+        trialEnd = Math.floor(dbUser.trialEndsAt / 1000);
+        logger.info(
+          `[checkout] User ${user.id} has trial ending at ${new Date(dbUser.trialEndsAt).toISOString()}`,
+        );
+      }
+    } catch (err) {
+      // Non-fatal: proceed without trial if we can't check
+      logger.warn("[checkout] Failed to check trial status, proceeding without trial:", err);
+    }
+
+    // Build subscription_data with optional trial_end
+    const subscriptionData: Stripe.Checkout.SessionCreateParams["subscription_data"] = {
+      metadata: {
+        clerkId: user.id,
+        plan,
+      },
+    };
+    if (trialEnd) {
+      subscriptionData.trial_end = trialEnd;
+    }
+
     // Create Checkout Session
     const session = await getStripe().checkout.sessions.create({
       mode: "subscription",
@@ -61,15 +93,12 @@ export async function POST(req: NextRequest) {
       // Allow promotion codes if we add them later
       allow_promotion_codes: false,
       // Subscription metadata
-      subscription_data: {
-        metadata: {
-          clerkId: user.id,
-          plan,
-        },
-      },
+      subscription_data: subscriptionData,
     });
 
-    logger.info(`[checkout] Created session for user ${user.id}, plan: ${plan}`);
+    logger.info(
+      `[checkout] Created session for user ${user.id}, plan: ${plan}${trialEnd ? `, trial_end: ${trialEnd}` : ""}`,
+    );
 
     return NextResponse.json({ url: session.url });
   } catch (error) {

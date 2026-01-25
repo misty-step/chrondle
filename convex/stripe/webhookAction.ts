@@ -33,6 +33,8 @@ const subscriptionStatusValidator = v.union(
 export const processWebhookEvent = action({
   args: {
     secret: v.string(),
+    eventId: v.optional(v.string()),
+    eventTimestamp: v.optional(v.number()),
     eventType: v.union(
       v.literal("checkout.session.completed"),
       v.literal("customer.subscription.updated"),
@@ -49,7 +51,7 @@ export const processWebhookEvent = action({
       subscriptionEndDate: v.optional(v.union(v.number(), v.null())),
     }),
   },
-  handler: async (ctx, { secret, eventType, payload }) => {
+  handler: async (ctx, { secret, eventId, eventTimestamp, eventType, payload }) => {
     // Validate shared secret - single point of authorization
     const expectedSecret = process.env.STRIPE_SYNC_SECRET;
     if (!expectedSecret) {
@@ -78,6 +80,8 @@ export const processWebhookEvent = action({
             subscriptionStatus: payload.subscriptionStatus,
             subscriptionPlan: payload.subscriptionPlan,
             subscriptionEndDate: payload.subscriptionEndDate,
+            eventId,
+            eventTimestamp,
           });
         }
         break;
@@ -92,6 +96,8 @@ export const processWebhookEvent = action({
           subscriptionStatus: payload.subscriptionStatus,
           subscriptionPlan: payload.subscriptionPlan,
           subscriptionEndDate: payload.subscriptionEndDate,
+          eventId,
+          eventTimestamp,
         });
         break;
       }
@@ -107,6 +113,8 @@ export const processWebhookEvent = action({
         await ctx.runMutation(internal.users.subscriptions.updateSubscription, {
           stripeCustomerId: payload.stripeCustomerId,
           subscriptionStatus: "past_due",
+          eventId,
+          eventTimestamp,
         });
         break;
       }

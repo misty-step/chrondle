@@ -186,6 +186,11 @@ export default defineSchema({
     ),
     subscriptionPlan: v.optional(v.union(v.literal("monthly"), v.literal("annual"), v.null())),
     subscriptionEndDate: v.optional(v.number()), // Unix timestamp (ms) when current period ends
+    // Trial tracking (business model: honor remaining trial on upgrade)
+    trialEndsAt: v.optional(v.number()), // Unix timestamp (ms) when trial ends; cleared on subscription activation
+    // Webhook idempotency (prevent duplicate/out-of-order event processing)
+    lastStripeEventId: v.optional(v.string()), // Most recent processed Stripe event ID
+    lastStripeEventTimestamp: v.optional(v.number()), // Unix timestamp (seconds) of that event
   })
     .index("by_clerk", ["clerkId"])
     .index("by_stripe", ["stripeCustomerId"]),

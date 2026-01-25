@@ -68,6 +68,8 @@ export const updateSubscription = internalMutation({
     ),
     subscriptionPlan: v.optional(v.union(v.literal("monthly"), v.literal("annual"), v.null())),
     subscriptionEndDate: v.optional(v.union(v.number(), v.null())),
+    eventId: v.optional(v.string()),
+    eventTimestamp: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -80,6 +82,24 @@ export const updateSubscription = internalMutation({
       throw new Error(`No user found for Stripe customer: ${args.stripeCustomerId}`);
     }
 
+    // Idempotency check - skip duplicate events
+    if (args.eventId && user.lastStripeEventId === args.eventId) {
+      console.log(`[subscriptions] Skipping duplicate event ${args.eventId} for user ${user._id}`);
+      return user._id;
+    }
+
+    // Out-of-order check - skip stale events
+    if (
+      args.eventTimestamp !== undefined &&
+      user.lastStripeEventTimestamp !== undefined &&
+      args.eventTimestamp < user.lastStripeEventTimestamp
+    ) {
+      console.log(
+        `[subscriptions] Skipping stale event (${args.eventTimestamp} < ${user.lastStripeEventTimestamp}) for user ${user._id}`,
+      );
+      return user._id;
+    }
+
     // Build patch object, properly handling null vs undefined:
     // - null: explicitly clear the field (convert to undefined for Convex)
     // - undefined: don't update the field
@@ -90,6 +110,8 @@ export const updateSubscription = internalMutation({
       subscriptionStatus?: SubscriptionStatus;
       subscriptionPlan?: SubscriptionPlan;
       subscriptionEndDate?: number;
+      lastStripeEventId?: string;
+      lastStripeEventTimestamp?: number;
       updatedAt: number;
     } = { updatedAt: Date.now() };
 
@@ -103,6 +125,12 @@ export const updateSubscription = internalMutation({
     }
     if (args.subscriptionEndDate !== undefined) {
       patch.subscriptionEndDate = args.subscriptionEndDate ?? undefined;
+    }
+    if (args.eventId !== undefined) {
+      patch.lastStripeEventId = args.eventId;
+    }
+    if (args.eventTimestamp !== undefined) {
+      patch.lastStripeEventTimestamp = args.eventTimestamp;
     }
 
     await ctx.db.patch(user._id, patch);
