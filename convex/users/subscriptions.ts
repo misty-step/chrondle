@@ -148,8 +148,10 @@ export const updateSubscription = internalMutation({
 export const clearSubscription = internalMutation({
   args: {
     stripeCustomerId: v.string(),
+    eventId: v.optional(v.string()),
+    eventTimestamp: v.optional(v.number()),
   },
-  handler: async (ctx, { stripeCustomerId }) => {
+  handler: async (ctx, { stripeCustomerId, eventId, eventTimestamp }) => {
     const user = await ctx.db
       .query("users")
       .withIndex("by_stripe", (q) => q.eq("stripeCustomerId", stripeCustomerId))
@@ -160,12 +162,47 @@ export const clearSubscription = internalMutation({
       throw new Error(`No user found for Stripe customer: ${stripeCustomerId}`);
     }
 
-    await ctx.db.patch(user._id, {
+    // Idempotency check - skip duplicate events
+    if (eventId && user.lastStripeEventId === eventId) {
+      console.log(`[subscriptions] Skipping duplicate event ${eventId} for user ${user._id}`);
+      return user._id;
+    }
+
+    // Out-of-order check - skip stale events
+    if (
+      eventTimestamp !== undefined &&
+      user.lastStripeEventTimestamp !== undefined &&
+      eventTimestamp < user.lastStripeEventTimestamp
+    ) {
+      console.log(
+        `[subscriptions] Skipping stale event (${eventTimestamp} < ${user.lastStripeEventTimestamp}) for user ${user._id}`,
+      );
+      return user._id;
+    }
+
+    // Build patch with idempotency tracking
+    const patch: {
+      subscriptionStatus?: undefined;
+      subscriptionPlan?: undefined;
+      subscriptionEndDate?: undefined;
+      lastStripeEventId?: string;
+      lastStripeEventTimestamp?: number;
+      updatedAt: number;
+    } = {
       subscriptionStatus: undefined,
       subscriptionPlan: undefined,
       subscriptionEndDate: undefined,
       updatedAt: Date.now(),
-    });
+    };
+
+    if (eventId !== undefined) {
+      patch.lastStripeEventId = eventId;
+    }
+    if (eventTimestamp !== undefined) {
+      patch.lastStripeEventTimestamp = eventTimestamp;
+    }
+
+    await ctx.db.patch(user._id, patch);
 
     console.log(`[subscriptions] Cleared subscription for user ${user._id}`);
     return user._id;

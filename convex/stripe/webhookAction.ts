@@ -105,6 +105,8 @@ export const processWebhookEvent = action({
       case "customer.subscription.deleted": {
         await ctx.runMutation(internal.users.subscriptions.clearSubscription, {
           stripeCustomerId: payload.stripeCustomerId,
+          eventId,
+          eventTimestamp,
         });
         break;
       }

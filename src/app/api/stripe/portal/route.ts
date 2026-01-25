@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!dbUser?.stripeCustomerId) {
+      logger.warn(`[portal] User ${user.id} tried to access portal without Stripe customer ID`);
       return NextResponse.json({ error: "No subscription found" }, { status: 404 });
     }
 

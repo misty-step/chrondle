@@ -32,25 +32,25 @@ export function checkArchiveAccess(user: Doc<"users">): boolean {
   }
 
   // 2. Active or trialing subscription within period
-  if (user.subscriptionStatus === "active" || user.subscriptionStatus === "trialing") {
-    // No end date means indefinite access (shouldn't happen, but safe default)
-    if (!user.subscriptionEndDate) {
-      return true;
-    }
-    // Within subscription period
-    if (user.subscriptionEndDate > now) {
-      return true;
-    }
-    // Period expired - no access
-    return false;
+  // No end date = indefinite access (shouldn't happen, but safe default)
+  // With end date = must be in future
+  const isActiveOrTrialing =
+    (user.subscriptionStatus === "active" || user.subscriptionStatus === "trialing") &&
+    (!user.subscriptionEndDate || user.subscriptionEndDate > now);
+
+  if (isActiveOrTrialing) {
+    return true;
   }
 
   // 3. Canceled subscription but within grace period
   // User canceled but already paid for current period - honor that
-  if (user.subscriptionStatus === "canceled") {
-    if (user.subscriptionEndDate && user.subscriptionEndDate > now) {
-      return true;
-    }
+  const isCanceledWithGracePeriod =
+    user.subscriptionStatus === "canceled" &&
+    user.subscriptionEndDate !== undefined &&
+    user.subscriptionEndDate > now;
+
+  if (isCanceledWithGracePeriod) {
+    return true;
   }
 
   // 4. past_due, null, or expired - no access

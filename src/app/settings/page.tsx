@@ -15,9 +15,9 @@ export default async function SettingsPage() {
   }
 
   let hasStripeCustomer = false;
-  let initialPlan: "monthly" | "annual" | null | undefined;
-  let initialStatus: "active" | "trialing" | "canceled" | "past_due" | null | undefined;
-  let initialEndDate: number | null | undefined;
+  let initialPlan: "monthly" | "annual" | null = null;
+  let initialStatus: "active" | "trialing" | "canceled" | "past_due" | null = null;
+  let initialEndDate: number | null = null;
 
   try {
     const convex = requireConvexClient();
