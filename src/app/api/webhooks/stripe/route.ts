@@ -41,17 +41,23 @@ function extractSubscriptionId(
 }
 
 /**
- * Extract period end from subscription items (throws if missing)
+ * Extract period end from subscription (with fallback locations)
  *
- * Note: In the Stripe API version used by this project, current_period_end
- * is on SubscriptionItem, not the top-level Subscription object.
+ * Stripe API has moved this field between versions. Check both locations
+ * for resilience against API version changes.
  */
 function getSubscriptionPeriodEnd(subscription: Stripe.Subscription): number {
-  const firstItem = subscription.items?.data?.[0];
-  if (!firstItem?.current_period_end) {
-    throw new Error(`Subscription ${subscription.id} missing current_period_end`);
+  // Try top-level first (newer API versions)
+  const periodEnd = (subscription as any).current_period_end;
+  if (typeof periodEnd === "number") {
+    return periodEnd;
   }
-  return firstItem.current_period_end;
+  // Fallback to item level (older API versions)
+  const firstItem = subscription.items?.data?.[0];
+  if (firstItem?.current_period_end) {
+    return firstItem.current_period_end;
+  }
+  throw new Error(`Subscription ${subscription.id} missing current_period_end`);
 }
 
 /**
@@ -140,6 +146,8 @@ export async function POST(req: NextRequest) {
 
         await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
           secret: syncSecret,
+          eventId: event.id,
+          eventTimestamp: event.created,
           eventType: "checkout.session.completed",
           payload: {
             clerkId,
@@ -166,6 +174,8 @@ export async function POST(req: NextRequest) {
 
         await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
           secret: syncSecret,
+          eventId: event.id,
+          eventTimestamp: event.created,
           eventType: "customer.subscription.updated",
           payload: {
             stripeCustomerId,
@@ -187,6 +197,8 @@ export async function POST(req: NextRequest) {
 
         await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
           secret: syncSecret,
+          eventId: event.id,
+          eventTimestamp: event.created,
           eventType: "customer.subscription.deleted",
           payload: { stripeCustomerId },
         });
@@ -214,8 +226,38 @@ export async function POST(req: NextRequest) {
         ) {
           await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
             secret: syncSecret,
+            eventId: event.id,
+            eventTimestamp: event.created,
             eventType: "invoice.payment_failed",
             payload: { stripeCustomerId },
+          });
+        }
+        break;
+      }
+
+      case "invoice.payment_succeeded": {
+        // Safety net: update subscriptionEndDate from successful invoice
+        // Handles edge cases where subscription.updated webhook fails
+        const invoice = event.data.object as Stripe.Invoice;
+        const stripeCustomerId = extractCustomerId(invoice.customer);
+
+        if (!stripeCustomerId) {
+          throw new Error("invoice.payment_succeeded missing customer");
+        }
+
+        // Only handle subscription-related invoices with period info
+        const subscriptionId = extractSubscriptionId((invoice as any).subscription);
+        if (subscriptionId && invoice.lines?.data?.[0]?.period?.end) {
+          const periodEnd = invoice.lines.data[0].period.end * 1000;
+          await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
+            secret: syncSecret,
+            eventId: event.id,
+            eventTimestamp: event.created,
+            eventType: "invoice.payment_succeeded",
+            payload: {
+              stripeCustomerId,
+              subscriptionEndDate: periodEnd,
+            },
           });
         }
         break;

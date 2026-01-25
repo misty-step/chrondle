@@ -98,7 +98,11 @@ export function getOpenRouterApiKey(): string {
  */
 export function getEnvVar(key: string, fallback: string = ""): string {
   try {
-    return process.env[key] || fallback;
+    // CRITICAL: Trim whitespace to prevent signature verification failures
+    // Trailing \n or spaces cause "Invalid character in header content" errors
+    // and webhook signature mismatches (see INCIDENT-2026-01-17T.md)
+    const value = process.env[key]?.trim();
+    return value || fallback;
   } catch (error) {
     logger.warn(`Failed to access environment variable: ${key}`, error);
     return fallback;

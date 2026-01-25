@@ -33,11 +33,14 @@ const subscriptionStatusValidator = v.union(
 export const processWebhookEvent = action({
   args: {
     secret: v.string(),
+    eventId: v.optional(v.string()),
+    eventTimestamp: v.optional(v.number()),
     eventType: v.union(
       v.literal("checkout.session.completed"),
       v.literal("customer.subscription.updated"),
       v.literal("customer.subscription.deleted"),
       v.literal("invoice.payment_failed"),
+      v.literal("invoice.payment_succeeded"),
     ),
     payload: v.object({
       // For checkout.session.completed - links customer and activates
@@ -49,7 +52,7 @@ export const processWebhookEvent = action({
       subscriptionEndDate: v.optional(v.union(v.number(), v.null())),
     }),
   },
-  handler: async (ctx, { secret, eventType, payload }) => {
+  handler: async (ctx, { secret, eventId, eventTimestamp, eventType, payload }) => {
     // Validate shared secret - single point of authorization
     const expectedSecret = process.env.STRIPE_SYNC_SECRET;
     if (!expectedSecret) {
@@ -78,6 +81,8 @@ export const processWebhookEvent = action({
             subscriptionStatus: payload.subscriptionStatus,
             subscriptionPlan: payload.subscriptionPlan,
             subscriptionEndDate: payload.subscriptionEndDate,
+            eventId,
+            eventTimestamp,
           });
         }
         break;
@@ -92,6 +97,8 @@ export const processWebhookEvent = action({
           subscriptionStatus: payload.subscriptionStatus,
           subscriptionPlan: payload.subscriptionPlan,
           subscriptionEndDate: payload.subscriptionEndDate,
+          eventId,
+          eventTimestamp,
         });
         break;
       }
@@ -99,6 +106,8 @@ export const processWebhookEvent = action({
       case "customer.subscription.deleted": {
         await ctx.runMutation(internal.users.subscriptions.clearSubscription, {
           stripeCustomerId: payload.stripeCustomerId,
+          eventId,
+          eventTimestamp,
         });
         break;
       }
@@ -107,7 +116,22 @@ export const processWebhookEvent = action({
         await ctx.runMutation(internal.users.subscriptions.updateSubscription, {
           stripeCustomerId: payload.stripeCustomerId,
           subscriptionStatus: "past_due",
+          eventId,
+          eventTimestamp,
         });
+        break;
+      }
+
+      case "invoice.payment_succeeded": {
+        if (payload.subscriptionEndDate != null) {
+          await ctx.runMutation(internal.users.subscriptions.updateSubscription, {
+            stripeCustomerId: payload.stripeCustomerId,
+            subscriptionStatus: "active",
+            subscriptionEndDate: payload.subscriptionEndDate,
+            eventId,
+            eventTimestamp,
+          });
+        }
         break;
       }
     }

@@ -18,32 +18,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const convexClient = requireConvexClient();
-
     // Get user's Stripe customer ID from Convex
-    const convexUser = await convexClient.query(api.users.getUserByClerkId, {
+    const convex = requireConvexClient();
+    const dbUser = await convex.query(api.users.getUserByClerkId, {
       clerkId: user.id,
     });
 
-    if (!convexUser?.stripeCustomerId) {
-      logger.warn(`[portal] No Stripe customer for user ${user.id}`);
+    if (!dbUser?.stripeCustomerId) {
+      logger.warn(`[portal] User ${user.id} tried to access portal without Stripe customer ID`);
       return NextResponse.json({ error: "No subscription found" }, { status: 404 });
     }
 
-    // Build return URL
-    const returnUrl = `${getAppOrigin(req)}/archive`;
-
-    // Create portal session
+    const origin = getAppOrigin(req);
     const session = await getStripe().billingPortal.sessions.create({
-      customer: convexUser.stripeCustomerId,
-      return_url: returnUrl,
+      customer: dbUser.stripeCustomerId,
+      return_url: `${origin}/settings`,
     });
-
-    logger.info(`[portal] Created portal session for user ${user.id}`);
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    logger.error("[portal] Failed to create session:", error);
+    logger.error("[portal] Failed to create portal session:", error);
     return NextResponse.json({ error: "Failed to create portal session" }, { status: 500 });
   }
 }
