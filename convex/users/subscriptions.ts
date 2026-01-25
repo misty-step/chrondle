@@ -110,6 +110,7 @@ export const updateSubscription = internalMutation({
       subscriptionStatus?: SubscriptionStatus;
       subscriptionPlan?: SubscriptionPlan;
       subscriptionEndDate?: number;
+      trialEndsAt?: undefined;
       lastStripeEventId?: string;
       lastStripeEventTimestamp?: number;
       updatedAt: number;
@@ -117,6 +118,12 @@ export const updateSubscription = internalMutation({
 
     // subscriptionStatus is required in args, always update
     patch.subscriptionStatus = args.subscriptionStatus;
+
+    // Clear zombie trial when subscription activates
+    // Without this, canceled users could regain access via stale trial data
+    if (args.subscriptionStatus === "active" && user.trialEndsAt) {
+      patch.trialEndsAt = undefined;
+    }
 
     // Optional fields: only include if explicitly provided
     // Convert null to undefined (Convex doesn't store null for optional numbers)

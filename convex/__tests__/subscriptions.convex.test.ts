@@ -119,6 +119,36 @@ describe("users/subscriptions", () => {
       });
     });
 
+    it("clears trialEndsAt when subscription activates", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      const trialEndsAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "clerk_trial_clear",
+          email: "trial-clear@example.com",
+          stripeCustomerId: "cus_trial123",
+          trialEndsAt,
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      await t.mutation(subscriptionsMutations.updateSubscription, {
+        stripeCustomerId: "cus_trial123",
+        subscriptionStatus: "active",
+      });
+
+      await t.run(async (ctx) => {
+        const user = await ctx.db.get(userId!);
+        expect(user?.trialEndsAt).toBeUndefined();
+      });
+    });
+
     it("handles null status (sets to null in db)", async () => {
       const t = convexTest(schema, modules);
 

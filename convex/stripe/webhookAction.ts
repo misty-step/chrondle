@@ -40,6 +40,7 @@ export const processWebhookEvent = action({
       v.literal("customer.subscription.updated"),
       v.literal("customer.subscription.deleted"),
       v.literal("invoice.payment_failed"),
+      v.literal("invoice.payment_succeeded"),
     ),
     payload: v.object({
       // For checkout.session.completed - links customer and activates
@@ -118,6 +119,19 @@ export const processWebhookEvent = action({
           eventId,
           eventTimestamp,
         });
+        break;
+      }
+
+      case "invoice.payment_succeeded": {
+        if (payload.subscriptionEndDate != null) {
+          await ctx.runMutation(internal.users.subscriptions.updateSubscription, {
+            stripeCustomerId: payload.stripeCustomerId,
+            subscriptionStatus: "active",
+            subscriptionEndDate: payload.subscriptionEndDate,
+            eventId,
+            eventTimestamp,
+          });
+        }
         break;
       }
     }
