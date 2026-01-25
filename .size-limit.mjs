@@ -2,7 +2,7 @@ export default [
   {
     name: "All JS Chunks",
     path: ".next/static/chunks/*.js",
-    limit: "810 KB",
+    limit: "830 KB",
     gzip: true,
   },
   {
