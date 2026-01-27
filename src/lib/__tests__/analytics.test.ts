@@ -385,8 +385,11 @@ describe("GameAnalytics", () => {
       expect(summary.queueSize).toBe(1);
     });
 
-    it("should call posthog when available", () => {
+    it("should call posthog when available", async () => {
       analytics.track(AnalyticsEvent.GAME_LOADED, { test: true }, "user-123");
+
+      // PostHog is now lazy-loaded via dynamic import
+      await Promise.resolve();
 
       expect(mockCapture).toHaveBeenCalledWith(
         AnalyticsEvent.GAME_LOADED,

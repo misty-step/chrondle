@@ -2,7 +2,7 @@ export default [
   {
     name: "All JS Chunks",
     path: ".next/static/chunks/*.js",
-    limit: "830 KB",
+    limit: "900 KB", // Increased from 830 KB to accommodate PostHog (~50 KB)
     gzip: true,
   },
   {
