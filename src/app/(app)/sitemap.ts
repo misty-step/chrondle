@@ -1,6 +1,6 @@
 import { MetadataRoute } from "next";
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../../convex/_generated/api";
+import { api } from "../../../convex/_generated/api";
 import { logger } from "@/lib/logger";
 
 const BASE_URL = "https://chrondle.app";
