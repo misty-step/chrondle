@@ -90,7 +90,7 @@
     "convex": "^1.25.2",
     "lucide-react": "^0.523.0",
     "motion": "^12.19.1",
-    "next": "16.0.10",
+    "next": "16.1.5",
     "posthog-js": "^1.335.3",
     "posthog-node": "^5.21.1",
     "qrcode": "^1.5.4",

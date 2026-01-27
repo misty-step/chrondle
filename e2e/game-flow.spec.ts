@@ -18,16 +18,11 @@ async function navigateToClassicGame(page: Page) {
   await expect(page.getByRole("main")).toBeVisible();
 
   // Click on Classic mode - the card should be visible
-  const classicCard = page.getByRole("button", { name: /select classic mode/i });
+  const classicCard = page.getByRole("button", { name: /classic/i });
   await expect(classicCard).toBeVisible();
 
-  // First click activates the card, click "Play Now" to navigate
+  // Click navigates directly to the classic game
   await classicCard.click();
-
-  // Now click "Play Now" button within the card
-  const playButton = page.getByRole("button", { name: /play now/i });
-  await expect(playButton).toBeVisible({ timeout: 5000 });
-  await playButton.click();
 
   // Wait for navigation to /classic
   await page.waitForURL(/\/classic/);
@@ -45,7 +40,7 @@ test.describe("Homepage Navigation @happy-path", () => {
     await expect(page.getByRole("heading", { name: "Order" })).toBeVisible();
 
     // Should have branding (use exact match to avoid title element)
-    await expect(page.getByText("CHRONDLE", { exact: true })).toBeVisible();
+    await expect(page.getByText("Chrondle", { exact: true })).toBeVisible();
   });
 
   test("can navigate from homepage to classic game", async ({ page }) => {
