@@ -9,8 +9,9 @@
  * - Production telemetry integration
  */
 
-import { GameState, isReady } from "@/types/gameState";
+import posthog from "posthog-js";
 import { logger } from "@/lib/logger";
+import { GameState, isReady } from "@/types/gameState";
 
 /**
  * Analytics event types for game state tracking
@@ -394,9 +395,9 @@ export class GameAnalytics {
       this.flush();
     }
 
-    // Send to gtag if available (for production)
-    if (typeof window !== "undefined" && "gtag" in window) {
-      (window as any).gtag?.("event", event, {
+    // Send to PostHog if available (for production)
+    if (typeof window !== "undefined" && posthog.__loaded) {
+      posthog.capture(event, {
         ...properties,
         user_id: userId,
         session_id: this.sessionId,

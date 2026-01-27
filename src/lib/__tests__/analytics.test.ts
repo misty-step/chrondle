@@ -3,12 +3,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GameAnalytics, AnalyticsEvent } from "../analytics";
 import type { GameState } from "@/types/gameState";
 
+const mockCapture = vi.hoisted(() => vi.fn());
+
+vi.mock("posthog-js", () => ({
+  default: {
+    capture: mockCapture,
+    __loaded: true,
+  },
+}));
+
 // Mock fetch globally
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
-
-// Mock window.gtag
-const mockGtag = vi.fn();
 
 describe("GameAnalytics", () => {
   let analytics: GameAnalytics;
@@ -18,13 +24,6 @@ describe("GameAnalytics", () => {
 
     // Reset singleton
     (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
-
-    // Setup window mocks
-    Object.defineProperty(window, "gtag", {
-      value: mockGtag,
-      writable: true,
-      configurable: true,
-    });
 
     // Get fresh instance with test config
     analytics = GameAnalytics.getInstance({
@@ -386,15 +385,15 @@ describe("GameAnalytics", () => {
       expect(summary.queueSize).toBe(1);
     });
 
-    it("should call gtag when available", () => {
+    it("should call posthog when available", () => {
       analytics.track(AnalyticsEvent.GAME_LOADED, { test: true }, "user-123");
 
-      expect(mockGtag).toHaveBeenCalledWith(
-        "event",
+      expect(mockCapture).toHaveBeenCalledWith(
         AnalyticsEvent.GAME_LOADED,
         expect.objectContaining({
           test: true,
           user_id: "user-123",
+          session_id: expect.any(String),
         }),
       );
     });

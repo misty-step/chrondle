@@ -76,7 +76,7 @@ export class ErrorBoundary extends Component<Props, State> {
       logger.error("PRODUCTION_ERROR:", JSON.stringify(errorData, null, 2));
 
       // Optional: Send to a telemetry service
-      // Example: window.gtag?.('event', 'exception', { description: error.message, fatal: false });
+      // Example: if (posthog.__loaded) posthog.capture("exception", { description: error.message, fatal: false });
     } catch (reportingError) {
       // Don't let error reporting crash the app
       logger.error("Failed to report error:", reportingError);

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
+import posthog from "posthog-js";
 import { AlertTriangle, RotateCw, Home, Bug } from "lucide-react";
 import Link from "next/link";
 import { logger } from "@/lib/logger";
@@ -108,8 +109,8 @@ export class GameErrorBoundary extends Component<Props, State> {
       logger.error("GAME_ERROR:", JSON.stringify(errorData, null, 2));
 
       // Send to analytics if available
-      if (typeof window !== "undefined" && "gtag" in window) {
-        (window as any).gtag?.("event", "exception", {
+      if (typeof window !== "undefined" && posthog.__loaded) {
+        posthog.capture("exception", {
           description: `Game State Error: ${error.message}`,
           fatal: false,
           error_count: errorCount,
