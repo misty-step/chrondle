@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "@/components/providers";
+import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 
@@ -68,9 +68,10 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <Providers>{children}</Providers>
-        <Toaster />
-        <Analytics />
+        <PostHogProvider>
+          <Providers>{children}</Providers>
+          <Toaster />
+        </PostHogProvider>
       </body>
     </html>
   );

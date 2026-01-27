@@ -9,8 +9,18 @@
  * - Production telemetry integration
  */
 
-import { GameState, isReady } from "@/types/gameState";
 import { logger } from "@/lib/logger";
+import { GameState, isReady } from "@/types/gameState";
+
+// Lazy-loaded PostHog - avoids bundling in initial chunk
+let posthogPromise: Promise<typeof import("posthog-js").default> | null = null;
+
+function getPostHog(): Promise<typeof import("posthog-js").default> {
+  if (!posthogPromise) {
+    posthogPromise = import("posthog-js").then((m) => m.default);
+  }
+  return posthogPromise;
+}
 
 /**
  * Analytics event types for game state tracking
@@ -394,12 +404,16 @@ export class GameAnalytics {
       this.flush();
     }
 
-    // Send to gtag if available (for production)
-    if (typeof window !== "undefined" && "gtag" in window) {
-      (window as any).gtag?.("event", event, {
-        ...properties,
-        user_id: userId,
-        session_id: this.sessionId,
+    // Send to PostHog if available (lazy-loaded for bundle optimization)
+    if (typeof window !== "undefined") {
+      getPostHog().then((posthog) => {
+        if (posthog.__loaded) {
+          posthog.capture(event, {
+            ...properties,
+            user_id: userId,
+            session_id: this.sessionId,
+          });
+        }
       });
     }
   }

@@ -107,13 +107,17 @@ export class GameErrorBoundary extends Component<Props, State> {
       // Log for production monitoring
       logger.error("GAME_ERROR:", JSON.stringify(errorData, null, 2));
 
-      // Send to analytics if available
-      if (typeof window !== "undefined" && "gtag" in window) {
-        (window as any).gtag?.("event", "exception", {
-          description: `Game State Error: ${error.message}`,
-          fatal: false,
-          error_count: errorCount,
-          puzzle_number: this.props.puzzleNumber,
+      // Send to analytics if available (lazy-loaded for bundle optimization)
+      if (typeof window !== "undefined") {
+        import("posthog-js").then(({ default: posthog }) => {
+          if (posthog.__loaded) {
+            posthog.capture("exception", {
+              description: `Game State Error: ${error.message}`,
+              fatal: false,
+              error_count: errorCount,
+              puzzle_number: this.props.puzzleNumber,
+            });
+          }
         });
       }
     } catch (reportingError) {
