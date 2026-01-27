@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Menu, X, Archive, Heart, Moon, Sun } from "lucide-react";
+import { Menu, X, Archive, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/SessionThemeProvider";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 
@@ -12,20 +12,14 @@ import { NavbarButton } from "@/components/ui/NavbarButton";
 
 interface MobileNavMenuProps {
   archiveHref: string;
-  onSupportClick: () => void;
 }
 
-export function MobileNavMenu({ archiveHref, onSupportClick }: MobileNavMenuProps) {
+export function MobileNavMenu({ archiveHref }: MobileNavMenuProps) {
   const [open, setOpen] = useState(false);
   const { currentTheme, toggle } = useTheme();
 
   const handleNavigation = () => {
     setOpen(false);
-  };
-
-  const handleSupportClick = () => {
-    setOpen(false);
-    onSupportClick();
   };
 
   return (
@@ -80,16 +74,6 @@ export function MobileNavMenu({ archiveHref, onSupportClick }: MobileNavMenuProp
               <Archive className="text-muted-foreground h-5 w-5" />
               <span className="text-foreground">Archive</span>
             </Link>
-
-            {/* Support */}
-            <button
-              type="button"
-              onClick={handleSupportClick}
-              className="hover:bg-muted flex w-full items-center gap-3 rounded-sm px-3 py-3 text-left transition-colors"
-            >
-              <Heart className="text-muted-foreground h-5 w-5" />
-              <span className="text-foreground">Support Chrondle</span>
-            </button>
 
             {/* Theme Toggle */}
             <button

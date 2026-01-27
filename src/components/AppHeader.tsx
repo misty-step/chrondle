@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
-import { Flame, Archive, Heart } from "lucide-react";
+import { Flame, Archive } from "lucide-react";
 
 import { AuthButtons } from "@/components/AuthButtons";
 import { AdminButton } from "@/components/AdminButton";
 import { LayoutContainer } from "@/components/LayoutContainer";
-import SupportModal from "@/components/SupportModal";
 import { ModeDropdown } from "@/components/ModeDropdown";
 import { MobileNavMenu } from "@/components/MobileNavMenu";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -15,10 +14,6 @@ import { NavbarButton } from "@/components/ui/NavbarButton";
 import { getStreakColorClasses } from "@/lib/ui/streak-styling";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/displayFormatting";
-
-// Constants
-const HEARTBEAT_DELAY_MS = 2000;
-const HEARTBEAT_DURATION_MS = 3000;
 
 interface AppHeaderProps {
   currentStreak?: number;
@@ -37,21 +32,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   isArchive = false,
   mode = "classic",
 }) => {
-  const [showSupport, setShowSupport] = useState(false);
-  const [showHeartbeat, setShowHeartbeat] = useState(false);
-
-  useEffect(() => {
-    // Show heartbeat animation once per session
-    const hasShownHeartbeat = sessionStorage.getItem("heartbeatShown");
-    if (!hasShownHeartbeat) {
-      setTimeout(() => {
-        setShowHeartbeat(true);
-        sessionStorage.setItem("heartbeatShown", "true");
-        setTimeout(() => setShowHeartbeat(false), HEARTBEAT_DURATION_MS);
-      }, HEARTBEAT_DELAY_MS);
-    }
-  }, []);
-
   const streakColors = currentStreak ? getStreakColorClasses(currentStreak) : null;
   const archiveHref = mode === "order" ? "/archive/order" : "/archive";
 
@@ -128,10 +108,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <ModeDropdown className="flex sm:hidden" />
 
               {/* Mobile Hamburger Menu - contains Archive, Support, Theme, Auth */}
-              <MobileNavMenu
-                archiveHref={archiveHref}
-                onSupportClick={() => setShowSupport(true)}
-              />
+              <MobileNavMenu archiveHref={archiveHref} />
 
               {/* Desktop-only buttons below */}
 
@@ -146,17 +123,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 <Archive className="h-5 w-5" />
               </NavbarButton>
 
-              {/* Support Button */}
-              <NavbarButton
-                onClick={() => setShowSupport(true)}
-                title="Support Chrondle"
-                aria-label="Support Chrondle"
-                overlayColor="rose"
-                className={cn("hidden sm:flex", showHeartbeat && "animate-heartbeat")}
-              >
-                <Heart className="text-body-primary h-4 w-4 transition-colors group-hover:text-rose-600" />
-              </NavbarButton>
-
               {/* Admin Button - Only visible to admins */}
               <AdminButton className="hidden sm:flex" />
 
@@ -169,8 +135,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </div>
         </LayoutContainer>
       </header>
-
-      <SupportModal open={showSupport} onOpenChange={setShowSupport} />
     </>
   );
 };

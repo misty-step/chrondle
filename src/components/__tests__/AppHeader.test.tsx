@@ -30,11 +30,6 @@ vi.mock("@/components/AdminButton", () => ({
   AdminButton: () => null,
 }));
 
-vi.mock("@/components/SupportModal", () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
 vi.mock("@/components/MobileNavMenu", () => ({
   MobileNavMenu: () => <div data-testid="mobile-nav-menu">MobileNav</div>,
 }));
