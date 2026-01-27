@@ -2,11 +2,13 @@
 
 import { useCallback, type ElementType } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
 import { motion, useReducedMotion } from "motion/react";
 import { Crosshair, Shuffle } from "lucide-react";
 
 import { setModePreferenceCookie, type ModeKey } from "@/lib/modePreference";
 import { cn } from "@/lib/utils";
+import { api } from "../../convex/_generated/api";
 
 // --- Configuration (co-located, not exported) ---
 
@@ -51,13 +53,13 @@ const MODE_THEME = {
   },
 } as const;
 
-const PUZZLE_NUMBER = 247;
-
 // --- Component ---
 
 export function GamesGallery() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
+  const classicPuzzle = useQuery(api.puzzles.getDailyPuzzle);
+  const orderPuzzle = useQuery(api.orderPuzzles.getDailyOrderPuzzle);
 
   const handleSelect = useCallback(
     (mode: ModeKey, route: string) => {
@@ -66,6 +68,11 @@ export function GamesGallery() {
     },
     [router],
   );
+
+  const getPuzzleLabel = (modeKey: ModeKey) => {
+    const puzzle = modeKey === "classic" ? classicPuzzle : orderPuzzle;
+    return puzzle?.puzzleNumber ? `Puzzle #${puzzle.puzzleNumber}` : "—";
+  };
 
   return (
     <div className="flex min-h-dvh w-full items-center justify-center p-4 md:p-8">
@@ -126,7 +133,7 @@ export function GamesGallery() {
                         theme.accent,
                       )}
                     >
-                      Puzzle #{PUZZLE_NUMBER}
+                      {getPuzzleLabel(mode.key)}
                     </span>
                   </div>
                 </div>

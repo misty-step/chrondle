@@ -1,6 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { useQuery } from "convex/react";
 import { GamesGallery } from "../GamesGallery";
 
 // --- Mocks ---
@@ -25,6 +26,10 @@ vi.mock("motion/react", () => ({
   useReducedMotion: () => false,
 }));
 
+vi.mock("convex/react", () => ({
+  useQuery: vi.fn(),
+}));
+
 vi.mock("lucide-react", () => ({
   Crosshair: (props: React.SVGProps<SVGSVGElement>) => (
     <svg data-testid="crosshair-icon" {...props} />
@@ -35,6 +40,9 @@ vi.mock("lucide-react", () => ({
 describe("GamesGallery", () => {
   beforeEach(() => {
     mockPush.mockClear();
+    const mockUseQuery = vi.mocked(useQuery);
+    mockUseQuery.mockReset();
+    mockUseQuery.mockReturnValue({ puzzleNumber: 247 });
   });
 
   afterEach(() => {
