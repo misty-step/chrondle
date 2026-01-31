@@ -10,7 +10,7 @@
  * perspective). The server passes all puzzles; this component filters.
  */
 
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Check, Lock } from "lucide-react";
@@ -37,32 +37,21 @@ export function ArchiveGrid({
   linkPrefix = "/archive/puzzle",
   hasAccess = true,
 }: ArchiveGridProps) {
-  // Track client mount to prevent hydration flicker
-  const [isClient, setIsClient] = useState(false);
+  const [visiblePuzzles, setVisiblePuzzles] = useState(puzzles);
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Filter puzzles to only show those up to user's local date
-  const filteredPuzzles = useMemo(() => {
-    if (!isClient) return []; // SSR: render nothing to prevent flicker
-
     const localDate = getLocalDateString();
-    return puzzles.filter((p) => {
-      // No date = show (legacy data)
-      if (!p.date) return true;
-      // Only show puzzles dated <= user's local date
-      return p.date <= localDate;
-    });
-  }, [puzzles, isClient]);
-
-  // Render nothing during SSR to prevent hydration mismatch
-  if (!isClient) return null;
+    setVisiblePuzzles(
+      puzzles.filter((p) => {
+        if (!p.date) return true;
+        return p.date <= localDate;
+      }),
+    );
+  }, [puzzles]);
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-      {filteredPuzzles.map((puzzle) => {
+      {visiblePuzzles.map((puzzle) => {
         // Determine link destination: if no access, go to pricing
         const href = hasAccess ? `${linkPrefix}/${puzzle.puzzleNumber}` : "/pricing";
 

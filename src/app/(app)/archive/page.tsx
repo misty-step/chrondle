@@ -83,6 +83,12 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
     logger.warn("[Archive] Headers not available (SSG/ISR context):", error);
   }
 
+  // Start independent archive query early to parallelize with auth flow
+  const archivePuzzlesPromise = client.query(api.puzzles.getArchivePuzzles, {
+    page: currentPage,
+    pageSize: PUZZLES_PER_PAGE,
+  });
+
   // Get current user from Clerk - comprehensive error handling
   let clerkUser = null;
   try {
@@ -154,8 +160,6 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
               if (!play.puzzleId) {
                 logger.warn(`[Archive] Play record at index ${index} missing puzzleId:`, {
                   play,
-                  hasCompletedAt: !!play.completedAt,
-                  hasUserId: !!play.userId,
                   playKeys: Object.keys(play),
                 });
                 return false;
@@ -216,10 +220,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
   };
 
   try {
-    archiveData = await client.query(api.puzzles.getArchivePuzzles, {
-      page: currentPage,
-      pageSize: PUZZLES_PER_PAGE,
-    });
+    archiveData = await archivePuzzlesPromise;
     // Debug: Puzzles loaded
   } catch (error) {
     logger.error("[Archive] Failed to load puzzles:", error);
@@ -322,7 +323,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
                       {totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}%
                     </span>
                   </div>
-                  <div className="bg-muted border-outline-default/30 h-3 w-full overflow-hidden rounded-sm border">
+                  <div className="bg-muted border-outline-default/30 h-3 w-full overflow-hidden rounded border">
                     <div
                       className="h-full bg-green-600 transition-all duration-300 ease-out"
                       style={{
@@ -335,10 +336,10 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
                 // Show skeleton loader while user data loads
                 <div className="animate-pulse">
                   <div className="mb-2 flex items-center justify-between">
-                    <div className="bg-muted h-5 w-32 rounded-sm" />
-                    <div className="bg-muted h-4 w-12 rounded-sm" />
+                    <div className="bg-muted h-5 w-32 rounded" />
+                    <div className="bg-muted h-4 w-12 rounded" />
                   </div>
-                  <div className="bg-muted border-outline-default/30 h-2 w-full rounded-sm border" />
+                  <div className="bg-muted border-outline-default/30 h-2 w-full rounded border" />
                 </div>
               )}
             </div>
