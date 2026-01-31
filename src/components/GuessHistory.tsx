@@ -23,7 +23,7 @@ const GuessRow: React.FC<GuessRowProps> = React.memo(({ guess, targetYear, hint,
 
   if (isCorrect) {
     return (
-      <div className="flex items-center justify-between rounded-sm border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
+      <div className="flex items-center justify-between rounded border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
         <div className="flex items-center gap-3">
           <span className="text-muted-foreground text-sm font-medium">#{index + 1}</span>
           <Badge variant="default" className="bg-green-500 hover:bg-green-600">
@@ -41,7 +41,7 @@ const GuessRow: React.FC<GuessRowProps> = React.memo(({ guess, targetYear, hint,
   const badgeText = isEarlier ? "EARLIER" : "LATER";
 
   return (
-    <div className="bg-card space-y-3 rounded-sm border p-4">
+    <div className="bg-card space-y-3 rounded border p-4">
       <div className="flex items-center gap-3">
         <span className="text-muted-foreground text-sm font-medium">#{index + 1}</span>
         <Badge variant={badgeVariant} className="px-3 py-1 text-sm">

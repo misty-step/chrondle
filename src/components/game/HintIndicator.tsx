@@ -45,7 +45,7 @@ export function HintIndicator({
             className={cn(
               "h-3.5 w-3.5 rounded-[1px] border-2 transition-all duration-300",
               i < hintsRevealed
-                ? "bg-vermilion-500 border-vermilion-600 shadow-sm"
+                ? "border-[#4a9b7f] bg-[#4a9b7f] shadow-sm"
                 : "border-muted-foreground/40 bg-transparent",
             )}
             aria-hidden="true"
@@ -60,7 +60,7 @@ export function HintIndicator({
           size="default"
           onClick={onRevealHint}
           disabled={disabled}
-          className="hover:border-vermilion-500 hover:text-vermilion-500 shadow-hard hover:shadow-hard-lg h-10 rounded-sm border-2 px-4 text-sm font-semibold transition-all hover:translate-y-[-2px]"
+          className="h-10 rounded border-2 px-4 text-sm font-semibold transition-all hover:translate-y-[-2px] hover:border-[#4a9b7f] hover:text-[#4a9b7f]"
         >
           Take Hint
         </Button>

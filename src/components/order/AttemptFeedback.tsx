@@ -26,7 +26,7 @@ export function AttemptFeedback({ attempt, attemptNumber }: AttemptFeedbackProps
 
   return (
     <motion.div
-      className="border-border bg-surface-elevated shadow-hard rounded-sm border-2 p-4"
+      className="border-border bg-surface-elevated rounded border-2 p-4"
       initial={prefersReducedMotion ? false : { opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: msToSeconds(ANIMATION_DURATIONS.HINT_TRANSITION) }}
@@ -44,7 +44,7 @@ export function AttemptFeedback({ attempt, attemptNumber }: AttemptFeedbackProps
         {attempt.feedback.map((feedback, idx) => (
           <motion.div
             key={idx}
-            className={`shadow-hard flex h-10 w-10 items-center justify-center rounded-sm border-2 ${
+            className={`flex h-10 w-10 items-center justify-center rounded border-2 ${
               feedback === "correct"
                 ? "border-feedback-success/30 bg-feedback-success/10"
                 : "border-destructive/30 bg-destructive/10"

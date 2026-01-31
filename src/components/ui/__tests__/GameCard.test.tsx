@@ -39,23 +39,21 @@ describe("GameCard", () => {
     });
   });
 
-  describe("Archival Styling (Core Design System)", () => {
-    it("applies archival angular aesthetic by default", () => {
+  describe("Core Styling", () => {
+    it("applies core surface styling by default", () => {
       const { container } = render(<GameCard>Content</GameCard>);
       const card = container.firstChild as HTMLElement;
 
       // Angular corners (not rounded-xl/lg)
-      expect(card.className).toContain("rounded-sm");
-
-      // Hard shadow system (not shadow-warm)
-      expect(card.className).toContain("shadow-hard");
+      expect(card.className).toContain("rounded");
+      expect(card.className).not.toContain("rounded-sm");
 
       // Solid background (not translucent)
-      expect(card.className).toContain("bg-surface-elevated");
+      expect(card.className).toContain("bg-white");
 
       // Border system
-      expect(card.className).toContain("border-outline-default");
-      expect(card.className).toContain("border-2");
+      expect(card.className).toContain("border");
+      expect(card.className).toContain("border-[#d3d6da]");
     });
 
     it("does not contain legacy shadow-warm class", () => {
@@ -89,8 +87,8 @@ describe("GameCard", () => {
       const { container } = render(<GameCard variant="default">Content</GameCard>);
       const card = container.firstChild as HTMLElement;
 
-      expect(card.className).toContain("bg-surface-elevated");
-      expect(card.className).toContain("border-outline-default");
+      expect(card.className).toContain("bg-white");
+      expect(card.className).toContain("border-[#d3d6da]");
     });
 
     it("applies success variant styling", () => {
@@ -113,7 +111,7 @@ describe("GameCard", () => {
       const { container, rerender } = render(<GameCard variant="default">Content</GameCard>);
       const card = container.firstChild as HTMLElement;
 
-      expect(card.className).toContain("bg-surface-elevated");
+      expect(card.className).toContain("bg-white");
 
       rerender(<GameCard variant="success">Content</GameCard>);
       expect(card.className).toContain("bg-feedback-success/5");
@@ -171,8 +169,8 @@ describe("GameCard", () => {
       expect(card.className).toContain("custom-class");
 
       // Base styles should still be present
-      expect(card.className).toContain("rounded-sm");
-      expect(card.className).toContain("shadow-hard");
+      expect(card.className).toContain("rounded");
+      expect(card.className).not.toContain("shadow-hard");
     });
 
     it("allows overriding styles with custom className", () => {
@@ -197,10 +195,9 @@ describe("GameCard", () => {
       );
 
       // Developer only specified 2 props, but got:
-      // - Archival angular aesthetic (rounded-sm)
-      // - Hard shadow system (shadow-hard)
-      // - Solid background (bg-surface-elevated overridden by success)
-      // - Border treatment (border-2, border color)
+      // - Angular aesthetic (rounded)
+      // - Solid background (bg-white overridden by success)
+      // - Border treatment (border + color)
       // - Responsive padding (p-3 md:p-4)
       // - Success semantic coloring
       // All decisions hidden from caller
@@ -214,9 +211,9 @@ describe("GameCard", () => {
       const card = container.firstChild as HTMLElement;
 
       // Guarantees correct tokens are used
-      expect(card.className).toContain("shadow-hard");
-      expect(card.className).toContain("rounded-sm");
-      expect(card.className).toContain("bg-surface-elevated");
+      expect(card.className).not.toContain("shadow-hard");
+      expect(card.className).toContain("rounded");
+      expect(card.className).toContain("bg-white");
 
       // Prevents incorrect tokens from being used
       expect(card.className).not.toContain("shadow-warm");

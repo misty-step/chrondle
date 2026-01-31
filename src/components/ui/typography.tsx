@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 // --- Heading Component ---
 
-const headingVariants = cva("font-serif tracking-tight text-body-primary", {
+const headingVariants = cva("font-body tracking-tight text-body-primary", {
   variants: {
     level: {
       1: "text-6xl font-bold leading-tight lg:text-7xl",
@@ -25,8 +25,7 @@ const headingVariants = cva("font-serif tracking-tight text-body-primary", {
 });
 
 export interface HeadingProps
-  extends React.HTMLAttributes<HTMLHeadingElement>,
-    VariantProps<typeof headingVariants> {
+  extends React.HTMLAttributes<HTMLHeadingElement>, VariantProps<typeof headingVariants> {
   as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 }
 
@@ -62,8 +61,7 @@ const proseVariants = cva("font-body text-body-primary leading-relaxed", {
 });
 
 export interface ProseProps
-  extends React.HTMLAttributes<HTMLParagraphElement>,
-    VariantProps<typeof proseVariants> {
+  extends React.HTMLAttributes<HTMLParagraphElement>, VariantProps<typeof proseVariants> {
   as?: React.ElementType;
 }
 
@@ -77,7 +75,7 @@ Prose.displayName = "Prose";
 // --- Handwriting Component ---
 // Used for "notes" or margin comments
 
-const handwritingVariants = cva("font-serif italic text-body-secondary opacity-90", {
+const handwritingVariants = cva("font-body italic text-body-secondary opacity-90", {
   variants: {
     size: {
       sm: "text-xs",
@@ -91,8 +89,7 @@ const handwritingVariants = cva("font-serif italic text-body-secondary opacity-9
 });
 
 export interface HandwritingProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof handwritingVariants> {
+  extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof handwritingVariants> {
   as?: React.ElementType;
 }
 

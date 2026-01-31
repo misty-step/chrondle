@@ -79,10 +79,10 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
       <SelectTrigger
         className={cn(
           // Override default height and shape - archival angular aesthetic
-          "h-8 rounded-sm",
+          "h-8 rounded",
           // Solid, confident colors - no translucency
           "bg-surface-elevated border-outline-default border-2",
-          "hover:border-primary/50 hover:shadow-hard-sm",
+          "hover:border-primary/50",
           // Typography - clear, readable (theme-adaptive)
           "text-foreground text-sm font-semibold",
           // Custom focus ring
@@ -102,9 +102,9 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
       <SelectContent
         className={cn(
           // Archival dropdown - consistent with trigger
-          "rounded-sm",
+          "rounded",
           // Solid borders and shadows
-          "border-outline-default shadow-hard border-2",
+          "border-outline-default border-2",
           // Background
           "bg-surface-elevated",
         )}
@@ -117,7 +117,7 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
             value={mode}
             className={cn(
               // Archival items - consistent angular aesthetic
-              "rounded-sm",
+              "rounded",
               // Better padding
               "px-3 py-2",
               // Typography (theme-adaptive)

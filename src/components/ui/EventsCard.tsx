@@ -10,7 +10,7 @@ interface EventsCardProps {
 
 export const EventsCard: React.FC<EventsCardProps> = ({ events, targetYear }) => {
   return (
-    <div className="from-card via-card to-muted/50 border-border/50 rounded-sm border bg-gradient-to-br p-4 shadow-lg">
+    <div className="from-card via-card to-muted/50 border-border/50 rounded border bg-gradient-to-br p-4 shadow-lg">
       <div className="space-y-3">
         {/* Header */}
         <div className="text-center">
@@ -25,7 +25,7 @@ export const EventsCard: React.FC<EventsCardProps> = ({ events, targetYear }) =>
           {events.map((event, index) => (
             <div
               key={index}
-              className="group bg-surface-elevated border-border/30 hover:bg-surface-elevated/80 rounded-sm border p-4 transition-all duration-200 hover:shadow-md"
+              className="group bg-surface-elevated border-border/30 hover:bg-surface-elevated/80 rounded border p-4 transition-all duration-200 hover:shadow-md"
             >
               <div className="flex items-start gap-3">
                 {/* Timeline dot */}

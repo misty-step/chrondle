@@ -18,7 +18,7 @@ export const DebugBanner: React.FC<DebugBannerProps> = ({
 
   return (
     <div
-      className={`rounded-sm p-3 text-center font-bold ${className}`}
+      className={`rounded p-3 text-center font-bold ${className}`}
       style={{
         background: "var(--warning)",
         color: "white",

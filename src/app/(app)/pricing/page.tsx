@@ -157,7 +157,7 @@ export default function PricingPage() {
         </div>
 
         {/* Value Props */}
-        <div className="border-outline-default/30 bg-surface-elevated rounded-sm border p-6">
+        <div className="border-outline-default/30 bg-surface-elevated rounded border p-6">
           <h2 className="text-foreground mb-4 flex items-center gap-2 text-lg font-semibold">
             <Archive className="h-5 w-5" />
             What&apos;s in the Archive?

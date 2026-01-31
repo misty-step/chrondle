@@ -114,7 +114,7 @@ function RangeSummary({ range, index }: { range: RangeGuess; index: number }) {
   const contained = range.score > 0;
 
   return (
-    <div className="border-border/40 bg-surface-elevated rounded-sm border p-3">
+    <div className="border-border/40 bg-surface-elevated rounded border p-3">
       <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs font-medium tracking-wide uppercase">
         <span>Range {index + 1}</span>
         <span className={contained ? "text-green-600" : "text-rose-500"}>
@@ -200,7 +200,7 @@ export function GameComplete({
     return "Share";
   })();
 
-  // Share button stays vermilion - feedback via icon + animation, not color change
+  // Share button stays success green - feedback via icon + animation, not color change
   const shareButtonIcon = (() => {
     if (shareStatus === "success")
       return <Check className="size-4 animate-[check-in_250ms_ease-out_forwards]" />;
@@ -214,17 +214,17 @@ export function GameComplete({
   const [showDetails, setShowDetails] = useState(false);
 
   return (
-    <section className={cn("border-border/60 bg-card rounded-sm border p-5 shadow-lg", className)}>
+    <section className={cn("border-border/60 bg-card rounded border p-5 shadow-lg", className)}>
       <div className="mb-5 flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] sm:items-stretch">
-          <div className="border-border/40 bg-surface-elevated rounded-sm border p-4 shadow-inner">
+          <div className="border-border/40 bg-surface-elevated rounded border p-4 shadow-inner">
             <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
               Game Summary
             </p>
             <h3 className="text-foreground text-2xl font-bold">{outcomeCopy.title}</h3>
           </div>
 
-          <div className="border-border/40 bg-primary/5 rounded-sm border p-4 text-right shadow-sm">
+          <div className="border-border/40 bg-primary/5 rounded border p-4 text-right shadow-sm">
             <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
               Total Score
             </p>
@@ -297,7 +297,7 @@ export function GameComplete({
 
       {showDetails && (
         <>
-          <div className="border-border/40 bg-surface-elevated mt-2 rounded-sm border p-4">
+          <div className="border-border/40 bg-surface-elevated mt-2 rounded border p-4">
             <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
               Score breakdown
             </p>
@@ -371,7 +371,7 @@ export function GameComplete({
 
           {/* Puzzle Hints Section */}
           {events && events.length > 0 && (
-            <div className="border-border/40 bg-surface-elevated mt-4 rounded-sm border p-4">
+            <div className="border-border/40 bg-surface-elevated mt-4 rounded border p-4">
               <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
                 Puzzle Hints
               </p>
@@ -389,7 +389,7 @@ export function GameComplete({
           )}
 
           {earlierRanges.length > 0 && (
-            <div className="border-border/40 bg-surface-elevated mt-4 rounded-sm border p-4">
+            <div className="border-border/40 bg-surface-elevated mt-4 rounded border p-4">
               <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                 Previous windows
               </p>

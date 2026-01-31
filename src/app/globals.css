@@ -1,581 +1,179 @@
 @import "tailwindcss";
-@import "../styles/background-animation.css";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
-/* -----------------------------------------------------------------
-   1. CSS VARIABLE DEFINITIONS (Values)
-   ----------------------------------------------------------------- */
 :root {
-  /* --- PRIMITIVES (Raw Palette) --- */
-  --color-vermilion-300: oklch(0.68 0.18 25); /* Softer, less saturated */
-  --color-vermilion-400: oklch(0.62 0.22 25);
-  --color-vermilion-500: oklch(0.58 0.3 25); /* True Vermilion - red-orange archival ink */
-  --color-vermilion-600: oklch(0.48 0.24 25);
-  --color-vermilion-700: oklch(0.42 0.28 25); /* Deeper */
+  --bg: #ffffff;
+  --text: #1a1a1b;
+  --muted: #787c7e;
+  --border: #d3d6da;
+  --success: #4a9b7f;
+  --warning: #d4a84b;
+  --neutral: #787c7e;
 
-  --color-ink-500: oklch(0.45 0.08 50);
-  --color-ink-700: oklch(0.28 0.1 50);
-  --color-ink-900: oklch(0.15 0.1 50);
+  /* Mode: Classic - Archival green/teal */
+  --mode-classic-bg: #f0f7f4;
+  --mode-classic-text: #1a1a1b;
+  --mode-classic-accent: #2d6a4f;
 
-  --color-parchment-50: oklch(0.96 0.08 85); /* Boosted for visible texture */
-  --color-parchment-100: oklch(0.94 0.1 85);
-  --color-parchment-200: oklch(0.9 0.12 85);
-  --color-parchment-300: oklch(0.88 0.03 85); /* Desaturated warm gray for structure */
+  /* Mode: Order - Warm amber timeline */
+  --mode-order-bg: #fef7ed;
+  --mode-order-text: #1a1a1b;
+  --mode-order-accent: #b45309;
 
-  /* Aged Newsprint - Cool gray-beige (legacy) */
-  --color-newsprint: oklch(0.88 0.015 75);
+  --font-display: "Outfit", sans-serif;
+  --font-body: "Karla", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", monospace;
 
-  /* Warm Stone - Perceptible contrast for card separation */
-  --color-warm-stone: oklch(0.92 0.015 78); /* Warm stone background */
+  --radius: 4px;
+  --radius-sm: 3px;
 
-  /* Archival Accents - Boosted for visibility */
-  --color-sepia: oklch(0.6 0.2 60);
-  --color-oxidized: oklch(0.5 0.22 140);
-  --color-wax-seal: oklch(0.4 0.24 10);
-
-  /* Structural Accent - Rich golden ochre for visible borders/icons */
-  --color-structure-accent: oklch(0.65 0.15 75);
-
-  /* --- SEMANTIC TOKENS (Abstraction Layer) --- */
-  /* Surface Tokens - for backgrounds and containers */
-  --surface-primary: var(--background); /* Main page background */
-  --surface-elevated: var(--card); /* Cards, modals, elevated surfaces */
-  --surface-overlay: var(--popover); /* Dropdowns, tooltips */
-
-  /* Text Tokens - for legible text on surfaces */
-  --text-primary: var(--foreground); /* Primary readable text */
-  --text-secondary: var(--muted-foreground); /* Secondary/muted text */
-  --text-tertiary: var(--color-ink-500); /* Even more subtle text */
-  --text-inverse: var(--primary-foreground); /* Text on primary colored backgrounds */
-
-  /* Interactive Tokens - for clickable elements */
-  --interactive-accent: var(--primary); /* Primary interactive color */
-  --interactive-accent-hover: var(--color-vermilion-600);
-  --interactive-muted: var(--secondary);
-
-  /* Border & Outline Tokens */
-  --outline-default: var(--border);
-  --outline-focus: var(--ring);
-
-  /* --- MATERIALS (Surfaces) --- */
-  --texture-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E");
-
-  --material-paper-bg: var(--color-parchment-100);
-  --material-paper-fg: var(--color-ink-900);
-  --material-paper-border: var(--color-parchment-300);
-
-  /* --- INTENTS (Semantic Roles) --- */
-  --background: var(--color-warm-stone); /* Warm stone for card separation */
-  --foreground: oklch(0.18 0.02 60); /* Warm near-black for excellent contrast */
-
-  --card: oklch(0.99 0.005 85); /* Bright white cards */
-  --card-foreground: oklch(0.18 0.02 60); /* Warm near-black text */
-
-  --popover: var(--color-parchment-100);
-  --popover-foreground: var(--color-ink-900);
-
-  --primary: var(--color-vermilion-500);
-  --primary-foreground: #ffffff;
-
-  --secondary: var(--color-parchment-200);
-  --secondary-foreground: var(--color-ink-900);
-
-  --muted: var(--color-parchment-200);
-  --muted-foreground: oklch(0.45 0.03 60); /* Warm medium gray */
-
-  --accent: var(--color-parchment-200);
-  --accent-foreground: var(--color-ink-900);
-
-  --destructive: oklch(0.6 0.2 25);
-  --destructive-foreground: #ffffff;
-
-  --border: var(--material-paper-border);
-  --input: oklch(0.92 0.01 85); /* Cooler, slightly darker for differentiation */
-  --ring: var(--color-vermilion-500);
-
-  --radius: 0.375rem;
-
-  /* --- MODES --- */
-  --color-classic-bg: oklch(0.94 0.03 85);
-  --color-classic-text: oklch(0.25 0.04 60);
-  --color-classic-accent: oklch(0.5 0.2 30);
-
-  --color-order-bg: oklch(0.93 0.02 240);
-  --color-order-text: oklch(0.28 0.06 250);
-  --color-order-accent: oklch(0.5 0.2 260);
-
-  /* Order Mode Specific Tokens */
-  --timeline-marker: var(--color-order-accent);
-  --timeline-spine: var(--border);
-  --timeline-era-label: var(--color-ink-700);
-  /* High-contrast accent for text/iconography on dark surfaces */
-  --timeline-marker-contrast: var(--color-order-text);
-  --locked-badge: var(--color-vermilion-500);
-  --locked-badge-bg: oklch(from var(--locked-badge) l c h / 0.1);
-
-  /* --- INTERACTIVE STATE TOKENS --- */
-  --interactive-bg: var(--color-vermilion-500);
-  --interactive-bg-hover: var(--color-vermilion-600);
-  --interactive-bg-soft: var(--color-vermilion-300);
-  --interactive-border: var(--color-vermilion-600);
-
-  /* --- FEEDBACK (Softened for archival warmth) --- */
-  --feedback-success: oklch(0.6 0.14 145); /* Softer green */
-  --feedback-warning: oklch(0.65 0.12 65); /* Warmer amber */
-  --feedback-error: oklch(0.55 0.15 25); /* Warmer red, less harsh */
-  --feedback-info: oklch(0.6 0.15 250);
-  --feedback-earlier: var(--feedback-warning);
-  --feedback-later: var(--feedback-info);
-  --feedback-correct: var(--feedback-success);
-
-  /* --- DECORATIVE (Non-semantic visual accents) --- */
-  --decorative-gold: oklch(0.82 0.17 90); /* Celebration confetti, awards */
-
-  /* --- ELEVATION SYSTEM --- */
-  --elevation-navbar-bg: oklch(0.99 0.005 85); /* Bright white editorial header */
-  --elevation-navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); /* Strong editorial shadow */
-  --elevation-navbar-border: oklch(0.92 0.02 85); /* Subtle border for definition */
-
-  /* --- MATERIALS (Dynamic) --- */
-  --material-overlay: linear-gradient(
-    to bottom right,
-    rgba(255, 255, 255, 0.5),
-    rgba(0, 0, 0, 0.02)
-  );
-  --card-shadow-color: rgba(20, 10, 0, 0.1); /* Warm-tinted shadow */
-
-  /* --- LEGACY / COMPATIBILITY --- */
-  --chart-1: oklch(0.6231 0.188 259.8145);
-  --chart-2: oklch(0.5461 0.2152 262.8809);
-  --chart-3: oklch(0.4882 0.2172 264.3763);
-  --chart-4: oklch(0.4244 0.1809 265.6377);
-  --chart-5: oklch(0.3791 0.1378 265.5222);
-
-  --sidebar: oklch(0.9846 0.0017 247.8389);
-  --sidebar-foreground: oklch(0.3211 0 0);
-  --sidebar-primary: oklch(0.6231 0.188 259.8145);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.9514 0.025 236.8242);
-  --sidebar-accent-foreground: oklch(0.3791 0.1378 265.5222);
-  --sidebar-border: oklch(0.9276 0.0058 264.5313);
-  --sidebar-ring: oklch(0.6231 0.188 259.8145);
-
-  --status-error: var(--feedback-error);
-  --status-warning: var(--feedback-warning);
-  --status-info: var(--feedback-info);
+  --shadow-focus: 0 4px 10px rgba(26, 26, 27, 0.12);
+  --shadow-hover: 0 2px 0 rgba(26, 26, 27, 0.15);
 }
 
-/* DARK MODE OVERRIDES - ARCHIVAL NIGHT
-   High contrast traditional dark theme with elevated dark cards.
-   Cards are dark but lighter than background for clear hierarchy. */
 html.dark {
-  /* MUSEUM AFTER HOURS PALETTE */
-  /* Warm cream text gradient for archival aesthetic */
-  --color-ink-900: oklch(0.92 0.03 75); /* Museum label cream */
-  --color-ink-700: oklch(0.75 0.035 70); /* Golden hour glow */
-  --color-ink-500: oklch(0.6 0.04 65); /* Faded amber ink */
+  --bg: #121213;
+  --text: #e5e5e5;
+  --muted: #a3a3a3;
+  --border: #2d2d2d;
+  --success: #4a9b7f;
+  --warning: #d4a84b;
 
-  /* Lifted surface hierarchy for texture visibility */
-  --color-parchment-50: oklch(0.15 0.02 250); /* Deep midnight void (lifted for patterns) */
-  --color-parchment-100: oklch(0.25 0.025 255); /* Museum vitrine dark */
-  --color-parchment-200: oklch(0.22 0.02 250); /* Interactive surfaces */
-  --color-parchment-300: oklch(0.45 0.03 260); /* Bronze-tinted borders (CRITICAL lift) */
+  /* Mode: Classic - Dark variant */
+  --mode-classic-bg: #1a2f25;
+  --mode-classic-text: #e5e5e5;
+  --mode-classic-accent: #5fb899;
 
-  /* Boosted vermilion for dark mode visibility */
-  --color-vermilion-400: oklch(0.65 0.22 25); /* Lifted vermilion */
-  --color-vermilion-500: oklch(0.62 0.24 25); /* Rich cinnabar */
-  --color-vermilion-600: oklch(0.55 0.2 25); /* Deep seal wax */
-
-  /* Archival Accents - Dark Mode */
-  --color-sepia: oklch(0.6 0.14 55); /* Aged photograph tone */
-  --color-oxidized: oklch(0.55 0.16 145); /* Oxidized copper green */
-  --color-wax-seal: oklch(0.48 0.22 15); /* Deep burgundy wax */
-
-  /* Structural accent - Golden ochre for visible icons */
-  --color-structure-accent: oklch(0.7 0.16 70);
-
-  /* Surface assignments */
-  --background: var(--color-parchment-50);
-  --foreground: var(--color-ink-900);
-
-  /* Cards are DARK in dark mode - with LIGHT text */
-  --card: var(--color-parchment-100);
-  --card-foreground: var(--color-ink-900);
-
-  --popover: var(--color-parchment-100);
-  --popover-foreground: var(--color-ink-900);
-
-  /* Interactive - vermilion stays bold */
-  --primary: var(--color-vermilion-500);
-  --primary-foreground: #ffffff;
-
-  --secondary: var(--color-parchment-200);
-  --secondary-foreground: var(--color-ink-900);
-
-  --muted: oklch(0.2 0.015 250); /* Dark muted background */
-  --muted-foreground: oklch(0.7 0.02 85); /* Visible muted text */
-
-  --accent: var(--color-parchment-200);
-  --accent-foreground: var(--color-ink-900);
-
-  /* Borders - visible on dark surfaces */
-  --border: var(--color-parchment-300);
-  --input: oklch(0.25 0.02 250);
-
-  /* MODES - Lifted for pattern visibility */
-  --color-classic-bg: oklch(0.18 0.025 60); /* Warm amber-lit archives */
-  --color-classic-text: oklch(0.92 0.03 75); /* Cream text */
-  --color-classic-accent: oklch(0.7 0.18 35); /* Bright vermilion */
-
-  --color-order-bg: oklch(0.18 0.025 250); /* Cool moonlit reading room */
-  --color-order-text: oklch(0.92 0.03 75); /* Cream text */
-  --color-order-accent: oklch(0.68 0.16 260); /* Periwinkle */
-  --timeline-marker-contrast: oklch(0.75 0.15 260);
-
-  /* Order Mode Specific Tokens - Dark Mode */
-  --timeline-marker: var(--color-order-accent);
-  --timeline-spine: oklch(0.35 0.02 250);
-  --timeline-era-label: var(--color-ink-700);
-  --locked-badge: var(--color-vermilion-500);
-  --locked-badge-bg: oklch(from var(--locked-badge) l c h / 0.15);
-
-  /* DECORATIVE - Dark Mode */
-  --decorative-gold: oklch(0.78 0.16 85); /* Slightly warmer gold for dark backgrounds */
-
-  /* ELEVATION SYSTEM - Dark Mode */
-  --elevation-navbar-bg: oklch(0.22 0.025 250); /* Elevated header */
-  --elevation-navbar-shadow: 0 4px 20px oklch(0 0 0 / 0.6); /* Strong shadow */
-  --elevation-navbar-border: oklch(0.4 0.03 260); /* Visible separator */
-
-  /* MATERIALS - Warm tinted for museum lighting */
-  --material-overlay: linear-gradient(to bottom right, oklch(1 0 0 / 0.04), oklch(0 0 0 / 0.08));
-  --card-shadow-color: oklch(0 0 0 / 0.5);
-
-  --chart-1: oklch(0.7137 0.1434 254.624);
-  --chart-2: oklch(0.6231 0.188 259.8145);
-  --chart-3: oklch(0.5461 0.2152 262.8809);
-  --chart-4: oklch(0.4882 0.2172 264.3763);
-  --chart-5: oklch(0.4244 0.1809 265.6377);
-
-  --sidebar: oklch(0.15 0.02 250);
-  --sidebar-foreground: oklch(0.92 0.02 85);
-  --sidebar-primary: oklch(0.6231 0.188 259.8145);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.3791 0.1378 265.5222);
-  --sidebar-accent-foreground: oklch(0.8823 0.0571 254.1284);
-  --sidebar-border: oklch(0.3 0.02 250);
-  --sidebar-ring: oklch(0.6231 0.188 259.8145);
+  /* Mode: Order - Dark variant */
+  --mode-order-bg: #2a2015;
+  --mode-order-text: #e5e5e5;
+  --mode-order-accent: #f59e0b;
 }
 
-/* -----------------------------------------------------------------
-   2. TAILWIND V4 THEME CONFIGURATION
-   This replaces tailwind.config.mjs for standard tokens
-   ----------------------------------------------------------------- */
 @theme {
-  /* =================================================================
-     OUSTERHOUT PRINCIPLE: Single source of truth for utility classes.
-     All colors defined with DIRECT values - no var() indirection.
-     Dark mode overrides happen via html.dark CSS custom properties.
-     ================================================================= */
+  --font-display: "Outfit", sans-serif;
+  --font-heading: "Outfit", sans-serif;
+  --font-body: "Karla", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", monospace;
+  --font-sans: "Karla", sans-serif;
+  --font-accent: "Outfit", sans-serif;
 
-  /* Typography System - Museum Reading Room Aesthetic */
-  --font-display: "Newsreader", "Georgia", serif;
-  --font-heading: "Archivo Narrow", "Helvetica Neue", sans-serif;
-  --font-body: "IBM Plex Sans", system-ui, sans-serif;
-  --font-serif: "Crimson Text", "Georgia", serif;
-  --font-mono: "JetBrains Mono", "Courier New", monospace;
-  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
-  --font-accent: "Newsreader", "Georgia", serif;
-
-  /* =================================================================
-     PRIMITIVES: Direct OKLch values for utility class generation.
-     These create: bg-vermilion-500, text-ink-900, etc.
-     ================================================================= */
-
-  /* Vermilion Palette (Primary Brand) */
-  --color-vermilion-300: oklch(0.68 0.18 25);
-  --color-vermilion-400: oklch(0.62 0.22 25);
-  --color-vermilion-500: oklch(0.58 0.3 25);
-  --color-vermilion-600: oklch(0.48 0.24 25);
-  --color-vermilion-700: oklch(0.42 0.28 25);
-
-  /* Ink Palette (Text) */
-  --color-ink-500: oklch(0.45 0.08 50);
-  --color-ink-700: oklch(0.28 0.1 50);
-  --color-ink-900: oklch(0.15 0.1 50);
-
-  /* Parchment Palette (Surfaces) */
-  --color-parchment-50: oklch(0.96 0.08 85);
-  --color-parchment-100: oklch(0.94 0.1 85);
-  --color-parchment-200: oklch(0.9 0.12 85);
-  --color-parchment-300: oklch(0.88 0.03 85);
-
-  /* =================================================================
-     SEMANTIC: Reference CSS custom properties from :root/html.dark.
-     These enable runtime theme switching.
-     ================================================================= */
-
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--bg);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--bg);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--text);
+  --color-primary-foreground: var(--bg);
+  --color-secondary: var(--border);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--border);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--border);
+  --color-accent-foreground: var(--text);
+  --color-destructive: #b42318;
+  --color-destructive-foreground: #ffffff;
   --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+  --color-input: var(--border);
+  --color-ring: var(--text);
 
-  /* Mode Colors */
-  --color-mode-classic-bg: var(--color-classic-bg);
-  --color-mode-classic-text: var(--color-classic-text);
-  --color-mode-classic-accent: var(--color-classic-accent);
-  --color-mode-order-bg: var(--color-order-bg);
-  --color-mode-order-text: var(--color-order-text);
-  --color-mode-order-accent: var(--color-order-accent);
+  --color-text-primary: var(--text);
+  --color-text-secondary: var(--muted);
+  --color-text-tertiary: var(--neutral);
 
-  /* Feedback Colors */
-  --color-feedback-success: var(--feedback-success);
-  --color-feedback-warning: var(--feedback-warning);
-  --color-feedback-error: var(--feedback-error);
-  --color-feedback-info: var(--feedback-info);
-  --color-feedback-correct: var(--feedback-correct);
-  --color-feedback-earlier: var(--feedback-earlier);
-  --color-feedback-later: var(--feedback-later);
+  --color-feedback-success: var(--success);
+  --color-feedback-warning: var(--warning);
+  --color-feedback-error: #b42318;
+  --color-feedback-info: #2563eb;
+  --color-feedback-correct: var(--success);
+  --color-feedback-earlier: var(--warning);
+  --color-feedback-later: #2563eb;
 
-  /* Semantic Text Colors (for text-text-primary, text-text-secondary utilities) */
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-tertiary: var(--text-tertiary);
+  /* Mode-specific colors */
+  --color-mode-classic-bg: var(--mode-classic-bg);
+  --color-mode-classic-text: var(--mode-classic-text);
+  --color-mode-classic-accent: var(--mode-classic-accent);
+  --color-mode-order-bg: var(--mode-order-bg);
+  --color-mode-order-text: var(--mode-order-text);
+  --color-mode-order-accent: var(--mode-order-accent);
 
-  /* Legacy/Chart Colors */
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --radius: 4px;
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius-3xl: 4px;
+  --radius-full: 999px;
 
-  /* Archival Border Radius Scale */
-  --radius-none: 0px;
-  --radius-archival: 2px; /* Angular archival aesthetic */
-  --radius-soft: 4px; /* Subtle modern touch */
-  --radius-card: 6px; /* Cards and containers */
-  --radius-pill: 999px; /* ONLY for specific badges */
+  --radius-archival: var(--radius);
+  --radius-soft: var(--radius);
+  --radius-card: var(--radius);
 
-  /* Semantic Radius Tokens */
-  --radius-interactive: var(--radius-archival); /* Buttons, toggles */
-  --radius-container: var(--radius-card); /* Cards, panels */
-  --radius-badge: var(--radius-archival); /* Status badges */
-
-  /* Legacy Radius (for compatibility) */
-  --radius-lg: var(--radius-card);
-  --radius-md: var(--radius-soft);
-  --radius-sm: var(--radius-archival);
-
-  /* Animations */
-  --animate-bounce-once: bounce-once 0.5s ease-in-out;
-  --animate-scale-in: scale-in 0.3s ease-out;
-  --animate-fade-in-up: fade-in-up 0.3s ease-out;
+  --animate-fade-in: fade-in 0.2s ease-out;
   --animate-spin: spin 1s linear infinite;
 
-  @keyframes bounce-once {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
-  }
-  @keyframes scale-in {
-    0% {
-      transform: scale(0);
+  @keyframes fade-in {
+    from {
       opacity: 0;
     }
-    50% {
-      transform: scale(1.1);
-    }
-    100% {
-      transform: scale(1);
+    to {
       opacity: 1;
     }
   }
-  @keyframes fade-in-up {
-    0% {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+
   @keyframes spin {
-    0% {
+    from {
       transform: rotate(0deg);
     }
-    100% {
+    to {
       transform: rotate(360deg);
     }
   }
-
-  /* Share button stamp confirmation */
-  @keyframes stamp-confirm {
-    0% {
-      transform: scale(1);
-    }
-    30% {
-      transform: scale(0.97);
-    }
-    60% {
-      transform: scale(1.02);
-    }
-    100% {
-      transform: scale(1);
-    }
-  }
-
-  /* Checkmark icon entrance */
-  @keyframes check-in {
-    0% {
-      opacity: 0;
-      transform: scale(0.5) rotate(-10deg);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.1) rotate(5deg);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1) rotate(0deg);
-    }
-  }
-
-  --animate-stamp-confirm: stamp-confirm 200ms ease-out;
-  --animate-check-in: check-in 250ms ease-out forwards;
 }
 
-/* -----------------------------------------------------------------
-   UTILITIES
-   ----------------------------------------------------------------- */
 @layer utilities {
-  /* --- SEMANTIC TOKEN UTILITIES --- */
-  /* Surface backgrounds */
   .bg-surface-primary {
-    background-color: var(--surface-primary);
+    background-color: var(--bg);
   }
+
   .bg-surface-elevated {
-    background-color: var(--surface-elevated);
+    background-color: var(--bg);
   }
+
   .bg-surface-overlay {
-    background-color: var(--surface-overlay);
+    background-color: var(--bg);
   }
 
-  /* Text colors - renamed to text-body-* to avoid collision with Tailwind's brand color utilities */
   .text-body-primary {
-    color: var(--text-primary);
+    color: var(--text);
   }
+
   .text-body-secondary {
-    color: var(--text-secondary);
+    color: var(--muted);
   }
+
   .text-body-tertiary {
-    color: var(--text-tertiary);
+    color: var(--neutral);
   }
+
   .text-inverse {
-    color: var(--text-inverse);
+    color: var(--bg);
   }
 
-  /* Interactive colors */
-  .bg-interactive-accent {
-    background-color: var(--interactive-accent);
-  }
-  .bg-interactive-accent-hover {
-    background-color: var(--interactive-accent-hover);
-  }
-  .bg-interactive-muted {
-    background-color: var(--interactive-muted);
-  }
-  .text-interactive-accent {
-    color: var(--interactive-accent);
-  }
-
-  /* Border colors */
   .border-outline-default {
-    border-color: var(--outline-default);
+    border-color: var(--border);
   }
+
   .ring-outline-focus {
-    --tw-ring-color: var(--outline-focus);
+    --tw-ring-color: var(--text);
   }
 
-  /* --- MATERIAL UTILITIES --- */
-  .material-paper {
-    background-color: var(--background);
-    background-image:
-      var(--texture-noise), var(--material-overlay),
-      repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.015) 2px,
-        rgba(0, 0, 0, 0.015) 4px
-      );
-    border: 1px solid var(--border);
-  }
-
-  .material-card {
-    background-color: var(--card);
-    background-image:
-      var(--texture-noise), var(--material-overlay),
-      repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.015) 2px,
-        rgba(0, 0, 0, 0.015) 4px
-      );
-    border: 1px solid var(--border);
-    /* Dual-layer shadow: tight occlusion + soft elevation */
-    box-shadow:
-      0 1px 2px -1px rgba(60, 45, 35, 0.12),
-      0 4px 16px -2px rgba(60, 45, 35, 0.06);
-  }
-
-  /* Dark mode: Warm vermilion-tinted shadows for museum lighting */
-  html.dark .material-card {
-    box-shadow:
-      0 2px 4px -1px oklch(0.55 0.2 25 / 0.3),
-      0 6px 20px -2px oklch(0.65 0.22 25 / 0.2),
-      0 0 40px -4px oklch(0.65 0.22 25 / 0.1);
-  }
-
-  .material-stamp {
-    @apply font-bold tracking-widest uppercase;
-    border: 2px solid currentColor;
-    mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.8'/%3E%3C/svg%3E");
-  }
-
-  /* Typography Utilities */
   .text-body {
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
     font-weight: 400;
     letter-spacing: 0.01em;
   }
@@ -586,14 +184,13 @@ html.dark {
     letter-spacing: -0.03em;
   }
 
-  /* Missing Font Utilities (used by components) */
   .font-heading {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-weight: 700;
   }
 
   .font-event {
-    font-family: var(--font-serif);
+    font-family: var(--font-body);
     font-weight: 400;
   }
 
@@ -602,26 +199,24 @@ html.dark {
     font-variant-numeric: tabular-nums;
   }
 
-  /* Display Font - Dramatic hero typography */
   .font-display {
     font-family: var(--font-display);
-    font-weight: 400; /* IM Fell English is naturally bold */
+    font-weight: 500;
     letter-spacing: -0.02em;
     line-height: 1.1;
   }
 
-  /* Dramatic Archival Typography */
   .text-archival-hero {
     font-family: var(--font-display);
     font-size: clamp(3rem, 10vw, 7rem);
-    font-weight: 400; /* IM Fell English doesn't need bold */
+    font-weight: 500;
     line-height: 0.9;
-    letter-spacing: -0.02em; /* Less aggressive for display font */
-    text-transform: none; /* Let the font's natural character shine */
+    letter-spacing: -0.02em;
+    text-transform: none;
   }
 
   .text-manuscript {
-    font-family: var(--font-serif);
+    font-family: var(--font-body);
     font-style: italic;
     font-size: 1.25rem;
     line-height: 1.8;
@@ -629,25 +224,24 @@ html.dark {
   }
 
   .text-ink-annotation {
-    font-family: var(--font-serif);
+    font-family: var(--font-body);
     font-size: 0.875rem;
     font-style: italic;
-    color: var(--primary);
+    color: var(--muted);
     transform: rotate(-2deg);
     display: inline-block;
   }
 
-  /* Typography Scale - Museum Reading Room */
   .text-display {
     font-family: var(--font-display);
     font-size: clamp(2rem, 5vw, 3rem);
     line-height: 1.1;
     letter-spacing: -0.02em;
-    font-weight: 500;
+    font-weight: 600;
   }
 
   .text-section-title {
-    font-family: var(--font-heading);
+    font-family: var(--font-display);
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.1em;
@@ -658,57 +252,13 @@ html.dark {
     font-family: var(--font-body);
   }
 
-  /* Enhanced Material Card - Extra elevation for emphasis */
-  .material-card-elevated {
-    background-color: var(--card);
-    background-image:
-      var(--texture-noise), var(--material-overlay),
-      repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.015) 2px,
-        rgba(0, 0, 0, 0.015) 4px
-      );
-    border: 1px solid var(--border);
-    box-shadow:
-      0 4px 12px -2px rgba(20, 10, 0, 0.1),
-      0 10px 20px -4px rgba(20, 10, 0, 0.08);
-  }
-
-  /* Shadow System - Layered with color tint for depth */
-  .shadow-hard {
-    box-shadow:
-      4px 4px 0px var(--border),
-      6px 6px 0px color-mix(in oklch, var(--primary) 10%, transparent);
-  }
-  .shadow-hard-sm {
-    box-shadow:
-      2px 2px 0px var(--border),
-      3px 3px 0px color-mix(in oklch, var(--primary) 10%, transparent);
-  }
-  .shadow-hard-lg {
-    box-shadow:
-      6px 6px 0px var(--border),
-      9px 9px 0px color-mix(in oklch, var(--primary) 10%, transparent);
-  }
-
-  /* Number Badge - Vermilion circle for event/card numbering */
   .number-badge {
     @apply flex h-8 w-8 items-center justify-center;
-    @apply bg-primary rounded-sm text-white;
+    @apply bg-primary rounded text-white;
     @apply text-lg leading-none font-bold;
-    /* Inline shadow (can't @apply custom classes) */
-    box-shadow:
-      2px 2px 0px var(--border),
-      3px 3px 0px color-mix(in oklch, var(--primary) 10%, transparent);
+    box-shadow: var(--shadow-hover);
   }
 
-  .bg-texture-noise {
-    background-image: var(--texture-noise);
-  }
-
-  /* Loading shimmer (respects reduced motion by opt-in usage) */
   @keyframes loading-shimmer {
     0% {
       background-position: -200% 0;
@@ -728,133 +278,10 @@ html.dark {
       animation: none;
     }
   }
-
-  /* Paper Edge Treatment - Subtle deckle edge effect */
-  .paper-edge {
-    /* Subtle displacement for organic paper edges */
-    filter: url(#paper-edge-filter);
-  }
-
-  /* More pronounced edge for dramatic cards */
-  .paper-edge-dramatic {
-    filter: url(#paper-edge-filter-dramatic);
-  }
-
-  /* ═══════════════════════════════════════════════════════════════════════════
-   * LEDGER FORM UTILITIES
-   * Archival paper form aesthetic for inputs and validation
-   * ═══════════════════════════════════════════════════════════════════════════ */
-
-  /* Ledger entry line - dotted underline for form fields */
-  .ledger-entry-line {
-    border: none;
-    border-bottom: 2px dotted var(--border);
-    background: transparent;
-    border-radius: 0;
-    transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
-  }
-
-  .ledger-entry-line:focus {
-    outline: none;
-    border-bottom-style: solid;
-    border-bottom-color: var(--primary);
-    box-shadow: 0 4px 12px color-mix(in oklch, var(--primary) 20%, transparent);
-  }
-
-  .ledger-entry-line:focus-visible {
-    outline: none;
-  }
-
-  /* Archival stamp effect - rotated badge for validation */
-  .archival-stamp {
-    font-family: var(--font-heading);
-    font-weight: 700;
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    transform: rotate(-3deg);
-    border: 2px solid currentColor;
-    padding: 0.25rem 0.75rem;
-    border-radius: var(--radius-archival);
-  }
-
-  .archival-stamp-error {
-    color: var(--feedback-error);
-    background: color-mix(in oklch, var(--feedback-error) 10%, transparent);
-  }
-
-  .archival-stamp-valid {
-    color: var(--feedback-success);
-    background: color-mix(in oklch, var(--feedback-success) 10%, transparent);
-  }
-
-  /* Range progress bar - shows proximity to 250-year limit */
-  .range-progress {
-    height: 4px;
-    background: var(--muted);
-    border-radius: var(--radius-archival);
-    overflow: hidden;
-  }
-
-  .range-progress-fill {
-    height: 100%;
-    background: var(--primary);
-    transition: width 0.3s ease;
-    border-radius: var(--radius-archival);
-  }
-
-  .range-progress-fill[data-exceeds="true"] {
-    background: var(--feedback-error);
-  }
-
-  /* Section divider - ruled line for ledger sections */
-  .ledger-divider {
-    height: 1px;
-    background: linear-gradient(
-      to right,
-      transparent,
-      var(--border) 10%,
-      var(--border) 90%,
-      transparent
-    );
-  }
 }
 
-/* SVG Filters for Paper Edge Effects (defined globally) */
-.svg-filters {
-  position: absolute;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
-/* Inline SVG filter definitions */
-body::before {
-  content: "";
-  position: absolute;
-  width: 0;
-  height: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='paper-edge-filter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.02' numOctaves='2' seed='1'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='2' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Cfilter id='paper-edge-filter-dramatic'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03' numOctaves='3' seed='2'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='4' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3C/defs%3E%3C/svg%3E");
-}
-
-/* Warm Textured Paper Background */
 body {
-  background:
-    /* Paper grain texture (subtle analog warmth) */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"),
-    /* Warm gradient with subtle vignette */
-    radial-gradient(ellipse at center, oklch(0.95 0.02 85) 0%, oklch(0.91 0.02 75) 100%);
-  background-attachment: fixed;
-}
-
-/* Dark Mode: Museum after hours - warm amber-lit void */
-html.dark body {
-  background:
-    /* Visible noise texture (lifted for texture visibility) */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"),
-    /* Lifted void with warm amber vignette */
-    radial-gradient(ellipse at center, oklch(0.15 0.02 60) 0%, oklch(0.12 0.015 55) 100%);
-  background-attachment: fixed;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
 }

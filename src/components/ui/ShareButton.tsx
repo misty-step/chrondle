@@ -69,7 +69,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
 
   const getButtonStyles = () => {
     const baseStyles =
-      "font-semibold py-3 px-6 rounded-sm transition-all duration-200 flex items-center justify-center gap-2";
+      "font-semibold py-3 px-6 rounded transition-all duration-200 flex items-center justify-center gap-2";
 
     switch (status) {
       case "success":
@@ -105,7 +105,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
       {/* Success ripple effect */}
       {status === "success" && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="absolute inline-flex h-full w-full animate-ping rounded-sm bg-white opacity-20" />
+          <div className="absolute inline-flex h-full w-full animate-ping rounded bg-white opacity-20" />
         </div>
       )}
     </button>

@@ -47,7 +47,7 @@ export const CelebrationHeader: React.FC<CelebrationHeaderProps> = ({
       </TextAnimate>
 
       {/* Countdown Badge */}
-      <div className="bg-primary/5 border-primary/20 inline-flex items-center gap-3 rounded-sm border px-4 py-2">
+      <div className="bg-primary/5 border-primary/20 inline-flex items-center gap-3 rounded border px-4 py-2">
         <div className="text-muted-foreground text-xs tracking-wide uppercase">Next puzzle</div>
         <div className="text-body-primary font-mono text-sm font-bold">{timeString}</div>
       </div>

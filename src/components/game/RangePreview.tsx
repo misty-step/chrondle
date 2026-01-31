@@ -45,14 +45,14 @@ export function RangePreview({ start, end, width, hintsUsed, className }: RangeP
 
       {/* Prominent Score Display */}
       {isValid ? (
-        <div className="bg-primary/10 border-primary/30 flex items-center justify-between rounded-sm border px-4 py-3">
+        <div className="bg-primary/10 border-primary/30 flex items-center justify-between rounded border px-4 py-3">
           <span className="text-muted-foreground text-sm font-medium">Potential Score</span>
           <span className="text-body-primary text-xl font-bold tabular-nums">
             {maxPossibleScore} pts
           </span>
         </div>
       ) : (
-        <div className="bg-muted/50 border-muted flex items-center justify-between rounded-sm border px-4 py-3">
+        <div className="bg-muted/50 border-muted flex items-center justify-between rounded border px-4 py-3">
           <span className="text-muted-foreground text-sm font-medium">Range too wide</span>
           <span className="text-muted-foreground/70 text-sm tabular-nums">
             max {theoreticalMax} pts

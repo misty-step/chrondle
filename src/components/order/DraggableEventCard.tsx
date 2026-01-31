@@ -203,7 +203,7 @@ interface PositionBadgeProps {
 function PositionBadge({ index, feedback }: PositionBadgeProps) {
   if (feedback === "correct") {
     return (
-      <div className="border-feedback-success/30 bg-feedback-success/10 shadow-hard flex h-9 w-9 items-center justify-center rounded-sm border-2">
+      <div className="border-feedback-success/30 bg-feedback-success/10 flex h-9 w-9 items-center justify-center rounded border-2">
         <Check className="text-feedback-success h-5 w-5" aria-hidden="true" />
       </div>
     );
@@ -211,7 +211,7 @@ function PositionBadge({ index, feedback }: PositionBadgeProps) {
 
   if (feedback === "incorrect") {
     return (
-      <div className="border-destructive/30 bg-destructive/10 shadow-hard flex h-9 w-9 items-center justify-center rounded-sm border-2">
+      <div className="border-destructive/30 bg-destructive/10 flex h-9 w-9 items-center justify-center rounded border-2">
         <X className="text-destructive h-5 w-5" aria-hidden="true" />
       </div>
     );
@@ -236,11 +236,9 @@ function cardClasses({
         : "border-border";
 
   return [
-    "relative flex min-h-[100px] flex-col rounded-sm text-left will-change-transform transition-all duration-200",
+    "relative flex min-h-[100px] flex-col rounded text-left will-change-transform transition-all duration-200",
     "bg-card border-2",
     feedbackBorder,
-    isDragging
-      ? "z-50 shadow-hard-lg ring-2 ring-primary/20 scale-[1.02]"
-      : "shadow-hard hover:shadow-hard-lg hover:-translate-y-0.5",
+    isDragging ? "z-50 ring-2 ring-primary/20 scale-[1.02]" : "hover:-translate-y-0.5",
   ].join(" ");
 }

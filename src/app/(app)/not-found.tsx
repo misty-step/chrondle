@@ -18,13 +18,13 @@ export default function NotFound() {
         {/* Minimal Display */}
         <div className="mb-12 space-y-2">
           <h1 className="text-archival-hero text-primary font-display leading-none">404</h1>
-          <p className="text-muted-foreground font-serif text-xl tracking-wide italic">
+          <p className="text-muted-foreground font-body text-xl tracking-wide italic">
             Page Not Found
           </p>
         </div>
 
         {/* Single CTA */}
-        <Button asChild size="lg" className="min-w-[200px] font-serif">
+        <Button asChild size="lg" className="font-body min-w-[200px]">
           <Link href="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Return Home

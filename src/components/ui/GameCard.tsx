@@ -13,9 +13,8 @@ interface GameCardProps {
  * Deep module for game surfaces - cards, panels, sections.
  *
  * **Hides complexity:**
- * - Archival angular aesthetic (rounded-sm)
- * - Hard shadow system (shadow-hard)
- * - Solid backgrounds (no translucency)
+ * - Refined surface treatment
+ * - Subtle borders
  * - Responsive padding
  * - Semantic color variants
  *
@@ -24,8 +23,8 @@ interface GameCardProps {
  *
  * **Ousterhout Deep Module:**
  * - Interface complexity: 2 props (variant, padding)
- * - Implementation complexity: 15+ styling decisions
- * - Value = Functionality - Interface ≈ 13 decisions hidden
+ * - Implementation complexity: 12+ styling decisions
+ * - Value = Functionality - Interface ≈ 10 decisions hidden
  *
  * @example
  * // Default card
@@ -53,8 +52,8 @@ export function GameCard({
   return (
     <Component
       className={cn(
-        // Core archival treatment - angular aesthetic, hard shadows, solid surfaces
-        "bg-surface-elevated border-outline-default shadow-hard rounded-sm border-2",
+        // Core surface treatment
+        "rounded border border-[#d3d6da] bg-white",
 
         // Responsive padding (mobile-first, desktop enhancement)
         padding === "compact" && "p-3 md:p-4",

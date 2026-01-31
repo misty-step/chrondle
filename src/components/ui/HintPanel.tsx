@@ -119,7 +119,7 @@ export interface HintPanelProps {
  * **Architectural Guarantees:**
  * 1. Responsive behavior is automatic (no breakpoint management needed)
  * 2. Used hints always animate in/out smoothly
- * 3. GameCard styling always consistent (shadow-hard, rounded-sm)
+ * 3. GameCard styling always consistent
  * 4. Accessibility built-in (ARIA labels, live regions)
  *
  * This eliminates responsive layout bugs and styling inconsistencies.
@@ -219,7 +219,7 @@ function MobileHintPanel(props: InternalPanelProps) {
       {/* Header - Museum placard style */}
       <div className="border-border/50 mb-4 flex items-center justify-between border-b pb-3">
         <div className="flex items-center gap-3">
-          <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-sm">
+          <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded">
             <Lightbulb className="text-body-primary h-4 w-4" aria-hidden="true" />
           </div>
           <div>
@@ -241,7 +241,7 @@ function MobileHintPanel(props: InternalPanelProps) {
               key={type}
               type="button"
               className={cn(
-                "border-border bg-background flex min-h-[56px] w-full items-center gap-4 rounded-sm border-2 px-4 py-3 text-left transition-all",
+                "border-border bg-background flex min-h-[56px] w-full items-center gap-4 rounded border-2 px-4 py-3 text-left transition-all",
                 "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                 isUsed
                   ? "cursor-not-allowed opacity-50"
@@ -254,7 +254,7 @@ function MobileHintPanel(props: InternalPanelProps) {
               {/* Icon container */}
               <div
                 className={cn(
-                  "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-sm",
+                  "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded",
                   isUsed ? "bg-muted" : "bg-primary/10",
                 )}
               >
@@ -380,8 +380,8 @@ function AvailableHintButton({ type, pending, onSelect }: AvailableHintButtonPro
       type="button"
       variant="outline"
       className={cn(
-        "shadow-hard flex h-auto w-full flex-col items-start gap-2 rounded-sm px-4 py-3 text-left",
-        !pending && "hover:border-timeline-spine/30 hover:shadow-hard-lg transition-shadow",
+        "flex h-auto w-full flex-col items-start gap-2 rounded px-4 py-3 text-left",
+        !pending && "hover:border-timeline-spine/30 transition-shadow",
       )}
       onClick={() => onSelect(type)}
       disabled={pending}
@@ -442,7 +442,7 @@ function UsedHintsList({ events, hints }: UsedHintsListProps) {
                     duration: shouldReduceMotion ? 0 : ANIMATION_DURATIONS.HINT_TRANSITION / 1000,
                   },
                 }}
-                className="border-border bg-muted/30 flex items-start gap-3 rounded-sm border px-3 py-2.5 shadow-sm"
+                className="border-border bg-muted/30 flex items-start gap-3 rounded border px-3 py-2.5 shadow-sm"
               >
                 <div className="flex-shrink-0 pt-0.5" style={{ color: "var(--timeline-marker)" }}>
                   {getHintIcon(hint.type, "h-4 w-4")}

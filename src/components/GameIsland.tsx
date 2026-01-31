@@ -21,7 +21,7 @@ import { useScreenReaderAnnouncements } from "@/hooks/useScreenReaderAnnouncemen
 import { logger } from "@/lib/logger";
 import { GAME_CONFIG } from "@/lib/constants";
 import { AchievementModal, LazyModalWrapper } from "@/components/LazyModals";
-import { GameLayout, LiveAnnouncer, BackgroundAnimation } from "@/components/LazyComponents";
+import { GameLayout, LiveAnnouncer } from "@/components/LazyComponents";
 import { ConfettiRef } from "@/components/magicui/confetti";
 import { GameModeLayout } from "@/components/GameModeLayout";
 
@@ -188,13 +188,6 @@ export function GameIsland() {
       puzzleDate={puzzleDate}
       currentStreak={streakData.currentStreak}
       isDebugMode={debugMode}
-      backgroundAnimation={
-        <BackgroundAnimation
-          guesses={gameLogic.gameState.guesses}
-          targetYear={gameLogic.gameState.puzzle?.year || new Date().getFullYear()}
-          isGameOver={gameLogic.isGameComplete}
-        />
-      }
       _confettiRef={confettiRef}
       modals={
         <LazyModalWrapper>
@@ -210,7 +203,7 @@ export function GameIsland() {
     >
       {!gameLogic.isLoading && gameLogic.error && (
         <div className="flex flex-1 items-center justify-center p-4">
-          <div className="bg-destructive/10 text-destructive max-w-md rounded-sm p-6 text-center">
+          <div className="bg-destructive/10 text-destructive max-w-md rounded p-6 text-center">
             <h2 className="mb-2 text-xl font-bold">Unable to Load Puzzle</h2>
             <p className="mb-4">{gameLogic.error}</p>
             <button

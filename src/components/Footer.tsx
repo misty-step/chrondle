@@ -26,18 +26,18 @@ export function Footer() {
             </Link>
             <Link
               href="/releases"
-              className="text-muted-foreground/60 hover:text-muted-foreground font-serif text-xs transition-colors"
+              className="text-muted-foreground/60 hover:text-muted-foreground font-body text-xs transition-colors"
               title="View releases"
             >
               v{process.env.NEXT_PUBLIC_APP_VERSION}
             </Link>
-            <span className="text-muted-foreground/60 font-serif text-xs">
+            <span className="text-muted-foreground/60 font-body text-xs">
               © {new Date().getFullYear()}
             </span>
           </div>
 
           {/* Right: Project, Feedback, Legal */}
-          <nav className="text-muted-foreground flex flex-wrap items-center justify-center gap-6 font-serif text-sm">
+          <nav className="text-muted-foreground font-body flex flex-wrap items-center justify-center gap-6 text-sm">
             <a
               href="https://mistystep.io"
               target="_blank"
