@@ -72,7 +72,7 @@ export function ArchiveGrid({
                     Puzzle #{puzzle.puzzleNumber}
                   </span>
                   {puzzle.date && (
-                    <span className="text-muted-foreground/60 text-xs">
+                    <span className="text-muted-foreground/80 text-xs">
                       {formatDate(puzzle.date)}
                     </span>
                   )}
@@ -80,7 +80,7 @@ export function ArchiveGrid({
                 {puzzle.isCompleted ? (
                   <Check className="h-4 w-4 text-green-600" />
                 ) : !hasAccess ? (
-                  <Lock className="text-muted-foreground/50 h-4 w-4" />
+                  <Lock className="text-muted-foreground/70 h-4 w-4" />
                 ) : null}
               </div>
 

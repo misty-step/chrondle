@@ -35,21 +35,21 @@
 
 html.dark {
   --bg: #121213;
-  --text: #e5e5e5;
-  --muted: #a3a3a3;
-  --border: #2d2d2d;
-  --success: #4a9b7f;
-  --warning: #d4a84b;
+  --text: #e4e5f1;
+  --muted: #9ca3af;
+  --border: #3a3a3c;
+  --success: #5fb899;
+  --warning: #fbbf24;
 
   /* Mode: Classic - Dark variant */
   --mode-classic-bg: #1a2f25;
-  --mode-classic-text: #e5e5e5;
-  --mode-classic-accent: #5fb899;
+  --mode-classic-text: #e4e5f1;
+  --mode-classic-accent: #6ee7b7;
 
   /* Mode: Order - Dark variant */
   --mode-order-bg: #2a2015;
-  --mode-order-text: #e5e5e5;
-  --mode-order-accent: #f59e0b;
+  --mode-order-text: #e4e5f1;
+  --mode-order-accent: #fbbf24;
 }
 
 @theme {
@@ -142,6 +142,10 @@ html.dark {
 
   .bg-surface-elevated {
     background-color: var(--bg);
+  }
+
+  html.dark .bg-surface-elevated {
+    background-color: #1e1e1f;
   }
 
   .bg-surface-overlay {
