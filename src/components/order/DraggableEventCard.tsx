@@ -125,7 +125,7 @@ function EventCardContent({
         className={[
           "flex touch-none items-center justify-center py-3",
           "cursor-grab active:cursor-grabbing",
-          "bg-muted/20 border-border/30 rounded-t-sm border-b",
+          "bg-muted/30 border-border/30 rounded-t-sm border-b dark:border-white/10 dark:bg-white/5",
         ].join(" ")}
         data-vaul-no-drag
         {...handleProps}
@@ -133,7 +133,9 @@ function EventCardContent({
         <div
           className={[
             "flex gap-1.5 transition-opacity",
-            mutedHandle ? "opacity-20" : "opacity-50 hover:opacity-80",
+            mutedHandle
+              ? "opacity-20"
+              : "opacity-60 hover:opacity-90 dark:opacity-40 dark:hover:opacity-70",
           ].join(" ")}
         >
           <div className="bg-foreground h-1.5 w-1.5 rounded-full" />
@@ -237,7 +239,7 @@ function cardClasses({
 
   return [
     "relative flex min-h-[100px] flex-col rounded text-left will-change-transform transition-all duration-200",
-    "bg-card border-2",
+    "bg-card dark:bg-[#1e1e1f] border-2 dark:border-[#3a3a3c]",
     feedbackBorder,
     isDragging ? "z-50 ring-2 ring-primary/20 scale-[1.02]" : "hover:-translate-y-0.5",
   ].join(" ");

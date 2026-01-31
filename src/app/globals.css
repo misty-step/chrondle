@@ -263,6 +263,11 @@ html.dark {
     box-shadow: var(--shadow-hover);
   }
 
+  html.dark .number-badge {
+    @apply bg-[#4a9b7f] text-white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
   @keyframes loading-shimmer {
     0% {
       background-position: -200% 0;
