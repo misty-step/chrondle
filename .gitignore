@@ -127,3 +127,6 @@ playwright-report/
 backups/
 test-results/
 .env*.local
+
+# Design exploration artifacts
+.design-catalogue/
