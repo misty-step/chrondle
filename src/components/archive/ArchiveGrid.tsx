@@ -37,7 +37,9 @@ export function ArchiveGrid({
   linkPrefix = "/archive/puzzle",
   hasAccess = true,
 }: ArchiveGridProps) {
-  const [visiblePuzzles, setVisiblePuzzles] = useState(puzzles);
+  // Initialize to null to prevent SSR from rendering unfiltered puzzles
+  // This avoids layout shift and prevents briefly exposing future puzzle hints
+  const [visiblePuzzles, setVisiblePuzzles] = useState<PuzzleData[] | null>(null);
 
   useEffect(() => {
     const localDate = getLocalDateString();
@@ -48,6 +50,11 @@ export function ArchiveGrid({
       }),
     );
   }, [puzzles]);
+
+  // Gate rendering until client-side filtering is complete
+  if (visiblePuzzles === null) {
+    return null;
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">

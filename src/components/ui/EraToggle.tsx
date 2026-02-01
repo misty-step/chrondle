@@ -12,8 +12,8 @@ const toggleContainerVariants = cva(
     variants: {
       size: {
         sm: "h-9",
-        default: "h-9",
-        lg: "h-9",
+        default: "h-11",
+        lg: "h-12",
       },
       width: {
         auto: "w-auto",
