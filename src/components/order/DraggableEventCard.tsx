@@ -125,7 +125,7 @@ function EventCardContent({
         className={[
           "flex touch-none items-center justify-center py-3",
           "cursor-grab active:cursor-grabbing",
-          "bg-muted/30 border-border/30 rounded-t-sm border-b dark:border-white/20 dark:bg-black/20",
+          "bg-muted/30 border-border/30 rounded-t-sm border-b dark:border-white/10 dark:bg-[#1f1f23]",
         ].join(" ")}
         data-vaul-no-drag
         {...handleProps}
