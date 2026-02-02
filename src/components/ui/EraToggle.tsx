@@ -33,7 +33,7 @@ const toggleButtonVariants = cva(
     variants: {
       variant: {
         active: "bg-[#4a9b7f] text-white",
-        inactive: "bg-white text-[#1a1a1b]",
+        inactive: "bg-white text-[#1a1a1b] dark:bg-[#27272a] dark:text-white/90",
       },
       size: {
         sm: "min-w-[2.5rem] text-xs",
