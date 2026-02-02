@@ -1,6 +1,7 @@
 "use client";
 
 import { ClerkProvider, useAuth } from "@clerk/nextjs";
+import { PostHogIdentify } from "@/components/providers/PostHogIdentify";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { SessionThemeProvider } from "@/components/SessionThemeProvider";
@@ -106,6 +107,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ToastProvider>
         <MigrationProvider>
           <ClerkProvider publishableKey={clerkKey} dynamic>
+            <PostHogIdentify />
             <ConvexProviderWithClerk client={convex!} useAuth={useAuth}>
               <UserCreationProvider>
                 <SessionThemeProvider>{children}</SessionThemeProvider>
