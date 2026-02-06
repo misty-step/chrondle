@@ -38,7 +38,7 @@ export function InlineWarning({ children, variant = "warning", className }: Inli
     <div
       className={cn(
         // Material archival badge
-        "material-paper rounded-archival border-2 px-3 py-2 text-xs font-semibold",
+        "rounded-archival border-2 px-3 py-2 text-xs font-semibold",
         // Variant-specific colors
         styles[variant],
         // Custom className override

@@ -30,29 +30,25 @@ describe("SubmitButton", () => {
     });
   });
 
-  describe("Archival Styling (Core Design System)", () => {
-    it("applies archival angular aesthetic", () => {
+  describe("Core Styling", () => {
+    it("applies core CTA styling", () => {
       const { container } = render(<SubmitButton onClick={() => {}}>Submit</SubmitButton>);
       const button = container.querySelector("button");
 
       // Angular corners (not rounded-full or rounded-xl)
-      expect(button?.className).toContain("rounded-sm");
+      expect(button?.className).toContain("rounded");
+      expect(button?.className).not.toContain("rounded-sm");
 
-      // Hard shadow with elevation
-      expect(button?.className).toContain("shadow-hard-lg");
-      expect(button?.className).toContain("hover:shadow-hard");
-
-      // Border treatment
-      expect(button?.className).toContain("border-2");
+      // No hard shadow classes
+      expect(button?.className).not.toContain("shadow-hard");
     });
 
-    it("applies vermilion brand theming", () => {
+    it("applies success brand theming", () => {
       const { container } = render(<SubmitButton onClick={() => {}}>Submit</SubmitButton>);
       const button = container.querySelector("button");
 
-      expect(button?.className).toContain("bg-vermilion-500");
-      expect(button?.className).toContain("hover:bg-vermilion-600");
-      expect(button?.className).toContain("border-vermilion-600");
+      expect(button?.className).toContain("bg-[#4a9b7f]");
+      expect(button?.className).toContain("hover:bg-[#3d8a6e]");
       expect(button?.className).toContain("text-white");
     });
 
@@ -60,7 +56,7 @@ describe("SubmitButton", () => {
       const { container } = render(<SubmitButton onClick={() => {}}>Submit</SubmitButton>);
       const button = container.querySelector("button");
 
-      expect(button?.className).toContain("hover:translate-y-[-2px]");
+      expect(button?.className).toContain("hover:translate-y-[-1px]");
       expect(button?.className).toContain("transition-all");
     });
 
@@ -71,6 +67,7 @@ describe("SubmitButton", () => {
       expect(button?.className).not.toContain("rounded-full");
       expect(button?.className).not.toContain("rounded-xl");
       expect(button?.className).not.toContain("rounded-lg");
+      expect(button?.className).not.toContain("rounded-sm");
     });
   });
 
@@ -125,8 +122,8 @@ describe("SubmitButton", () => {
       expect(button?.className).toContain("custom-class");
 
       // Base styles should still be present
-      expect(button?.className).toContain("rounded-sm");
-      expect(button?.className).toContain("shadow-hard-lg");
+      expect(button?.className).toContain("rounded");
+      expect(button?.className).not.toContain("shadow-hard");
     });
   });
 
@@ -139,11 +136,9 @@ describe("SubmitButton", () => {
       render(<SubmitButton onClick={() => {}}>Submit</SubmitButton>);
 
       // Developer only specified 1 required prop, but got:
-      // - Archival angular aesthetic (rounded-sm)
-      // - Hard shadow system (shadow-hard-lg)
-      // - Vermilion brand theming
-      // - Hover animations (lift, shadow change)
-      // - Border treatment
+      // - Angular aesthetic (rounded)
+      // - Success brand theming
+      // - Hover animations (lift, color)
       // - Full-width layout
       // All decisions hidden from caller
     });
@@ -163,12 +158,15 @@ describe("SubmitButton", () => {
       const orderButton = orderContainer.querySelector("button");
       const classicButton = classicContainer.querySelector("button");
 
-      // Both use identical core styling (rounded-sm, shadow-hard-lg)
-      expect(orderButton?.className).toContain("rounded-sm");
-      expect(classicButton?.className).toContain("rounded-sm");
+      // Both use identical core styling (rounded, success color)
+      expect(orderButton?.className).toContain("rounded");
+      expect(classicButton?.className).toContain("rounded");
 
-      expect(orderButton?.className).toContain("shadow-hard-lg");
-      expect(classicButton?.className).toContain("shadow-hard-lg");
+      expect(orderButton?.className).toContain("bg-[#4a9b7f]");
+      expect(classicButton?.className).toContain("bg-[#4a9b7f]");
+
+      expect(orderButton?.className).not.toContain("shadow-hard");
+      expect(classicButton?.className).not.toContain("shadow-hard");
 
       // Neither can accidentally use rounded-full
       expect(orderButton?.className).not.toContain("rounded-full");

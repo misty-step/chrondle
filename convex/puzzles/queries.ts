@@ -102,23 +102,35 @@ export const getArchivePuzzles = query({
     maxDate: v.optional(v.string()), // YYYY-MM-DD: filter out puzzles after this date
   },
   handler: async (ctx, { page, pageSize, maxDate }) => {
-    // Use DB-level filtering with by_date index when maxDate provided
-    const puzzles = maxDate
-      ? await ctx.db
+    const buildArchiveQuery = () => {
+      if (maxDate) {
+        return ctx.db
           .query("puzzles")
           .withIndex("by_date", (q) => q.lte("date", maxDate))
-          .collect()
-      : await ctx.db.query("puzzles").collect();
+          .order("desc");
+      }
 
-    // Sort by puzzleNumber descending (index returns date order)
-    puzzles.sort((a, b) => (b.puzzleNumber ?? 0) - (a.puzzleNumber ?? 0));
+      return ctx.db.query("puzzles").withIndex("by_number").order("desc");
+    };
 
-    const totalCount = puzzles.length;
+    const countQueryResults = async (query: AsyncIterable<unknown>) => {
+      let count = 0;
+      for await (const _ of query) {
+        count += 1;
+      }
+      return count;
+    };
 
-    // Manual pagination
     const startIndex = (page - 1) * pageSize;
     const endIndex = startIndex + pageSize;
-    const paginatedPuzzles = puzzles.slice(startIndex, endIndex);
+
+    const pageWindow = await buildArchiveQuery().take(endIndex);
+    const paginatedPuzzles = pageWindow.slice(startIndex, endIndex);
+
+    let totalCount = pageWindow.length;
+    if (pageWindow.length === endIndex) {
+      totalCount = await countQueryResults(buildArchiveQuery());
+    }
 
     return {
       puzzles: paginatedPuzzles,

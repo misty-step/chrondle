@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "compareUrl": "https://github.com/misty-step/chrondle/releases/tag/v1.0.0",
+  "date": "2026-01-28",
+  "changes": [
+    {
+      "type": "feat",
+      "description": "Launch Chrondle - the daily history guessing game",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "Classic mode: guess the year of historical events",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "Order mode: arrange historical events chronologically",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "Archive access via subscription",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "Streak tracking and statistics",
+      "breaking": false
+    }
+  ]
+}

@@ -103,7 +103,7 @@ export function OrderGameBoard({
         {/* Inline error feedback */}
         {lastError && (
           <div
-            className="text-destructive bg-destructive/5 border-destructive/20 rounded-sm border px-4 py-3 text-sm"
+            className="text-destructive bg-destructive/5 border-destructive/20 rounded border px-4 py-3 text-sm"
             role="alert"
           >
             <p className="font-medium">{lastError.message}</p>

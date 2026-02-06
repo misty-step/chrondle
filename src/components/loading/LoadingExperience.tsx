@@ -82,7 +82,7 @@ function TopBar({
 
 function InlineSpinner({ intentAccent }: { intentAccent: string }) {
   return (
-    <div className="border-outline-default/60 bg-card shadow-hard-sm flex h-12 w-12 items-center justify-center rounded-sm border">
+    <div className="border-outline-default/60 bg-card flex h-12 w-12 items-center justify-center rounded border">
       <Hourglass
         className="h-5 w-5 animate-pulse"
         style={{ color: intentAccent, animationDuration: "1.5s" }}
@@ -105,10 +105,10 @@ function ProgressBar({
   const pct = progress ?? 34;
 
   return (
-    <div className="bg-muted/70 border-outline-default/30 relative mt-4 h-1.5 w-48 overflow-hidden rounded-sm border">
+    <div className="bg-muted/70 border-outline-default/30 relative mt-4 h-1.5 w-48 overflow-hidden rounded border">
       <div
         className={cn(
-          "absolute inset-y-0 left-0 rounded-sm",
+          "absolute inset-y-0 left-0 rounded",
           !showDeterminate && !prefersReducedMotion && "loading-shimmer",
         )}
         style={{

@@ -121,7 +121,6 @@ describe("GameModeLayout", () => {
       render(
         <GameModeLayout
           mode="classic"
-          backgroundAnimation={<div>BG</div>}
           modals={<div>Modal</div>}
           debugContent={<div>Debug</div>}
           isDebugMode={true}
@@ -135,25 +134,6 @@ describe("GameModeLayout", () => {
   });
 
   describe("Classic Mode Features", () => {
-    it("renders background animation when provided", () => {
-      render(
-        <GameModeLayout
-          mode="classic"
-          backgroundAnimation={<div data-testid="bg-animation">Background</div>}
-        >
-          Content
-        </GameModeLayout>,
-      );
-
-      expect(screen.getByTestId("bg-animation")).toBeInTheDocument();
-    });
-
-    it("does not render background animation when not provided", () => {
-      render(<GameModeLayout mode="order">Content</GameModeLayout>);
-
-      expect(screen.queryByTestId("bg-animation")).not.toBeInTheDocument();
-    });
-
     it("renders modals when provided", () => {
       render(
         <GameModeLayout mode="classic" modals={<div data-testid="modal">Achievement Modal</div>}>
@@ -282,20 +262,6 @@ describe("GameModeLayout", () => {
   });
 
   describe("Cross-Mode Feature Availability", () => {
-    it("allows Order Mode to use background animation if provided", () => {
-      render(
-        <GameModeLayout
-          mode="order"
-          backgroundAnimation={<div data-testid="order-bg">Order BG</div>}
-        >
-          Content
-        </GameModeLayout>,
-      );
-
-      // Features are mode-agnostic - Order Mode CAN use them
-      expect(screen.getByTestId("order-bg")).toBeInTheDocument();
-    });
-
     it("allows Order Mode to use debug mode", () => {
       render(
         <GameModeLayout
@@ -368,7 +334,6 @@ describe("GameModeLayout", () => {
       render(
         <GameModeLayout
           mode="classic"
-          backgroundAnimation={<div data-testid="bg">BG</div>}
           debugContent={<div data-testid="debug">Debug</div>}
           isDebugMode={true}
         >
@@ -377,7 +342,6 @@ describe("GameModeLayout", () => {
       );
 
       // Both features render (Suspense internal to GameModeLayout)
-      expect(screen.getByTestId("bg")).toBeInTheDocument();
       expect(screen.getByTestId("debug")).toBeInTheDocument();
     });
 

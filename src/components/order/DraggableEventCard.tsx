@@ -125,7 +125,7 @@ function EventCardContent({
         className={[
           "flex touch-none items-center justify-center py-3",
           "cursor-grab active:cursor-grabbing",
-          "bg-muted/20 border-border/30 rounded-t-sm border-b",
+          "bg-muted/30 border-border/30 rounded-t-sm border-b dark:border-white/10 dark:bg-[#1f1f23]",
         ].join(" ")}
         data-vaul-no-drag
         {...handleProps}
@@ -133,7 +133,9 @@ function EventCardContent({
         <div
           className={[
             "flex gap-1.5 transition-opacity",
-            mutedHandle ? "opacity-20" : "opacity-50 hover:opacity-80",
+            mutedHandle
+              ? "opacity-20"
+              : "opacity-60 hover:opacity-90 dark:opacity-70 dark:hover:opacity-100",
           ].join(" ")}
         >
           <div className="bg-foreground h-1.5 w-1.5 rounded-full" />
@@ -203,7 +205,7 @@ interface PositionBadgeProps {
 function PositionBadge({ index, feedback }: PositionBadgeProps) {
   if (feedback === "correct") {
     return (
-      <div className="border-feedback-success/30 bg-feedback-success/10 shadow-hard flex h-9 w-9 items-center justify-center rounded-sm border-2">
+      <div className="border-feedback-success/30 bg-feedback-success/10 flex h-9 w-9 items-center justify-center rounded border-2">
         <Check className="text-feedback-success h-5 w-5" aria-hidden="true" />
       </div>
     );
@@ -211,7 +213,7 @@ function PositionBadge({ index, feedback }: PositionBadgeProps) {
 
   if (feedback === "incorrect") {
     return (
-      <div className="border-destructive/30 bg-destructive/10 shadow-hard flex h-9 w-9 items-center justify-center rounded-sm border-2">
+      <div className="border-destructive/30 bg-destructive/10 flex h-9 w-9 items-center justify-center rounded border-2">
         <X className="text-destructive h-5 w-5" aria-hidden="true" />
       </div>
     );
@@ -236,11 +238,9 @@ function cardClasses({
         : "border-border";
 
   return [
-    "relative flex min-h-[100px] flex-col rounded-sm text-left will-change-transform transition-all duration-200",
-    "bg-card border-2",
+    "relative flex min-h-[100px] flex-col rounded text-left will-change-transform transition-all duration-200",
+    "bg-card dark:bg-[#27272a] border-2 dark:border-[#52525b]",
     feedbackBorder,
-    isDragging
-      ? "z-50 shadow-hard-lg ring-2 ring-primary/20 scale-[1.02]"
-      : "shadow-hard hover:shadow-hard-lg hover:-translate-y-0.5",
+    isDragging ? "z-50 ring-2 ring-primary/20 scale-[1.02]" : "hover:-translate-y-0.5",
   ].join(" ");
 }

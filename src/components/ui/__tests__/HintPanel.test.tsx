@@ -315,7 +315,7 @@ describe("HintPanel", () => {
 
       // Developer only specified 3 props, but got:
       // - Mobile and desktop responsive layouts
-      // - GameCard wrapping (shadow-hard, rounded-sm)
+      // - GameCard wrapping (rounded)
       // - Accordion behavior (collapsible sections)
       // - Animation logic (motion, AnimatePresence)
       // - Icon rendering (Anchor, Scale, CalendarRange)
@@ -334,9 +334,8 @@ describe("HintPanel", () => {
       expect(sections.length).toBeGreaterThan(0);
 
       // Caller didn't specify GameCard, but got:
-      // - shadow-hard styling
-      // - rounded-sm borders
-      // - bg-surface-elevated background
+      // - rounded borders
+      // - bg-white background
       // - Responsive padding (compact for mobile, default for desktop)
     });
 

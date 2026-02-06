@@ -49,7 +49,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = "", size =
       className={cn(
         // Base button styles - angular archival aesthetic
         buttonSize,
-        "rounded-sm",
+        "rounded",
         "focus:ring-ring focus:ring-2 focus:ring-offset-2 focus:outline-none",
         "transition-colors duration-200",
         "flex items-center justify-center",
@@ -91,7 +91,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = "", size =
 
       {/* Subtle hover effect overlay - angular archival */}
       <motion.div
-        className="bg-primary/10 absolute inset-0 rounded-sm opacity-0"
+        className="bg-primary/10 absolute inset-0 rounded opacity-0"
         whileHover={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
         aria-hidden="true"

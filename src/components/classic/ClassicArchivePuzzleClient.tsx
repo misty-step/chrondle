@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useRangeGame } from "@/hooks/useRangeGame";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
-import { BackgroundAnimation } from "@/components/BackgroundAnimation";
 import { GameLayout } from "@/components/GameLayout";
 import { LiveAnnouncer } from "@/components/ui/LiveAnnouncer";
 import { useVictoryConfetti } from "@/hooks/useVictoryConfetti";
@@ -106,11 +105,6 @@ export function ClassicArchivePuzzleClient({ puzzleNumber }: ClassicArchivePuzzl
 
   return (
     <div className="bg-background flex min-h-screen flex-col">
-      <BackgroundAnimation
-        guesses={gameState.guesses}
-        targetYear={targetYear}
-        isGameOver={gameState.isComplete}
-      />
       <GameLayout
         gameState={{
           puzzle: { ...gameState.puzzle, year: gameState.puzzle.targetYear },

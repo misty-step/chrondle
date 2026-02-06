@@ -20,7 +20,7 @@ export function TimelineReveal({ events }: TimelineRevealProps) {
 
   return (
     <motion.div
-      className="border-border/40 bg-surface-elevated rounded-sm border shadow-inner"
+      className="border-border/40 bg-surface-elevated rounded border shadow-inner"
       initial={prefersReducedMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{

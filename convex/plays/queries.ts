@@ -100,7 +100,7 @@ export const getUserPlay = query({
  * Used by archive page to show which puzzles user has finished.
  *
  * @param userId - User whose completed puzzles to fetch
- * @returns Array of completed play records
+ * @returns Array of completed puzzle IDs
  */
 export const getUserCompletedPuzzles = query({
   args: {
@@ -113,6 +113,6 @@ export const getUserCompletedPuzzles = query({
       .filter((q) => q.neq(q.field("completedAt"), null))
       .collect();
 
-    return completedPlays;
+    return completedPlays.map((play) => ({ puzzleId: play.puzzleId }));
   },
 });

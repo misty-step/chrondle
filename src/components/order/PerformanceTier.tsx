@@ -19,7 +19,6 @@ export function PerformanceTier({ accuracyPercent }: PerformanceTierProps) {
       initial={prefersReducedMotion ? false : { opacity: 0, y: -20, scale: 0.95 }}
       animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
       transition={{
-        type: "spring",
         ...ANIMATION_SPRINGS.SMOOTH,
       }}
     >
@@ -32,7 +31,6 @@ export function PerformanceTier({ accuracyPercent }: PerformanceTierProps) {
           prefersReducedMotion
             ? undefined
             : {
-                type: "spring",
                 ...ANIMATION_SPRINGS.SMOOTH,
                 delay: msToSeconds(ANIMATION_DURATIONS.PROXIMITY_DELAY),
               }

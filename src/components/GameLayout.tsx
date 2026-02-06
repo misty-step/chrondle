@@ -157,7 +157,7 @@ export function GameLayout(props: GameLayoutProps) {
                   mass: 0.5,
                 }}
                 className={cn(
-                  "material-stamp flex flex-col items-center gap-2 rounded-sm border-4 p-4 text-4xl font-black tracking-widest uppercase mix-blend-multiply backdrop-blur-[1px] dark:mix-blend-normal",
+                  "flex flex-col items-center gap-2 rounded border-4 p-4 text-4xl font-black tracking-widest uppercase mix-blend-multiply backdrop-blur-[1px] dark:mix-blend-normal",
                   // Color based on accuracy
                   lastGuessStamp.start <= targetYear && lastGuessStamp.end >= targetYear
                     ? "border-feedback-correct text-feedback-correct rotate-[-2deg]"
@@ -197,7 +197,7 @@ export function GameLayout(props: GameLayoutProps) {
           {!isGameComplete && gameState.puzzle && (
             <div className="space-y-5">
               {/* The Puzzle Event - Hero Display */}
-              <div className="material-card paper-edge group border-primary/20 relative overflow-hidden border-2 p-8 sm:p-10">
+              <div className="paper-edge group dark:border-border dark:bg-card relative overflow-hidden rounded border border-[#d3d6da] bg-white p-8 sm:p-10">
                 {/* Removed decorative corner accents - unnecessary visual noise */}
 
                 <div className="text-body-primary mb-4 flex items-center gap-2 font-sans text-xs font-bold tracking-wider uppercase">
@@ -216,12 +216,12 @@ export function GameLayout(props: GameLayoutProps) {
                   {gameState.puzzle.events.slice(1, hintsRevealed + 1).map((hint, index) => (
                     <div
                       key={index}
-                      className="material-paper paper-edge border-primary/30 relative border-l-4 p-3"
+                      className="paper-edge border-primary/30 relative border-l-4 p-3"
                     >
                       <div className="text-body-secondary mb-1 font-sans text-xs font-semibold uppercase">
                         Clue {index + 2}
                       </div>
-                      <div className="text-body-primary font-serif text-base leading-snug">
+                      <div className="text-body-primary font-body text-base leading-snug">
                         {hint}
                       </div>
                     </div>

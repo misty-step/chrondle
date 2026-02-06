@@ -92,7 +92,7 @@ export function OrderReveal({
     <div className="space-y-6">
       {/* Success Banner */}
       <motion.div
-        className="border-feedback-success/30 bg-feedback-success/5 shadow-hard flex w-full items-center gap-4 rounded-sm border-2 p-6"
+        className="border-feedback-success/30 bg-feedback-success/5 flex w-full items-center gap-4 rounded border-2 p-6"
         initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
         animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         transition={{
@@ -111,7 +111,7 @@ export function OrderReveal({
         </div>
 
         {/* Right side: Check icon */}
-        <div className="border-feedback-success/30 bg-feedback-success/10 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-sm border-2">
+        <div className="border-feedback-success/30 bg-feedback-success/10 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded border-2">
           <Check className="text-feedback-success h-6 w-6" aria-hidden="true" />
         </div>
       </motion.div>
@@ -121,7 +121,7 @@ export function OrderReveal({
 
       {/* Share Card */}
       <motion.div
-        className="border-primary/20 from-primary/5 to-primary/10 shadow-hard flex w-full flex-col gap-6 rounded-sm border-2 bg-gradient-to-br p-6"
+        className="border-primary/20 from-primary/5 to-primary/10 flex w-full flex-col gap-6 rounded border-2 bg-gradient-to-br p-6"
         initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
         animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         transition={{
@@ -146,7 +146,7 @@ export function OrderReveal({
               type="button"
               onClick={handleShareClick}
               disabled={isShared}
-              className="bg-primary text-primary-foreground shadow-hard-lg hover:bg-primary/90 flex w-full cursor-pointer items-center justify-center gap-2 rounded-sm px-8 py-3 text-base font-semibold transition-all hover:scale-105 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full cursor-pointer items-center justify-center gap-2 rounded px-8 py-3 text-base font-semibold transition-all hover:scale-105 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto"
               whileTap={
                 prefersReducedMotion || isShared
                   ? undefined

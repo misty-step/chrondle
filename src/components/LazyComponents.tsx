@@ -2,13 +2,6 @@
 
 import { lazy } from "react";
 
-// Lazy load heavy animation components
-export const BackgroundAnimation = lazy(() =>
-  import("@/components/BackgroundAnimation").then((m) => ({
-    default: m.BackgroundAnimation,
-  })),
-);
-
 // Lazy load historical context card (uses AI and heavy dependencies)
 export const HistoricalContextCard = lazy(() =>
   import("@/components/HistoricalContextCard").then((m) => ({

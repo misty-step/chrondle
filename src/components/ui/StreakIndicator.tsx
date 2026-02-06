@@ -25,7 +25,7 @@ export const StreakIndicator: React.FC<StreakIndicatorProps> = ({
     <div className={`flex items-center gap-2 ${className}`}>
       {/* Current Streak */}
       <div
-        className="touch-target-min flex items-center gap-1 rounded-sm px-2 py-1 text-sm font-medium transition-all duration-200"
+        className="touch-target-min flex items-center gap-1 rounded px-2 py-1 text-sm font-medium transition-all duration-200"
         style={{
           background: hasActiveStreak ? "var(--primary)" : "var(--input)",
           color: hasActiveStreak ? "white" : "var(--foreground)",
@@ -43,7 +43,7 @@ export const StreakIndicator: React.FC<StreakIndicatorProps> = ({
       {/* Best Streak (if different and exists) */}
       {longest > current && longest > 0 && (
         <div
-          className="flex items-center gap-1 rounded-sm px-2 py-1 text-sm font-medium"
+          className="flex items-center gap-1 rounded px-2 py-1 text-sm font-medium"
           style={{
             background: "var(--input)",
             color: "var(--muted-foreground)",

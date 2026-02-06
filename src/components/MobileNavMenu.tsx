@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Menu, X, Archive, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/SessionThemeProvider";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
@@ -54,10 +55,15 @@ export function MobileNavMenu({ archiveHref }: MobileNavMenuProps) {
             "duration-200",
           )}
         >
+          {/* Accessible title (visually hidden) */}
+          <VisuallyHidden asChild>
+            <DialogPrimitive.Title>Navigation Menu</DialogPrimitive.Title>
+          </VisuallyHidden>
+
           {/* Header */}
           <div className="flex items-center justify-between border-b p-4">
             <span className="text-muted-foreground text-sm font-medium">Menu</span>
-            <DialogPrimitive.Close className="text-muted-foreground hover:text-foreground rounded-sm p-1 transition-colors">
+            <DialogPrimitive.Close className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors">
               <X className="h-5 w-5" />
               <span className="sr-only">Close menu</span>
             </DialogPrimitive.Close>
@@ -69,7 +75,7 @@ export function MobileNavMenu({ archiveHref }: MobileNavMenuProps) {
             <Link
               href={archiveHref}
               onClick={handleNavigation}
-              className="hover:bg-muted flex items-center gap-3 rounded-sm px-3 py-3 transition-colors"
+              className="hover:bg-muted flex items-center gap-3 rounded px-3 py-3 transition-colors"
             >
               <Archive className="text-muted-foreground h-5 w-5" />
               <span className="text-foreground">Archive</span>
@@ -79,7 +85,7 @@ export function MobileNavMenu({ archiveHref }: MobileNavMenuProps) {
             <button
               type="button"
               onClick={toggle}
-              className="hover:bg-muted flex w-full items-center gap-3 rounded-sm px-3 py-3 text-left transition-colors"
+              className="hover:bg-muted flex w-full items-center gap-3 rounded px-3 py-3 text-left transition-colors"
             >
               {currentTheme === "dark" ? (
                 <Sun className="text-muted-foreground h-5 w-5" />
@@ -99,7 +105,7 @@ export function MobileNavMenu({ archiveHref }: MobileNavMenuProps) {
               <SignInButton mode="modal">
                 <button
                   type="button"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded-sm px-4 py-3 font-medium transition-colors"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded px-4 py-3 font-medium transition-colors"
                 >
                   Sign in
                 </button>

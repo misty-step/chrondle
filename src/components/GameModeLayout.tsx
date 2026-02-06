@@ -16,7 +16,6 @@ interface GameModeLayoutProps {
   className?: string;
 
   // Classic Mode features (optional)
-  backgroundAnimation?: ReactNode;
   _confettiRef?: React.RefObject<ConfettiRef>;
   modals?: ReactNode;
   debugContent?: ReactNode;
@@ -66,7 +65,6 @@ interface GameModeLayoutProps {
  *   puzzleNumber={456}
  *   currentStreak={5}
  *   isDebugMode={true}
- *   backgroundAnimation={<BackgroundAnimation />}
  *   confettiRef={confettiRef}
  *   modals={<AchievementModal />}
  *   debugContent={<AnalyticsDashboard />}
@@ -82,7 +80,6 @@ export function GameModeLayout({
   puzzleDate,
   isArchive = false,
   className,
-  backgroundAnimation,
   _confettiRef,
   modals,
   debugContent,
@@ -105,9 +102,6 @@ export function GameModeLayout({
           className,
         )}
       >
-        {/* Background animation - Classic Mode only, behind all content */}
-        {backgroundAnimation && <Suspense fallback={null}>{backgroundAnimation}</Suspense>}
-
         {/* Unified header - mode-aware, with optional streak display */}
         <AppHeader
           currentStreak={currentStreak}

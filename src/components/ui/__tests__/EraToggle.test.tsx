@@ -275,14 +275,17 @@ describe("EraToggle", () => {
 
   describe("Variants", () => {
     it("applies size variant classes", () => {
-      const { rerender, container } = render(
-        <EraToggle value="BC" onChange={mockOnChange} size="sm" />,
-      );
+      const { rerender } = render(<EraToggle value="BC" onChange={mockOnChange} size="sm" />);
 
-      expect(container.querySelector(".h-7")).toBeTruthy();
+      const smallButton = screen.getByRole("radio", { name: /BC/i });
+      expect(smallButton.className).toContain("min-w-[2.5rem]");
+      expect(smallButton.className).toContain("text-xs");
 
       rerender(<EraToggle value="BC" onChange={mockOnChange} size="lg" />);
-      expect(container.querySelector(".h-10")).toBeTruthy();
+
+      const largeButton = screen.getByRole("radio", { name: /BC/i });
+      expect(largeButton.className).toContain("min-w-[3.5rem]");
+      expect(largeButton.className).toContain("text-base");
     });
 
     it("applies width variant classes", () => {
@@ -312,9 +315,10 @@ describe("EraToggle", () => {
       const bcButton = screen.getByRole("radio", { name: /BC/i });
       const adButton = screen.getByRole("radio", { name: /AD/i });
 
-      expect(bcButton.className).toContain("bg-vermilion-500");
+      expect(bcButton.className).toContain("bg-[#4a9b7f]");
       expect(bcButton.className).toContain("text-white");
-      expect(adButton.className).toContain("text-body-secondary");
+      expect(adButton.className).toContain("bg-white");
+      expect(adButton.className).toContain("text-[#1a1a1b]");
     });
 
     it("switches visual states when value changes", () => {
@@ -323,13 +327,13 @@ describe("EraToggle", () => {
       const bcButton = screen.getByRole("radio", { name: /BC/i });
       const adButton = screen.getByRole("radio", { name: /AD/i });
 
-      expect(bcButton.className).toContain("bg-vermilion-500");
-      expect(adButton.className).not.toContain("bg-vermilion-500");
+      expect(bcButton.className).toContain("bg-[#4a9b7f]");
+      expect(adButton.className).not.toContain("bg-[#4a9b7f]");
 
       rerender(<EraToggle value="AD" onChange={mockOnChange} />);
 
-      expect(bcButton.className).not.toContain("bg-vermilion-500");
-      expect(adButton.className).toContain("bg-vermilion-500");
+      expect(bcButton.className).not.toContain("bg-[#4a9b7f]");
+      expect(adButton.className).toContain("bg-[#4a9b7f]");
     });
   });
 

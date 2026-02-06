@@ -251,7 +251,7 @@ function MetricCard({
   color?: string;
 }) {
   return (
-    <div className="bg-muted/50 rounded-sm p-3">
+    <div className="bg-muted/50 rounded p-3">
       <div className="mb-1 flex items-center gap-2">
         <span className={color}>{icon}</span>
         <span className="text-muted-foreground text-xs">{label}</span>

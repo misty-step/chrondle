@@ -30,7 +30,7 @@ export const HistoricalContextCard: React.FC<HistoricalContextCardProps> = ({
   return (
     <div className={`w-full ${className}`}>
       {/* Single Container - Header and expandable content */}
-      <div className="w-full overflow-hidden rounded-sm border border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-blue-600/10">
+      <div className="w-full overflow-hidden rounded border border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-blue-600/10">
         {/* Header Row - Same structure as other cards */}
         <div className="flex items-center gap-4 px-6 py-4">
           {/* Left Side - Label Only */}

@@ -10,7 +10,7 @@
  * perspective). The server passes all puzzles; this component filters.
  */
 
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Check, Lock } from "lucide-react";
@@ -37,32 +37,28 @@ export function ArchiveGrid({
   linkPrefix = "/archive/puzzle",
   hasAccess = true,
 }: ArchiveGridProps) {
-  // Track client mount to prevent hydration flicker
-  const [isClient, setIsClient] = useState(false);
+  // Initialize to null to prevent SSR from rendering unfiltered puzzles
+  // This avoids layout shift and prevents briefly exposing future puzzle hints
+  const [visiblePuzzles, setVisiblePuzzles] = useState<PuzzleData[] | null>(null);
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Filter puzzles to only show those up to user's local date
-  const filteredPuzzles = useMemo(() => {
-    if (!isClient) return []; // SSR: render nothing to prevent flicker
-
     const localDate = getLocalDateString();
-    return puzzles.filter((p) => {
-      // No date = show (legacy data)
-      if (!p.date) return true;
-      // Only show puzzles dated <= user's local date
-      return p.date <= localDate;
-    });
-  }, [puzzles, isClient]);
+    setVisiblePuzzles(
+      puzzles.filter((p) => {
+        if (!p.date) return true;
+        return p.date <= localDate;
+      }),
+    );
+  }, [puzzles]);
 
-  // Render nothing during SSR to prevent hydration mismatch
-  if (!isClient) return null;
+  // Gate rendering until client-side filtering is complete
+  if (visiblePuzzles === null) {
+    return null;
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-      {filteredPuzzles.map((puzzle) => {
+      {visiblePuzzles.map((puzzle) => {
         // Determine link destination: if no access, go to pricing
         const href = hasAccess ? `${linkPrefix}/${puzzle.puzzleNumber}` : "/pricing";
 
@@ -83,7 +79,7 @@ export function ArchiveGrid({
                     Puzzle #{puzzle.puzzleNumber}
                   </span>
                   {puzzle.date && (
-                    <span className="text-muted-foreground/60 text-xs">
+                    <span className="text-muted-foreground/80 text-xs">
                       {formatDate(puzzle.date)}
                     </span>
                   )}
@@ -91,7 +87,7 @@ export function ArchiveGrid({
                 {puzzle.isCompleted ? (
                   <Check className="h-4 w-4 text-green-600" />
                 ) : !hasAccess ? (
-                  <Lock className="text-muted-foreground/50 h-4 w-4" />
+                  <Lock className="text-muted-foreground/70 h-4 w-4" />
                 ) : null}
               </div>
 

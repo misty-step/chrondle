@@ -41,16 +41,16 @@ describe("RangeInput", () => {
   });
 
   describe("Default State", () => {
-    it("defaults to full timeline range (3000 BC - 2025 AD)", () => {
+    it("defaults to zero range (0 AD - 0 AD)", () => {
       renderRangeInput();
 
       // Should display default years in inputs
       const startInput = screen.getByLabelText(/from year/i);
       const endInput = screen.getByLabelText(/to year/i);
 
-      // Default start is 3000 BC, end is 2025 AD
-      expect(startInput).toHaveValue("3000");
-      expect(endInput).toHaveValue(String(new Date().getFullYear()));
+      // Default is 0 AD for both start and end
+      expect(startInput).toHaveValue("0");
+      expect(endInput).toHaveValue("0");
     });
 
     it("disables submit button until range is modified", () => {
@@ -60,19 +60,31 @@ describe("RangeInput", () => {
       expect(commitButton).toBeDisabled();
     });
 
-    it("shows width error when range exceeds maximum", () => {
+    it("shows width error when range exceeds maximum after modification", () => {
       renderRangeInput();
-      // Default range spans full timeline which exceeds max, so error should be visible
-      const defaultWidth = GAME_CONFIG.MAX_YEAR - GAME_CONFIG.MIN_YEAR + 1;
+
+      const startInput = screen.getByLabelText(/from year/i);
+      const endInput = screen.getByLabelText(/to year/i);
+
+      // Default [0, 0] should NOT show error (1 year range)
+      expect(screen.queryByText(/exceeds limit/i)).not.toBeInTheDocument();
+
+      // Set to range > 250 years: 1000 BC - 100 AD = 1101 years
+      fireEvent.change(startInput, { target: { value: "1000" } });
+      // Toggle start to BC
+      const bcButtons = screen.getAllByTestId("toggle-bc-AD");
+      fireEvent.click(bcButtons[0]);
+      fireEvent.blur(startInput);
+
+      fireEvent.change(endInput, { target: { value: "100" } });
+      fireEvent.blur(endInput);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      // Now should show error
       expect(screen.getByText(/exceeds limit/i)).toBeInTheDocument();
-      // New format shows formatted width and max value: "X of 250 years"
-      expect(
-        screen.getByText(
-          new RegExp(
-            `${defaultWidth.toLocaleString()}.*of.*${SCORING_CONSTANTS.W_MAX.toLocaleString()}.*years`,
-          ),
-        ),
-      ).toBeInTheDocument();
     });
   });
 
@@ -80,9 +92,9 @@ describe("RangeInput", () => {
     it("renders era toggles for both start and end years", () => {
       renderRangeInput();
 
-      // Initially both should be BC for start (3000 BC) and AD for end (2025 AD)
-      expect(screen.getByTestId("era-toggle-BC")).toBeInTheDocument();
-      expect(screen.getByTestId("era-toggle-AD")).toBeInTheDocument();
+      // Initially both should be AD (default is 0 AD for both)
+      const adToggles = screen.getAllByTestId("era-toggle-AD");
+      expect(adToggles).toHaveLength(2);
     });
 
     it("toggles era correctly when within bounds", () => {
@@ -95,10 +107,7 @@ describe("RangeInput", () => {
       expect(commitButton).toBeDisabled();
 
       // Set to a valid narrow range: 1900-1950 AD (51 years)
-      // Toggle start to AD first
-      const startAdToggle = screen.getByTestId("toggle-ad-BC");
-      fireEvent.click(startAdToggle);
-
+      // Both default to AD now, so just change the values
       fireEvent.change(startInput, { target: { value: "1900" } });
       fireEvent.blur(startInput);
 
@@ -112,8 +121,8 @@ describe("RangeInput", () => {
       // After changing to valid narrow range, button should be enabled
       expect(commitButton).toBeEnabled();
 
-      // Toggle start from AD back to BC - this creates invalid range (1900 BC is before 1950 AD but too wide)
-      // Both toggles now show AD, so both have toggle-bc-AD buttons - get the first one (start)
+      // Toggle start from AD to BC - this creates invalid range (1900 BC to 1950 AD = 3851 years)
+      // Both toggles show AD, so both have toggle-bc-AD buttons - get the first one (start)
       const bcButtons = screen.getAllByTestId("toggle-bc-AD");
       fireEvent.click(bcButtons[0]); // Click the start toggle's BC button
 
@@ -132,8 +141,6 @@ describe("RangeInput", () => {
 
       const startInput = screen.getByLabelText(/from year/i);
 
-      // Toggle to AD and change input
-      fireEvent.click(screen.getAllByText("AD")[0]);
       fireEvent.change(startInput, { target: { value: "1900" } });
       fireEvent.blur(startInput);
 
@@ -155,9 +162,6 @@ describe("RangeInput", () => {
       const commitButton = screen.getByRole("button", { name: /submit range/i });
       expect(commitButton).toBeDisabled();
 
-      // Change start to 1900 AD (toggle era first since default is BC)
-      const startAdToggle = screen.getByTestId("toggle-ad-BC");
-      fireEvent.click(startAdToggle); // Toggle start year from BC to AD
       fireEvent.change(startInput, { target: { value: "1900" } });
       fireEvent.blur(startInput);
 
@@ -176,10 +180,7 @@ describe("RangeInput", () => {
 
   describe("Controlled Mode", () => {
     const ControlledWrapper = () => {
-      const [range, setRange] = React.useState<[number, number]>([
-        GAME_CONFIG.MIN_YEAR,
-        GAME_CONFIG.MAX_YEAR,
-      ]);
+      const [range, setRange] = React.useState<[number, number]>([0, 0]);
 
       return (
         <RangeInput
@@ -197,10 +198,6 @@ describe("RangeInput", () => {
 
       const startInput = screen.getByLabelText(/from year/i);
       const endInput = screen.getByLabelText(/to year/i);
-
-      // Toggle start to AD so a modern year is valid
-      const startAdToggle = screen.getByTestId("toggle-ad-BC");
-      fireEvent.click(startAdToggle);
 
       fireEvent.change(startInput, { target: { value: "1900" } });
       fireEvent.blur(startInput);
@@ -228,8 +225,10 @@ describe("RangeInput", () => {
       const endInput = screen.getByLabelText(/to year/i);
 
       // Set to range > 250 years within bounds (e.g., 1700 BC - 100 BC = 1601 years)
-      // Start defaults to BC, so just change the values
+      // Start defaults to AD, toggle to BC first
       fireEvent.change(startInput, { target: { value: "1700" } });
+      const bcButtons = screen.getAllByTestId("toggle-bc-AD");
+      fireEvent.click(bcButtons[0]);
       fireEvent.blur(startInput);
 
       fireEvent.change(endInput, { target: { value: "100" } });
@@ -377,10 +376,6 @@ describe("RangeInput", () => {
       expect(commitButton).toBeDisabled();
 
       // Set valid range: 1900-1950 AD (51 years)
-      // Toggle start to AD first (default is BC)
-      const startAdToggle = screen.getByTestId("toggle-ad-BC");
-      fireEvent.click(startAdToggle);
-
       fireEvent.change(startInput, { target: { value: "1900" } });
       fireEvent.blur(startInput);
 
@@ -428,9 +423,6 @@ describe("RangeInput", () => {
       const endInput = screen.getByLabelText(/to year/i);
 
       // Set valid narrow range (1900-1920 AD = 21 years)
-      // Toggle start to AD first
-      const startAdToggle = screen.getByTestId("toggle-ad-BC");
-      fireEvent.click(startAdToggle);
       fireEvent.change(startInput, { target: { value: "1900" } });
       fireEvent.blur(startInput);
 

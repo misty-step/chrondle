@@ -47,11 +47,11 @@ export const NavbarButton: React.FC<NavbarButtonProps> = ({
 
   const buttonClasses = cn(
     sizeClasses[size],
-    "rounded-sm relative overflow-hidden",
+    "rounded relative overflow-hidden",
     "transition-all duration-200",
     "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
     "flex items-center justify-center group",
-    "hover:bg-accent/50 hover:shadow-hard-sm",
+    "hover:bg-accent/50",
     "cursor-pointer",
     "text-body-primary",
     "border border-transparent hover:border-primary/20",
@@ -64,7 +64,7 @@ export const NavbarButton: React.FC<NavbarButtonProps> = ({
       {showOverlay && (
         <motion.div
           className={cn(
-            "pointer-events-none absolute inset-0 rounded-sm opacity-0",
+            "pointer-events-none absolute inset-0 rounded opacity-0",
             overlayColors[overlayColor],
           )}
           initial={false}

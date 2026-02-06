@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EraToggle } from "@/components/ui/EraToggle";
 import { SCORING_CONSTANTS } from "@/lib/scoring";
@@ -27,8 +28,8 @@ interface RangeInputProps {
  * Creates default range spanning the full timeline
  * This forces user to modify before submitting
  */
-function createFullTimelineRange(minYear: number, maxYear: number): [number, number] {
-  return [minYear, maxYear];
+function createFullTimelineRange(_minYear: number, _maxYear: number): [number, number] {
+  return [0, 0];
 }
 
 export function RangeInput({
@@ -194,11 +195,9 @@ export function RangeInput({
     <div className={cn("space-y-6", className)}>
       {/* Onboarding message for first-time users */}
       {!hasBeenModified && !disabled && (
-        <div className="bg-vermilion-50 dark:bg-vermilion-950/30 border-vermilion-200 dark:border-vermilion-800 rounded-sm border px-4 py-3">
-          <p className="text-vermilion-700 dark:text-vermilion-300 flex items-center gap-2 text-sm font-medium">
-            <span className="text-base" aria-hidden="true">
-              💡
-            </span>
+        <div className="rounded border border-[#4a9b7f] bg-[#4a9b7f]/10 px-4 py-3 dark:bg-[#4a9b7f]/20">
+          <p className="flex items-center gap-2 text-sm font-medium text-[#3d8268] dark:text-[#5fb899]">
+            <Lightbulb className="h-4 w-4 shrink-0" aria-hidden="true" />
             Adjust the years to narrow your range, then submit your guess
           </p>
         </div>
@@ -207,11 +206,11 @@ export function RangeInput({
       {/* Ledger Entry Card */}
       <div
         className={cn(
-          "material-card group relative p-6 transition-all sm:p-8",
+          "group dark:border-border dark:bg-card relative rounded border border-[#d3d6da] bg-white p-6 transition-all sm:p-8",
           rangeTooWide
             ? "border-feedback-error/50"
             : hasBeenModified
-              ? "border-vermilion-500"
+              ? "border-[#4a9b7f]"
               : "border-outline-default",
         )}
       >
@@ -222,7 +221,7 @@ export function RangeInput({
         </div>
 
         {/* Current Range Display */}
-        <div className="bg-muted/30 mb-6 rounded-sm px-4 py-3">
+        <div className="bg-muted/30 mb-6 rounded px-4 py-3">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
               Range
@@ -371,11 +370,11 @@ export function RangeInput({
               {rangeTooWide ? (
                 <motion.span
                   key="error"
-                  initial={prefersReducedMotion ? false : { scale: 0.8, opacity: 0, rotate: -8 }}
-                  animate={{ scale: 1, opacity: 1, rotate: -3 }}
+                  initial={prefersReducedMotion ? false : { scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.8, opacity: 0 }}
                   transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  className="archival-stamp archival-stamp-error"
+                  className="text-feedback-error text-xs font-semibold"
                 >
                   Exceeds Limit
                 </motion.span>
@@ -407,11 +406,9 @@ export function RangeInput({
             variant="default"
             size="lg"
             className={cn(
-              "h-14 w-full rounded-sm text-lg font-bold tracking-wide transition-shadow duration-200",
-              "bg-vermilion-500 hover:bg-vermilion-600 border-vermilion-600 border-2 text-white",
-              commitDisabled
-                ? "cursor-not-allowed opacity-50 shadow-none"
-                : "shadow-hard hover:shadow-hard-lg",
+              "h-14 w-full rounded text-lg font-bold tracking-wide transition-shadow duration-200",
+              "border-2 border-[#4a9b7f] bg-[#4a9b7f] text-white hover:bg-[#4a9b7f]",
+              commitDisabled ? "cursor-not-allowed opacity-50 shadow-none" : "",
             )}
           >
             {isOneGuessMode ? "Lock In Final Guess" : "Submit Range"}

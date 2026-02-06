@@ -11,39 +11,8 @@ interface SubmitButtonProps {
 }
 
 /**
- * Deep module for primary submit actions across all game modes.
- *
- * **Hides complexity:**
- * - Archival angular aesthetic (rounded-sm)
- * - Hard shadow with elevation on hover
- * - Vermilion brand color theming
- * - Consistent sizing and padding
- * - Hover lift animation
- * - Focus ring accessibility
- *
- * **Simple interface:**
- * Just specify action handler + label. All styling decisions internal.
- *
- * **Ousterhout Deep Module:**
- * - Interface complexity: 1 required prop (onClick)
- * - Implementation complexity: 10+ styling decisions
- * - Value = Consistency across all submit actions
- *
- * **Cross-Mode Consistency:**
- * Before: Order Mode used rounded-full, Classic used rounded-sm
- * After: Both modes use identical submit styling (architectural guarantee)
- *
- * @example
- * // Order Mode
- * <SubmitButton onClick={commitOrdering}>
- *   Submit My Timeline
- * </SubmitButton>
- *
- * @example
- * // Classic Mode
- * <SubmitButton onClick={commitRange}>
- *   Commit Range
- * </SubmitButton>
+ * Primary CTA button.
+ * NYT Refined v3 styling, centralized.
  */
 export function SubmitButton({
   onClick,
@@ -59,14 +28,8 @@ export function SubmitButton({
       disabled={disabled}
       size={size}
       className={cn(
-        // Core archival treatment - angular aesthetic
-        "shadow-hard-lg hover:shadow-hard rounded-sm border-2",
-
-        // Vermilion brand theming
-        "bg-vermilion-500 hover:bg-vermilion-600 border-vermilion-600 text-white",
-
-        // Interaction - lift on hover
-        "font-semibold transition-all hover:translate-y-[-2px]",
+        "h-11 rounded bg-[#4a9b7f] font-bold tracking-[0.04em] text-white uppercase",
+        "transition-all duration-150 hover:translate-y-[-1px] hover:bg-[#3d8a6e]",
 
         // Layout - full width mobile, auto desktop
         "relative z-10 w-full",

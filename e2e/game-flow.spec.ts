@@ -176,12 +176,33 @@ test.describe("Range Validation @happy-path", () => {
     // Wait for game to load
     await expect(page.getByText("Primary Clue")).toBeVisible({ timeout: 10000 });
 
-    // The default range (3000 BC to 2025 AD) exceeds the limit
-    // Should show "Exceeds Limit" validation message
+    // Default range is 0-0 (year 0 AD), so "Exceeds Limit" should NOT appear initially
+    // Submit button disabled because range hasn't been modified yet
+    const submitButton = page.getByRole("button", { name: /lock in|submit range/i });
+    await expect(submitButton).toBeDisabled();
+
+    // Set a range that exceeds the 250-year limit (W_MAX)
+    const startYearInput = page.getByRole("textbox", { name: "Start year" });
+    const endYearInput = page.getByRole("textbox", { name: "End year" });
+
+    // Set start year to 1000 BC
+    await startYearInput.clear();
+    await startYearInput.fill("1000");
+    const startEraGroup = page.getByRole("radiogroup", { name: /select era/i }).first();
+    await startEraGroup.getByRole("radio", { name: /BC/i }).click();
+    await startYearInput.blur();
+
+    // Set end year to 2000 AD (3000 year span - exceeds 250 limit)
+    await endYearInput.clear();
+    await endYearInput.fill("2000");
+    const endEraGroup = page.getByRole("radiogroup", { name: /select era/i }).last();
+    await endEraGroup.getByRole("radio", { name: /AD/i }).click();
+    await endYearInput.blur();
+
+    // Now "Exceeds Limit" should be visible
     await expect(page.getByText("Exceeds Limit")).toBeVisible();
 
-    // Submit button should be disabled
-    const submitButton = page.getByRole("button", { name: /lock in|submit range/i });
+    // Submit button should still be disabled
     await expect(submitButton).toBeDisabled();
   });
 
@@ -191,10 +212,7 @@ test.describe("Range Validation @happy-path", () => {
     // Wait for game to load
     await expect(page.getByText("Primary Clue")).toBeVisible({ timeout: 10000 });
 
-    // Initially "Exceeds Limit" should be visible
-    await expect(page.getByText("Exceeds Limit")).toBeVisible();
-
-    // Narrow the range to a valid width - both in AD era
+    // Set a valid range (both in AD era, within 250 years)
     const startYearInput = page.getByRole("textbox", { name: "Start year" });
     const endYearInput = page.getByRole("textbox", { name: "End year" });
 
@@ -202,7 +220,7 @@ test.describe("Range Validation @happy-path", () => {
     await startYearInput.fill("1900");
     await startYearInput.blur();
 
-    // Click AD radio for start year (might still be BC from initial state)
+    // Click AD radio for start year
     const startEraGroup = page.getByRole("radiogroup", { name: /select era/i }).first();
     await startEraGroup.getByRole("radio", { name: /AD/i }).click();
 
@@ -210,7 +228,7 @@ test.describe("Range Validation @happy-path", () => {
     await endYearInput.fill("2000");
     await endYearInput.blur();
 
-    // "Exceeds Limit" should disappear
+    // "Exceeds Limit" should not be visible (100-year range is valid)
     await expect(page.getByText("Exceeds Limit")).not.toBeVisible();
 
     // "Valid" indicator should appear

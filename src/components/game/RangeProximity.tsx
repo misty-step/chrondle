@@ -43,7 +43,7 @@ export function RangeProximity({
       : `${windowYears}-year window`;
 
   return (
-    <div className="border-border bg-background rounded-sm border-2 px-6 py-5 shadow-lg">
+    <div className="border-border bg-background rounded border-2 px-6 py-5 shadow-lg">
       {/* Hero text with subtitle - left-aligned, subtle hierarchy */}
       {heroText && (
         <div className="mb-4 space-y-1">

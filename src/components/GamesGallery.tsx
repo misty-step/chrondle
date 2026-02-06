@@ -75,11 +75,11 @@ export function GamesGallery() {
   };
 
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center p-4 md:p-8">
+    <div className="flex min-h-dvh w-full items-center justify-center bg-white bg-[radial-gradient(circle,_#e5e5e5_1px,_transparent_1px)] bg-[size:20px_20px] p-4 md:p-8 dark:bg-[#0f1115] dark:bg-[radial-gradient(circle,_rgba(255,255,255,0.08)_1px,_transparent_1px)]">
       <main
         className={cn(
-          "material-card shadow-hard flex w-full max-w-xl flex-col gap-5 rounded-sm border-2 p-5 md:gap-6 md:p-8",
-          "bg-card text-card-foreground",
+          "dark:border-border dark:bg-card flex w-full max-w-xl flex-col gap-5 rounded border border-[#d3d6da] bg-white p-5 md:gap-6 md:p-8",
+          "text-card-foreground",
         )}
       >
         {/* Header: Wordmark + Tagline */}
@@ -106,9 +106,9 @@ export function GamesGallery() {
                 animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, ease: "easeOut", delay }}
                 className={cn(
-                  "shadow-hard flex w-full flex-col gap-3 rounded-sm border-2 p-4 text-left md:p-5",
+                  "flex w-full flex-col gap-3 rounded border-2 p-4 text-left md:p-5",
                   "transition-transform duration-200 ease-out",
-                  "hover:shadow-hard-lg hover:-translate-y-0.5",
+                  "hover:-translate-y-0.5",
                   "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                   theme.card,
                 )}
@@ -123,7 +123,7 @@ export function GamesGallery() {
                   </div>
                   <div className="flex flex-col items-end gap-1.5">
                     {mode.badge && (
-                      <span className="rounded-sm border-2 border-current/25 px-2 py-0.5 text-[11px] font-semibold tracking-[0.1em] uppercase">
+                      <span className="rounded border-2 border-current/25 px-2 py-0.5 text-[11px] font-semibold tracking-[0.1em] uppercase">
                         {mode.badge}
                       </span>
                     )}
@@ -147,7 +147,7 @@ export function GamesGallery() {
                 <div className="mt-auto pt-1">
                   <span
                     className={cn(
-                      "inline-flex min-h-12 w-full items-center justify-center rounded-sm border-2 border-current/30 px-6 py-3 text-base font-semibold",
+                      "inline-flex min-h-12 w-full items-center justify-center rounded border-2 border-current/30 px-6 py-3 text-base font-semibold",
                       "transition-colors duration-200 ease-out hover:bg-current/10",
                       theme.accent,
                     )}

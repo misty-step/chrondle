@@ -87,7 +87,7 @@ export default function PricingPage() {
                 <span className="text-foreground text-4xl font-bold">$0.99</span>
                 <span className="text-muted-foreground">/month</span>
               </div>
-              <ul className="text-body-secondary mb-6 flex-grow space-y-3 text-sm">
+              <ul className="text-foreground/80 mb-6 flex-grow space-y-3 text-sm">
                 <li className="flex items-start gap-2">
                   <Check className="text-primary mt-0.5 h-4 w-4 flex-shrink-0" />
                   <span>Full access to puzzle archive</span>
@@ -127,7 +127,7 @@ export default function PricingPage() {
                 <span className="text-muted-foreground">/year</span>
                 <div className="text-muted-foreground mt-1 text-sm">~$0.83/month</div>
               </div>
-              <ul className="text-body-secondary mb-6 flex-grow space-y-3 text-sm">
+              <ul className="text-foreground/80 mb-6 flex-grow space-y-3 text-sm">
                 <li className="flex items-start gap-2">
                   <Check className="text-primary mt-0.5 h-4 w-4 flex-shrink-0" />
                   <span>Full access to puzzle archive</span>
@@ -157,12 +157,12 @@ export default function PricingPage() {
         </div>
 
         {/* Value Props */}
-        <div className="border-outline-default/30 bg-surface-elevated rounded-sm border p-6">
+        <div className="border-outline-default/30 bg-surface-elevated rounded border p-6">
           <h2 className="text-foreground mb-4 flex items-center gap-2 text-lg font-semibold">
             <Archive className="h-5 w-5" />
             What&apos;s in the Archive?
           </h2>
-          <ul className="text-body-secondary grid gap-2 text-sm sm:grid-cols-2">
+          <ul className="text-foreground/80 grid gap-2 text-sm sm:grid-cols-2">
             <li>150+ unique historical puzzles</li>
             <li>Events spanning 5000+ years</li>
             <li>Classic mode: guess the year</li>

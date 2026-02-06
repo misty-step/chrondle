@@ -91,9 +91,10 @@ export function isValidEraYear(year: number, era: Era): boolean {
   // Additional era-specific validation
   if (era === "BC") {
     // BC years: 1 to 3000 (stored as -1 to -3000)
+    // Note: Year 0 doesn't exist historically - calendar goes 1 BC → 1 AD
     return year >= 1 && year <= Math.abs(GAME_CONFIG.MIN_YEAR);
   } else {
-    // AD years: 0 to current year
+    // AD years: 0 to current year (year 0 is treated as AD for internal encoding)
     return year >= 0 && year <= GAME_CONFIG.MAX_YEAR;
   }
 }

@@ -85,13 +85,13 @@ describe("eraUtils", () => {
 
   describe("isValidEraYear", () => {
     it("should validate BC years within range", () => {
+      expect(isValidEraYear(0, "BC")).toBe(false);
       expect(isValidEraYear(1, "BC")).toBe(true);
       expect(isValidEraYear(776, "BC")).toBe(true);
       expect(isValidEraYear(3000, "BC")).toBe(true);
     });
 
     it("should reject BC years outside range", () => {
-      expect(isValidEraYear(0, "BC")).toBe(false); // 0 not valid for BC
       expect(isValidEraYear(3001, "BC")).toBe(false);
       expect(isValidEraYear(10000, "BC")).toBe(false);
     });

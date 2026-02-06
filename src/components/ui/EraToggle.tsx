@@ -7,13 +7,13 @@ import { cn } from "@/lib/utils";
 import type { Era } from "@/lib/eraUtils";
 
 const toggleContainerVariants = cva(
-  "inline-flex rounded-sm material-paper border border-outline-default p-1 gap-1 relative",
+  "inline-flex rounded border border-[#d3d6da] divide-x divide-[#d3d6da] overflow-hidden relative",
   {
     variants: {
       size: {
-        sm: "h-7 text-xs",
-        default: "h-8 text-sm",
-        lg: "h-12 text-base",
+        sm: "h-9",
+        default: "h-11",
+        lg: "h-12",
       },
       width: {
         auto: "w-auto",
@@ -28,27 +28,17 @@ const toggleContainerVariants = cva(
 );
 
 const toggleButtonVariants = cva(
-  "inline-flex items-center justify-center rounded-sm px-3 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-vermilion-500/50 disabled:pointer-events-none disabled:opacity-50 flex-1 sm:flex-initial relative z-10",
+  "inline-flex items-center justify-center px-3 h-full transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4a9b7f]/40 disabled:pointer-events-none disabled:opacity-50 flex-1 sm:flex-initial relative z-10",
   {
     variants: {
       variant: {
-        active: [
-          "bg-vermilion-500 text-white",
-          "font-semibold tracking-wide",
-          "shadow-[0_1px_2px_rgba(60,45,35,0.12)]",
-          "border border-vermilion-600",
-        ].join(" "),
-        inactive: [
-          "text-body-secondary",
-          "font-medium",
-          "bg-surface-elevated hover:bg-muted",
-          "border border-outline-default",
-        ].join(" "),
+        active: "bg-[#4a9b7f] text-white",
+        inactive: "bg-white text-[#1a1a1b] dark:bg-[#27272a] dark:text-white/90",
       },
       size: {
-        sm: "h-5 min-w-[2.5rem] text-xs",
-        default: "h-6 min-w-[3rem] text-sm",
-        lg: "h-10 min-w-[3.5rem] text-base",
+        sm: "min-w-[2.5rem] text-xs",
+        default: "min-w-[3rem] text-sm",
+        lg: "min-w-[3.5rem] text-base",
       },
     },
     defaultVariants: {
@@ -59,7 +49,8 @@ const toggleButtonVariants = cva(
 );
 
 export interface EraToggleProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onChange">,
+  extends
+    Omit<React.HTMLAttributes<HTMLDivElement>, "onChange">,
     VariantProps<typeof toggleContainerVariants> {
   value: Era;
   onChange: (era: Era) => void;
