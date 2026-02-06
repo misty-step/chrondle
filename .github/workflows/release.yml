@@ -56,7 +56,7 @@ jobs:
       - name: Release
         id: semantic
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
         run: pnpm exec semantic-release
 
   synthesize:
@@ -78,6 +78,6 @@ jobs:
 
       - name: Synthesize user-friendly notes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: node scripts/synthesize-release-notes.mjs ${{ needs.release.outputs.new_release_version }}
