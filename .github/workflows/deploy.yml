@@ -148,7 +148,7 @@ jobs:
       # Step 5: Create Sentry release (skipped if Sentry not configured)
       - name: Create Sentry release
         if: steps.validate-secrets.outputs.sentry_configured == 'true'
-        uses: getsentry/action-release@v3.4.0
+        uses: getsentry/action-release@v3.5.0
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
