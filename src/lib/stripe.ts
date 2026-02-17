@@ -14,6 +14,7 @@ export function getStripe(): Stripe {
       throw new Error("STRIPE_SECRET_KEY is not configured. Add it to your environment variables.");
     }
     _stripe = new Stripe(key, {
+      // @ts-expect-error Stripe types only reflect the library's latest API version.
       apiVersion: "2026-01-28.clover",
       typescript: true,
     });
