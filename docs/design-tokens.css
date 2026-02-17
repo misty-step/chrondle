@@ -1,0 +1,492 @@
+/**
+ * Chrondle Design Tokens - CSS Implementation
+ * 
+ * This file contains the complete CSS custom properties implementation
+ * of the Chrondle design token system. Import this into your globals.css
+ * or reference it when updating styles.
+ * 
+ * Compatible with: Tailwind CSS 4 + Next.js 15
+ */
+
+/* ========================================
+   LIGHT MODE (Default)
+   ======================================== */
+:root {
+  /* ----------------------------------------
+     Base Colors
+     ---------------------------------------- */
+  --bg: #ffffff;
+  --text: #1a1a1b;
+  --muted: #787c7e;
+  --neutral: #787c7e;
+  --success: #4a9b7f;
+  --warning: #d4a84b;
+  --error: #b42318;
+  --info: #2563eb;
+
+  /* ----------------------------------------
+     Elevation System (Shadows)
+     ---------------------------------------- */
+  --elevation-0: none;
+  --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --elevation-3: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.04);
+  --elevation-drag: 0 12px 32px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1);
+
+  /* ----------------------------------------
+     Surface Colors
+     ---------------------------------------- */
+  --surface-primary: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-elevated-hover: #fafafa;
+  --surface-overlay: #ffffff;
+  --surface-inset: #f4f4f5;
+  --surface-inset-focus: #ffffff;
+  --surface-hover: #f4f4f5;
+  --surface-active: #e4e4e7;
+  --surface-subtle: #fafafa;
+  --surface-backdrop: rgba(0, 0, 0, 0.5);
+
+  /* ----------------------------------------
+     Interactive States - Primary Button
+     ---------------------------------------- */
+  --btn-primary-bg: #4a9b7f;
+  --btn-primary-bg-hover: #3d8a6e;
+  --btn-primary-bg-active: #347a60;
+  --btn-primary-text: #ffffff;
+  --btn-primary-text-disabled: rgba(255, 255, 255, 0.5);
+
+  /* ----------------------------------------
+     Interactive States - Secondary Button
+     ---------------------------------------- */
+  --btn-secondary-bg: transparent;
+  --btn-secondary-bg-hover: #f4f4f5;
+  --btn-secondary-bg-active: #e4e4e7;
+  --btn-secondary-text: #1a1a1b;
+  --btn-secondary-border: #d3d6da;
+  --btn-secondary-border-hover: #a1a1aa;
+  --btn-secondary-border-active: #71717a;
+
+  /* ----------------------------------------
+     Interactive States - Ghost Button
+     ---------------------------------------- */
+  --btn-ghost-bg-hover: rgba(0, 0, 0, 0.05);
+  --btn-ghost-bg-active: rgba(0, 0, 0, 0.1);
+  --btn-ghost-text: #1a1a1b;
+
+  /* ----------------------------------------
+     Interactive States - Destructive Button
+     ---------------------------------------- */
+  --btn-destructive-bg: #b42318;
+  --btn-destructive-bg-hover: #991b1b;
+  --btn-destructive-bg-active: #7f1d1d;
+  --btn-destructive-text: #ffffff;
+
+  /* ----------------------------------------
+     Take Hint Button (Special)
+     ---------------------------------------- */
+  --hint-btn-bg: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  --hint-btn-bg-hover: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  --hint-btn-border: rgba(217, 119, 6, 0.5);
+  --hint-btn-border-hover: rgba(180, 83, 9, 0.5);
+  --hint-btn-text: #92400e;
+
+  /* ----------------------------------------
+     Focus Ring System
+     ---------------------------------------- */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: #2563eb;
+  --focus-ring:
+    0 0 0 var(--focus-ring-offset) var(--surface-primary),
+    0 0 0 calc(var(--focus-ring-offset) + var(--focus-ring-width)) var(--focus-ring-color);
+
+  /* ----------------------------------------
+     Border System
+     ---------------------------------------- */
+  --border-subtle: #f4f4f5;
+  --border-default: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --border-interactive: #a1a1aa;
+  --border-interactive-focus: #3f3f46;
+
+  /* ----------------------------------------
+     Mode: Classic (Archival Green/Teal)
+     ---------------------------------------- */
+  --mode-classic-bg: #f0f7f4;
+  --mode-classic-surface: #ffffff;
+  --mode-classic-accent: #2d6a4f;
+  --mode-classic-accent-hover: #22543d;
+  --mode-classic-accent-subtle: #d1fae5;
+  --mode-classic-accent-muted: #6b9c86;
+  --mode-classic-border: #a7f3d0;
+  --mode-classic-border-strong: #6ee7b7;
+  --mode-classic-text: #1a1a1b;
+  --mode-classic-text-muted: #787c7e;
+  --mode-classic-elevation-1: 0 1px 3px rgba(45, 106, 79, 0.08);
+  --mode-classic-elevation-2: 0 4px 12px rgba(45, 106, 79, 0.12);
+
+  /* ----------------------------------------
+     Mode: Order (Warm Amber/Timeline)
+     ---------------------------------------- */
+  --mode-order-bg: #fef7ed;
+  --mode-order-surface: #ffffff;
+  --mode-order-accent: #b45309;
+  --mode-order-accent-hover: #92400e;
+  --mode-order-accent-subtle: #fef3c7;
+  --mode-order-accent-muted: #d97706;
+  --order-border: #fde68a;
+  --mode-order-border-strong: #fbbf24;
+  --mode-order-text: #1a1a1b;
+  --mode-order-text-muted: #787c7e;
+  --mode-order-elevation-1: 0 1px 3px rgba(180, 83, 9, 0.08);
+  --mode-order-elevation-2: 0 4px 12px rgba(180, 83, 9, 0.12);
+
+  /* ----------------------------------------
+     Typography
+     ---------------------------------------- */
+  --font-display: "Outfit", sans-serif;
+  --font-body: "Karla", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* ----------------------------------------
+     Border Radius
+     ---------------------------------------- */
+  --radius-none: 0;
+  --radius-sm: 3px;
+  --radius-default: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* ----------------------------------------
+     Animation Timing
+     ---------------------------------------- */
+  --duration-instant: 0ms;
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --duration-slow: 200ms;
+  --duration-slower: 300ms;
+
+  /* Easing Functions */
+  --ease-default: ease;
+  --ease-in-out: ease-in-out;
+  --ease-out: ease-out;
+  --ease-spring: cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+/* ========================================
+   DARK MODE
+   ======================================== */
+.dark,
+[data-theme="dark"] {
+  /* ----------------------------------------
+     Base Colors
+     ---------------------------------------- */
+  --bg: #121213;
+  --text: #e4e5f1;
+  --muted: #9ca3af;
+  --neutral: #9ca3af;
+  --success: #5fb899;
+  --warning: #fbbf24;
+  --error: #ef4444;
+  --info: #60a5fa;
+
+  /* ----------------------------------------
+     Elevation System (Darker shadows)
+     ---------------------------------------- */
+  --elevation-0: none;
+  --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
+  --elevation-3: 0 8px 24px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 0, 0, 0.2);
+  --elevation-drag: 0 12px 32px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.3);
+
+  /* ----------------------------------------
+     Surface Colors
+     ---------------------------------------- */
+  --surface-primary: #121213;
+  --surface-elevated: #1e1e1f;
+  --surface-elevated-hover: #27272a;
+  --surface-overlay: #27272a;
+  --surface-inset: #18181b;
+  --surface-inset-focus: #27272a;
+  --surface-hover: rgba(255, 255, 255, 0.1);
+  --surface-active: rgba(255, 255, 255, 0.15);
+  --surface-subtle: #18181b;
+  --surface-backdrop: rgba(0, 0, 0, 0.7);
+
+  /* ----------------------------------------
+     Interactive States - Primary Button
+     ---------------------------------------- */
+  --btn-primary-bg: #5fb899;
+  --btn-primary-bg-hover: #4a9b7f;
+  --btn-primary-bg-active: #3d8a6e;
+  --btn-primary-text: #121213;
+  --btn-primary-text-disabled: rgba(18, 18, 19, 0.5);
+
+  /* ----------------------------------------
+     Interactive States - Secondary Button
+     ---------------------------------------- */
+  --btn-secondary-bg: transparent;
+  --btn-secondary-bg-hover: rgba(255, 255, 255, 0.1);
+  --btn-secondary-bg-active: rgba(255, 255, 255, 0.15);
+  --btn-secondary-text: #e4e5f1;
+  --btn-secondary-border: #52525b;
+  --btn-secondary-border-hover: #71717a;
+  --btn-secondary-border-active: #a1a1aa;
+
+  /* ----------------------------------------
+     Interactive States - Ghost Button
+     ---------------------------------------- */
+  --btn-ghost-bg-hover: rgba(255, 255, 255, 0.1);
+  --btn-ghost-bg-active: rgba(255, 255, 255, 0.15);
+  --btn-ghost-text: #e4e5f1;
+
+  /* ----------------------------------------
+     Interactive States - Destructive Button
+     ---------------------------------------- */
+  --btn-destructive-bg: #ef4444;
+  --btn-destructive-bg-hover: #dc2626;
+  --btn-destructive-bg-active: #b91c1c;
+  --btn-destructive-text: #ffffff;
+
+  /* ----------------------------------------
+     Take Hint Button (Dark Mode - Improved visibility)
+     ---------------------------------------- */
+  --hint-btn-bg: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+  --hint-btn-bg-hover: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+  --hint-btn-border: rgba(251, 191, 36, 0.3);
+  --hint-btn-border-hover: rgba(251, 191, 36, 0.5);
+  --hint-btn-text: #fbbf24;
+
+  /* ----------------------------------------
+     Focus Ring System
+     ---------------------------------------- */
+  --focus-ring-color: #60a5fa;
+  --focus-ring:
+    0 0 0 var(--focus-ring-offset) var(--surface-primary),
+    0 0 0 calc(var(--focus-ring-offset) + var(--focus-ring-width)) var(--focus-ring-color);
+
+  /* ----------------------------------------
+     Border System
+     ---------------------------------------- */
+  --border-subtle: #27272a;
+  --border-default: #3a3a3c;
+  --border-strong: #52525b;
+  --border-interactive: #71717a;
+  --border-interactive-focus: #a1a1aa;
+
+  /* ----------------------------------------
+     Mode: Classic (Dark)
+     ---------------------------------------- */
+  --mode-classic-bg: #1a2f25;
+  --mode-classic-surface: #1e1e1f;
+  --mode-classic-accent: #6ee7b7;
+  --mode-classic-accent-hover: #34d399;
+  --mode-classic-accent-subtle: #064e3b;
+  --mode-classic-accent-muted: #4a9b7f;
+  --mode-classic-border: #065f46;
+  --mode-classic-border-strong: #10b981;
+  --mode-classic-text: #e4e5f1;
+  --mode-classic-text-muted: #9ca3af;
+  --mode-classic-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --mode-classic-elevation-2: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  /* ----------------------------------------
+     Mode: Order (Dark)
+     ---------------------------------------- */
+  --mode-order-bg: #2a2015;
+  --mode-order-surface: #1e1e1f;
+  --mode-order-accent: #fbbf24;
+  --mode-order-accent-hover: #f59e0b;
+  --mode-order-accent-subtle: #78350f;
+  --mode-order-accent-muted: #d97706;
+  --order-border: #92400e;
+  --mode-order-border-strong: #f59e0b;
+  --mode-order-text: #e4e5f1;
+  --mode-order-text-muted: #9ca3af;
+  --mode-order-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --mode-order-elevation-2: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ========================================
+   UTILITY CLASSES
+   Use these for quick prototyping
+   ======================================== */
+
+/* Elevation Utilities */
+.elevation-0 {
+  box-shadow: var(--elevation-0);
+}
+.elevation-1 {
+  box-shadow: var(--elevation-1);
+}
+.elevation-2 {
+  box-shadow: var(--elevation-2);
+}
+.elevation-3 {
+  box-shadow: var(--elevation-3);
+}
+.elevation-drag {
+  box-shadow: var(--elevation-drag);
+}
+
+/* Surface Utilities */
+.surface-primary {
+  background-color: var(--surface-primary);
+}
+.surface-elevated {
+  background-color: var(--surface-elevated);
+}
+.surface-elevated-hover:hover {
+  background-color: var(--surface-elevated-hover);
+}
+.surface-overlay {
+  background-color: var(--surface-overlay);
+}
+.surface-inset {
+  background-color: var(--surface-inset);
+}
+
+/* Border Utilities */
+.border-subtle {
+  border-color: var(--border-subtle);
+}
+.border-default {
+  border-color: var(--border-default);
+}
+.border-strong {
+  border-color: var(--border-strong);
+}
+.border-interactive {
+  border-color: var(--border-interactive);
+}
+.border-interactive-focus:focus {
+  border-color: var(--border-interactive-focus);
+}
+
+/* Focus Ring Utility */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Transition Utilities */
+.transition-interactive {
+  transition:
+    background-color var(--duration-normal) var(--ease-default),
+    border-color var(--duration-normal) var(--ease-default),
+    box-shadow var(--duration-normal) var(--ease-default),
+    transform var(--duration-normal) var(--ease-spring);
+}
+
+/* ========================================
+   COMPONENT PATTERNS
+   Common component combinations
+   ======================================== */
+
+/* Card Pattern */
+.card {
+  background-color: var(--surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-default);
+  box-shadow: var(--elevation-1);
+}
+
+.card-hover:hover {
+  background-color: var(--surface-elevated-hover);
+  box-shadow: var(--elevation-2);
+  transform: translateY(-1px);
+}
+
+/* Button Patterns */
+.btn-primary {
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-radius: var(--radius-default);
+  box-shadow: var(--elevation-1);
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.btn-primary:hover {
+  background-color: var(--btn-primary-bg-hover);
+  box-shadow: var(--elevation-2);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  background-color: var(--btn-primary-bg-active);
+  box-shadow: var(--elevation-0);
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background-color: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+  border: 1px solid var(--btn-secondary-border);
+  border-radius: var(--radius-default);
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.btn-secondary:hover {
+  background-color: var(--btn-secondary-bg-hover);
+  border-color: var(--btn-secondary-border-hover);
+  box-shadow: var(--elevation-1);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+  background-color: var(--btn-secondary-bg-active);
+  border-color: var(--btn-secondary-border-active);
+  box-shadow: var(--elevation-0);
+  transform: translateY(0);
+}
+
+/* Take Hint Button Pattern */
+.btn-hint {
+  background: var(--hint-btn-bg);
+  color: var(--hint-btn-text);
+  border: 2px solid var(--hint-btn-border);
+  border-radius: var(--radius-default);
+  box-shadow: var(--elevation-1);
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.btn-hint:hover {
+  background: var(--hint-btn-bg-hover);
+  border-color: var(--hint-btn-border-hover);
+  box-shadow: var(--elevation-2);
+  transform: translateY(-1px);
+}
+
+/* Input Pattern */
+.input-interactive {
+  background-color: var(--surface-inset);
+  border: 1px solid var(--border-interactive);
+  border-radius: var(--radius-default);
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.input-interactive:hover {
+  border-color: var(--border-strong);
+}
+
+.input-interactive:focus {
+  background-color: var(--surface-inset-focus);
+  border-color: var(--border-interactive-focus);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+/* Modal Pattern */
+.modal-overlay {
+  background-color: var(--surface-backdrop);
+}
+
+.modal-content {
+  background-color: var(--surface-overlay);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-3);
+}
