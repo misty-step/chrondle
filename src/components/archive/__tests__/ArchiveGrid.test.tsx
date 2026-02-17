@@ -42,13 +42,13 @@ describe("ArchiveGrid", () => {
     // After useEffect runs, future puzzles should be filtered
     // Wait for the effect to run
     await vi.waitFor(() => {
-      expect(screen.queryByText(/Puzzle #135/)).not.toBeInTheDocument();
+      expect(screen.queryByText("135")).not.toBeInTheDocument();
     });
 
     // Today and past puzzles should remain
-    expect(screen.getByText(/Puzzle #134/)).toBeInTheDocument();
-    expect(screen.getByText(/Puzzle #133/)).toBeInTheDocument();
-    expect(screen.getByText(/Puzzle #132/)).toBeInTheDocument();
+    expect(screen.getByText("134")).toBeInTheDocument();
+    expect(screen.getByText("133")).toBeInTheDocument();
+    expect(screen.getByText("132")).toBeInTheDocument();
   });
 
   it("shows puzzles with today's date", async () => {
@@ -56,11 +56,11 @@ describe("ArchiveGrid", () => {
     render(<ArchiveGrid puzzles={basePuzzles} />);
 
     await vi.waitFor(() => {
-      expect(screen.queryByText(/Puzzle #135/)).not.toBeInTheDocument();
+      expect(screen.queryByText("135")).not.toBeInTheDocument();
     });
 
     // Puzzle dated 2025-12-24 (today) should be visible
-    expect(screen.getByText(/Puzzle #134/)).toBeInTheDocument();
+    expect(screen.getByText("134")).toBeInTheDocument();
     expect(screen.getByText("Today puzzle")).toBeInTheDocument();
   });
 
@@ -75,11 +75,11 @@ describe("ArchiveGrid", () => {
 
     await vi.waitFor(() => {
       // Future puzzle should be filtered
-      expect(screen.queryByText(/Puzzle #135/)).not.toBeInTheDocument();
+      expect(screen.queryByText("135")).not.toBeInTheDocument();
     });
 
     // Puzzle without date should still show
-    expect(screen.getByText(/Puzzle #100/)).toBeInTheDocument();
+    expect(screen.getByText("100")).toBeInTheDocument();
   });
 
   it("uses correct link prefix for classic mode", async () => {
@@ -116,7 +116,7 @@ describe("ArchiveGrid", () => {
     render(<ArchiveGrid puzzles={puzzles} />);
 
     // Both puzzles should have cards
-    const cards = screen.getAllByText(/Puzzle #\d+/);
-    expect(cards).toHaveLength(2);
+    expect(screen.getByText("134")).toBeInTheDocument();
+    expect(screen.getByText("133")).toBeInTheDocument();
   });
 });

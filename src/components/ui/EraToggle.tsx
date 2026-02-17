@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import type { Era } from "@/lib/eraUtils";
 
 const toggleContainerVariants = cva(
-  "inline-flex rounded border border-[#d3d6da] divide-x divide-[#d3d6da] overflow-hidden relative",
+  "inline-flex rounded border border-border divide-x divide-border overflow-hidden relative",
   {
     variants: {
       size: {
@@ -33,7 +33,7 @@ const toggleButtonVariants = cva(
     variants: {
       variant: {
         active: "bg-[#4a9b7f] text-white",
-        inactive: "bg-white text-[#1a1a1b] dark:bg-[#27272a] dark:text-white/90",
+        inactive: "bg-surface-elevated text-[#1a1a1b] dark:text-white/90",
       },
       size: {
         sm: "min-w-[2.5rem] text-xs",

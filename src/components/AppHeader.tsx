@@ -8,7 +8,6 @@ import { AuthButtons } from "@/components/AuthButtons";
 import { AdminButton } from "@/components/AdminButton";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { ModeDropdown } from "@/components/ModeDropdown";
-import { MobileNavMenu } from "@/components/MobileNavMenu";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { NavbarButton } from "@/components/ui/NavbarButton";
 import { getStreakColorClasses } from "@/lib/ui/streak-styling";
@@ -107,18 +106,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               {/* Mobile Mode Dropdown */}
               <ModeDropdown className="flex sm:hidden" />
 
-              {/* Mobile Hamburger Menu - contains Archive, Support, Theme, Auth */}
-              <MobileNavMenu archiveHref={archiveHref} />
-
-              {/* Desktop-only buttons below */}
-
               {/* Archive Button */}
               <NavbarButton
                 href={archiveHref}
                 title="Browse puzzle archive"
                 aria-label="Browse puzzle archive"
                 overlayColor="primary"
-                className="hidden sm:flex"
+                className="flex"
               >
                 <Archive className="h-5 w-5" />
               </NavbarButton>
@@ -127,10 +121,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <AdminButton className="hidden sm:flex" />
 
               {/* Theme Toggle */}
-              <ThemeToggle className="hidden sm:flex" />
+              <ThemeToggle className="flex" />
 
-              {/* Auth Buttons - Rightmost (desktop only) */}
-              <AuthButtons className="hidden sm:flex" />
+              {/* Auth Buttons - Rightmost */}
+              <AuthButtons className="flex" />
             </div>
           </div>
         </LayoutContainer>

@@ -49,11 +49,11 @@ describe("GameCard", () => {
       expect(card.className).not.toContain("rounded-sm");
 
       // Solid background (not translucent)
-      expect(card.className).toContain("bg-white");
+      expect(card.className).toContain("bg-surface-elevated");
 
       // Border system
       expect(card.className).toContain("border");
-      expect(card.className).toContain("border-[#d3d6da]");
+      expect(card.className).toContain("border-border");
     });
 
     it("does not contain legacy shadow-warm class", () => {
@@ -87,8 +87,8 @@ describe("GameCard", () => {
       const { container } = render(<GameCard variant="default">Content</GameCard>);
       const card = container.firstChild as HTMLElement;
 
-      expect(card.className).toContain("bg-white");
-      expect(card.className).toContain("border-[#d3d6da]");
+      expect(card.className).toContain("bg-surface-elevated");
+      expect(card.className).toContain("border-border");
     });
 
     it("applies success variant styling", () => {
@@ -111,7 +111,7 @@ describe("GameCard", () => {
       const { container, rerender } = render(<GameCard variant="default">Content</GameCard>);
       const card = container.firstChild as HTMLElement;
 
-      expect(card.className).toContain("bg-white");
+      expect(card.className).toContain("bg-surface-elevated");
 
       rerender(<GameCard variant="success">Content</GameCard>);
       expect(card.className).toContain("bg-feedback-success/5");
@@ -196,7 +196,7 @@ describe("GameCard", () => {
 
       // Developer only specified 2 props, but got:
       // - Angular aesthetic (rounded)
-      // - Solid background (bg-white overridden by success)
+      // - Solid background (bg-surface-elevated overridden by success)
       // - Border treatment (border + color)
       // - Responsive padding (p-3 md:p-4)
       // - Success semantic coloring
@@ -213,7 +213,7 @@ describe("GameCard", () => {
       // Guarantees correct tokens are used
       expect(card.className).not.toContain("shadow-hard");
       expect(card.className).toContain("rounded");
-      expect(card.className).toContain("bg-white");
+      expect(card.className).toContain("bg-surface-elevated");
 
       // Prevents incorrect tokens from being used
       expect(card.className).not.toContain("shadow-warm");

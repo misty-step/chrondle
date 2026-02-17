@@ -317,7 +317,7 @@ describe("EraToggle", () => {
 
       expect(bcButton.className).toContain("bg-[#4a9b7f]");
       expect(bcButton.className).toContain("text-white");
-      expect(adButton.className).toContain("bg-white");
+      expect(adButton.className).toContain("bg-surface-elevated");
       expect(adButton.className).toContain("text-[#1a1a1b]");
     });
 

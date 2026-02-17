@@ -206,7 +206,7 @@ export function RangeInput({
       {/* Ledger Entry Card */}
       <div
         className={cn(
-          "group dark:border-border dark:bg-card relative rounded border border-[#d3d6da] bg-white p-6 transition-all sm:p-8",
+          "group border-border bg-surface-elevated relative rounded border p-6 transition-all sm:p-8",
           rangeTooWide
             ? "border-feedback-error/50"
             : hasBeenModified
