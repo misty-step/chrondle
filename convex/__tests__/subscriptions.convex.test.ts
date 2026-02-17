@@ -194,6 +194,72 @@ describe("users/subscriptions", () => {
         }),
       ).rejects.toThrow("No user found for Stripe customer");
     });
+
+    it("skips stale events based on eventTimestamp", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "clerk_stale_timestamp",
+          email: "stale-timestamp@example.com",
+          stripeCustomerId: "cus_stale_timestamp",
+          lastStripeEventTimestamp: 1_700_000_001,
+          subscriptionStatus: "active",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      await t.mutation(subscriptionsMutations.updateSubscription, {
+        stripeCustomerId: "cus_stale_timestamp",
+        subscriptionStatus: "canceled",
+        eventTimestamp: 1_700_000_000,
+        eventId: "evt_stale",
+      });
+
+      await t.run(async (ctx) => {
+        const user = await ctx.db.get(userId!);
+        expect(user?.subscriptionStatus).toBe("active");
+      });
+    });
+
+    it("processes same-second events (no eventId tie-break)", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "clerk_same_second",
+          email: "same-second@example.com",
+          stripeCustomerId: "cus_same_second",
+          lastStripeEventTimestamp: 1_700_000_000,
+          subscriptionStatus: "active",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      await t.mutation(subscriptionsMutations.updateSubscription, {
+        stripeCustomerId: "cus_same_second",
+        subscriptionStatus: "canceled",
+        eventTimestamp: 1_700_000_000,
+        eventId: "evt_same_second",
+      });
+
+      await t.run(async (ctx) => {
+        const user = await ctx.db.get(userId!);
+        expect(user?.subscriptionStatus).toBe("canceled");
+        expect(user?.lastStripeEventTimestamp).toBe(1_700_000_000);
+        expect(user?.lastStripeEventId).toBe("evt_same_second");
+      });
+    });
   });
 
   describe("clearSubscription", () => {
@@ -240,6 +306,38 @@ describe("users/subscriptions", () => {
           stripeCustomerId: "cus_ghost",
         }),
       ).rejects.toThrow("No user found for Stripe customer");
+    });
+    it("skips stale clear events based on eventTimestamp", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "clerk_clear_stale_timestamp",
+          email: "clear-stale-timestamp@example.com",
+          stripeCustomerId: "cus_clear_stale_timestamp",
+          subscriptionStatus: "active",
+          subscriptionPlan: "monthly",
+          lastStripeEventTimestamp: 1_700_000_001,
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      await t.mutation(subscriptionsMutations.clearSubscription, {
+        stripeCustomerId: "cus_clear_stale_timestamp",
+        eventTimestamp: 1_700_000_000,
+        eventId: "evt_clear_stale",
+      });
+
+      await t.run(async (ctx) => {
+        const user = await ctx.db.get(userId!);
+        expect(user?.subscriptionStatus).toBe("active");
+        expect(user?.subscriptionPlan).toBe("monthly");
+      });
     });
   });
 

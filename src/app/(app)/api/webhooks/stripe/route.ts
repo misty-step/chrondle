@@ -162,15 +162,19 @@ export async function POST(req: NextRequest) {
 
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
-        const stripeCustomerId = extractCustomerId(subscription.customer);
+        const currentSubscription = await getStripe().subscriptions.retrieve(subscription.id, {
+          expand: ["items.data"],
+        });
+        const stripeCustomerId = extractCustomerId(currentSubscription.customer);
 
         if (!stripeCustomerId) {
           throw new Error("customer.subscription.updated missing customer");
         }
 
-        const subscriptionStatus = STATUS_MAP[subscription.status] ?? null;
-        const subscriptionPlan = (subscription.metadata.plan as "monthly" | "annual") || "monthly";
-        const subscriptionEndDate = getSubscriptionPeriodEnd(subscription) * 1000;
+        const subscriptionStatus = STATUS_MAP[currentSubscription.status] ?? null;
+        const subscriptionPlan =
+          (currentSubscription.metadata.plan as "monthly" | "annual") || "monthly";
+        const subscriptionEndDate = getSubscriptionPeriodEnd(currentSubscription) * 1000;
 
         await convexClient.action(api.stripe.webhookAction.processWebhookEvent, {
           secret: syncSecret,
