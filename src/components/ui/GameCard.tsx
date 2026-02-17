@@ -53,7 +53,7 @@ export function GameCard({
     <Component
       className={cn(
         // Core surface treatment
-        "rounded border border-[#d3d6da] bg-white dark:border-[#52525b] dark:bg-[#27272a]",
+        "border-border bg-surface-elevated rounded border",
 
         // Responsive padding (mobile-first, desktop enhancement)
         padding === "compact" && "p-3 md:p-4",

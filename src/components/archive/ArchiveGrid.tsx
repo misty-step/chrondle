@@ -30,12 +30,15 @@ interface ArchiveGridProps {
   linkPrefix?: string;
   /** Whether user has archive access (subscription). If false, shows lock icons. */
   hasAccess?: boolean;
+  /** Visual mode for accent tokens. Default: "classic" */
+  mode?: "classic" | "order";
 }
 
 export function ArchiveGrid({
   puzzles,
   linkPrefix = "/archive/puzzle",
   hasAccess = true,
+  mode = "classic",
 }: ArchiveGridProps) {
   // Initialize to null to prevent SSR from rendering unfiltered puzzles
   // This avoids layout shift and prevents briefly exposing future puzzle hints
@@ -56,6 +59,13 @@ export function ArchiveGrid({
     return null;
   }
 
+  const accentBg = mode === "order" ? "bg-order-accent" : "bg-classic-accent";
+  const accentText = mode === "order" ? "text-order-accent" : "text-classic-accent";
+  const accentBorder = mode === "order" ? "border-l-order-accent" : "border-l-classic-accent";
+  const accentBorderFaded =
+    mode === "order" ? "border-l-order-accent/80" : "border-l-classic-accent/80";
+  const completedTint = mode === "order" ? "bg-order-accent/5" : "bg-classic-accent/5";
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
       {visiblePuzzles.map((puzzle) => {
@@ -65,38 +75,44 @@ export function ArchiveGrid({
         return (
           <Link key={puzzle.puzzleNumber} href={href}>
             <Card
-              className={`flex h-36 cursor-pointer flex-col gap-2 p-3 transition-all hover:shadow-md sm:h-[10rem] sm:p-4 ${
+              className={`border-border bg-surface-elevated shadow-elevation-1 hover:shadow-elevation-2 h-36 cursor-pointer overflow-hidden border-l-[3px] p-3 transition-all duration-150 hover:translate-y-[-2px] sm:h-[10rem] sm:p-4 ${
                 puzzle.isCompleted
-                  ? "border-green-600/30 bg-green-600/5 hover:border-green-600/50"
+                  ? `${accentBorder} ${completedTint}`
                   : hasAccess
-                    ? "hover:border-primary"
-                    : "hover:border-muted-foreground/50"
+                    ? accentBorderFaded
+                    : "border-l-muted-foreground/30"
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex flex-col">
-                  <span className="text-muted-foreground font-mono text-sm">
-                    Puzzle #{puzzle.puzzleNumber}
-                  </span>
-                  {puzzle.date && (
-                    <span className="text-muted-foreground/80 text-xs">
-                      {formatDate(puzzle.date)}
+              <div className={`flex h-full flex-col gap-2 ${hasAccess ? "" : "opacity-70"}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex size-6 items-center justify-center rounded ${accentBg} text-xs font-bold text-white`}
+                    >
+                      {puzzle.puzzleNumber}
                     </span>
-                  )}
+                    {puzzle.date && (
+                      <span className="text-muted-foreground/80 font-mono text-xs">
+                        {formatDate(puzzle.date)}
+                      </span>
+                    )}
+                  </div>
+                  {puzzle.isCompleted ? (
+                    <span className="flex size-5 items-center justify-center rounded-full bg-green-600 text-white">
+                      <Check className="size-3" />
+                    </span>
+                  ) : !hasAccess ? (
+                    <Lock className="text-muted-foreground/70 h-4 w-4" />
+                  ) : null}
                 </div>
-                {puzzle.isCompleted ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : !hasAccess ? (
-                  <Lock className="text-muted-foreground/70 h-4 w-4" />
-                ) : null}
-              </div>
 
-              <p className="text-foreground flex-1 overflow-hidden text-sm">
-                <span className="line-clamp-3">{puzzle.firstHint}</span>
-              </p>
+                <p className="text-foreground font-event flex-1 overflow-hidden text-base italic">
+                  <span className="line-clamp-3">{puzzle.firstHint}</span>
+                </p>
 
-              <div className="text-muted-foreground mt-auto text-xs">
-                {hasAccess ? "Play puzzle →" : "Unlock archive →"}
+                <div className={`mt-auto text-xs font-medium ${accentText}`}>
+                  {hasAccess ? "Play puzzle →" : "Unlock archive →"}
+                </div>
               </div>
             </Card>
           </Link>

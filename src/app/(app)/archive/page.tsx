@@ -287,23 +287,23 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
 
         <main className="mx-auto w-full max-w-2xl flex-grow px-4 py-6 sm:px-6 sm:py-8">
           <div className="mb-8">
-            <h1 className="font-heading text-foreground mb-2 text-3xl font-bold sm:text-4xl">
+            <h1 className="font-heading text-foreground mb-2 text-3xl font-bold text-balance sm:text-4xl">
               Puzzle Archive
             </h1>
             <p className="text-muted-foreground text-lg">Explore and play past Chrondle puzzles</p>
           </div>
 
           {/* Navigation */}
-          <div className="mb-6 flex gap-2 border-b">
+          <div className="mb-6 flex gap-2">
             <Link
               href="/archive"
-              className="border-primary text-body-primary flex items-center gap-2 border-b-2 px-3 py-2 font-semibold"
+              className="bg-classic-bg text-classic-accent flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
             >
               <History className="h-4 w-4" /> Classic
             </Link>
             <Link
               href="/archive/order"
-              className="text-muted-foreground hover:text-foreground flex items-center gap-2 border-b-2 border-transparent px-3 py-2 transition-colors hover:border-gray-300"
+              className="text-muted-foreground hover:text-foreground hover:bg-surface-inset flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors"
             >
               <BarChart className="h-4 w-4" /> Order
             </Link>
@@ -316,16 +316,19 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
                 // Show actual completion data
                 <div>
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="text-foreground font-medium">
-                      Completed: {completedCount} of {totalCount}
-                    </span>
-                    <span className="text-muted-foreground text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-sm">Completed:</span>
+                      <span className="text-foreground font-mono font-semibold tabular-nums">
+                        {completedCount} of {totalCount}
+                      </span>
+                    </div>
+                    <span className="text-classic-accent font-mono font-semibold tabular-nums">
                       {totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}%
                     </span>
                   </div>
-                  <div className="bg-muted border-outline-default/30 h-3 w-full overflow-hidden rounded border">
+                  <div className="bg-surface-inset h-2 w-full overflow-hidden rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
                     <div
-                      className="h-full bg-green-600 transition-all duration-300 ease-out"
+                      className="bg-classic-accent h-full rounded-full transition-all duration-300 ease-out"
                       style={{
                         width: totalCount > 0 ? `${(completedCount / totalCount) * 100}%` : "0%",
                       }}
@@ -386,7 +389,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
                       <Button
                         variant="outline"
                         size="default"
-                        className="h-10 w-10 p-0 sm:h-8 sm:w-8"
+                        className="h-10 w-10 rounded-full p-0 sm:h-8 sm:w-8"
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
@@ -396,13 +399,13 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
                       variant="outline"
                       size="default"
                       disabled
-                      className="h-10 w-10 p-0 sm:h-8 sm:w-8"
+                      className="h-10 w-10 rounded-full p-0 sm:h-8 sm:w-8"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                   )}
 
-                  <span className="text-muted-foreground px-2 text-sm sm:px-4">
+                  <span className="text-muted-foreground px-2 font-mono text-sm tabular-nums sm:px-4">
                     Page {currentPage} of {totalPages}
                   </span>
 
@@ -411,7 +414,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
                       <Button
                         variant="outline"
                         size="default"
-                        className="h-10 w-10 p-0 sm:h-8 sm:w-8"
+                        className="h-10 w-10 rounded-full p-0 sm:h-8 sm:w-8"
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -421,7 +424,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
                       variant="outline"
                       size="default"
                       disabled
-                      className="h-10 w-10 p-0 sm:h-8 sm:w-8"
+                      className="h-10 w-10 rounded-full p-0 sm:h-8 sm:w-8"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>

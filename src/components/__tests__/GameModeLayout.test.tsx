@@ -288,23 +288,23 @@ describe("GameModeLayout", () => {
   });
 
   describe("Hydration State", () => {
-    it("adds hydrated class after mount", async () => {
+    it("renders with consistent structure without hydration classes", () => {
       const { container } = render(<GameModeLayout mode="order">Content</GameModeLayout>);
 
-      // After hydration effect runs
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      const rootDiv = container.querySelector(".hydrated");
-      expect(rootDiv).toBeInTheDocument();
+      // Component no longer uses hydration classes - CSS variables handle theme switching
+      // Verify the core structure is present
+      expect(container.querySelector(".bg-background")).toBeInTheDocument();
+      expect(container.querySelector(".flex-col")).toBeInTheDocument();
     });
 
-    it("starts with ssr class before hydration", () => {
+    it("applies background and foreground classes", () => {
       const { container } = render(<GameModeLayout mode="order">Content</GameModeLayout>);
 
-      // Before hydration effect runs (synchronous)
-      const rootDiv = container.querySelector(".ssr");
-      // Note: Due to how React Testing Library works, this may already be hydrated
-      // This test documents the intended SSR→hydrated transition
+      // The layout div (inside error boundary mock) should have theme-aware classes
+      const layoutDiv = container.querySelector(".min-h-screen");
+      expect(layoutDiv).toBeInTheDocument();
+      expect(layoutDiv?.className).toContain("bg-background");
+      expect(layoutDiv?.className).toContain("text-foreground");
     });
   });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext, useLayoutEffect } from "react";
 import { useSessionTheme } from "@/hooks/useSessionTheme";
 
 /**
@@ -42,40 +42,16 @@ interface SessionThemeProviderProps {
 export function SessionThemeProvider({ children }: SessionThemeProviderProps) {
   const sessionTheme = useSessionTheme();
 
-  // Apply theme classes immediately to prevent flash
-  useEffect(() => {
+  // Apply theme classes before paint to prevent flash
+  useLayoutEffect(() => {
     const html = document.documentElement;
+    const targetTheme = sessionTheme.override ?? sessionTheme.systemTheme;
+    const oppositeTheme = targetTheme === "dark" ? "light" : "dark";
 
-    // Remove any existing theme classes
-    html.classList.remove("light", "dark");
-
-    // Apply override class if user has chosen one
-    if (sessionTheme.override) {
-      html.classList.add(sessionTheme.override);
-    }
-    // If no override, CSS media query will handle system theme automatically
-  }, [sessionTheme.override]);
-
-  // Initialize theme class on first mount for immediate application
-  useEffect(() => {
-    const html = document.documentElement;
-
-    // Ensure we have a theme class set immediately
-    if (sessionTheme.override) {
-      html.classList.add(sessionTheme.override);
-    } else {
-      // Apply system theme class to prevent flash during SSR hydration
-      const systemTheme = sessionTheme.systemTheme;
-      if (systemTheme && !html.classList.contains("light") && !html.classList.contains("dark")) {
-        html.classList.add(systemTheme);
-      }
-    }
-
-    // Add theme-loaded class for smooth transitions after initial load
-    setTimeout(() => {
-      html.classList.add("theme-loaded");
-    }, 100); // Brief delay to ensure initial theme is applied
-  }, [sessionTheme.override, sessionTheme.systemTheme]); // Run when override or system theme changes
+    html.classList.remove(oppositeTheme);
+    html.classList.add(targetTheme);
+    html.classList.add("theme-loaded");
+  }, [sessionTheme.override, sessionTheme.systemTheme]);
 
   const value: SessionThemeContextType = {
     ...sessionTheme,
