@@ -51,6 +51,34 @@ export const linkStripeCustomer = internalMutation({
   },
 });
 
+type EventOrderingInput = {
+  eventTimestamp?: number;
+  eventId?: string;
+  lastEventTimestamp?: number;
+  lastEventId?: string;
+};
+
+function isOutOfOrderEvent(input: EventOrderingInput) {
+  if (input.eventTimestamp === undefined || input.lastEventTimestamp === undefined) {
+    return false;
+  }
+
+  if (input.eventTimestamp < input.lastEventTimestamp) {
+    return true;
+  }
+
+  if (
+    input.eventTimestamp === input.lastEventTimestamp &&
+    input.eventId !== undefined &&
+    input.lastEventId !== undefined &&
+    input.eventId <= input.lastEventId
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Update subscription status (called on subscription events)
  *
@@ -90,12 +118,15 @@ export const updateSubscription = internalMutation({
 
     // Out-of-order check - skip stale events
     if (
-      args.eventTimestamp !== undefined &&
-      user.lastStripeEventTimestamp !== undefined &&
-      args.eventTimestamp < user.lastStripeEventTimestamp
+      isOutOfOrderEvent({
+        eventTimestamp: args.eventTimestamp,
+        eventId: args.eventId,
+        lastEventTimestamp: user.lastStripeEventTimestamp,
+        lastEventId: user.lastStripeEventId,
+      })
     ) {
       console.log(
-        `[subscriptions] Skipping stale event (${args.eventTimestamp} < ${user.lastStripeEventTimestamp}) for user ${user._id}`,
+        `[subscriptions] Skipping stale event for user ${user._id} (incoming ${args.eventId} @ ${args.eventTimestamp}, last ${user.lastStripeEventId} @ ${user.lastStripeEventTimestamp})`,
       );
       return user._id;
     }
@@ -177,12 +208,15 @@ export const clearSubscription = internalMutation({
 
     // Out-of-order check - skip stale events
     if (
-      eventTimestamp !== undefined &&
-      user.lastStripeEventTimestamp !== undefined &&
-      eventTimestamp < user.lastStripeEventTimestamp
+      isOutOfOrderEvent({
+        eventTimestamp,
+        eventId,
+        lastEventTimestamp: user.lastStripeEventTimestamp,
+        lastEventId: user.lastStripeEventId,
+      })
     ) {
       console.log(
-        `[subscriptions] Skipping stale event (${eventTimestamp} < ${user.lastStripeEventTimestamp}) for user ${user._id}`,
+        `[subscriptions] Skipping stale event for user ${user._id} (incoming ${eventId} @ ${eventTimestamp}, last ${user.lastStripeEventId} @ ${user.lastStripeEventTimestamp})`,
       );
       return user._id;
     }

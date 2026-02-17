@@ -194,6 +194,78 @@ describe("users/subscriptions", () => {
         }),
       ).rejects.toThrow("No user found for Stripe customer");
     });
+
+    it("skips stale events for same-second older ids", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "clerk_same_second",
+          email: "same-second@example.com",
+          stripeCustomerId: "cus_same_second",
+          lastStripeEventTimestamp: 1_700_000_000,
+          lastStripeEventId: "evt_b",
+          subscriptionStatus: "active",
+          subscriptionPlan: "monthly",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      await t.mutation(subscriptionsMutations.updateSubscription, {
+        stripeCustomerId: "cus_same_second",
+        subscriptionStatus: "canceled",
+        eventTimestamp: 1_700_000_000,
+        eventId: "evt_a",
+      });
+
+      await t.run(async (ctx) => {
+        const user = await ctx.db.get(userId!);
+        expect(user?.subscriptionStatus).toBe("active");
+        expect(user?.lastStripeEventId).toBe("evt_b");
+        expect(user?.lastStripeEventTimestamp).toBe(1_700_000_000);
+      });
+    });
+
+    it("accepts newer same-second events when eventId ordering advances", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "clerk_same_second_newer",
+          email: "same-second-newer@example.com",
+          stripeCustomerId: "cus_same_second_newer",
+          lastStripeEventTimestamp: 1_700_000_000,
+          lastStripeEventId: "evt_b",
+          subscriptionStatus: "active",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      await t.mutation(subscriptionsMutations.updateSubscription, {
+        stripeCustomerId: "cus_same_second_newer",
+        subscriptionStatus: "canceled",
+        subscriptionPlan: "annual",
+        eventTimestamp: 1_700_000_000,
+        eventId: "evt_c",
+      });
+
+      await t.run(async (ctx) => {
+        const user = await ctx.db.get(userId!);
+        expect(user?.subscriptionStatus).toBe("canceled");
+        expect(user?.subscriptionPlan).toBe("annual");
+        expect(user?.lastStripeEventId).toBe("evt_c");
+      });
+    });
   });
 
   describe("clearSubscription", () => {
@@ -240,6 +312,41 @@ describe("users/subscriptions", () => {
           stripeCustomerId: "cus_ghost",
         }),
       ).rejects.toThrow("No user found for Stripe customer");
+    });
+
+    it("skips stale same-second clear events", async () => {
+      const t = convexTest(schema, modules);
+
+      let userId: Id<"users">;
+      await t.run(async (ctx) => {
+        userId = await ctx.db.insert("users", {
+          clerkId: "clerk_clear_same_second",
+          email: "clear-same-second@example.com",
+          stripeCustomerId: "cus_clear_same_second",
+          subscriptionStatus: "active",
+          subscriptionPlan: "monthly",
+          lastStripeEventTimestamp: 1_700_000_000,
+          lastStripeEventId: "evt_b",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPlays: 0,
+          perfectGames: 0,
+          updatedAt: Date.now(),
+        });
+      });
+
+      await t.mutation(subscriptionsMutations.clearSubscription, {
+        stripeCustomerId: "cus_clear_same_second",
+        eventTimestamp: 1_700_000_000,
+        eventId: "evt_a",
+      });
+
+      await t.run(async (ctx) => {
+        const user = await ctx.db.get(userId!);
+        expect(user?.subscriptionStatus).toBe("active");
+        expect(user?.subscriptionPlan).toBe("monthly");
+        expect(user?.lastStripeEventId).toBe("evt_b");
+      });
     });
   });
 
