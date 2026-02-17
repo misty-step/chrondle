@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactNode, useEffect, useState, Suspense } from "react";
+import React, { ReactNode, Suspense } from "react";
 import { AppHeader } from "@/components/LazyComponents";
 import { Footer } from "@/components/Footer";
 import { GameErrorBoundary } from "@/components/GameErrorBoundary";
@@ -87,21 +87,9 @@ export function GameModeLayout({
   currentStreak,
   isDebugMode = false,
 }: GameModeLayoutProps) {
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
-
   return (
     <GameErrorBoundary>
-      <div
-        className={cn(
-          "bg-background text-foreground flex min-h-screen flex-col",
-          hydrated ? "hydrated" : "ssr",
-          className,
-        )}
-      >
+      <div className={cn("bg-background text-foreground flex min-h-screen flex-col", className)}>
         {/* Unified header - mode-aware, with optional streak display */}
         <AppHeader
           currentStreak={currentStreak}

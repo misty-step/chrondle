@@ -3,7 +3,6 @@
 import { useCallback, type ElementType } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { motion, useReducedMotion } from "motion/react";
 import { Crosshair, Shuffle } from "lucide-react";
 
 import { setModePreferenceCookie, type ModeKey } from "@/lib/modePreference";
@@ -57,7 +56,6 @@ const MODE_THEME = {
 
 export function GamesGallery() {
   const router = useRouter();
-  const reduceMotion = useReducedMotion();
   const classicPuzzle = useQuery(api.puzzles.getDailyPuzzle);
   const orderPuzzle = useQuery(api.orderPuzzles.getDailyOrderPuzzle);
 
@@ -71,14 +69,14 @@ export function GamesGallery() {
 
   const getPuzzleLabel = (modeKey: ModeKey) => {
     const puzzle = modeKey === "classic" ? classicPuzzle : orderPuzzle;
-    return puzzle?.puzzleNumber ? `Puzzle #${puzzle.puzzleNumber}` : "—";
+    return puzzle?.puzzleNumber ? `Puzzle #${puzzle.puzzleNumber}` : null;
   };
 
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-white bg-[radial-gradient(circle,_#e5e5e5_1px,_transparent_1px)] bg-[size:20px_20px] p-4 md:p-8 dark:bg-[#0f1115] dark:bg-[radial-gradient(circle,_rgba(255,255,255,0.08)_1px,_transparent_1px)]">
+    <div className="bg-surface-primary flex min-h-dvh w-full items-center justify-center bg-[radial-gradient(circle,_#e5e5e5_1px,_transparent_1px)] bg-[size:20px_20px] p-4 md:p-8 dark:bg-[radial-gradient(circle,_rgba(255,255,255,0.08)_1px,_transparent_1px)]">
       <main
         className={cn(
-          "dark:border-border dark:bg-card flex w-full max-w-xl flex-col gap-5 rounded border border-[#d3d6da] bg-white p-5 md:gap-6 md:p-8",
+          "dark:border-border dark:bg-card border-border bg-surface-elevated flex w-full max-w-xl flex-col gap-5 rounded border p-5 md:gap-6 md:p-8",
           "text-card-foreground",
         )}
       >
@@ -92,19 +90,15 @@ export function GamesGallery() {
 
         {/* Mode Cards */}
         <div className="flex flex-col gap-3">
-          {MODE_CARDS.map((mode, index) => {
+          {MODE_CARDS.map((mode) => {
             const theme = MODE_THEME[mode.key];
             const Icon = mode.icon;
-            const delay = reduceMotion ? 0 : index * 0.06;
 
             return (
-              <motion.button
+              <button
                 key={mode.key}
                 type="button"
                 onClick={() => handleSelect(mode.key, mode.route)}
-                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                transition={{ duration: 0.28, ease: "easeOut", delay }}
                 className={cn(
                   "flex w-full flex-col gap-3 rounded border-2 p-4 text-left md:p-5",
                   "transition-transform duration-200 ease-out",
@@ -129,11 +123,14 @@ export function GamesGallery() {
                     )}
                     <span
                       className={cn(
-                        "text-[11px] font-semibold tracking-[0.14em] uppercase",
+                        "text-[11px] font-semibold tracking-[0.14em] uppercase tabular-nums",
+                        "min-w-[5.5rem]",
                         theme.accent,
                       )}
                     >
-                      {getPuzzleLabel(mode.key)}
+                      {getPuzzleLabel(mode.key) ?? (
+                        <span className="inline-block h-3 w-16 animate-pulse rounded bg-current/20" />
+                      )}
                     </span>
                   </div>
                 </div>
@@ -155,7 +152,7 @@ export function GamesGallery() {
                     {mode.cta}
                   </span>
                 </div>
-              </motion.button>
+              </button>
             );
           })}
         </div>

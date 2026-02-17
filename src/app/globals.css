@@ -3,6 +3,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Prevent white flash for dark mode users before JS hydrates */
+@media (prefers-color-scheme: dark) {
+  html:not(.light):not(.dark) {
+    color-scheme: dark;
+    background: #121213;
+    color: #e4e5f1;
+  }
+}
+
 :root {
   --bg: #ffffff;
   --text: #1a1a1b;
@@ -11,6 +20,15 @@
   --success: #4a9b7f;
   --warning: #d4a84b;
   --neutral: #787c7e;
+
+  /* Surfaces */
+  --surface-primary: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-elevated-hover: #fafafa;
+  --surface-inset: #f4f4f5;
+
+  /* Borders */
+  --border-subtle: #f4f4f5;
 
   /* Mode: Classic - Archival green/teal */
   --mode-classic-bg: #f0f7f4;
@@ -29,8 +47,31 @@
   --radius: 4px;
   --radius-sm: 3px;
 
+  /* Elevation shadows */
+  --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.1);
+
   --shadow-focus: 0 4px 10px rgba(26, 26, 27, 0.12);
   --shadow-hover: 0 2px 0 rgba(26, 26, 27, 0.15);
+}
+
+.dark {
+  --surface-primary: #121213;
+  --surface-elevated: #1e1e1f;
+  --surface-elevated-hover: #27272a;
+  --surface-inset: #18181b;
+
+  --border: #3a3a3c;
+  --border-subtle: #27272a;
+
+  --mode-classic-bg: #1a2f25;
+  --mode-classic-accent: #6ee7b7;
+
+  --mode-order-bg: #2a2015;
+  --mode-order-accent: #fbbf24;
+
+  --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 html.dark {
@@ -52,13 +93,18 @@ html.dark {
   --mode-order-accent: #fbbf24;
 }
 
-@theme {
+@theme inline {
   --font-display: "Outfit", sans-serif;
   --font-heading: "Outfit", sans-serif;
   --font-body: "Karla", sans-serif;
   --font-mono: ui-monospace, "SF Mono", monospace;
   --font-sans: "Karla", sans-serif;
   --font-accent: "Outfit", sans-serif;
+
+  --color-surface-primary: var(--surface-primary);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-elevated-hover: var(--surface-elevated-hover);
+  --color-surface-inset: var(--surface-inset);
 
   --color-background: var(--bg);
   --color-foreground: var(--text);
@@ -77,6 +123,7 @@ html.dark {
   --color-destructive: #b42318;
   --color-destructive-foreground: #ffffff;
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
   --color-input: var(--border);
   --color-ring: var(--text);
 
@@ -93,12 +140,19 @@ html.dark {
   --color-feedback-later: #2563eb;
 
   /* Mode-specific colors */
+  --color-classic-bg: var(--mode-classic-bg);
+  --color-classic-accent: var(--mode-classic-accent);
+  --color-order-bg: var(--mode-order-bg);
+  --color-order-accent: var(--mode-order-accent);
   --color-mode-classic-bg: var(--mode-classic-bg);
   --color-mode-classic-text: var(--mode-classic-text);
   --color-mode-classic-accent: var(--mode-classic-accent);
   --color-mode-order-bg: var(--mode-order-bg);
   --color-mode-order-text: var(--mode-order-text);
   --color-mode-order-accent: var(--mode-order-accent);
+
+  --shadow-elevation-1: var(--elevation-1);
+  --shadow-elevation-2: var(--elevation-2);
 
   --radius: 4px;
   --radius-sm: 4px;
