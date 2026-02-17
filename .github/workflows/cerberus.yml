@@ -4,7 +4,7 @@ name: Cerberus Council
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -33,7 +33,10 @@ jobs:
         with:
           perspective: ${{ matrix.perspective }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          kimi-api-key: ${{ secrets.MOONSHOT_API_KEY }}
+          # Prefer OPENROUTER_API_KEY (OpenRouter). Fallback supports legacy secret name.
+          api-key: ${{ secrets.OPENROUTER_API_KEY || secrets.MOONSHOT_API_KEY }}
+          # 1800s (30m): default 600s caused consistent SKIPs on PRs #178/#179.
+          timeout: "1800"
 
   verdict:
     name: "Council Verdict"
@@ -44,3 +47,4 @@ jobs:
       - uses: misty-step/cerberus/verdict@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          fail-on-skip: "true"
