@@ -2,6 +2,13 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.0.1](https://github.com/misty-step/chrondle/compare/v1.0.0...v1.0.1) (2026-02-17)
+
+### Bug Fixes
+
+- **ci:** use GH_RELEASE_TOKEN for semantic-release ([18e1af8](https://github.com/misty-step/chrondle/commit/18e1af8933c72f7cb23c24cb3f855ddaabf0c4f5))
+- unblock type-check for Stripe apiVersion ([#177](https://github.com/misty-step/chrondle/issues/177)) ([a10d5f5](https://github.com/misty-step/chrondle/commit/a10d5f5f4911fb7e89bf7ef78fc1b7e09ead8c18))
+
 # 1.0.0 (2026-01-28)
 
 - feat!: remove notification system core files ([5f80970](https://github.com/misty-step/chrondle/commit/5f809705054ec40a16061365515e7733ba48f50c))
