@@ -121,7 +121,7 @@ playwright-report/
 
 # Convex generated files
 # ⚠️ EXCEPTION: These files are NOT gitignored despite being generated
-# They MUST be committed for Vercel deployments to work  
+# They MUST be committed for Vercel deployments to work
 # See convex/_generated/README.md for full explanation
 # convex/_generated/  # ← DO NOT UNCOMMENT THIS LINE!
 backups/
@@ -130,3 +130,5 @@ test-results/
 
 # Design exploration artifacts
 .design-catalogue/
+
+.flywheel/
