@@ -60,6 +60,7 @@ describe("useGameActions - submitRange", () => {
     vi.clearAllMocks();
     mockSubmitGuessMutation.mockReset();
     mockSubmitRangeMutation.mockReset();
+    vi.mocked(useMutationWithRetry).mockReturnValue(mockSubmitRangeMutation);
   });
 
   it("optimistically adds range and reconciles with server score", async () => {
