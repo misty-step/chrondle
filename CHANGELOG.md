@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.0.4](https://github.com/misty-step/chrondle/compare/v1.0.3...v1.0.4) (2026-02-21)
+
+### Bug Fixes
+
+- **ux:** increase EraToggle sm touch target to 44px minimum ([#188](https://github.com/misty-step/chrondle/issues/188)) ([09b4ce2](https://github.com/misty-step/chrondle/commit/09b4ce268228f9598de4debb4bd143cdd772b485)), closes [#116](https://github.com/misty-step/chrondle/issues/116)
+
 ## [1.0.3](https://github.com/misty-step/chrondle/compare/v1.0.2...v1.0.3) (2026-02-21)
 
 ### Bug Fixes
