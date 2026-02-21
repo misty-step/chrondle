@@ -115,18 +115,34 @@ describe("useGameActions - submitGuess", () => {
       .mockReturnValue(mockSubmitRangeMutation);
   });
 
+  /** Render hook, call submitGuess, return the boolean result */
+  async function callSubmitGuess(sources: DataSources, year: number): Promise<boolean> {
+    const { result } = renderHook(() => useGameActions(sources));
+    let returnValue = false;
+    await act(async () => {
+      returnValue = await result.current.submitGuess(year);
+    });
+    return returnValue;
+  }
+
   it("optimistically adds guess and returns true on successful server call (authenticated)", async () => {
     const sources = createDataSources();
     mockSubmitGuessMutation.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useGameActions(sources));
-
-    let returnValue: boolean | undefined;
-    await act(async () => {
-      returnValue = await result.current.submitGuess(1969);
-    });
+    const returnValue = await callSubmitGuess(sources, 1969);
 
     expect(sources.session.addGuess).toHaveBeenCalledWith(1969);
+    expect(mockSubmitGuessMutation).toHaveBeenCalledTimes(1);
+    expect(returnValue).toBe(true);
+  });
+
+  it("handles BC years (negative numbers) the same as AD years", async () => {
+    const sources = createDataSources();
+    mockSubmitGuessMutation.mockResolvedValue(undefined);
+
+    const returnValue = await callSubmitGuess(sources, -500);
+
+    expect(sources.session.addGuess).toHaveBeenCalledWith(-500);
     expect(mockSubmitGuessMutation).toHaveBeenCalledTimes(1);
     expect(returnValue).toBe(true);
   });
@@ -136,12 +152,7 @@ describe("useGameActions - submitGuess", () => {
     sources.auth.isAuthenticated = false;
     sources.auth.userId = null;
 
-    const { result } = renderHook(() => useGameActions(sources));
-
-    let returnValue: boolean | undefined;
-    await act(async () => {
-      returnValue = await result.current.submitGuess(1969);
-    });
+    const returnValue = await callSubmitGuess(sources, 1969);
 
     expect(sources.session.addGuess).toHaveBeenCalledWith(1969);
     expect(mockSubmitGuessMutation).not.toHaveBeenCalled();
@@ -152,12 +163,7 @@ describe("useGameActions - submitGuess", () => {
     const sources = createDataSources();
     sources.puzzle.puzzle = null;
 
-    const { result } = renderHook(() => useGameActions(sources));
-
-    let returnValue: boolean | undefined;
-    await act(async () => {
-      returnValue = await result.current.submitGuess(1969);
-    });
+    const returnValue = await callSubmitGuess(sources, 1969);
 
     expect(sources.session.addGuess).not.toHaveBeenCalled();
     expect(returnValue).toBe(false);
@@ -166,12 +172,7 @@ describe("useGameActions - submitGuess", () => {
   it("returns false and skips addGuess on out-of-bounds year (validation failure)", async () => {
     const sources = createDataSources();
 
-    const { result } = renderHook(() => useGameActions(sources));
-
-    let returnValue: boolean | undefined;
-    await act(async () => {
-      returnValue = await result.current.submitGuess(99999);
-    });
+    const returnValue = await callSubmitGuess(sources, 99999);
 
     expect(sources.session.addGuess).not.toHaveBeenCalled();
     expect(returnValue).toBe(false);
@@ -181,12 +182,7 @@ describe("useGameActions - submitGuess", () => {
     const sources = createDataSources();
     sources.session.sessionGuesses = Array(6).fill(1969) as number[];
 
-    const { result } = renderHook(() => useGameActions(sources));
-
-    let returnValue: boolean | undefined;
-    await act(async () => {
-      returnValue = await result.current.submitGuess(1969);
-    });
+    const returnValue = await callSubmitGuess(sources, 1969);
 
     expect(sources.session.addGuess).not.toHaveBeenCalled();
     expect(returnValue).toBe(false);
@@ -197,12 +193,7 @@ describe("useGameActions - submitGuess", () => {
     sources.auth.isAuthenticated = true;
     sources.auth.userId = null;
 
-    const { result } = renderHook(() => useGameActions(sources));
-
-    let returnValue: boolean | undefined;
-    await act(async () => {
-      returnValue = await result.current.submitGuess(1969);
-    });
+    const returnValue = await callSubmitGuess(sources, 1969);
 
     // Optimistic update fires before auth check; no rollback on this path
     expect(sources.session.addGuess).toHaveBeenCalledWith(1969);
@@ -213,12 +204,7 @@ describe("useGameActions - submitGuess", () => {
     const sources = createDataSources();
     mockSubmitGuessMutation.mockRejectedValue(new Error("network error"));
 
-    const { result } = renderHook(() => useGameActions(sources));
-
-    let returnValue: boolean | undefined;
-    await act(async () => {
-      returnValue = await result.current.submitGuess(1969);
-    });
+    const returnValue = await callSubmitGuess(sources, 1969);
 
     expect(sources.session.addGuess).toHaveBeenCalledWith(1969);
     expect(mockSubmitGuessMutation).toHaveBeenCalledTimes(1);
@@ -232,12 +218,7 @@ describe("useGameActions - submitGuess", () => {
       new ConvexIdValidationError("Invalid puzzles ID format", "bad-id", "puzzles"),
     );
 
-    const { result } = renderHook(() => useGameActions(sources));
-
-    let returnValue: boolean | undefined;
-    await act(async () => {
-      returnValue = await result.current.submitGuess(1969);
-    });
+    const returnValue = await callSubmitGuess(sources, 1969);
 
     expect(sources.session.addGuess).toHaveBeenCalledWith(1969);
     expect(mockSubmitGuessMutation).toHaveBeenCalledTimes(1);
