@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import Markdown from "react-markdown";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { LayoutContainer } from "@/components/LayoutContainer";
+import { InlineMarkdown } from "@/components/ui/InlineMarkdown";
 import { loadAllReleases } from "@/lib/releases/loader";
 import { CHANGE_TYPE_LABELS, CHANGE_TYPE_ORDER } from "@/lib/releases/types";
 import type { ChangeType } from "@/lib/releases/types";
@@ -66,7 +66,7 @@ export default function ReleasesPage() {
 
                     {preview ? (
                       <div className="prose dark:prose-invert prose-sm max-w-none">
-                        <Markdown>{preview}</Markdown>
+                        <InlineMarkdown>{preview}</InlineMarkdown>
                       </div>
                     ) : null}
 
