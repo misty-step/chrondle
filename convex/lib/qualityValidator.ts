@@ -9,71 +9,12 @@ const DEFAULT_LEAKY_PHRASES_FILE = path.join(LEAKY_PHRASES_BASE_DIR, "leakyPhras
 // Common English function words that carry no semantic signal for leakage detection.
 // Filtering these prevents false positives where texts share only generic tokens
 // (e.g. "Battle of Hastings" should not flag "battle of waterloo" just because of "of").
-const STOPWORDS = new Set([
-  "a",
-  "an",
-  "the",
-  "and",
-  "but",
-  "or",
-  "nor",
-  "so",
-  "yet",
-  "at",
-  "by",
-  "for",
-  "from",
-  "in",
-  "into",
-  "of",
-  "on",
-  "to",
-  "with",
-  "is",
-  "are",
-  "was",
-  "were",
-  "be",
-  "been",
-  "being",
-  "have",
-  "has",
-  "had",
-  "do",
-  "does",
-  "did",
-  "will",
-  "would",
-  "shall",
-  "should",
-  "may",
-  "might",
-  "must",
-  "can",
-  "could",
-  "that",
-  "this",
-  "these",
-  "those",
-  "which",
-  "who",
-  "it",
-  "its",
-  "i",
-  "me",
-  "my",
-  "we",
-  "us",
-  "our",
-  "he",
-  "she",
-  "they",
-  "them",
-  "their",
-  "not",
-  "no",
-  "s", // possessive artifact from "Napoleon's" → ["napoleon", "s"]
-]);
+// "s" = possessive artifact from "Napoleon's" → ["napoleon", "s"]
+const STOPWORDS = new Set(
+  "a an the and but or nor so yet at by for from in into of on to with is are was were be been being have has had do does did will would shall should may might must can could that this these those which who it its i me my we us our he she they them their not no s".split(
+    " ",
+  ),
+);
 
 function resolvePhrasesFile(phrasesFile?: string): string {
   if (!phrasesFile) {
@@ -147,19 +88,22 @@ export class SemanticLeakageDetector {
     }
 
     const textTokens = new Set(tokenize(text));
-    let best: LeakyPhraseIndex | undefined;
+    let closestPhrase: LeakyPhraseIndex | undefined;
     let bestScore = 0;
 
     for (const phrase of this.phrases) {
       const similarity = recallScore(textTokens, phrase.tokens);
       if (similarity > bestScore) {
         bestScore = similarity;
-        best = phrase;
+        closestPhrase = phrase;
       }
     }
 
-    // Clamp to [0,1]
-    return { score: Math.min(1, Math.max(0, bestScore)), closest: best };
+    if (!closestPhrase) return { score: 0 };
+
+    // Strip runtime-only `tokens` field from return value
+    const { tokens: _, ...closest } = closestPhrase;
+    return { score: bestScore, closest };
   }
 
   private loadPhrases(file: string): LeakyPhraseIndex[] {
