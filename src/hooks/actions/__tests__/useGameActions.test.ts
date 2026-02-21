@@ -105,6 +105,37 @@ describe("useGameActions - submitRange", () => {
   });
 });
 
+describe("useGameActions - resetGame", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useMutationWithRetry).mockReturnValue(mockSubmitRangeMutation);
+  });
+
+  it("calls clearGuesses and clearRanges on the session", () => {
+    const sources = createDataSources();
+    const { result } = renderHook(() => useGameActions(sources));
+
+    act(() => {
+      result.current.resetGame();
+    });
+
+    expect(sources.session.clearGuesses).toHaveBeenCalledTimes(1);
+    expect(sources.session.clearRanges).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fire any mutation on reset", () => {
+    const sources = createDataSources();
+    const { result } = renderHook(() => useGameActions(sources));
+
+    act(() => {
+      result.current.resetGame();
+    });
+
+    expect(mockSubmitGuessMutation).not.toHaveBeenCalled();
+    expect(mockSubmitRangeMutation).not.toHaveBeenCalled();
+  });
+});
+
 describe("useGameActions - submitGuess", () => {
   beforeEach(() => {
     vi.clearAllMocks();
