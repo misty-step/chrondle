@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.0.3](https://github.com/misty-step/chrondle/compare/v1.0.2...v1.0.3) (2026-02-21)
+
+### Bug Fixes
+
+- **ci:** restore bundle size monitoring with correct webpack output paths ([#119](https://github.com/misty-step/chrondle/issues/119)) ([#187](https://github.com/misty-step/chrondle/issues/187)) ([4778026](https://github.com/misty-step/chrondle/commit/47780268a4e8decf2ae8f580a9652b966bf85a29))
+
 ## [1.0.2](https://github.com/misty-step/chrondle/compare/v1.0.1...v1.0.2) (2026-02-21)
 
 ### Bug Fixes
