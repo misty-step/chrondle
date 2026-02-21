@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.0.2](https://github.com/misty-step/chrondle/compare/v1.0.1...v1.0.2) (2026-02-21)
+
+### Bug Fixes
+
+- replace fake embeddings with keyword recall scoring in SemanticLeakageDetector ([#185](https://github.com/misty-step/chrondle/issues/185)) ([cb1ed9f](https://github.com/misty-step/chrondle/commit/cb1ed9f05a7c6abf97631a1b910cdc8a21b5c9f9)), closes [#111](https://github.com/misty-step/chrondle/issues/111)
+
 ## [1.0.1](https://github.com/misty-step/chrondle/compare/v1.0.0...v1.0.1) (2026-02-17)
 
 ### Bug Fixes
