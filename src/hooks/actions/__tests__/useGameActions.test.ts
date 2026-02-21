@@ -105,6 +105,54 @@ describe("useGameActions - submitRange", () => {
   });
 });
 
+describe("useGameActions - resetGame", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubmitGuessMutation.mockReset();
+    mockSubmitRangeMutation.mockReset();
+    vi.mocked(useMutationWithRetry)
+      .mockReturnValueOnce(mockSubmitGuessMutation)
+      .mockReturnValue(mockSubmitRangeMutation);
+  });
+
+  it("calls clearGuesses and clearRanges on the session", () => {
+    const sources = createDataSources();
+    const { result } = renderHook(() => useGameActions(sources));
+
+    act(() => {
+      result.current.resetGame();
+    });
+
+    expect(sources.session.clearGuesses).toHaveBeenCalledTimes(1);
+    expect(sources.session.clearRanges).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fire any mutation on reset", () => {
+    const sources = createDataSources();
+    const { result } = renderHook(() => useGameActions(sources));
+
+    act(() => {
+      result.current.resetGame();
+    });
+
+    expect(mockSubmitGuessMutation).not.toHaveBeenCalled();
+    expect(mockSubmitRangeMutation).not.toHaveBeenCalled();
+  });
+
+  it("succeeds when clearRanges is undefined (optional method)", () => {
+    const sources = createDataSources();
+    // clearRanges is optional on DataSources — verify resetGame doesn't throw
+    sources.session.clearRanges = undefined as unknown as typeof sources.session.clearRanges;
+    const { result } = renderHook(() => useGameActions(sources));
+
+    act(() => {
+      result.current.resetGame();
+    });
+
+    expect(sources.session.clearGuesses).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("useGameActions - submitGuess", () => {
   beforeEach(() => {
     vi.clearAllMocks();
