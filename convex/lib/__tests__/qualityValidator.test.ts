@@ -34,6 +34,34 @@ describe("SemanticLeakageDetector", () => {
   });
 });
 
+describe("SemanticLeakageDetector - stopword filtering", () => {
+  it("does not flag text sharing only stopwords with a leaky phrase", () => {
+    // "Battle of Hastings" shares "battle" and "of" with "battle of waterloo".
+    // "of" is a stopword and should be ignored; only "battle" is a content match → 1/2 = 0.5,
+    // which is below the 0.6 threshold and must not be flagged as leakage.
+    const detector = new SemanticLeakageDetector();
+    const result = detector.score("The Battle of Hastings changed English history");
+
+    expect(result.score).toBeLessThan(0.6);
+  });
+
+  it("scores content-word matches correctly after stopword removal", () => {
+    // "battle of waterloo" content tokens are {battle, waterloo}.
+    // Text contains both → full recall score of 1.0 regardless of surrounding stopwords.
+    const detector = new SemanticLeakageDetector();
+    const result = detector.score("The famous battle at waterloo in 1815");
+
+    expect(result.score).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it("produces consistent scores on repeated calls (pre-tokenized phrases)", () => {
+    const detector = new SemanticLeakageDetector();
+    const text = "The Battle of Waterloo ends Napoleon's rule";
+
+    expect(detector.score(text).score).toEqual(detector.score(text).score);
+  });
+});
+
 describe("QualityValidatorImpl", () => {
   it("flags missing metadata and leakage", async () => {
     const validator = new QualityValidatorImpl(new SemanticLeakageDetector());

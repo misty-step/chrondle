@@ -6,6 +6,75 @@ import path from "node:path";
 const LEAKY_PHRASES_BASE_DIR = path.join(process.cwd(), "convex", "data");
 const DEFAULT_LEAKY_PHRASES_FILE = path.join(LEAKY_PHRASES_BASE_DIR, "leakyPhrases.json");
 
+// Common English function words that carry no semantic signal for leakage detection.
+// Filtering these prevents false positives where texts share only generic tokens
+// (e.g. "Battle of Hastings" should not flag "battle of waterloo" just because of "of").
+const STOPWORDS = new Set([
+  "a",
+  "an",
+  "the",
+  "and",
+  "but",
+  "or",
+  "nor",
+  "so",
+  "yet",
+  "at",
+  "by",
+  "for",
+  "from",
+  "in",
+  "into",
+  "of",
+  "on",
+  "to",
+  "with",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "being",
+  "have",
+  "has",
+  "had",
+  "do",
+  "does",
+  "did",
+  "will",
+  "would",
+  "shall",
+  "should",
+  "may",
+  "might",
+  "must",
+  "can",
+  "could",
+  "that",
+  "this",
+  "these",
+  "those",
+  "which",
+  "who",
+  "it",
+  "its",
+  "i",
+  "me",
+  "my",
+  "we",
+  "us",
+  "our",
+  "he",
+  "she",
+  "they",
+  "them",
+  "their",
+  "not",
+  "no",
+  "s", // possessive artifact from "Napoleon's" → ["napoleon", "s"]
+]);
+
 function resolvePhrasesFile(phrasesFile?: string): string {
   if (!phrasesFile) {
     return DEFAULT_LEAKY_PHRASES_FILE;
@@ -52,8 +121,18 @@ type LeakyPhrase = {
   yearRange: [number, number];
 };
 
+// Internal representation with pre-computed token set for efficient repeated scoring.
+// `tokens` is runtime-only and never serialized to disk.
+type LeakyPhraseIndex = LeakyPhrase & {
+  tokens: Set<string>;
+};
+
+function withTokens(phrase: LeakyPhrase): LeakyPhraseIndex {
+  return { ...phrase, tokens: new Set(tokenize(phrase.phrase)) };
+}
+
 export class SemanticLeakageDetector {
-  private phrases: LeakyPhrase[];
+  private phrases: LeakyPhraseIndex[];
   private readonly phrasesFile: string;
 
   constructor(phrasesFile?: string) {
@@ -68,11 +147,11 @@ export class SemanticLeakageDetector {
     }
 
     const textTokens = new Set(tokenize(text));
-    let best: LeakyPhrase | undefined;
+    let best: LeakyPhraseIndex | undefined;
     let bestScore = 0;
 
     for (const phrase of this.phrases) {
-      const similarity = recallScore(textTokens, phrase.phrase);
+      const similarity = recallScore(textTokens, phrase.tokens);
       if (similarity > bestScore) {
         bestScore = similarity;
         best = phrase;
@@ -83,18 +162,18 @@ export class SemanticLeakageDetector {
     return { score: Math.min(1, Math.max(0, bestScore)), closest: best };
   }
 
-  private loadPhrases(file: string): LeakyPhrase[] {
+  private loadPhrases(file: string): LeakyPhraseIndex[] {
     try {
       const raw = fs.readFileSync(file, "utf-8");
       const parsed = JSON.parse(raw) as LeakyPhrase[];
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? parsed.map(withTokens) : [];
     } catch {
       return [];
     }
   }
 
   addPhrase(entry: LeakyPhrase): void {
-    this.phrases.push(entry);
+    this.phrases.push(withTokens(entry));
   }
 
   /**
@@ -109,8 +188,12 @@ export class SemanticLeakageDetector {
         fs.mkdirSync(dir, { recursive: true });
       }
 
-      // Write with pretty formatting for version control using a temp file + rename for atomicity
-      const payload = JSON.stringify(this.phrases, null, 2);
+      // Serialize only persistent fields — tokens is a runtime-only Set
+      const payload = JSON.stringify(
+        this.phrases.map(({ phrase, yearRange }) => ({ phrase, yearRange })),
+        null,
+        2,
+      );
       const tempFile = path.join(
         dir,
         `${path.basename(this.phrasesFile)}.tmp-${process.pid}-${Date.now()}`,
@@ -194,11 +277,10 @@ function tokenize(text: string): string[] {
   return text
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter(Boolean);
+    .filter((t) => t && !STOPWORDS.has(t));
 }
 
-function recallScore(textTokens: Set<string>, phrase: string): number {
-  const phraseTokens = new Set(tokenize(phrase));
+function recallScore(textTokens: Set<string>, phraseTokens: Set<string>): number {
   if (!phraseTokens.size) return 0;
 
   let overlapCount = 0;
