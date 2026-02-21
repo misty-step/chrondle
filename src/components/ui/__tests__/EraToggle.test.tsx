@@ -274,24 +274,25 @@ describe("EraToggle", () => {
   });
 
   describe("Touch Target Compliance", () => {
+    // WCAG 2.5.5 / Apple HIG / Material Design: minimum 44px touch target
     it("meets 44px minimum touch target height for sm size", () => {
-      const { container } = render(<EraToggle value="BC" onChange={mockOnChange} size="sm" />);
-      const toggleContainer = container.firstElementChild;
-      // h-11 = 2.75rem = 44px — Apple/Google minimum touch target
-      expect(toggleContainer?.className).toContain("h-11");
+      render(<EraToggle value="BC" onChange={mockOnChange} size="sm" />);
+      const toggle = screen.getByRole("radiogroup");
+      // h-11 = 2.75rem = 44px
+      expect(toggle.className).toContain("h-11");
     });
 
     it("meets 44px minimum touch target height for default size", () => {
-      const { container } = render(<EraToggle value="BC" onChange={mockOnChange} />);
-      const toggleContainer = container.firstElementChild;
-      expect(toggleContainer?.className).toContain("h-11");
+      render(<EraToggle value="BC" onChange={mockOnChange} />);
+      const toggle = screen.getByRole("radiogroup");
+      expect(toggle.className).toContain("h-11");
     });
 
     it("meets 44px minimum touch target height for lg size", () => {
-      const { container } = render(<EraToggle value="BC" onChange={mockOnChange} size="lg" />);
-      const toggleContainer = container.firstElementChild;
-      // h-12 = 3rem = 48px — exceeds minimum
-      expect(toggleContainer?.className).toContain("h-12");
+      render(<EraToggle value="BC" onChange={mockOnChange} size="lg" />);
+      const toggle = screen.getByRole("radiogroup");
+      // h-12 = 3rem = 48px
+      expect(toggle.className).toContain("h-12");
     });
   });
 
