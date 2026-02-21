@@ -114,6 +114,7 @@
       "ws": "^8.17.1",
       "tar-fs": ">=3.1.1",
       "nanoid": "^5.0.9",
+      "fast-xml-parser": ">=5.3.6",
       "glob": "^11.1.0",
       "minimatch": ">=10.2.1",
       "mdast-util-to-hast": ">=13.2.1",
