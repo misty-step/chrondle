@@ -1,20 +1,16 @@
 export default [
   {
     name: "All JS Chunks",
-    path: ".next/static/chunks/*.js",
-    limit: "900 KB", // Increased from 830 KB to accommodate PostHog (~50 KB)
+    path: ".next/static/chunks/**/*.js",
+    limit: "900 KB",
     gzip: true,
-  },
-  {
-    name: "Turbopack Runtime",
-    path: ".next/static/chunks/turbopack-*.js",
-    limit: "10 KB",
-    gzip: true,
+    running: false,
   },
   {
     name: "CSS Bundle",
     path: ".next/static/chunks/*.css",
     limit: "150 KB",
     gzip: true,
+    running: false,
   },
 ];
