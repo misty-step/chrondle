@@ -94,4 +94,26 @@ describe("parseInlineMarkdown", () => {
     expect(inline.querySelector("strong")).toBeNull();
     expect(inline.querySelector("em")).toBeNull();
   });
+
+  it("does not italicize intraword snake_case underscores", () => {
+    renderInline("foo_bar_baz");
+
+    const inline = screen.getByTestId("inline");
+    expect(inline).toHaveTextContent("foo_bar_baz");
+    expect(inline.querySelector("em")).toBeNull();
+  });
+
+  it("does not italicize env var style identifiers like NEXT_PUBLIC_APP_URL", () => {
+    renderInline("NEXT_PUBLIC_APP_URL");
+
+    const inline = screen.getByTestId("inline");
+    expect(inline).toHaveTextContent("NEXT_PUBLIC_APP_URL");
+    expect(inline.querySelector("em")).toBeNull();
+  });
+
+  it("still italicizes standalone _word_ surrounded by spaces", () => {
+    renderInline("use _emphasis_ here");
+
+    expect(screen.getByText("emphasis").tagName).toBe("EM");
+  });
 });

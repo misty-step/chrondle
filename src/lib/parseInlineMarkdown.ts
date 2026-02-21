@@ -34,7 +34,12 @@ function parseSegments(text: string, keyPrefix: string): React.ReactNode[] {
       const previousChar = text[index - 1];
       const nextChar = text[index + fullMatch.length];
 
-      if (previousChar === "_" || nextChar === "_") {
+      if (
+        previousChar === "_" ||
+        nextChar === "_" ||
+        (previousChar && /\w/.test(previousChar)) ||
+        (nextChar && /\w/.test(nextChar))
+      ) {
         nodes.push(fullMatch);
       } else {
         nodes.push(
