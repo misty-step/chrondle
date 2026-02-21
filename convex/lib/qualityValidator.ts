@@ -6,6 +6,16 @@ import path from "node:path";
 const LEAKY_PHRASES_BASE_DIR = path.join(process.cwd(), "convex", "data");
 const DEFAULT_LEAKY_PHRASES_FILE = path.join(LEAKY_PHRASES_BASE_DIR, "leakyPhrases.json");
 
+// Common English function words that carry no semantic signal for leakage detection.
+// Filtering these prevents false positives where texts share only generic tokens
+// (e.g. "Battle of Hastings" should not flag "battle of waterloo" just because of "of").
+// "s" = possessive artifact from "Napoleon's" → ["napoleon", "s"]
+const STOPWORDS = new Set(
+  "a an the and but or nor so yet at by for from in into of on to with is are was were be been being have has had do does did will would shall should may might must can could that this these those which who it its i me my we us our he she they them their not no s".split(
+    " ",
+  ),
+);
+
 function resolvePhrasesFile(phrasesFile?: string): string {
   if (!phrasesFile) {
     return DEFAULT_LEAKY_PHRASES_FILE;
@@ -50,11 +60,20 @@ export interface QualityValidator {
 type LeakyPhrase = {
   phrase: string;
   yearRange: [number, number];
-  embedding: number[];
 };
 
+// Internal representation with pre-computed token set for efficient repeated scoring.
+// `tokens` is runtime-only and never serialized to disk.
+type LeakyPhraseIndex = LeakyPhrase & {
+  tokens: Set<string>;
+};
+
+function withTokens(phrase: LeakyPhrase): LeakyPhraseIndex {
+  return { ...phrase, tokens: new Set(tokenize(phrase.phrase)) };
+}
+
 export class SemanticLeakageDetector {
-  private phrases: LeakyPhrase[];
+  private phrases: LeakyPhraseIndex[];
   private readonly phrasesFile: string;
 
   constructor(phrasesFile?: string) {
@@ -68,48 +87,37 @@ export class SemanticLeakageDetector {
       return { score: 0 };
     }
 
-    const textEmbedding = this.fakeEmbed(text);
-    let best: LeakyPhrase | undefined;
+    const textTokens = new Set(tokenize(text));
+    let closestPhrase: LeakyPhraseIndex | undefined;
     let bestScore = 0;
 
     for (const phrase of this.phrases) {
-      const similarity = cosine(textEmbedding, phrase.embedding);
+      const similarity = recallScore(textTokens, phrase.tokens);
       if (similarity > bestScore) {
         bestScore = similarity;
-        best = phrase;
+        closestPhrase = phrase;
       }
     }
 
-    // Clamp to [0,1]
-    return { score: Math.min(1, Math.max(0, bestScore)), closest: best };
+    if (!closestPhrase) return { score: 0 };
+
+    // Strip runtime-only `tokens` field from return value
+    const { tokens: _, ...closest } = closestPhrase;
+    return { score: bestScore, closest };
   }
 
-  private loadPhrases(file: string): LeakyPhrase[] {
+  private loadPhrases(file: string): LeakyPhraseIndex[] {
     try {
       const raw = fs.readFileSync(file, "utf-8");
       const parsed = JSON.parse(raw) as LeakyPhrase[];
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? parsed.map(withTokens) : [];
     } catch {
       return [];
     }
   }
 
-  // Placeholder embedding: hash text into small vector so tests can run without external API
-  fakeEmbed(text: string): number[] {
-    const tokens = text
-      .toLowerCase()
-      .split(/[^a-z0-9]+/)
-      .filter(Boolean);
-    const vec = new Array(6).fill(0);
-    for (const token of tokens) {
-      const h = hash(token);
-      vec[h % vec.length] += 1;
-    }
-    return vec.map((v) => v / Math.max(1, tokens.length));
-  }
-
   addPhrase(entry: LeakyPhrase): void {
-    this.phrases.push(entry);
+    this.phrases.push(withTokens(entry));
   }
 
   /**
@@ -124,8 +132,12 @@ export class SemanticLeakageDetector {
         fs.mkdirSync(dir, { recursive: true });
       }
 
-      // Write with pretty formatting for version control using a temp file + rename for atomicity
-      const payload = JSON.stringify(this.phrases, null, 2);
+      // Serialize only persistent fields — tokens is a runtime-only Set
+      const payload = JSON.stringify(
+        this.phrases.map(({ phrase, yearRange }) => ({ phrase, yearRange })),
+        null,
+        2,
+      );
       const tempFile = path.join(
         dir,
         `${path.basename(this.phrasesFile)}.tmp-${process.pid}-${Date.now()}`,
@@ -180,7 +192,7 @@ export class QualityValidatorImpl implements QualityValidator {
 
   /**
    * Learn from rejected event with high semantic leakage.
-   * Extracts key phrase, generates embedding, adds to database, and persists to disk.
+   * Extracts key phrase, adds to database, and persists to disk.
    *
    * @param eventText - The rejected event text containing leaky phrases
    * @param inferredYearRange - Year range this phrase is associated with [start, end]
@@ -188,11 +200,9 @@ export class QualityValidatorImpl implements QualityValidator {
   learnFromRejected(eventText: string, inferredYearRange: [number, number]): void {
     if (!eventText.trim()) return;
     const phrase = eventText.toLowerCase().slice(0, 180);
-    const embedding = this.leakageDetector.fakeEmbed(eventText);
     this.leakageDetector.addPhrase({
       phrase,
       yearRange: inferredYearRange,
-      embedding,
     });
 
     // Persist updated database to disk (append-only)
@@ -207,25 +217,22 @@ export class QualityValidatorImpl implements QualityValidator {
   }
 }
 
-function cosine(a: number[], b: number[]): number {
-  const len = Math.min(a.length, b.length);
-  let dot = 0;
-  let magA = 0;
-  let magB = 0;
-  for (let i = 0; i < len; i += 1) {
-    dot += a[i] * b[i];
-    magA += a[i] * a[i];
-    magB += b[i] * b[i];
-  }
-  if (magA === 0 || magB === 0) return 0;
-  return dot / Math.sqrt(magA * magB);
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t && !STOPWORDS.has(t));
 }
 
-function hash(str: string): number {
-  let h = 0;
-  for (let i = 0; i < str.length; i += 1) {
-    h = (h << 5) - h + str.charCodeAt(i);
-    h |= 0;
+function recallScore(textTokens: Set<string>, phraseTokens: Set<string>): number {
+  if (!phraseTokens.size) return 0;
+
+  let overlapCount = 0;
+  for (const token of phraseTokens) {
+    if (textTokens.has(token)) {
+      overlapCount += 1;
+    }
   }
-  return Math.abs(h);
+
+  return overlapCount / phraseTokens.size;
 }

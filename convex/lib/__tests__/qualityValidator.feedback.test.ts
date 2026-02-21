@@ -49,7 +49,6 @@ describe("QualityValidator feedback loop", () => {
     expect(content[0]).toMatchObject({
       phrase: expect.stringContaining("battle of 1066"),
       yearRange: [1066, 1066],
-      embedding: expect.any(Array),
     });
   });
 
@@ -58,7 +57,6 @@ describe("QualityValidator feedback loop", () => {
     const initialPhrase = {
       phrase: "moon landing",
       yearRange: [1969, 1969],
-      embedding: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
     };
     fs.writeFileSync(testFile, JSON.stringify([initialPhrase], null, 2), "utf-8");
 

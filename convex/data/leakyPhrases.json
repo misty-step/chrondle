@@ -1,27 +1,102 @@
 [
   {
     "phrase": "battle of waterloo",
-    "yearRange": [1815, 1815],
-    "embedding": [0.4, 0.1, 0.2, 0.3, 0.0, 0.0]
+    "yearRange": [1815, 1815]
   },
   {
     "phrase": "moon landing",
-    "yearRange": [1969, 1969],
-    "embedding": [0.0, 0.3, 0.4, 0.2, 0.1, 0.0]
+    "yearRange": [1969, 1969]
   },
   {
     "phrase": "fall of the berlin wall",
-    "yearRange": [1989, 1989],
-    "embedding": [0.1, 0.1, 0.1, 0.5, 0.2, 0.0]
+    "yearRange": [1989, 1989]
   },
   {
     "phrase": "assassination of julius caesar",
-    "yearRange": [-44, -44],
-    "embedding": [0.5, 0.2, 0.0, 0.0, 0.2, 0.1]
+    "yearRange": [-44, -44]
   },
   {
     "phrase": "american declaration of independence",
-    "yearRange": [1776, 1776],
-    "embedding": [0.2, 0.4, 0.2, 0.1, 0.1, 0.0]
+    "yearRange": [1776, 1776]
+  },
+  {
+    "phrase": "french revolution",
+    "yearRange": [1789, 1799]
+  },
+  {
+    "phrase": "world war one",
+    "yearRange": [1914, 1918]
+  },
+  {
+    "phrase": "world war two",
+    "yearRange": [1939, 1945]
+  },
+  {
+    "phrase": "treaty of versailles",
+    "yearRange": [1919, 1919]
+  },
+  {
+    "phrase": "black tuesday stock market crash",
+    "yearRange": [1929, 1929]
+  },
+  {
+    "phrase": "cuban missile crisis",
+    "yearRange": [1962, 1962]
+  },
+  {
+    "phrase": "fall of rome",
+    "yearRange": [476, 476]
+  },
+  {
+    "phrase": "black death plague",
+    "yearRange": [1347, 1353]
+  },
+  {
+    "phrase": "titanic sinks",
+    "yearRange": [1912, 1912]
+  },
+  {
+    "phrase": "russian revolution",
+    "yearRange": [1917, 1917]
+  },
+  {
+    "phrase": "hiroshima atomic bomb",
+    "yearRange": [1945, 1945]
+  },
+  {
+    "phrase": "signing of magna carta",
+    "yearRange": [1215, 1215]
+  },
+  {
+    "phrase": "protestant reformation",
+    "yearRange": [1517, 1517]
+  },
+  {
+    "phrase": "great fire of london",
+    "yearRange": [1666, 1666]
+  },
+  {
+    "phrase": "boston tea party",
+    "yearRange": [1773, 1773]
+  },
+  {
+    "phrase": "spanish armada",
+    "yearRange": [1588, 1588]
+  },
+  {
+    "phrase": "storming of the bastille",
+    "yearRange": [1789, 1789]
+  },
+  {
+    "phrase": "assassination of archduke franz ferdinand",
+    "yearRange": [1914, 1914]
+  },
+  {
+    "phrase": "apollo mission moon",
+    "yearRange": [1969, 1969]
+  },
+  {
+    "phrase": "berlin wall construction",
+    "yearRange": [1961, 1961]
   }
 ]
