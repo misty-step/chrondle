@@ -2,6 +2,16 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.1.0](https://github.com/misty-step/chrondle/compare/v1.0.4...v1.1.0) (2026-02-22)
+
+### Bug Fixes
+
+- prevent intraword underscores from triggering italics ([2068941](https://github.com/misty-step/chrondle/commit/2068941d06a1feed40d1c9442eda0d3300a778eb)), closes [#190](https://github.com/misty-step/chrondle/issues/190)
+
+### Features
+
+- implement InlineMarkdown component with parseInlineMarkdown ([#104](https://github.com/misty-step/chrondle/issues/104)) ([00b85ac](https://github.com/misty-step/chrondle/commit/00b85ac0eaa9d60b8a4c2c4197292350f4a4ca2e))
+
 ## [1.0.4](https://github.com/misty-step/chrondle/compare/v1.0.3...v1.0.4) (2026-02-21)
 
 ### Bug Fixes
