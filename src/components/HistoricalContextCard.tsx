@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
-import ReactMarkdown from "react-markdown";
+import { InlineMarkdown } from "@/components/ui/InlineMarkdown";
 
 interface HistoricalContextCardProps {
   context?: string;
@@ -84,20 +84,11 @@ export const HistoricalContextCard: React.FC<HistoricalContextCardProps> = ({
               <div className="px-6 pt-1 pb-6">
                 {/* Content */}
                 <div className="prose prose-sm dark:prose-invert text-foreground max-w-none text-left leading-relaxed">
-                  <ReactMarkdown
-                    components={{
-                      // Ensure paragraphs have proper spacing
-                      p: ({ children }) => <p className="mb-3 text-left last:mb-0">{children}</p>,
-                      // Style emphasis (italics) appropriately
-                      em: ({ children }) => <em className="italic">{children}</em>,
-                      // Only allow safe elements
-                      script: () => null,
-                      iframe: () => null,
-                    }}
-                    allowedElements={["p", "em", "strong", "ul", "ol", "li", "blockquote", "br"]}
-                  >
-                    {context}
-                  </ReactMarkdown>
+                  {context.split(/\n\n/).map((para, i) => (
+                    <p key={i} className="mb-3 text-left last:mb-0">
+                      <InlineMarkdown>{para}</InlineMarkdown>
+                    </p>
+                  ))}
                 </div>
               </div>
             </motion.div>
