@@ -43,6 +43,7 @@ export function initSentryServer(): void {
 
       // Performance monitoring
       tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || "0.1"),
+      sendDefaultPii: false,
 
       // Don't capture profiling data by default (can be enabled via env)
       profilesSampleRate: parseFloat(process.env.SENTRY_PROFILES_SAMPLE_RATE || "0"),
