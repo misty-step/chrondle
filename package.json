@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "bun@1.3.9",
   "scripts": {
     "dev": "concurrently \"npx convex dev\" \"next dev --turbopack\"",
     "dev:next": "next dev --turbopack",
