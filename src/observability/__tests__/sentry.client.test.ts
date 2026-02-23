@@ -61,9 +61,14 @@ describe("Sentry Client", () => {
       vi.clearAllMocks();
       initSentryClient();
 
-      // May be called or may be already initialized
-      // The important thing is the config would be correct
-      expect(true).toBe(true); // Module already tested manually
+      expect(Sentry.init).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dsn: "https://test@sentry.io/456",
+          environment: "test",
+          release: "abc123",
+          sendDefaultPii: false,
+        }),
+      );
     });
   });
 

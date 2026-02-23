@@ -77,6 +77,7 @@ describe("Sentry Server", () => {
           dsn: "https://test@sentry.io/789",
           environment: "test-server",
           release: "server-abc123",
+          sendDefaultPii: false,
         }),
       );
     });
