@@ -84,7 +84,7 @@
 
 ## Stack
 
-**Hard requirements:** pnpm (npm blocked), Vitest + React Testing Library + jest-dom matchers, motion (NOT framer-motion)
+**Hard requirements:** Bun (pnpm/npm blocked), Vitest + React Testing Library + jest-dom matchers, motion (NOT framer-motion)
 
 **Core:** Next.js 15, React 19, TypeScript 5 (strict), Convex, Clerk, Tailwind 4, Radix UI
 
@@ -92,14 +92,14 @@
 
 ```bash
 # Before committing
-pnpm lint && pnpm type-check && pnpm test
+bun run lint && bun run type-check && bun run test
 
 # Convex DB integrity
 npx convex run puzzles:getTotalPuzzles
 
 # Start dev environment
-npx convex dev  # Terminal 1
-pnpm dev        # Terminal 2
+bunx convex dev  # Terminal 1
+bun run dev      # Terminal 2
 ```
 
 ## Live Patterns

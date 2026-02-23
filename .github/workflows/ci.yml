@@ -53,64 +53,34 @@ jobs:
         with:
           node-version: 20
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.1.0
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Cache pnpm store
+      - name: Cache Bun dependencies
         uses: actions/cache@v5
         with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: 🔒 Security Audit
         run: |
           echo "🔍 Checking for security vulnerabilities in dependencies..."
 
-          # Production dependencies - STRICT (fail on moderate or higher)
+          # Fail on moderate or higher (matches original pnpm prod strictness)
           echo ""
-          echo "📦 Auditing production dependencies..."
-          pnpm audit --prod --audit-level moderate || {
+          echo "📦 Auditing all dependencies (moderate+ severity)..."
+          bun audit --audit-level moderate || {
             EXIT_CODE=$?
-            echo "❌ CRITICAL: Production vulnerabilities found!"
-            echo "These vulnerabilities affect your users and must be fixed immediately."
-            echo "Run 'pnpm audit --prod' locally to see details"
+            echo "❌ Moderate/High/Critical vulnerabilities found!"
+            echo "Run 'bun audit' locally to see details"
             exit $EXIT_CODE
           }
-          echo "✅ Production dependencies secure (no moderate+ vulnerabilities)"
-
-          # Development dependencies - LENIENT (fail only on high or critical)
-          echo ""
-          echo "🛠️ Auditing development dependencies..."
-          pnpm audit --dev --audit-level high || {
-            EXIT_CODE=$?
-            echo "❌ High/Critical vulnerabilities found in dev dependencies!"
-            echo "These should be addressed but don't affect production users."
-            echo "Run 'pnpm audit --dev' locally to see details"
-            exit $EXIT_CODE
-          }
-
-          # Check for moderate dev vulnerabilities (warning only, non-blocking)
-          echo ""
-          echo "📋 Checking for moderate dev dependency vulnerabilities..."
-          if ! pnpm audit --dev --audit-level moderate 2>/dev/null; then
-            echo "⚠️ Moderate vulnerabilities found in dev dependencies (non-blocking)"
-            echo "These don't block CI but should be reviewed in the next maintenance cycle."
-            echo "Run 'pnpm audit --dev' locally for details"
-          else
-            echo "✅ Dev dependencies secure (no moderate+ vulnerabilities)"
-          fi
+          echo "✅ Dependencies secure (no moderate+ vulnerabilities)"
 
           echo ""
           echo "✅ Security audit complete"
@@ -122,15 +92,15 @@ jobs:
 
       - name: Run linting
         if: matrix.check == 'lint'
-        run: pnpm lint
+        run: bun run lint
 
       - name: Run type checking
         if: matrix.check == 'type-check'
-        run: pnpm type-check
+        run: bun run type-check
 
       - name: Run tests with coverage
         if: matrix.check == 'test'
-        run: pnpm test:coverage
+        run: bun run test:coverage
 
       - name: Generate coverage summary
         if: matrix.check == 'test' && always()
@@ -204,32 +174,25 @@ jobs:
         with:
           node-version: 20
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.1.0
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Cache pnpm store
+      - name: Cache Bun dependencies
         uses: actions/cache@v5
         with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Run puzzle validation
-        run: pnpm validate-puzzles
+        run: bun run validate-puzzles
 
       - name: Test module system compatibility
-        run: pnpm test-module-system
+        run: bun run test-module-system
 
   docs:
     runs-on: ubuntu-latest
@@ -279,26 +242,19 @@ jobs:
         with:
           node-version: 20
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.1.0
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Cache pnpm store
+      - name: Cache Bun dependencies
         uses: actions/cache@v5
         with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Cache Next.js build
         uses: actions/cache@v5
@@ -308,9 +264,9 @@ jobs:
             .next/.next-build-cache
             .next/server
             node_modules/.cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]sx?') }}
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('bun.lock') }}-${{ hashFiles('src/**/*.[jt]sx?') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-nextjs-${{ hashFiles('bun.lock') }}-
             ${{ runner.os }}-nextjs-
 
       - name: Verify Convex files
@@ -319,7 +275,7 @@ jobs:
         # DO NOT cache them - caching causes stale type definitions.
 
       - name: Build application
-        run: pnpm build
+        run: bun run build
         env:
           # Client-side: Embedded in the JavaScript bundle for browser access
           NEXT_PUBLIC_CONVEX_URL: https://fleet-goldfish-183.convex.cloud
@@ -362,13 +318,13 @@ jobs:
       - name: Check bundle size
         run: |
           echo "📊 Checking bundle sizes against configured limits..."
-          pnpm size
+          bun run size
           if [ $? -ne 0 ]; then
             echo "❌ Bundle size limits exceeded! Please optimize your code."
             echo "💡 Tips:"
             echo "   - Check for unnecessary dependencies"
             echo "   - Use dynamic imports for large components"
-            echo "   - Analyze bundle with 'pnpm bundle-analysis'"
+            echo "   - Analyze bundle with 'bun run bundle-analysis'"
             exit 1
           fi
           echo "✅ Bundle sizes within limits"
@@ -397,26 +353,19 @@ jobs:
         with:
           node-version: 20
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.1.0
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Cache pnpm store
+      - name: Cache Bun dependencies
         uses: actions/cache@v5
         with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Download build artifacts
         uses: actions/download-artifact@v7
@@ -425,10 +374,10 @@ jobs:
           path: .next/
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: bunx playwright install --with-deps chromium
 
       - name: Run e2e tests
-        run: pnpm test:e2e
+        run: bun run test:e2e
         env:
           NEXT_PUBLIC_CONVEX_URL: https://handsome-raccoon-955.convex.cloud
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_aGVhbHRoeS1kb2UtMjMuY2xlcmsuYWNjb3VudHMuZGV2JA

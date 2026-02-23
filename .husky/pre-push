@@ -3,6 +3,6 @@ echo "🔍 Running pre-push checks..."
 
 # Type checking only - tests run in CI
 echo "📝 Type checking..."
-pnpm type-check || exit 1
+bun run type-check || exit 1
 
 echo "✅ Pre-push checks passed!"

@@ -72,7 +72,7 @@ Steps:
 
 1. Checkout code
 2. **Validate secrets** (fail-fast on missing required secrets)
-3. Setup Node.js 20 and pnpm
+3. Setup Bun 1.3.9
 4. Install dependencies
 5. Build Next.js application
 6. Create Sentry release (if configured)
@@ -115,6 +115,6 @@ This is expected if Sentry secrets aren't configured. The deploy will still succ
 ## Manual Deployment
 
 ```bash
-pnpm deploy        # Full deploy
-pnpm deploy:verify # Verify deployment health
+bun run deploy        # Full deploy
+bun run deploy:verify # Verify deployment health
 ```
