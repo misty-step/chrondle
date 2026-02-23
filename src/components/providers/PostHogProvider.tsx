@@ -14,7 +14,6 @@ function getPostHog() {
 
 export function PostHogProvider({ children }: { children: ReactNode }) {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -26,7 +25,7 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
     getPostHog().then(({ default: posthog }) => {
       if (!posthog.__loaded) {
         posthog.init(key, {
-          api_host: host || "/ingest",
+          api_host: "/ingest", // always route via Next.js proxy — never directly to PostHog
           ui_host: "https://us.posthog.com",
           person_profiles: "identified_only",
           capture_pageview: true,
@@ -41,7 +40,7 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
       }
       setIsLoaded(true);
     });
-  }, [key, host]);
+  }, [key]);
 
   // Always render children immediately - PostHog loads async
   // PHProvider is only needed for React hooks, not basic capture
