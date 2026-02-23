@@ -26,7 +26,7 @@ export default defineConfig({
   webServer: process.env.TEST_SKIP_SERVER
     ? undefined
     : {
-        command: process.env.CI ? "pnpm start" : "pnpm dev:next",
+        command: process.env.CI ? "bun run start" : "bun run dev:next",
         port: PORT,
         reuseExistingServer: !process.env.CI,
         timeout: 120000,

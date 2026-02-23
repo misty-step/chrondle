@@ -39,14 +39,11 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Check and report bundle size
-        uses: andresz1/size-limit-action@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          build_script: build
-          skip_step: install # We already installed dependencies
-          package_manager: bun
+      - name: Build
+        run: bun run build
         env:
-          # Required for build to complete - these are public keys (safe to expose)
           NEXT_PUBLIC_CONVEX_URL: https://fleet-goldfish-183.convex.cloud
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_aGVhbHRoeS1kb2UtMjMuY2xlcmsuYWNjb3VudHMuZGV2JA
+
+      - name: Check bundle size
+        run: bun run size
