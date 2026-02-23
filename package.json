@@ -96,7 +96,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "resend": "^6.5.2",
-    "stripe": "^20.1.2",
+    "stripe": "^20.3.1",
     "svix": "^1.69.0",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",
