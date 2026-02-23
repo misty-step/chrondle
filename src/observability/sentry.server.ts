@@ -11,14 +11,11 @@
 import * as Sentry from "@sentry/nextjs";
 import { hashIdentifier } from "./hash";
 import { logger } from "@/lib/logger";
+import type { SentryContext } from "./types";
+
+export type { SentryContext };
 
 let isInitialized = false;
-
-export interface SentryContext {
-  tags?: Record<string, string | number | boolean>;
-  extras?: Record<string, unknown>;
-  level?: "error" | "warning" | "info" | "debug";
-}
 
 /**
  * Initialize Sentry server-side
