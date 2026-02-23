@@ -172,8 +172,10 @@
     "@sentry/cli",
     "@swc/core",
     "core-js",
+    "esbuild",
     "onnxruntime-node",
     "protobufjs",
+    "sharp",
     "unrs-resolver"
   ]
 }
