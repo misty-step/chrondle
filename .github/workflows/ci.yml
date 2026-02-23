@@ -73,26 +73,16 @@ jobs:
         run: |
           echo "🔍 Checking for security vulnerabilities in dependencies..."
 
-          # Production dependencies - STRICT (fail on moderate or higher)
+          # Fail on moderate or higher (matches original pnpm prod strictness)
           echo ""
-          echo "📦 Auditing all dependencies (high+ severity)..."
-          bun audit --audit-level high || {
+          echo "📦 Auditing all dependencies (moderate+ severity)..."
+          bun audit --audit-level moderate || {
             EXIT_CODE=$?
-            echo "❌ High/Critical vulnerabilities found!"
+            echo "❌ Moderate/High/Critical vulnerabilities found!"
             echo "Run 'bun audit' locally to see details"
             exit $EXIT_CODE
           }
-          echo "✅ Dependencies secure (no high+ vulnerabilities)"
-
-          # Moderate check - warning only, non-blocking
-          echo ""
-          echo "📋 Checking for moderate vulnerabilities (non-blocking)..."
-          if ! bun audit --audit-level moderate 2>/dev/null; then
-            echo "⚠️ Moderate vulnerabilities found (non-blocking)"
-            echo "Run 'bun audit' locally for details"
-          else
-            echo "✅ No moderate+ vulnerabilities found"
-          fi
+          echo "✅ Dependencies secure (no moderate+ vulnerabilities)"
 
           echo ""
           echo "✅ Security audit complete"

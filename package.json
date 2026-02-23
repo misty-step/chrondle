@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npx convex dev\" \"next dev --turbopack\"",
+    "dev": "concurrently \"bunx convex dev\" \"next dev --turbopack\"",
     "dev:next": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
@@ -101,6 +101,12 @@
     "zod": "^4.1.7"
   },
   "overrides": {
+    "@eslint/eslintrc": {
+      "ajv": "6.12.6"
+    },
+    "schema-utils": {
+      "ajv": "^8.18.0"
+    },
     "@isaacs/brace-expansion": "^5.0.1",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "hono": ">=4.11.4",
