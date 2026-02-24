@@ -12,6 +12,10 @@
 import { logger } from "@/lib/logger";
 import { GameState, isReady } from "@/types/gameState";
 
+type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
+type JsonObject = { [key: string]: JsonValue | undefined };
+type JsonArray = JsonValue[];
+
 // Lazy-loaded PostHog - avoids bundling in initial chunk
 let posthogPromise: Promise<typeof import("posthog-js").default> | null = null;
 
@@ -110,6 +114,8 @@ export class GameAnalytics {
   private flushTimer?: NodeJS.Timeout;
 
   private constructor(config?: Partial<AnalyticsConfig>) {
+    const configuredEndpoint = process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT?.trim();
+
     this.config = {
       enabled:
         process.env.NODE_ENV === "production" || process.env.NEXT_PUBLIC_ANALYTICS_DEBUG === "true",
@@ -117,6 +123,7 @@ export class GameAnalytics {
       sampleRate: 1.0, // Track all events by default
       batchSize: 10,
       flushInterval: 5000, // 5 seconds
+      endpoint: configuredEndpoint || undefined,
       ...config,
     };
 
@@ -481,25 +488,94 @@ export class GameAnalytics {
     const events = [...this.eventQueue];
     this.eventQueue = [];
 
-    // In production, send to analytics endpoint
-    if (this.config.endpoint) {
-      fetch(this.config.endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ events }),
-        keepalive: true, // Important for beforeunload
-      }).catch((error) => {
-        logger.error("Analytics flush failed:", error);
-        // Re-add events to queue for retry
-        this.eventQueue.unshift(...events);
-      });
+    const endpoint = this.config.endpoint;
+    const request = this.createFlushRequest(events);
+    if (!endpoint || !request) {
+      return;
     }
+
+    fetch(endpoint, request).catch((error) => {
+      logger.error("Analytics flush failed:", error);
+      // Re-add events to queue for retry
+      this.eventQueue.unshift(...events);
+    });
 
     // Debug output
     if (this.config.debugMode) {
       // Using console.error which is allowed by ESLint
       logger.error("[Analytics] Flushed", events.length, "events");
     }
+  }
+
+  /**
+   * Build flush request for configured endpoint
+   */
+  private createFlushRequest(events: AnalyticsEventData[]): RequestInit | null {
+    if (!this.config.endpoint) {
+      return null;
+    }
+
+    if (this.config.endpoint.includes("/ingest")) {
+      return this.createPostHogBatchRequest(events);
+    }
+
+    return {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ events }),
+      keepalive: true, // Important for beforeunload
+    };
+  }
+
+  /**
+   * Build PostHog batch payload for /ingest proxy endpoint
+   */
+  private createPostHogBatchRequest(events: AnalyticsEventData[]): RequestInit | null {
+    const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
+    if (!posthogKey) {
+      logger.error("Analytics endpoint uses PostHog proxy but NEXT_PUBLIC_POSTHOG_KEY is missing");
+      return null;
+    }
+
+    const batch = events.map((event) => {
+      const properties = this.cleanObject({
+        event_name: event.event,
+        ...event.properties,
+        environment: event.environment,
+        puzzle_number: event.puzzleNumber,
+        session_id: event.sessionId,
+      });
+
+      return {
+        event: event.event,
+        distinct_id: event.userId || event.sessionId,
+        timestamp: new Date(event.timestamp).toISOString(),
+        properties,
+      };
+    });
+
+    return {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: posthogKey,
+        batch,
+        v: 1,
+      }),
+      keepalive: true, // Important for beforeunload
+    };
+  }
+
+  /**
+   * Remove undefined keys from object payloads
+   */
+  private cleanObject<T extends Record<string, JsonValue | undefined>>(
+    value: T,
+  ): Record<string, JsonValue> {
+    return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Record<
+      string,
+      JsonValue
+    >;
   }
 
   /**

@@ -18,6 +18,8 @@ global.fetch = mockFetch;
 
 describe("GameAnalytics", () => {
   let analytics: GameAnalytics;
+  const originalEndpoint = process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
+  const originalPosthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -38,6 +40,18 @@ describe("GameAnalytics", () => {
   afterEach(() => {
     analytics.reset();
     vi.clearAllTimers();
+
+    if (originalEndpoint === undefined) {
+      delete process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
+    } else {
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = originalEndpoint;
+    }
+
+    if (originalPosthogKey === undefined) {
+      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    } else {
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = originalPosthogKey;
+    }
   });
 
   describe("getInstance", () => {
@@ -424,6 +438,85 @@ describe("GameAnalytics", () => {
 
       const summary = sampledAnalytics.getSummary();
       expect(summary.queueSize).toBe(0);
+    });
+  });
+
+  describe("flush", () => {
+    it("should send PostHog batch payload for ingest endpoint", async () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
+
+      // Reset with config that will flush on first tracked event.
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { difficulty: "easy" }, "user-123", 42);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+
+      expect(url).toBe("/ingest/batch");
+      expect(payload.api_key).toBe("phc_test_key");
+      expect(payload.v).toBe(1);
+      expect(payload.batch).toHaveLength(1);
+      expect(payload.batch[0]).toEqual(
+        expect.objectContaining({
+          event: AnalyticsEvent.GAME_LOADED,
+          distinct_id: "user-123",
+          properties: expect.objectContaining({
+            event_name: AnalyticsEvent.GAME_LOADED,
+            difficulty: "easy",
+            puzzle_number: 42,
+          }),
+        }),
+      );
+    });
+
+    it("should send raw { events } payload for custom endpoint", async () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { difficulty: "medium" }, "user-456", 7);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+
+      expect(url).toBe("https://analytics.example.test/v1/events");
+      expect(payload).toEqual(
+        expect.objectContaining({
+          events: expect.arrayContaining([
+            expect.objectContaining({
+              event: AnalyticsEvent.GAME_LOADED,
+              userId: "user-456",
+              sessionId: expect.any(String),
+              puzzleNumber: 7,
+              properties: expect.objectContaining({
+                difficulty: "medium",
+              }),
+            }),
+          ]),
+        }),
+      );
     });
   });
 
