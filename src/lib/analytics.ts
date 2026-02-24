@@ -97,6 +97,7 @@ interface AnalyticsConfig {
   debugMode: boolean;
   sampleRate: number; // 0-1, for production sampling
   endpoint?: string; // Analytics endpoint URL
+  posthogKey?: string;
   batchSize: number;
   flushInterval: number; // ms
 }
@@ -115,6 +116,7 @@ export class GameAnalytics {
 
   private constructor(config?: Partial<AnalyticsConfig>) {
     const configuredEndpoint = process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT?.trim();
+    const configuredPosthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
 
     this.config = {
       enabled:
@@ -124,6 +126,7 @@ export class GameAnalytics {
       batchSize: 10,
       flushInterval: 5000, // 5 seconds
       endpoint: configuredEndpoint || undefined,
+      posthogKey: configuredPosthogKey || undefined,
       ...config,
     };
 
@@ -489,8 +492,14 @@ export class GameAnalytics {
     this.eventQueue = [];
 
     const endpoint = this.config.endpoint;
-    const request = this.createFlushRequest(events);
-    if (!endpoint || !request) {
+    if (!endpoint) {
+      return;
+    }
+
+    const request = this.createFlushRequest(endpoint, events);
+    if (!request) {
+      // Recover queue if payload generation fails (e.g. missing PostHog key).
+      this.eventQueue.unshift(...events);
       return;
     }
 
@@ -510,12 +519,8 @@ export class GameAnalytics {
   /**
    * Build flush request for configured endpoint
    */
-  private createFlushRequest(events: AnalyticsEventData[]): RequestInit | null {
-    if (!this.config.endpoint) {
-      return null;
-    }
-
-    if (this.config.endpoint.includes("/ingest")) {
+  private createFlushRequest(endpoint: string, events: AnalyticsEventData[]): RequestInit | null {
+    if (this.shouldUsePostHogBatch(endpoint)) {
       return this.createPostHogBatchRequest(events);
     }
 
@@ -528,10 +533,22 @@ export class GameAnalytics {
   }
 
   /**
+   * Use PostHog payload only for the known /ingest/batch endpoint.
+   */
+  private shouldUsePostHogBatch(endpoint: string): boolean {
+    try {
+      const pathname = new URL(endpoint, "https://analytics.local").pathname;
+      return pathname.replace(/\/+$/, "") === "/ingest/batch";
+    } catch {
+      return endpoint.replace(/\/+$/, "") === "/ingest/batch";
+    }
+  }
+
+  /**
    * Build PostHog batch payload for /ingest proxy endpoint
    */
   private createPostHogBatchRequest(events: AnalyticsEventData[]): RequestInit | null {
-    const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
+    const posthogKey = this.config.posthogKey;
     if (!posthogKey) {
       logger.error("Analytics endpoint uses PostHog proxy but NEXT_PUBLIC_POSTHOG_KEY is missing");
       return null;
@@ -539,8 +556,8 @@ export class GameAnalytics {
 
     const batch = events.map((event) => {
       const properties = this.cleanObject({
-        event_name: event.event,
         ...event.properties,
+        event_name: event.event,
         environment: event.environment,
         puzzle_number: event.puzzleNumber,
         session_id: event.sessionId,

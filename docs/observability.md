@@ -43,7 +43,7 @@ Environment variables required for observability:
   - `guess_submitted`
   - `state_divergence`
 - Confirm these dashboard metrics can be calculated:
-  - Daily active users from `game_loaded` deduped by `session_id`
+  - Daily active users from `game_loaded` deduped by `distinct_id`
   - Completion rate: `count(game_completed where won=true) / count(game_completed)`
   - Average guesses to solve from `guess_submitted` grouped by puzzle
 

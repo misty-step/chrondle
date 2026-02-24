@@ -457,7 +457,12 @@ describe("GameAnalytics", () => {
         flushInterval: 60000,
       });
 
-      analytics.track(AnalyticsEvent.GAME_LOADED, { difficulty: "easy" }, "user-123", 42);
+      analytics.track(
+        AnalyticsEvent.GAME_LOADED,
+        { difficulty: "easy", event_name: "should_not_override" },
+        "user-123",
+        42,
+      );
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
@@ -517,6 +522,61 @@ describe("GameAnalytics", () => {
           ]),
         }),
       );
+    });
+
+    it("should treat ingest-like custom endpoint as raw events payload", async () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/ingest/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "custom" }, "user-789", 9);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+
+      expect(url).toBe("https://analytics.example.test/v1/ingest/events");
+      expect(payload).toEqual(
+        expect.objectContaining({
+          events: expect.arrayContaining([
+            expect.objectContaining({
+              event: AnalyticsEvent.GAME_LOADED,
+              userId: "user-789",
+            }),
+          ]),
+        }),
+      );
+      expect(payload.api_key).toBeUndefined();
+    });
+
+    it("should requeue events when PostHog request cannot be built", () => {
+      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "missing-key" });
+
+      const summary = analytics.getSummary();
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(summary.queueSize).toBe(1);
     });
   });
 
