@@ -110,6 +110,7 @@ export class GameAnalytics {
   private config: AnalyticsConfig;
   private eventQueue: AnalyticsEventData[] = [];
   private sessionId: string;
+  private anonymousId?: string;
   private lastState: GameState | null = null;
   private stateHistory: StateTransition[] = [];
   private flushTimer?: NodeJS.Timeout;
@@ -133,6 +134,7 @@ export class GameAnalytics {
 
     // Generate session ID
     this.sessionId = this.generateSessionId();
+    this.anonymousId = this.getOrCreateAnonymousId();
 
     // Start flush timer if enabled
     if (this.config.enabled) {
@@ -472,6 +474,29 @@ export class GameAnalytics {
   }
 
   /**
+   * Get a stable anonymous ID for cross-refresh analytics deduplication.
+   */
+  private getOrCreateAnonymousId(): string | undefined {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const key = "chrondle-anonymous-id";
+    try {
+      const existing = window.localStorage.getItem(key);
+      if (existing) {
+        return existing;
+      }
+
+      const generated = `anon_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      window.localStorage.setItem(key, generated);
+      return generated;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Start flush timer
    */
   private startFlushTimer(): void {
@@ -571,7 +596,7 @@ export class GameAnalytics {
 
       return {
         event: event.event,
-        distinct_id: event.userId || event.sessionId,
+        distinct_id: event.userId || this.anonymousId || event.sessionId,
         timestamp: new Date(event.timestamp).toISOString(),
         properties,
       };

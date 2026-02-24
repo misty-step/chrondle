@@ -23,6 +23,7 @@ describe("GameAnalytics", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.removeItem("chrondle-anonymous-id");
 
     // Reset singleton
     (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
@@ -40,6 +41,7 @@ describe("GameAnalytics", () => {
   afterEach(() => {
     analytics.reset();
     vi.clearAllTimers();
+    window.localStorage.removeItem("chrondle-anonymous-id");
 
     if (originalEndpoint === undefined) {
       delete process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
@@ -487,6 +489,30 @@ describe("GameAnalytics", () => {
 
       await Promise.resolve();
       expect(mockCapture).not.toHaveBeenCalled();
+    });
+
+    it("should use persistent anonymous id for PostHog distinct_id", () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
+      window.localStorage.setItem("chrondle-anonymous-id", "anon_test_123");
+
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { difficulty: "anon" });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+      expect(payload.batch[0].distinct_id).toBe("anon_test_123");
     });
 
     it("should send raw { events } payload for custom endpoint", async () => {
