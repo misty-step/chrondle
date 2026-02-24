@@ -4,10 +4,12 @@ import { GameAnalytics, AnalyticsEvent } from "../analytics";
 import type { GameState } from "@/types/gameState";
 
 const mockCapture = vi.hoisted(() => vi.fn());
+const mockGetDistinctId = vi.hoisted(() => vi.fn<() => string | undefined>(() => undefined));
 
 vi.mock("posthog-js", () => ({
   default: {
     capture: mockCapture,
+    get_distinct_id: mockGetDistinctId,
     __loaded: true,
   },
 }));
@@ -18,9 +20,13 @@ global.fetch = mockFetch;
 
 describe("GameAnalytics", () => {
   let analytics: GameAnalytics;
+  const originalEndpoint = process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
+  const originalPayloadFormat = process.env.NEXT_PUBLIC_ANALYTICS_FORMAT;
+  const originalPosthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.removeItem("chrondle-anonymous-id");
 
     // Reset singleton
     (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
@@ -38,6 +44,25 @@ describe("GameAnalytics", () => {
   afterEach(() => {
     analytics.reset();
     vi.clearAllTimers();
+    window.localStorage.removeItem("chrondle-anonymous-id");
+
+    if (originalEndpoint === undefined) {
+      delete process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
+    } else {
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = originalEndpoint;
+    }
+
+    if (originalPayloadFormat === undefined) {
+      delete process.env.NEXT_PUBLIC_ANALYTICS_FORMAT;
+    } else {
+      process.env.NEXT_PUBLIC_ANALYTICS_FORMAT = originalPayloadFormat;
+    }
+
+    if (originalPosthogKey === undefined) {
+      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    } else {
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = originalPosthogKey;
+    }
   });
 
   describe("getInstance", () => {
@@ -424,6 +449,530 @@ describe("GameAnalytics", () => {
 
       const summary = sampledAnalytics.getSummary();
       expect(summary.queueSize).toBe(0);
+    });
+  });
+
+  describe("flush", () => {
+    it("should send PostHog batch payload for ingest endpoint", async () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
+
+      // Reset with config that will flush on first tracked event.
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+      });
+
+      analytics.track(
+        AnalyticsEvent.GAME_LOADED,
+        { difficulty: "easy", event_name: "should_not_override" },
+        "user-123",
+        42,
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+
+      expect(url).toBe("/ingest/batch");
+      expect(payload.api_key).toBe("phc_test_key");
+      expect(payload.v).toBe(1);
+      expect(payload.batch).toHaveLength(1);
+      expect(payload.batch[0]).toEqual(
+        expect.objectContaining({
+          event: AnalyticsEvent.GAME_LOADED,
+          distinct_id: "user-123",
+          properties: expect.objectContaining({
+            event_name: AnalyticsEvent.GAME_LOADED,
+            difficulty: "easy",
+            puzzle_number: 42,
+          }),
+        }),
+      );
+
+      await Promise.resolve();
+      expect(mockCapture).not.toHaveBeenCalled();
+    });
+
+    it("should use persistent anonymous id for PostHog distinct_id", () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
+      window.localStorage.setItem("chrondle-anonymous-id", "anon_test_123");
+
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { difficulty: "anon" });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+      expect(payload.batch[0].distinct_id).toBe("anon_test_123");
+    });
+
+    it("should prefer PostHog SDK distinct_id for batch payloads", async () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
+      mockGetDistinctId.mockReturnValue("ph_distinct_123");
+
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 100,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "sdk-distinct-id" });
+      await Promise.resolve();
+      window.dispatchEvent(new Event("beforeunload"));
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+      expect(payload.batch[0].distinct_id).toBe("ph_distinct_123");
+    });
+
+    it("should send raw { events } payload for custom endpoint", async () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { difficulty: "medium" }, "user-456", 7);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+
+      expect(url).toBe("https://analytics.example.test/v1/events");
+      expect(payload).toEqual(
+        expect.objectContaining({
+          events: expect.arrayContaining([
+            expect.objectContaining({
+              event: AnalyticsEvent.GAME_LOADED,
+              userId: "user-456",
+              sessionId: expect.any(String),
+              puzzleNumber: 7,
+              properties: expect.objectContaining({
+                difficulty: "medium",
+              }),
+            }),
+          ]),
+        }),
+      );
+    });
+
+    it("should treat ingest-like custom endpoint as raw events payload", async () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/ingest/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "custom" }, "user-789", 9);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+
+      expect(url).toBe("https://analytics.example.test/v1/ingest/events");
+      expect(payload).toEqual(
+        expect.objectContaining({
+          events: expect.arrayContaining([
+            expect.objectContaining({
+              event: AnalyticsEvent.GAME_LOADED,
+              userId: "user-789",
+            }),
+          ]),
+        }),
+      );
+      expect(payload.api_key).toBeUndefined();
+    });
+
+    it("should honor explicit payload format override", async () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
+      process.env.NEXT_PUBLIC_ANALYTICS_FORMAT = "events";
+      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "format-override" }, "user-123", 3);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+
+      expect(url).toBe("/ingest/batch");
+      expect(payload).toEqual(
+        expect.objectContaining({
+          events: expect.arrayContaining([
+            expect.objectContaining({
+              event: AnalyticsEvent.GAME_LOADED,
+              userId: "user-123",
+              puzzleNumber: 3,
+            }),
+          ]),
+        }),
+      );
+      expect(payload.api_key).toBeUndefined();
+
+      await Promise.resolve();
+      expect(mockCapture).toHaveBeenCalledWith(
+        AnalyticsEvent.GAME_LOADED,
+        expect.objectContaining({
+          source: "format-override",
+        }),
+      );
+    });
+
+    it("should skip direct PostHog capture for explicit posthog-batch override", async () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "https://analytics.example.test/v1/events";
+      process.env.NEXT_PUBLIC_ANALYTICS_FORMAT = "posthog-batch";
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_STARTED, { source: "batch-override" }, "user-999", 5);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+      expect(url).toBe("https://analytics.example.test/v1/events");
+      expect(payload).toEqual(
+        expect.objectContaining({
+          api_key: "phc_test_key",
+          batch: expect.arrayContaining([
+            expect.objectContaining({
+              event: AnalyticsEvent.GAME_STARTED,
+              distinct_id: "user-999",
+            }),
+          ]),
+          v: 1,
+        }),
+      );
+
+      await Promise.resolve();
+      expect(mockCapture).not.toHaveBeenCalled();
+    });
+
+    it("should drop events when PostHog key is missing to avoid retry loop", () => {
+      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "missing-key" });
+
+      const summary = analytics.getSummary();
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(summary.queueSize).toBe(0);
+    });
+
+    it("should cap queue growth when flush retries keep failing", async () => {
+      mockFetch.mockRejectedValue(new Error("network down"));
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        maxQueueSize: 2,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { n: 1 });
+      await Promise.resolve();
+      analytics.track(AnalyticsEvent.GAME_STARTED, { n: 2 });
+      await Promise.resolve();
+      analytics.track(AnalyticsEvent.HINT_VIEWED, { n: 3 });
+      await Promise.resolve();
+
+      const summary = analytics.getSummary();
+      expect(summary.queueSize).toBe(2);
+    });
+
+    it("should retry transient server errors (5xx)", async () => {
+      mockFetch.mockResolvedValue(new Response("server error", { status: 503 }));
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "retry-5xx" });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const summary = analytics.getSummary();
+      expect(summary.queueSize).toBe(1);
+    });
+
+    it("should preserve event order when requeueing failed flushes", async () => {
+      let rejectFirst: (reason?: unknown) => void = () => {};
+      const firstFetch = new Promise<Response>((_resolve, reject) => {
+        rejectFirst = reject;
+      });
+
+      mockFetch.mockImplementationOnce(() => firstFetch);
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { seq: 1 });
+      analytics.track(AnalyticsEvent.GAME_STARTED, { seq: 2 });
+
+      rejectFirst(new Error("network down"));
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      window.dispatchEvent(new Event("beforeunload"));
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const [, secondInit] = mockFetch.mock.calls[1] as [string, RequestInit];
+      const payload = JSON.parse(secondInit.body as string) as {
+        events: Array<{ properties?: { seq?: number } }>;
+      };
+
+      expect(payload.events.map((event) => event.properties?.seq)).toEqual([1, 2]);
+    });
+
+    it("should omit keepalive on regular interval flushes", () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "interval" });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(init.keepalive).toBeUndefined();
+    });
+
+    it("should use keepalive for beforeunload flush", () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 100,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "beforeunload" });
+      window.dispatchEvent(new Event("beforeunload"));
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(init.keepalive).toBe(true);
+    });
+
+    it("should allow keepalive flush while regular flush is in progress", async () => {
+      let resolveFirst: (value: Response) => void = () => {};
+      const firstFetch = new Promise<Response>((resolve) => {
+        resolveFirst = resolve;
+      });
+
+      mockFetch.mockImplementationOnce(() => firstFetch);
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { seq: 1 });
+      analytics.track(AnalyticsEvent.GAME_STARTED, { seq: 2 });
+
+      window.dispatchEvent(new Event("beforeunload"));
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const [, secondInit] = mockFetch.mock.calls[1] as [string, RequestInit];
+      expect(secondInit.keepalive).toBe(true);
+
+      const payload = JSON.parse(secondInit.body as string) as {
+        events: Array<{ properties?: { seq?: number } }>;
+      };
+      expect(payload.events.map((event) => event.properties?.seq)).toEqual([2]);
+
+      resolveFirst(new Response(null, { status: 200 }));
+      await Promise.resolve();
+    });
+
+    it("should use keepalive for visibilitychange flush", () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      const originalVisibilityState = Object.getOwnPropertyDescriptor(document, "visibilityState");
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "hidden",
+      });
+
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 100,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "visibilitychange" });
+      window.dispatchEvent(new Event("visibilitychange"));
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(init.keepalive).toBe(true);
+
+      if (originalVisibilityState) {
+        Object.defineProperty(document, "visibilityState", originalVisibilityState);
+      } else {
+        delete (document as { visibilityState?: string }).visibilityState;
+      }
+    });
+
+    it("should cap keepalive flush batch size to avoid oversized payloads", () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 200,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      for (let index = 0; index < 120; index += 1) {
+        analytics.track(AnalyticsEvent.GAME_LOADED, { index });
+      }
+      window.dispatchEvent(new Event("beforeunload"));
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string) as {
+        events: Array<{ properties?: { index?: number } }>;
+      };
+      expect(payload.events).toHaveLength(50);
+      expect(payload.events[0]?.properties?.index).toBe(0);
+      expect(payload.events[49]?.properties?.index).toBe(49);
+
+      const summary = analytics.getSummary();
+      expect(summary.queueSize).toBe(70);
+    });
+
+    it("should keep queued events when endpoint is missing", () => {
+      delete process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 100,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "no-endpoint" });
+      window.dispatchEvent(new Event("beforeunload"));
+
+      const summary = analytics.getSummary();
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(summary.queueSize).toBe(1);
     });
   });
 

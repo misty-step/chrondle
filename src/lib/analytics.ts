@@ -12,6 +12,10 @@
 import { logger } from "@/lib/logger";
 import { GameState, isReady } from "@/types/gameState";
 
+type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
+type JsonObject = { [key: string]: JsonValue | undefined };
+type JsonArray = JsonValue[];
+
 // Lazy-loaded PostHog - avoids bundling in initial chunk
 let posthogPromise: Promise<typeof import("posthog-js").default> | null = null;
 
@@ -93,7 +97,10 @@ interface AnalyticsConfig {
   debugMode: boolean;
   sampleRate: number; // 0-1, for production sampling
   endpoint?: string; // Analytics endpoint URL
+  payloadFormat?: "events" | "posthog-batch";
+  posthogKey?: string;
   batchSize: number;
+  maxQueueSize: number;
   flushInterval: number; // ms
 }
 
@@ -105,23 +112,37 @@ export class GameAnalytics {
   private config: AnalyticsConfig;
   private eventQueue: AnalyticsEventData[] = [];
   private sessionId: string;
+  private anonymousId?: string;
+  private posthogDistinctId?: string;
   private lastState: GameState | null = null;
   private stateHistory: StateTransition[] = [];
   private flushTimer?: NodeJS.Timeout;
+  private isFlushing = false;
+  private hasLoggedInvalidPostHogConfig = false;
+  private hasLoggedQueueOverflow = false;
 
   private constructor(config?: Partial<AnalyticsConfig>) {
+    const configuredEndpoint = process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT?.trim();
+    const configuredPayloadFormat = process.env.NEXT_PUBLIC_ANALYTICS_FORMAT?.trim();
+    const configuredPosthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
+
     this.config = {
       enabled:
         process.env.NODE_ENV === "production" || process.env.NEXT_PUBLIC_ANALYTICS_DEBUG === "true",
       debugMode: process.env.NODE_ENV === "development",
       sampleRate: 1.0, // Track all events by default
       batchSize: 10,
+      maxQueueSize: 1000,
       flushInterval: 5000, // 5 seconds
+      endpoint: configuredEndpoint || undefined,
+      payloadFormat: this.parsePayloadFormat(configuredPayloadFormat),
+      posthogKey: configuredPosthogKey || undefined,
       ...config,
     };
 
     // Generate session ID
     this.sessionId = this.generateSessionId();
+    this.anonymousId = this.getOrCreateAnonymousId();
 
     // Start flush timer if enabled
     if (this.config.enabled) {
@@ -130,10 +151,11 @@ export class GameAnalytics {
 
     // Bind window events for cleanup
     if (typeof window !== "undefined") {
-      window.addEventListener("beforeunload", () => this.flush());
+      this.syncDistinctIdFromPostHog();
+      window.addEventListener("beforeunload", () => this.flush({ keepalive: true }));
       window.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "hidden") {
-          this.flush();
+          this.flush({ keepalive: true });
         }
       });
     }
@@ -377,6 +399,10 @@ export class GameAnalytics {
   ): void {
     if (!this.config.enabled) return;
 
+    if (typeof window !== "undefined") {
+      this.syncDistinctIdFromPostHog();
+    }
+
     // Apply sampling rate
     if (Math.random() > this.config.sampleRate) return;
 
@@ -392,6 +418,7 @@ export class GameAnalytics {
 
     // Add to queue
     this.eventQueue.push(eventData);
+    this.trimQueueIfNeeded();
 
     // Debug logging
     if (this.config.debugMode) {
@@ -405,7 +432,10 @@ export class GameAnalytics {
     }
 
     // Send to PostHog if available (lazy-loaded for bundle optimization)
-    if (typeof window !== "undefined") {
+    const shouldSkipDirectPostHogCapture =
+      !!this.config.endpoint && this.resolvePayloadFormat(this.config.endpoint) === "posthog-batch";
+
+    if (typeof window !== "undefined" && !shouldSkipDirectPostHogCapture) {
       getPostHog().then((posthog) => {
         if (posthog.__loaded) {
           posthog.capture(event, {
@@ -458,6 +488,29 @@ export class GameAnalytics {
   }
 
   /**
+   * Get a stable anonymous ID for cross-refresh analytics deduplication.
+   */
+  private getOrCreateAnonymousId(): string | undefined {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const key = "chrondle-anonymous-id";
+    try {
+      const existing = window.localStorage.getItem(key);
+      if (existing) {
+        return existing;
+      }
+
+      const generated = `anon_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      window.localStorage.setItem(key, generated);
+      return generated;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Start flush timer
    */
   private startFlushTimer(): void {
@@ -475,31 +528,225 @@ export class GameAnalytics {
   /**
    * Flush event queue to analytics service
    */
-  private flush(): void {
+  private flush(options: { keepalive?: boolean } = {}): void {
     if (this.eventQueue.length === 0) return;
 
-    const events = [...this.eventQueue];
-    this.eventQueue = [];
+    const keepalive = options.keepalive === true;
+    const allowConcurrentKeepalive = keepalive && this.isFlushing;
+    if (this.isFlushing && !allowConcurrentKeepalive) return;
 
-    // In production, send to analytics endpoint
-    if (this.config.endpoint) {
-      fetch(this.config.endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ events }),
-        keepalive: true, // Important for beforeunload
-      }).catch((error) => {
-        logger.error("Analytics flush failed:", error);
-        // Re-add events to queue for retry
-        this.eventQueue.unshift(...events);
-      });
+    const endpoint = this.config.endpoint;
+    if (!endpoint) {
+      return;
     }
+
+    const payloadFormat = this.resolvePayloadFormat(endpoint);
+    if (payloadFormat === "posthog-batch" && !this.config.posthogKey) {
+      if (!this.hasLoggedInvalidPostHogConfig) {
+        logger.error("Analytics endpoint is /ingest/batch but NEXT_PUBLIC_POSTHOG_KEY is missing");
+        this.hasLoggedInvalidPostHogConfig = true;
+      }
+      // Configuration is invalid for this sink; drop buffered events to avoid a retry loop.
+      this.eventQueue = [];
+      return;
+    }
+
+    const events = this.eventQueue.splice(0, this.getFlushBatchSize(keepalive));
+    const request = this.createFlushRequest(payloadFormat, events, keepalive);
+    if (!allowConcurrentKeepalive) {
+      this.isFlushing = true;
+    }
+
+    fetch(endpoint, request)
+      .then((response) => {
+        // Retry transient upstream failures.
+        if (!response.ok && (response.status >= 500 || response.status === 429)) {
+          throw new Error(`Analytics flush failed with HTTP ${response.status}`);
+        }
+
+        if (!response.ok) {
+          logger.error("Analytics flush failed with non-retryable status:", response.status);
+        }
+      })
+      .catch((error) => {
+        logger.error("Analytics flush failed:", error);
+        this.requeueFailedEvents(events);
+      })
+      .finally(() => {
+        if (!allowConcurrentKeepalive) {
+          this.isFlushing = false;
+        }
+      });
 
     // Debug output
     if (this.config.debugMode) {
       // Using console.error which is allowed by ESLint
       logger.error("[Analytics] Flushed", events.length, "events");
     }
+  }
+
+  /**
+   * Build flush request for configured endpoint
+   */
+  private createFlushRequest(
+    payloadFormat: "events" | "posthog-batch",
+    events: AnalyticsEventData[],
+    keepalive: boolean,
+  ): RequestInit {
+    if (payloadFormat === "posthog-batch") {
+      return this.createPostHogBatchRequest(events, keepalive);
+    }
+
+    return {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ events }),
+      ...(keepalive ? { keepalive: true } : {}),
+    };
+  }
+
+  private parsePayloadFormat(value?: string): AnalyticsConfig["payloadFormat"] {
+    if (!value) {
+      return undefined;
+    }
+
+    if (value === "events" || value === "posthog-batch") {
+      return value;
+    }
+
+    logger.error(
+      "Invalid NEXT_PUBLIC_ANALYTICS_FORMAT. Expected 'events' or 'posthog-batch'. Falling back to endpoint-based inference.",
+    );
+    return undefined;
+  }
+
+  private resolvePayloadFormat(endpoint: string): "events" | "posthog-batch" {
+    return (
+      this.config.payloadFormat ??
+      (this.shouldUsePostHogBatch(endpoint) ? "posthog-batch" : "events")
+    );
+  }
+
+  private getFlushBatchSize(keepalive: boolean): number {
+    if (keepalive) {
+      // keepalive requests have strict body-size limits in browsers.
+      return 50;
+    }
+
+    const configuredBatchSize = Math.max(1, this.config.batchSize);
+    return Math.min(configuredBatchSize, 100);
+  }
+
+  /**
+   * Use PostHog payload only for the known /ingest/batch endpoint.
+   */
+  private shouldUsePostHogBatch(endpoint: string): boolean {
+    try {
+      const pathname = new URL(endpoint, "https://analytics.local").pathname;
+      return pathname.replace(/\/+$/, "") === "/ingest/batch";
+    } catch {
+      return endpoint.replace(/\/+$/, "") === "/ingest/batch";
+    }
+  }
+
+  /**
+   * Build PostHog batch payload for /ingest proxy endpoint
+   */
+  private createPostHogBatchRequest(events: AnalyticsEventData[], keepalive: boolean): RequestInit {
+    const posthogKey = this.config.posthogKey;
+    if (!posthogKey) {
+      throw new Error("PostHog batch request requires NEXT_PUBLIC_POSTHOG_KEY");
+    }
+
+    const batch = events.map((event) => {
+      const properties = this.cleanObject({
+        ...event.properties,
+        event_name: event.event,
+        environment: event.environment,
+        puzzle_number: event.puzzleNumber,
+        session_id: event.sessionId,
+      });
+
+      return {
+        event: event.event,
+        distinct_id: this.resolveDistinctId(event),
+        timestamp: new Date(event.timestamp).toISOString(),
+        properties,
+      };
+    });
+
+    return {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: posthogKey,
+        batch,
+        v: 1,
+      }),
+      ...(keepalive ? { keepalive: true } : {}),
+    };
+  }
+
+  private resolveDistinctId(event: AnalyticsEventData): string {
+    return event.userId || this.posthogDistinctId || this.anonymousId || event.sessionId;
+  }
+
+  private syncDistinctIdFromPostHog(): void {
+    getPostHog()
+      .then((posthog) => {
+        if (!posthog.__loaded) {
+          return;
+        }
+
+        const getDistinctId = (posthog as typeof posthog & { get_distinct_id?: () => unknown })
+          .get_distinct_id;
+        if (typeof getDistinctId !== "function") {
+          return;
+        }
+
+        const distinctId = getDistinctId();
+        if (typeof distinctId === "string" && distinctId.trim().length > 0) {
+          this.posthogDistinctId = distinctId;
+          this.anonymousId = distinctId;
+        }
+      })
+      .catch(() => {
+        // Best-effort sync; ignore SDK load failures in analytics path.
+      });
+  }
+
+  private requeueFailedEvents(events: AnalyticsEventData[]): void {
+    // Preserve chronological order by restoring failed events ahead of newer queued events.
+    this.eventQueue = [...events, ...this.eventQueue];
+    this.trimQueueIfNeeded();
+  }
+
+  /**
+   * Keep queue bounded to prevent memory growth during outages.
+   */
+  private trimQueueIfNeeded(): void {
+    const overflow = this.eventQueue.length - this.config.maxQueueSize;
+    if (overflow <= 0) {
+      return;
+    }
+
+    this.eventQueue.splice(0, overflow);
+    if (!this.hasLoggedQueueOverflow) {
+      logger.error("Analytics queue capped; dropping oldest events to bound memory");
+      this.hasLoggedQueueOverflow = true;
+    }
+  }
+
+  /**
+   * Remove undefined keys from object payloads
+   */
+  private cleanObject<T extends Record<string, JsonValue | undefined>>(
+    value: T,
+  ): Record<string, JsonValue> {
+    return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Record<
+      string,
+      JsonValue
+    >;
   }
 
   /**
@@ -510,6 +757,9 @@ export class GameAnalytics {
     this.stateHistory = [];
     this.lastState = null;
     this.sessionId = this.generateSessionId();
+    this.isFlushing = false;
+    this.hasLoggedInvalidPostHogConfig = false;
+    this.hasLoggedQueueOverflow = false;
   }
 }
 

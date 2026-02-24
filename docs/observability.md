@@ -25,6 +25,28 @@ Environment variables required for observability:
 | `NEXT_PUBLIC_SENTRY_RELEASE`     | Release identifier (commit SHA).                      | CI/Prod    |
 | `ORDER_FAILURE_SLACK_WEBHOOK`    | Webhook URL for critical order failure alerts.        | Optional   |
 
+## Game Analytics Verification
+
+- `GameAnalytics` uses `NEXT_PUBLIC_ANALYTICS_ENDPOINT` to flush event batches from the client.
+- Set this to `/ingest/batch` for PostHog (batches are transformed in `src/lib/analytics.ts`).
+- Optional fallback/custom backends should accept:
+
+  ```json
+  { "events": [ ...AnalyticsEventData... ] }
+  ```
+
+### Launch validation checklist
+
+- Confirm events are being captured in PostHog (or your backend) for:
+  - `game_loaded`
+  - `game_completed`
+  - `guess_submitted`
+  - `state_divergence`
+- Confirm these dashboard metrics can be calculated:
+  - Daily active users from `game_loaded` deduped by `distinct_id`
+  - Completion rate: `count(game_completed where won=true) / count(game_completed)`
+  - Average guesses to solve from `guess_submitted` grouped by puzzle
+
 ## Usage
 
 ### Client-Side Mutations
