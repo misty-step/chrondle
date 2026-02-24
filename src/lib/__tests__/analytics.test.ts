@@ -607,6 +607,72 @@ describe("GameAnalytics", () => {
       expect(mockFetch).not.toHaveBeenCalled();
       expect(summary.queueSize).toBe(0);
     });
+
+    it("should cap queue growth when flush retries keep failing", async () => {
+      mockFetch.mockRejectedValue(new Error("network down"));
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        maxQueueSize: 2,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { n: 1 });
+      await Promise.resolve();
+      analytics.track(AnalyticsEvent.GAME_STARTED, { n: 2 });
+      await Promise.resolve();
+      analytics.track(AnalyticsEvent.HINT_VIEWED, { n: 3 });
+      await Promise.resolve();
+
+      const summary = analytics.getSummary();
+      expect(summary.queueSize).toBe(2);
+    });
+
+    it("should omit keepalive on regular interval flushes", () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "interval" });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(init.keepalive).toBeUndefined();
+    });
+
+    it("should use keepalive for beforeunload flush", () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 100,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "beforeunload" });
+      window.dispatchEvent(new Event("beforeunload"));
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(init.keepalive).toBe(true);
+    });
   });
 
   describe("reset", () => {

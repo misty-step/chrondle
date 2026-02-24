@@ -99,6 +99,7 @@ interface AnalyticsConfig {
   endpoint?: string; // Analytics endpoint URL
   posthogKey?: string;
   batchSize: number;
+  maxQueueSize: number;
   flushInterval: number; // ms
 }
 
@@ -115,6 +116,7 @@ export class GameAnalytics {
   private stateHistory: StateTransition[] = [];
   private flushTimer?: NodeJS.Timeout;
   private hasLoggedInvalidPostHogConfig = false;
+  private hasLoggedQueueOverflow = false;
 
   private constructor(config?: Partial<AnalyticsConfig>) {
     const configuredEndpoint = process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT?.trim();
@@ -126,6 +128,7 @@ export class GameAnalytics {
       debugMode: process.env.NODE_ENV === "development",
       sampleRate: 1.0, // Track all events by default
       batchSize: 10,
+      maxQueueSize: 1000,
       flushInterval: 5000, // 5 seconds
       endpoint: configuredEndpoint || undefined,
       posthogKey: configuredPosthogKey || undefined,
@@ -143,7 +146,7 @@ export class GameAnalytics {
 
     // Bind window events for cleanup
     if (typeof window !== "undefined") {
-      window.addEventListener("beforeunload", () => this.flush());
+      window.addEventListener("beforeunload", () => this.flush({ keepalive: true }));
       window.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "hidden") {
           this.flush();
@@ -405,6 +408,7 @@ export class GameAnalytics {
 
     // Add to queue
     this.eventQueue.push(eventData);
+    this.trimQueueIfNeeded();
 
     // Debug logging
     if (this.config.debugMode) {
@@ -514,7 +518,7 @@ export class GameAnalytics {
   /**
    * Flush event queue to analytics service
    */
-  private flush(): void {
+  private flush(options: { keepalive?: boolean } = {}): void {
     if (this.eventQueue.length === 0) return;
 
     const events = [...this.eventQueue];
@@ -533,12 +537,13 @@ export class GameAnalytics {
       return;
     }
 
-    const request = this.createFlushRequest(endpoint, events);
+    const request = this.createFlushRequest(endpoint, events, options.keepalive === true);
 
     fetch(endpoint, request).catch((error) => {
       logger.error("Analytics flush failed:", error);
       // Re-add events to queue for retry
       this.eventQueue.unshift(...events);
+      this.trimQueueIfNeeded();
     });
 
     // Debug output
@@ -551,16 +556,20 @@ export class GameAnalytics {
   /**
    * Build flush request for configured endpoint
    */
-  private createFlushRequest(endpoint: string, events: AnalyticsEventData[]): RequestInit {
+  private createFlushRequest(
+    endpoint: string,
+    events: AnalyticsEventData[],
+    keepalive: boolean,
+  ): RequestInit {
     if (this.shouldUsePostHogBatch(endpoint)) {
-      return this.createPostHogBatchRequest(events);
+      return this.createPostHogBatchRequest(events, keepalive);
     }
 
     return {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ events }),
-      keepalive: true, // Important for beforeunload
+      ...(keepalive ? { keepalive: true } : {}),
     };
   }
 
@@ -579,7 +588,7 @@ export class GameAnalytics {
   /**
    * Build PostHog batch payload for /ingest proxy endpoint
    */
-  private createPostHogBatchRequest(events: AnalyticsEventData[]): RequestInit {
+  private createPostHogBatchRequest(events: AnalyticsEventData[], keepalive: boolean): RequestInit {
     const posthogKey = this.config.posthogKey;
     if (!posthogKey) {
       throw new Error("PostHog batch request requires NEXT_PUBLIC_POSTHOG_KEY");
@@ -610,8 +619,24 @@ export class GameAnalytics {
         batch,
         v: 1,
       }),
-      keepalive: true, // Important for beforeunload
+      ...(keepalive ? { keepalive: true } : {}),
     };
+  }
+
+  /**
+   * Keep queue bounded to prevent memory growth during outages.
+   */
+  private trimQueueIfNeeded(): void {
+    const overflow = this.eventQueue.length - this.config.maxQueueSize;
+    if (overflow <= 0) {
+      return;
+    }
+
+    this.eventQueue.splice(0, overflow);
+    if (!this.hasLoggedQueueOverflow) {
+      logger.error("Analytics queue capped; dropping oldest events to bound memory");
+      this.hasLoggedQueueOverflow = true;
+    }
   }
 
   /**
@@ -635,6 +660,7 @@ export class GameAnalytics {
     this.lastState = null;
     this.sessionId = this.generateSessionId();
     this.hasLoggedInvalidPostHogConfig = false;
+    this.hasLoggedQueueOverflow = false;
   }
 }
 
