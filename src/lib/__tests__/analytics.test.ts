@@ -4,7 +4,7 @@ import { GameAnalytics, AnalyticsEvent } from "../analytics";
 import type { GameState } from "@/types/gameState";
 
 const mockCapture = vi.hoisted(() => vi.fn());
-const mockGetDistinctId = vi.hoisted(() => vi.fn(() => undefined));
+const mockGetDistinctId = vi.hoisted(() => vi.fn<() => string | undefined>(() => undefined));
 
 vi.mock("posthog-js", () => ({
   default: {
