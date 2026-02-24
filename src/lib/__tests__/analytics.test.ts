@@ -57,7 +57,6 @@ describe("GameAnalytics", () => {
     } else {
       process.env.NEXT_PUBLIC_ANALYTICS_FORMAT = originalPayloadFormat;
     }
-
     if (originalPosthogKey === undefined) {
       delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
     } else {

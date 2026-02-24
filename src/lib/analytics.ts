@@ -736,7 +736,6 @@ export class GameAnalytics {
       this.hasLoggedQueueOverflow = true;
     }
   }
-
   /**
    * Remove undefined keys from object payloads
    */
