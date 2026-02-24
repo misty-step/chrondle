@@ -677,6 +677,68 @@ describe("GameAnalytics", () => {
       expect(summary.queueSize).toBe(2);
     });
 
+    it("should retry transient server errors (5xx)", async () => {
+      mockFetch.mockResolvedValue(new Response("server error", { status: 503 }));
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "retry-5xx" });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const summary = analytics.getSummary();
+      expect(summary.queueSize).toBe(1);
+    });
+
+    it("should preserve event order when requeueing failed flushes", async () => {
+      let rejectFirst: (reason?: unknown) => void = () => {};
+      const firstFetch = new Promise<Response>((_resolve, reject) => {
+        rejectFirst = reject;
+      });
+
+      mockFetch.mockImplementationOnce(() => firstFetch);
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { seq: 1 });
+      analytics.track(AnalyticsEvent.GAME_STARTED, { seq: 2 });
+
+      rejectFirst(new Error("network down"));
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      window.dispatchEvent(new Event("beforeunload"));
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const [, secondInit] = mockFetch.mock.calls[1] as [string, RequestInit];
+      const payload = JSON.parse(secondInit.body as string) as {
+        events: Array<{ properties?: { seq?: number } }>;
+      };
+
+      expect(payload.events.map((event) => event.properties?.seq)).toEqual([1, 2]);
+    });
+
     it("should omit keepalive on regular interval flushes", () => {
       mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
       (GameAnalytics as unknown as { instance: undefined }).instance = undefined;

@@ -116,6 +116,7 @@ export class GameAnalytics {
   private lastState: GameState | null = null;
   private stateHistory: StateTransition[] = [];
   private flushTimer?: NodeJS.Timeout;
+  private isFlushing = false;
   private hasLoggedInvalidPostHogConfig = false;
   private hasLoggedQueueOverflow = false;
 
@@ -523,6 +524,7 @@ export class GameAnalytics {
    */
   private flush(options: { keepalive?: boolean } = {}): void {
     if (this.eventQueue.length === 0) return;
+    if (this.isFlushing) return;
 
     const endpoint = this.config.endpoint;
     if (!endpoint) {
@@ -543,13 +545,26 @@ export class GameAnalytics {
     const events = [...this.eventQueue];
     this.eventQueue = [];
     const request = this.createFlushRequest(payloadFormat, events, options.keepalive === true);
+    this.isFlushing = true;
 
-    fetch(endpoint, request).catch((error) => {
-      logger.error("Analytics flush failed:", error);
-      // Re-add events to queue for retry
-      this.eventQueue.unshift(...events);
-      this.trimQueueIfNeeded();
-    });
+    fetch(endpoint, request)
+      .then((response) => {
+        // Retry transient upstream failures.
+        if (!response.ok && (response.status >= 500 || response.status === 429)) {
+          throw new Error(`Analytics flush failed with HTTP ${response.status}`);
+        }
+
+        if (!response.ok) {
+          logger.error("Analytics flush failed with non-retryable status:", response.status);
+        }
+      })
+      .catch((error) => {
+        logger.error("Analytics flush failed:", error);
+        this.requeueFailedEvents(events);
+      })
+      .finally(() => {
+        this.isFlushing = false;
+      });
 
     // Debug output
     if (this.config.debugMode) {
@@ -650,6 +665,12 @@ export class GameAnalytics {
     };
   }
 
+  private requeueFailedEvents(events: AnalyticsEventData[]): void {
+    // Preserve chronological order by restoring failed events ahead of newer queued events.
+    this.eventQueue = [...events, ...this.eventQueue];
+    this.trimQueueIfNeeded();
+  }
+
   /**
    * Keep queue bounded to prevent memory growth during outages.
    */
@@ -686,6 +707,7 @@ export class GameAnalytics {
     this.stateHistory = [];
     this.lastState = null;
     this.sessionId = this.generateSessionId();
+    this.isFlushing = false;
     this.hasLoggedInvalidPostHogConfig = false;
     this.hasLoggedQueueOverflow = false;
   }
