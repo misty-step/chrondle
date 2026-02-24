@@ -113,6 +113,7 @@ export class GameAnalytics {
   private lastState: GameState | null = null;
   private stateHistory: StateTransition[] = [];
   private flushTimer?: NodeJS.Timeout;
+  private hasLoggedInvalidPostHogConfig = false;
 
   private constructor(config?: Partial<AnalyticsConfig>) {
     const configuredEndpoint = process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT?.trim();
@@ -415,7 +416,10 @@ export class GameAnalytics {
     }
 
     // Send to PostHog if available (lazy-loaded for bundle optimization)
-    if (typeof window !== "undefined") {
+    const shouldSkipDirectPostHogCapture =
+      !!this.config.endpoint && this.shouldUsePostHogBatch(this.config.endpoint);
+
+    if (typeof window !== "undefined" && !shouldSkipDirectPostHogCapture) {
       getPostHog().then((posthog) => {
         if (posthog.__loaded) {
           posthog.capture(event, {
@@ -496,6 +500,14 @@ export class GameAnalytics {
       return;
     }
 
+    if (this.shouldUsePostHogBatch(endpoint) && !this.config.posthogKey) {
+      if (!this.hasLoggedInvalidPostHogConfig) {
+        logger.error("Analytics endpoint is /ingest/batch but NEXT_PUBLIC_POSTHOG_KEY is missing");
+        this.hasLoggedInvalidPostHogConfig = true;
+      }
+      return;
+    }
+
     const request = this.createFlushRequest(endpoint, events);
     if (!request) {
       // Recover queue if payload generation fails (e.g. missing PostHog key).
@@ -550,7 +562,6 @@ export class GameAnalytics {
   private createPostHogBatchRequest(events: AnalyticsEventData[]): RequestInit | null {
     const posthogKey = this.config.posthogKey;
     if (!posthogKey) {
-      logger.error("Analytics endpoint uses PostHog proxy but NEXT_PUBLIC_POSTHOG_KEY is missing");
       return null;
     }
 
@@ -603,6 +614,7 @@ export class GameAnalytics {
     this.stateHistory = [];
     this.lastState = null;
     this.sessionId = this.generateSessionId();
+    this.hasLoggedInvalidPostHogConfig = false;
   }
 }
 

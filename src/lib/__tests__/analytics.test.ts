@@ -484,6 +484,9 @@ describe("GameAnalytics", () => {
           }),
         }),
       );
+
+      await Promise.resolve();
+      expect(mockCapture).not.toHaveBeenCalled();
     });
 
     it("should send raw { events } payload for custom endpoint", async () => {
@@ -559,7 +562,7 @@ describe("GameAnalytics", () => {
       expect(payload.api_key).toBeUndefined();
     });
 
-    it("should requeue events when PostHog request cannot be built", () => {
+    it("should drop events when PostHog key is missing to avoid retry loop", () => {
       delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
       process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
       (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
@@ -576,7 +579,7 @@ describe("GameAnalytics", () => {
 
       const summary = analytics.getSummary();
       expect(mockFetch).not.toHaveBeenCalled();
-      expect(summary.queueSize).toBe(1);
+      expect(summary.queueSize).toBe(0);
     });
   });
 
