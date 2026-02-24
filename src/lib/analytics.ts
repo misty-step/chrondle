@@ -113,6 +113,7 @@ export class GameAnalytics {
   private eventQueue: AnalyticsEventData[] = [];
   private sessionId: string;
   private anonymousId?: string;
+  private posthogDistinctId?: string;
   private lastState: GameState | null = null;
   private stateHistory: StateTransition[] = [];
   private flushTimer?: NodeJS.Timeout;
@@ -150,6 +151,7 @@ export class GameAnalytics {
 
     // Bind window events for cleanup
     if (typeof window !== "undefined") {
+      this.syncDistinctIdFromPostHog();
       window.addEventListener("beforeunload", () => this.flush({ keepalive: true }));
       window.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "hidden") {
@@ -396,6 +398,10 @@ export class GameAnalytics {
     puzzleNumber?: number,
   ): void {
     if (!this.config.enabled) return;
+
+    if (typeof window !== "undefined") {
+      this.syncDistinctIdFromPostHog();
+    }
 
     // Apply sampling rate
     if (Math.random() > this.config.sampleRate) return;
@@ -663,7 +669,7 @@ export class GameAnalytics {
 
       return {
         event: event.event,
-        distinct_id: event.userId || this.anonymousId || event.sessionId,
+        distinct_id: this.resolveDistinctId(event),
         timestamp: new Date(event.timestamp).toISOString(),
         properties,
       };
@@ -679,6 +685,34 @@ export class GameAnalytics {
       }),
       ...(keepalive ? { keepalive: true } : {}),
     };
+  }
+
+  private resolveDistinctId(event: AnalyticsEventData): string {
+    return event.userId || this.posthogDistinctId || this.anonymousId || event.sessionId;
+  }
+
+  private syncDistinctIdFromPostHog(): void {
+    getPostHog()
+      .then((posthog) => {
+        if (!posthog.__loaded) {
+          return;
+        }
+
+        const getDistinctId = (posthog as typeof posthog & { get_distinct_id?: () => unknown })
+          .get_distinct_id;
+        if (typeof getDistinctId !== "function") {
+          return;
+        }
+
+        const distinctId = getDistinctId();
+        if (typeof distinctId === "string" && distinctId.trim().length > 0) {
+          this.posthogDistinctId = distinctId;
+          this.anonymousId = distinctId;
+        }
+      })
+      .catch(() => {
+        // Best-effort sync; ignore SDK load failures in analytics path.
+      });
   }
 
   private requeueFailedEvents(events: AnalyticsEventData[]): void {

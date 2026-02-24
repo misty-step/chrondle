@@ -4,10 +4,12 @@ import { GameAnalytics, AnalyticsEvent } from "../analytics";
 import type { GameState } from "@/types/gameState";
 
 const mockCapture = vi.hoisted(() => vi.fn());
+const mockGetDistinctId = vi.hoisted(() => vi.fn(() => undefined));
 
 vi.mock("posthog-js", () => ({
   default: {
     capture: mockCapture,
+    get_distinct_id: mockGetDistinctId,
     __loaded: true,
   },
 }));
@@ -520,6 +522,31 @@ describe("GameAnalytics", () => {
       const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       const payload = JSON.parse(init.body as string);
       expect(payload.batch[0].distinct_id).toBe("anon_test_123");
+    });
+
+    it("should prefer PostHog SDK distinct_id for batch payloads", async () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
+      mockGetDistinctId.mockReturnValue("ph_distinct_123");
+
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 100,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "sdk-distinct-id" });
+      await Promise.resolve();
+      window.dispatchEvent(new Event("beforeunload"));
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+      expect(payload.batch[0].distinct_id).toBe("ph_distinct_123");
     });
 
     it("should send raw { events } payload for custom endpoint", async () => {
