@@ -97,6 +97,7 @@ interface AnalyticsConfig {
   debugMode: boolean;
   sampleRate: number; // 0-1, for production sampling
   endpoint?: string; // Analytics endpoint URL
+  payloadFormat?: "events" | "posthog-batch";
   posthogKey?: string;
   batchSize: number;
   maxQueueSize: number;
@@ -120,6 +121,7 @@ export class GameAnalytics {
 
   private constructor(config?: Partial<AnalyticsConfig>) {
     const configuredEndpoint = process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT?.trim();
+    const configuredPayloadFormat = process.env.NEXT_PUBLIC_ANALYTICS_FORMAT?.trim();
     const configuredPosthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
 
     this.config = {
@@ -131,6 +133,7 @@ export class GameAnalytics {
       maxQueueSize: 1000,
       flushInterval: 5000, // 5 seconds
       endpoint: configuredEndpoint || undefined,
+      payloadFormat: this.parsePayloadFormat(configuredPayloadFormat),
       posthogKey: configuredPosthogKey || undefined,
       ...config,
     };
@@ -521,23 +524,25 @@ export class GameAnalytics {
   private flush(options: { keepalive?: boolean } = {}): void {
     if (this.eventQueue.length === 0) return;
 
-    const events = [...this.eventQueue];
-    this.eventQueue = [];
-
     const endpoint = this.config.endpoint;
     if (!endpoint) {
       return;
     }
 
-    if (this.shouldUsePostHogBatch(endpoint) && !this.config.posthogKey) {
+    const payloadFormat = this.resolvePayloadFormat(endpoint);
+    if (payloadFormat === "posthog-batch" && !this.config.posthogKey) {
       if (!this.hasLoggedInvalidPostHogConfig) {
         logger.error("Analytics endpoint is /ingest/batch but NEXT_PUBLIC_POSTHOG_KEY is missing");
         this.hasLoggedInvalidPostHogConfig = true;
       }
+      // Configuration is invalid for this sink; drop buffered events to avoid a retry loop.
+      this.eventQueue = [];
       return;
     }
 
-    const request = this.createFlushRequest(endpoint, events, options.keepalive === true);
+    const events = [...this.eventQueue];
+    this.eventQueue = [];
+    const request = this.createFlushRequest(payloadFormat, events, options.keepalive === true);
 
     fetch(endpoint, request).catch((error) => {
       logger.error("Analytics flush failed:", error);
@@ -557,11 +562,11 @@ export class GameAnalytics {
    * Build flush request for configured endpoint
    */
   private createFlushRequest(
-    endpoint: string,
+    payloadFormat: "events" | "posthog-batch",
     events: AnalyticsEventData[],
     keepalive: boolean,
   ): RequestInit {
-    if (this.shouldUsePostHogBatch(endpoint)) {
+    if (payloadFormat === "posthog-batch") {
       return this.createPostHogBatchRequest(events, keepalive);
     }
 
@@ -571,6 +576,28 @@ export class GameAnalytics {
       body: JSON.stringify({ events }),
       ...(keepalive ? { keepalive: true } : {}),
     };
+  }
+
+  private parsePayloadFormat(value?: string): AnalyticsConfig["payloadFormat"] {
+    if (!value) {
+      return undefined;
+    }
+
+    if (value === "events" || value === "posthog-batch") {
+      return value;
+    }
+
+    logger.error(
+      "Invalid NEXT_PUBLIC_ANALYTICS_FORMAT. Expected 'events' or 'posthog-batch'. Falling back to endpoint-based inference.",
+    );
+    return undefined;
+  }
+
+  private resolvePayloadFormat(endpoint: string): "events" | "posthog-batch" {
+    return (
+      this.config.payloadFormat ??
+      (this.shouldUsePostHogBatch(endpoint) ? "posthog-batch" : "events")
+    );
   }
 
   /**

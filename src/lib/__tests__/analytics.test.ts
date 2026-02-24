@@ -19,6 +19,7 @@ global.fetch = mockFetch;
 describe("GameAnalytics", () => {
   let analytics: GameAnalytics;
   const originalEndpoint = process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
+  const originalPayloadFormat = process.env.NEXT_PUBLIC_ANALYTICS_FORMAT;
   const originalPosthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 
   beforeEach(() => {
@@ -47,6 +48,12 @@ describe("GameAnalytics", () => {
       delete process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
     } else {
       process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = originalEndpoint;
+    }
+
+    if (originalPayloadFormat === undefined) {
+      delete process.env.NEXT_PUBLIC_ANALYTICS_FORMAT;
+    } else {
+      process.env.NEXT_PUBLIC_ANALYTICS_FORMAT = originalPayloadFormat;
     }
 
     if (originalPosthogKey === undefined) {
@@ -588,6 +595,43 @@ describe("GameAnalytics", () => {
       expect(payload.api_key).toBeUndefined();
     });
 
+    it("should honor explicit payload format override", () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
+      process.env.NEXT_PUBLIC_ANALYTICS_FORMAT = "events";
+      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "format-override" }, "user-123", 3);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+
+      expect(url).toBe("/ingest/batch");
+      expect(payload).toEqual(
+        expect.objectContaining({
+          events: expect.arrayContaining([
+            expect.objectContaining({
+              event: AnalyticsEvent.GAME_LOADED,
+              userId: "user-123",
+              puzzleNumber: 3,
+            }),
+          ]),
+        }),
+      );
+      expect(payload.api_key).toBeUndefined();
+    });
+
     it("should drop events when PostHog key is missing to avoid retry loop", () => {
       delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
       process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
@@ -672,6 +716,26 @@ describe("GameAnalytics", () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(init.keepalive).toBe(true);
+    });
+
+    it("should keep queued events when endpoint is missing", () => {
+      delete process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 100,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "no-endpoint" });
+      window.dispatchEvent(new Event("beforeunload"));
+
+      const summary = analytics.getSummary();
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(summary.queueSize).toBe(1);
     });
   });
 
