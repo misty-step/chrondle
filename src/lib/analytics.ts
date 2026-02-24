@@ -524,7 +524,10 @@ export class GameAnalytics {
    */
   private flush(options: { keepalive?: boolean } = {}): void {
     if (this.eventQueue.length === 0) return;
-    if (this.isFlushing) return;
+
+    const keepalive = options.keepalive === true;
+    const allowConcurrentKeepalive = keepalive && this.isFlushing;
+    if (this.isFlushing && !allowConcurrentKeepalive) return;
 
     const endpoint = this.config.endpoint;
     if (!endpoint) {
@@ -542,10 +545,11 @@ export class GameAnalytics {
       return;
     }
 
-    const keepalive = options.keepalive === true;
     const events = this.eventQueue.splice(0, this.getFlushBatchSize(keepalive));
     const request = this.createFlushRequest(payloadFormat, events, keepalive);
-    this.isFlushing = true;
+    if (!allowConcurrentKeepalive) {
+      this.isFlushing = true;
+    }
 
     fetch(endpoint, request)
       .then((response) => {
@@ -563,7 +567,9 @@ export class GameAnalytics {
         this.requeueFailedEvents(events);
       })
       .finally(() => {
-        this.isFlushing = false;
+        if (!allowConcurrentKeepalive) {
+          this.isFlushing = false;
+        }
       });
 
     // Debug output

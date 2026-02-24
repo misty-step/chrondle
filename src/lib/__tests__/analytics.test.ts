@@ -826,6 +826,45 @@ describe("GameAnalytics", () => {
       expect(init.keepalive).toBe(true);
     });
 
+    it("should allow keepalive flush while regular flush is in progress", async () => {
+      let resolveFirst: (value: Response) => void = () => {};
+      const firstFetch = new Promise<Response>((resolve) => {
+        resolveFirst = resolve;
+      });
+
+      mockFetch.mockImplementationOnce(() => firstFetch);
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { seq: 1 });
+      analytics.track(AnalyticsEvent.GAME_STARTED, { seq: 2 });
+
+      window.dispatchEvent(new Event("beforeunload"));
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const [, secondInit] = mockFetch.mock.calls[1] as [string, RequestInit];
+      expect(secondInit.keepalive).toBe(true);
+
+      const payload = JSON.parse(secondInit.body as string) as {
+        events: Array<{ properties?: { seq?: number } }>;
+      };
+      expect(payload.events.map((event) => event.properties?.seq)).toEqual([2]);
+
+      resolveFirst(new Response(null, { status: 200 }));
+      await Promise.resolve();
+    });
+
     it("should use keepalive for visibilitychange flush", () => {
       mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
       const originalVisibilityState = Object.getOwnPropertyDescriptor(document, "visibilityState");
