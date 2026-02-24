@@ -153,7 +153,7 @@ export class GameAnalytics {
       window.addEventListener("beforeunload", () => this.flush({ keepalive: true }));
       window.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "hidden") {
-          this.flush();
+          this.flush({ keepalive: true });
         }
       });
     }
@@ -542,9 +542,9 @@ export class GameAnalytics {
       return;
     }
 
-    const events = [...this.eventQueue];
-    this.eventQueue = [];
-    const request = this.createFlushRequest(payloadFormat, events, options.keepalive === true);
+    const keepalive = options.keepalive === true;
+    const events = this.eventQueue.splice(0, this.getFlushBatchSize(keepalive));
+    const request = this.createFlushRequest(payloadFormat, events, keepalive);
     this.isFlushing = true;
 
     fetch(endpoint, request)
@@ -613,6 +613,16 @@ export class GameAnalytics {
       this.config.payloadFormat ??
       (this.shouldUsePostHogBatch(endpoint) ? "posthog-batch" : "events")
     );
+  }
+
+  private getFlushBatchSize(keepalive: boolean): number {
+    if (keepalive) {
+      // keepalive requests have strict body-size limits in browsers.
+      return 50;
+    }
+
+    const configuredBatchSize = Math.max(1, this.config.batchSize);
+    return Math.min(configuredBatchSize, 100);
   }
 
   /**

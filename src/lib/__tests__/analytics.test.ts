@@ -826,6 +826,69 @@ describe("GameAnalytics", () => {
       expect(init.keepalive).toBe(true);
     });
 
+    it("should use keepalive for visibilitychange flush", () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      const originalVisibilityState = Object.getOwnPropertyDescriptor(document, "visibilityState");
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "hidden",
+      });
+
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 100,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      analytics.track(AnalyticsEvent.GAME_LOADED, { source: "visibilitychange" });
+      window.dispatchEvent(new Event("visibilitychange"));
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(init.keepalive).toBe(true);
+
+      if (originalVisibilityState) {
+        Object.defineProperty(document, "visibilityState", originalVisibilityState);
+      } else {
+        delete (document as { visibilityState?: string }).visibilityState;
+      }
+    });
+
+    it("should cap keepalive flush batch size to avoid oversized payloads", () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 200,
+        flushInterval: 60000,
+        endpoint: "https://analytics.example.test/v1/events",
+      });
+
+      for (let index = 0; index < 120; index += 1) {
+        analytics.track(AnalyticsEvent.GAME_LOADED, { index });
+      }
+      window.dispatchEvent(new Event("beforeunload"));
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string) as {
+        events: Array<{ properties?: { index?: number } }>;
+      };
+      expect(payload.events).toHaveLength(50);
+      expect(payload.events[0]?.properties?.index).toBe(0);
+      expect(payload.events[49]?.properties?.index).toBe(49);
+
+      const summary = analytics.getSummary();
+      expect(summary.queueSize).toBe(70);
+    });
+
     it("should keep queued events when endpoint is missing", () => {
       delete process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
       (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
