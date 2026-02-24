@@ -427,7 +427,7 @@ export class GameAnalytics {
 
     // Send to PostHog if available (lazy-loaded for bundle optimization)
     const shouldSkipDirectPostHogCapture =
-      !!this.config.endpoint && this.shouldUsePostHogBatch(this.config.endpoint);
+      !!this.config.endpoint && this.resolvePayloadFormat(this.config.endpoint) === "posthog-batch";
 
     if (typeof window !== "undefined" && !shouldSkipDirectPostHogCapture) {
       getPostHog().then((posthog) => {

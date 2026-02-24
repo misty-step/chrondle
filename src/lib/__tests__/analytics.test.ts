@@ -595,7 +595,7 @@ describe("GameAnalytics", () => {
       expect(payload.api_key).toBeUndefined();
     });
 
-    it("should honor explicit payload format override", () => {
+    it("should honor explicit payload format override", async () => {
       mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
       process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "/ingest/batch";
       process.env.NEXT_PUBLIC_ANALYTICS_FORMAT = "events";
@@ -630,6 +630,52 @@ describe("GameAnalytics", () => {
         }),
       );
       expect(payload.api_key).toBeUndefined();
+
+      await Promise.resolve();
+      expect(mockCapture).toHaveBeenCalledWith(
+        AnalyticsEvent.GAME_LOADED,
+        expect.objectContaining({
+          source: "format-override",
+        }),
+      );
+    });
+
+    it("should skip direct PostHog capture for explicit posthog-batch override", async () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT = "https://analytics.example.test/v1/events";
+      process.env.NEXT_PUBLIC_ANALYTICS_FORMAT = "posthog-batch";
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
+      (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
+
+      analytics = GameAnalytics.getInstance({
+        enabled: true,
+        debugMode: false,
+        sampleRate: 1,
+        batchSize: 1,
+        flushInterval: 60000,
+      });
+
+      analytics.track(AnalyticsEvent.GAME_STARTED, { source: "batch-override" }, "user-999", 5);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(init.body as string);
+      expect(url).toBe("https://analytics.example.test/v1/events");
+      expect(payload).toEqual(
+        expect.objectContaining({
+          api_key: "phc_test_key",
+          batch: expect.arrayContaining([
+            expect.objectContaining({
+              event: AnalyticsEvent.GAME_STARTED,
+              distinct_id: "user-999",
+            }),
+          ]),
+          v: 1,
+        }),
+      );
+
+      await Promise.resolve();
+      expect(mockCapture).not.toHaveBeenCalled();
     });
 
     it("should drop events when PostHog key is missing to avoid retry loop", () => {
