@@ -509,11 +509,6 @@ export class GameAnalytics {
     }
 
     const request = this.createFlushRequest(endpoint, events);
-    if (!request) {
-      // Recover queue if payload generation fails (e.g. missing PostHog key).
-      this.eventQueue.unshift(...events);
-      return;
-    }
 
     fetch(endpoint, request).catch((error) => {
       logger.error("Analytics flush failed:", error);
@@ -531,7 +526,7 @@ export class GameAnalytics {
   /**
    * Build flush request for configured endpoint
    */
-  private createFlushRequest(endpoint: string, events: AnalyticsEventData[]): RequestInit | null {
+  private createFlushRequest(endpoint: string, events: AnalyticsEventData[]): RequestInit {
     if (this.shouldUsePostHogBatch(endpoint)) {
       return this.createPostHogBatchRequest(events);
     }
@@ -559,10 +554,10 @@ export class GameAnalytics {
   /**
    * Build PostHog batch payload for /ingest proxy endpoint
    */
-  private createPostHogBatchRequest(events: AnalyticsEventData[]): RequestInit | null {
+  private createPostHogBatchRequest(events: AnalyticsEventData[]): RequestInit {
     const posthogKey = this.config.posthogKey;
     if (!posthogKey) {
-      return null;
+      throw new Error("PostHog batch request requires NEXT_PUBLIC_POSTHOG_KEY");
     }
 
     const batch = events.map((event) => {
