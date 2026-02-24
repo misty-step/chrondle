@@ -16,6 +16,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/webhooks/stripe(.*)", // Stripe webhooks
   "/sign-in(.*)",
   "/sign-up(.*)",
+  "/ingest(.*)", // PostHog analytics proxy
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
