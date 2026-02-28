@@ -14,8 +14,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-// Headers that should never be forwarded to PostHog
-const SENSITIVE_HEADERS = ["cookie", "authorization", "set-cookie"];
+// Request headers that should never be forwarded to PostHog
+const REQUEST_HEADERS_TO_STRIP = ["cookie", "authorization"];
+
+// Response headers that should never be exposed back to the browser
+const RESPONSE_HEADERS_TO_STRIP = ["set-cookie"];
 
 // PostHog hosts
 const POSTHOG_MAIN_HOST = "https://us.i.posthog.com";
@@ -32,12 +35,12 @@ function getPostHogHost(path: string): string {
 }
 
 /**
- * Strip sensitive headers from the request headers
+ * Strip configured headers from a header set
  */
-function stripSensitiveHeaders(headers: Headers): Headers {
+function stripHeaders(headers: Headers, headersToStrip: readonly string[]): Headers {
   const cleanHeaders = new Headers();
   for (const [key, value] of headers.entries()) {
-    if (!SENSITIVE_HEADERS.includes(key.toLowerCase())) {
+    if (!headersToStrip.includes(key.toLowerCase())) {
       cleanHeaders.set(key, value);
     }
   }
@@ -57,8 +60,8 @@ async function proxyToPostHog(request: NextRequest): Promise<NextResponse> {
     targetUrl.searchParams.append(key, value);
   });
 
-  // Prepare headers (strip sensitive ones)
-  const cleanHeaders = stripSensitiveHeaders(request.headers);
+  // Prepare headers (strip auth-sensitive request headers)
+  const cleanHeaders = stripHeaders(request.headers, REQUEST_HEADERS_TO_STRIP);
 
   // Forward the request
   const response = await fetch(targetUrl, {
@@ -69,12 +72,7 @@ async function proxyToPostHog(request: NextRequest): Promise<NextResponse> {
   });
 
   // Build response with PostHog headers (strip any set-cookie from upstream)
-  const responseHeaders = new Headers();
-  for (const [key, value] of response.headers.entries()) {
-    if (!SENSITIVE_HEADERS.includes(key.toLowerCase())) {
-      responseHeaders.set(key, value);
-    }
-  }
+  const responseHeaders = stripHeaders(response.headers, RESPONSE_HEADERS_TO_STRIP);
 
   return new NextResponse(response.body, {
     status: response.status,
