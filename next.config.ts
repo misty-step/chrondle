@@ -35,23 +35,8 @@ const nextConfig: NextConfig = {
     },
   }),
 
-  // PostHog reverse proxy (bypass ad blockers)
-  async rewrites() {
-    return [
-      {
-        source: "/ingest/static/:path*",
-        destination: "https://us-assets.i.posthog.com/static/:path*",
-      },
-      {
-        source: "/ingest/decide",
-        destination: "https://us.i.posthog.com/decide",
-      },
-      {
-        source: "/ingest/:path*",
-        destination: "https://us.i.posthog.com/:path*",
-      },
-    ];
-  },
+  // PostHog proxy moved to Route Handler (src/app/(app)/api/ingest/[...path]/route.ts)
+  // This ensures auth cookies are stripped before forwarding to PostHog
 
   // Security headers configuration
   async headers() {
