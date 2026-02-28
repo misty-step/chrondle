@@ -48,7 +48,7 @@ function stripSensitiveHeaders(headers: Headers): Headers {
  * Forward a request to PostHog and return the response
  */
 async function proxyToPostHog(request: NextRequest): Promise<NextResponse> {
-  const path = request.nextUrl.pathname.replace("/ingest", "") || "/";
+  const path = request.nextUrl.pathname.replace(/^\/ingest/, "") || "/";
   const host = getPostHogHost(path);
 
   // Build the target URL with query params

@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
     },
   }),
 
-  // PostHog proxy moved to Route Handler (src/app/(app)/api/ingest/[...path]/route.ts)
+  // PostHog proxy moved to Route Handler (src/app/(app)/ingest/[...path]/route.ts)
   // This ensures auth cookies are stripped before forwarding to PostHog
 
   // Security headers configuration
