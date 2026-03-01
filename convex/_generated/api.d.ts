@@ -47,7 +47,6 @@ import type * as lib_observability_emailNotifier from "../lib/observability/emai
 import type * as lib_observability_metricsCollector from "../lib/observability/metricsCollector.js";
 import type * as lib_observability_metricsService from "../lib/observability/metricsService.js";
 import type * as lib_observability_sentryNotifier from "../lib/observability/sentryNotifier.js";
-import type * as lib_orderScoring from "../lib/orderScoring.js";
 import type * as lib_orderValidation from "../lib/orderValidation.js";
 import type * as lib_prompts_eventGeneration from "../lib/prompts/eventGeneration.js";
 import type * as lib_puzzleHelpers from "../lib/puzzleHelpers.js";
@@ -131,7 +130,6 @@ declare const fullApi: ApiFromModules<{
   "lib/observability/metricsCollector": typeof lib_observability_metricsCollector;
   "lib/observability/metricsService": typeof lib_observability_metricsService;
   "lib/observability/sentryNotifier": typeof lib_observability_sentryNotifier;
-  "lib/orderScoring": typeof lib_orderScoring;
   "lib/orderValidation": typeof lib_orderValidation;
   "lib/prompts/eventGeneration": typeof lib_prompts_eventGeneration;
   "lib/puzzleHelpers": typeof lib_puzzleHelpers;
