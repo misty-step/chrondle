@@ -99,19 +99,13 @@ export interface AttemptScore {
 }
 
 // =============================================================================
-// Legacy Types (deprecated, kept for migration)
+// Hint System
 // =============================================================================
 
-/** @deprecated Use AttemptScore instead */
-export interface OrderScore {
-  totalScore: number;
-  correctPairs: number;
-  totalPairs: number;
-  perfectPositions: number;
-  hintsUsed: number;
-}
-
-/** @deprecated Hints removed in golf redesign */
+/**
+ * Hint types for Order mode.
+ * These provide progressive assistance without revealing the full answer.
+ */
 export type OrderHint =
   | { type: "anchor"; eventId: string; position: number }
   | { type: "relative"; earlierEventId: string; laterEventId: string }
