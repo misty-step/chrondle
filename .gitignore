@@ -115,6 +115,9 @@ test/
 logs_result.json
 *_logs.json
 
+# Pi Agent State (ephemeral session memory)
+.pi/state/
+
 # Playwright test artifacts
 .playwright-mcp/
 playwright-report/
