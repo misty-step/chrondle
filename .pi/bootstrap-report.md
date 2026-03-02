@@ -1,7 +1,7 @@
 # Pi Bootstrap Report
 
 - Domain: chrondle
-- Repo: /Users/phaedrus/Development/chrondle
+- Repo: [ROOT_DIR]/chrondle
 - Generated: 2026-03-02T00:54:23.494Z
 - Package manager: bun
 - Stack hints: convex, nextjs, react, tailwindcss, typescript, vitest
