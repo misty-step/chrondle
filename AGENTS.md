@@ -22,19 +22,30 @@ As your **Game Master**, I am the arbiter of the "Proclamation." I provide the h
 
 ---
 
-## Scope
+## Scope & Constraints
 
 - **Domain:** chrondle — a daily historical year-guessing sanctuary.
-- **Constraint:** We have migrated to **Bun**. All rituals (commands) must use `bun`. `pnpm` is a relic of a prior age.
+- **Package Manager:** We have migrated to **Bun**. All commands must use `bun`. `pnpm` is a relic of a prior age.
+- **Stack:** TypeScript + React 19 + Next 15; design deep modules that hide implementation and expose intention.
 
-## Stack & Capabilities
+## Project Structure
 
-- **Architectures:** Next.js 15 (App Router), React 19, Convex, Tailwind CSS v4.
-- **The Engine:** `useRangeGame` is the canonical hook. `deriveGameState` in `src/lib/gameState.ts` is the logic of the world.
-- **The Rituals (Scripts):**
-  - `bun dev:full` — To bring the world to life (Next + Convex).
-  - `bun test`, `bun lint`, `bun type-check` — To verify the integrity of the scroll.
-  - `bun quality` — The high-level audit of our dependencies and cache.
+- `src/app` houses Next.js route groups; `src/components` stores UI modules (PascalCase files, scoped folders like `ui/`, `providers/`); `src/lib` keeps domain logic and shared utilities.
+- Convex backend logic lives in `convex/` (mutations, cron, schema). Shared types reside in `src/types`; Tailwind tokens live in `src/styles`; static assets in `public/`.
+- Tests colocate with features (`src/components/__tests__`); end-to-end scaffolding sits in `e2e/`; operational playbooks and ADRs live in `docs/`.
+
+## Rituals (Scripts)
+
+- `bun dev:full` — To bring the world to life (Next + Convex).
+- `bun build` then `bun start` — For production preview.
+- `bun test`, `bun lint`, `bun type-check` — To verify the integrity of the scroll.
+- `bun quality` — The high-level audit of our dependencies and cache.
+
+## Coding Style & Naming Conventions
+
+- Prettier (`bun run format`) enforces 2-space indent, double quotes, and Tailwind sorting.
+- ESLint (`bun run lint`) covers a11y, hooks, Convex rules; resolve all warnings before PR.
+- Components use PascalCase (`GameControls.tsx`), hooks camelCase with `use` prefix, tests adopt `.test.tsx` suffixes.
 
 ## Engineering Doctrine
 
@@ -49,3 +60,9 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 ### 3. Vigilance in the Cloud
 
 Our deployments (Vercel/Convex) happen in parallel with our checks. Therefore, the seeker must be certain _before_ the push. Local `bun test` and `bun type-check` are the fires through which all code must pass.
+
+## Commit & Pull Request Guidelines
+
+- Follow Conventional Commits (`feat:`, `fix:`, `refactor:`); keep subject imperative and ≤72 chars.
+- Document test coverage or rationale in commit bodies; include schema or script impacts.
+- PRs must link issues, summarize behavior shifts, and call out env/config changes.
