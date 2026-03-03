@@ -2,8 +2,19 @@ import sharp from "sharp";
 import fs from "fs";
 import path from "path";
 
+/**
+ * Regenerate all favicon assets from public/logo.svg.
+ * Run with: bun run assets:favicons
+ *
+ * This script intentionally builds favicon.ico without external ICO deps
+ * to avoid vulnerable transitive packages.
+ */
 const publicDir = "public";
 const sourceLogo = path.join(publicDir, "logo.svg");
+const PNG_IHDR_WIDTH_OFFSET = 16;
+const PNG_IHDR_HEIGHT_OFFSET = 20;
+const ICO_HEADER_BYTES = 6;
+const ICO_ENTRY_BYTES = 16;
 
 const sizes = [
   { name: "favicon-16x16.png", size: 16 },
@@ -14,21 +25,21 @@ const sizes = [
 ];
 
 function buildIco(pngBuffers) {
-  const header = Buffer.alloc(6);
+  const header = Buffer.alloc(ICO_HEADER_BYTES);
   header.writeUInt16LE(0, 0); // reserved
   header.writeUInt16LE(1, 2); // type: icon
   header.writeUInt16LE(pngBuffers.length, 4); // image count
 
   const entries = [];
   const payloads = [];
-  let offset = 6 + pngBuffers.length * 16;
+  let offset = ICO_HEADER_BYTES + pngBuffers.length * ICO_ENTRY_BYTES;
 
   for (const png of pngBuffers) {
     const meta = {
-      width: png.readUInt32BE(16),
-      height: png.readUInt32BE(20),
+      width: png.readUInt32BE(PNG_IHDR_WIDTH_OFFSET),
+      height: png.readUInt32BE(PNG_IHDR_HEIGHT_OFFSET),
     };
-    const entry = Buffer.alloc(16);
+    const entry = Buffer.alloc(ICO_ENTRY_BYTES);
     entry.writeUInt8(meta.width >= 256 ? 0 : meta.width, 0);
     entry.writeUInt8(meta.height >= 256 ? 0 : meta.height, 1);
     entry.writeUInt8(0, 2);

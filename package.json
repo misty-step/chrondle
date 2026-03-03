@@ -36,6 +36,7 @@
     "clean:dev": "bun run clean:next && bun run dev",
     "fresh": "bun run clean && bun install && bun run dev",
     "check-cache": "node scripts/check-cache-age.mjs",
+    "assets:favicons": "node scripts/generate-favicons.mjs",
     "predev": "node scripts/check-cache-age.mjs || true",
     "events": "tsx scripts/manage-events.ts",
     "events:audit": "tsx scripts/audit-events.ts",
