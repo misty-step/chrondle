@@ -63,6 +63,14 @@ This project uses pnpm with specific dependency overrides to address security vu
 - Maintenance guidelines
 - Removal criteria and testing procedures
 
+### Regenerating Favicons
+
+If `public/logo.svg` changes, regenerate all favicon assets with:
+
+```bash
+bun run assets:favicons
+```
+
 1.  **Dial in a Range:** Drag or type a historical range (e.g., 1910–1930) that you believe captures the event.
 2.  **Check Containment:** Submit the range to learn whether the true year sits inside; containment is required to win.
 3.  **Reveal up to Six Hints:** Each miss unlocks another clue (era buckets through precise deltas). Every hint slightly lowers the max score.
@@ -234,13 +242,11 @@ Chrondle requires several environment variables for production deployment. Copy 
    This will create a production deployment and provide your `NEXT_PUBLIC_CONVEX_URL`.
 
 3. **Import to Vercel:**
-
    - Go to [Vercel Dashboard](https://vercel.com/dashboard)
    - Click "New Project"
    - Import your GitHub repository
 
 4. **Configure Environment Variables in Vercel:**
-
    - Go to Project Settings → Environment Variables
    - Add all required variables from `.env.example`:
      - `NEXT_PUBLIC_CONVEX_URL`
@@ -250,7 +256,6 @@ Chrondle requires several environment variables for production deployment. Copy 
      - `CLERK_WEBHOOK_SECRET` (if using Clerk webhooks)
 
 5. **Configure Build Settings:**
-
    - Vercel should auto-detect Next.js settings
    - The build command is already configured in `vercel.json`:
      ```json
@@ -266,7 +271,6 @@ Chrondle requires several environment variables for production deployment. Copy 
 ### Post-Deployment
 
 1. **Configure Clerk Webhook (if using authentication):**
-
    - In Clerk Dashboard, update the webhook endpoint to your production URL:
      `https://your-app.vercel.app/api/webhooks/clerk`
 

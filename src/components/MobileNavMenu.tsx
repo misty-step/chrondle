@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Menu, X, Archive, Moon, Sun } from "lucide-react";
+import { List, X, Archive, Moon, Sun } from "@phosphor-icons/react";
 import { useTheme } from "@/components/SessionThemeProvider";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 
@@ -32,7 +32,7 @@ export function MobileNavMenu({ archiveHref }: MobileNavMenuProps) {
           overlayColor="primary"
           className="flex sm:hidden"
         >
-          <Menu className="h-5 w-5" />
+          <List className="h-5 w-5" />
         </NavbarButton>
       </DialogPrimitive.Trigger>
 
@@ -69,7 +69,7 @@ export function MobileNavMenu({ archiveHref }: MobileNavMenuProps) {
             </DialogPrimitive.Close>
           </div>
 
-          {/* Menu items */}
+          {/* List items */}
           <nav className="flex flex-col gap-1 p-4">
             {/* Archive */}
             <Link

@@ -6,7 +6,7 @@ import type { StateTransition } from "@/lib/analytics";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/button";
-import { BarChart3, TrendingUp, AlertTriangle, Users, Activity } from "lucide-react";
+import { ChartBar, TrendUp, Warning, Users, Pulse } from "@phosphor-icons/react";
 
 /**
  * Analytics summary type
@@ -96,7 +96,7 @@ export function AnalyticsDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between border-b p-4">
           <div className="flex items-center gap-2">
-            <Activity className="text-body-primary h-5 w-5" />
+            <Pulse className="text-body-primary h-5 w-5" />
             <h3 className="font-bold">Analytics Dashboard</h3>
           </div>
           <div className="flex items-center gap-2">
@@ -116,7 +116,7 @@ export function AnalyticsDashboard() {
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 gap-2 p-4">
           <MetricCard
-            icon={<BarChart3 className="h-4 w-4" />}
+            icon={<ChartBar className="h-4 w-4" />}
             label="Total Events"
             value={totalEvents}
             color="text-body-primary"
@@ -128,13 +128,13 @@ export function AnalyticsDashboard() {
             color="text-blue-500"
           />
           <MetricCard
-            icon={<TrendingUp className="h-4 w-4" />}
+            icon={<TrendUp className="h-4 w-4" />}
             label="Completions"
             value={completionCount}
             color="text-green-500"
           />
           <MetricCard
-            icon={<AlertTriangle className="h-4 w-4" />}
+            icon={<Warning className="h-4 w-4" />}
             label="Issues"
             value={divergenceCount + errorCount}
             color={divergenceCount + errorCount > 0 ? "text-red-500" : "text-muted-foreground"}
@@ -202,13 +202,13 @@ export function AnalyticsDashboard() {
             <div className="text-muted-foreground mt-2 mb-2 text-xs">Alerts</div>
             {divergenceCount > 0 && (
               <div className="mb-1 flex items-center gap-2 text-xs text-yellow-600">
-                <AlertTriangle className="h-3 w-3" />
+                <Warning className="h-3 w-3" />
                 <span>{divergenceCount} state divergence(s) detected</span>
               </div>
             )}
             {errorCount > 0 && (
               <div className="flex items-center gap-2 text-xs text-red-600">
-                <AlertTriangle className="h-3 w-3" />
+                <Warning className="h-3 w-3" />
                 <span>{errorCount} state error(s) detected</span>
               </div>
             )}

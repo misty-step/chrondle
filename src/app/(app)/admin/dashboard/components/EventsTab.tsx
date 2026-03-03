@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { SearchIcon, TrashIcon, CheckIcon, XIcon, Loader2Icon } from "lucide-react";
+import { MagnifyingGlass, Trash, Check, X, CircleNotch } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 
@@ -180,7 +180,7 @@ export default function EventsTab() {
               Search Events
             </label>
             <div className="relative">
-              <SearchIcon className="text-text-tertiary absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+              <MagnifyingGlass className="text-text-tertiary absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 id="event-search"
                 placeholder="Search event text..."
@@ -278,7 +278,7 @@ export default function EventsTab() {
       <Card className="p-6">
         {!eventsResult ? (
           <div className="text-text-secondary flex items-center gap-2">
-            <Loader2Icon className="h-4 w-4 animate-spin" />
+            <CircleNotch className="h-4 w-4 animate-spin" />
             Loading events...
           </div>
         ) : eventsResult.events.length === 0 ? (
@@ -326,13 +326,13 @@ export default function EventsTab() {
                               disabled={isSaving}
                             >
                               {isSaving ? (
-                                <Loader2Icon className="h-4 w-4 animate-spin" />
+                                <CircleNotch className="h-4 w-4 animate-spin" />
                               ) : (
-                                <CheckIcon className="h-4 w-4 text-green-500" />
+                                <Check className="h-4 w-4 text-green-500" />
                               )}
                             </Button>
                             <Button variant="ghost" size="icon" onClick={cancelEditing}>
-                              <XIcon className="h-4 w-4 text-red-500" />
+                              <X className="h-4 w-4 text-red-500" />
                             </Button>
                           </div>
                         ) : (
@@ -380,7 +380,7 @@ export default function EventsTab() {
                               : "Delete event"
                           }
                         >
-                          <TrashIcon
+                          <Trash
                             className={cn(
                               "h-4 w-4",
                               event.classicPuzzleId || event.orderPuzzleId
@@ -433,7 +433,7 @@ export default function EventsTab() {
             <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
               {isDeleting ? (
                 <>
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                  <CircleNotch className="mr-2 h-4 w-4 animate-spin" />
                   Deleting...
                 </>
               ) : (

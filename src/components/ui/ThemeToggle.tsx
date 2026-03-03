@@ -2,7 +2,7 @@
 
 import React, { useRef } from "react";
 import { motion } from "motion/react";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/SessionThemeProvider";
 

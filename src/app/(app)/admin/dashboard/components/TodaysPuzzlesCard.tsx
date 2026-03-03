@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../../../../../convex/_generated/api";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Loader2Icon, TargetIcon, ClockIcon, UsersIcon, CalendarIcon } from "lucide-react";
+import { CircleNotch, Target, Clock, Users, Calendar } from "@phosphor-icons/react";
 
 /**
  * Today's Puzzles Card - Daily Ops Visibility
@@ -24,7 +24,7 @@ export function TodaysPuzzlesCard() {
         </h2>
         {todaysPuzzles && (
           <span className="text-text-tertiary flex items-center gap-1 text-sm">
-            <CalendarIcon className="h-4 w-4" />
+            <Calendar className="h-4 w-4" />
             {formatDate(todaysPuzzles.date)}
           </span>
         )}
@@ -32,7 +32,7 @@ export function TodaysPuzzlesCard() {
 
       {!todaysPuzzles ? (
         <div className="text-text-secondary flex items-center gap-2">
-          <Loader2Icon className="h-4 w-4 animate-spin" />
+          <CircleNotch className="h-4 w-4 animate-spin" />
           Loading today&apos;s puzzles...
         </div>
       ) : (
@@ -40,7 +40,7 @@ export function TodaysPuzzlesCard() {
           {/* Classic Puzzle */}
           <PuzzleCard
             mode="classic"
-            icon={<TargetIcon className="h-5 w-5" />}
+            icon={<Target className="h-5 w-5" />}
             puzzle={
               todaysPuzzles.classic
                 ? {
@@ -57,7 +57,7 @@ export function TodaysPuzzlesCard() {
           {/* Order Puzzle */}
           <PuzzleCard
             mode="order"
-            icon={<ClockIcon className="h-5 w-5" />}
+            icon={<Clock className="h-5 w-5" />}
             puzzle={
               todaysPuzzles.order
                 ? {
@@ -139,7 +139,7 @@ function PuzzleCard({
         {/* Play Count */}
         <div className="flex items-center justify-between">
           <span className="text-text-tertiary flex items-center gap-1 text-sm">
-            <UsersIcon className="h-3.5 w-3.5" />
+            <Users className="h-3.5 w-3.5" />
             Players
           </span>
           <span className="text-text-primary font-medium">{puzzle.playCount.toLocaleString()}</span>

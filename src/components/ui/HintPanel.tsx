@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import * as Accordion from "@radix-ui/react-accordion";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { Anchor, Scale, CalendarRange, Lightbulb } from "lucide-react";
+import { Anchor, Scales, CalendarDots, Lightbulb } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { GameCard } from "@/components/ui/GameCard";
@@ -77,9 +77,9 @@ function getHintIcon(type: HintType, className?: string) {
     case "anchor":
       return <Anchor {...iconProps} />;
     case "relative":
-      return <Scale {...iconProps} />;
+      return <Scales {...iconProps} />;
     case "bracket":
-      return <CalendarRange {...iconProps} />;
+      return <CalendarDots {...iconProps} />;
   }
 }
 

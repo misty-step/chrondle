@@ -30,7 +30,7 @@ vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
 }));
 
-vi.mock("lucide-react", () => ({
+vi.mock("@phosphor-icons/react", () => ({
   Crosshair: (props: React.SVGProps<SVGSVGElement>) => (
     <svg data-testid="crosshair-icon" {...props} />
   ),

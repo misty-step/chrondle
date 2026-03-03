@@ -5,7 +5,7 @@ import type { DraggableSyntheticListeners } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { motion, useReducedMotion } from "motion/react";
-import { Check, X } from "lucide-react";
+import { Check, X } from "@phosphor-icons/react";
 import { formatYear } from "@/lib/displayFormatting";
 import type { OrderEvent, PositionFeedback } from "@/types/orderGameState";
 

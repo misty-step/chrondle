@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { Check, Share2 } from "lucide-react";
+import { Check, ShareNetwork } from "@phosphor-icons/react";
 import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
 import { NextPuzzleCountdownCard } from "@/components/game/NextPuzzleCountdownCard";
 import { TimelineReveal } from "@/components/order/TimelineReveal";
@@ -162,7 +162,7 @@ export function OrderReveal({
                 </>
               ) : (
                 <>
-                  <Share2 className="h-5 w-5" />
+                  <ShareNetwork className="h-5 w-5" />
                   <span>Share Result</span>
                 </>
               )}

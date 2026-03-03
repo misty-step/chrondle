@@ -7,7 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
-import { Check, Archive, Sparkles } from "lucide-react";
+import { Check, Archive, Sparkle } from "@phosphor-icons/react";
 import { logger } from "@/lib/logger";
 
 type Plan = "monthly" | "annual";
@@ -141,7 +141,7 @@ export default function PricingPage() {
                   <span>One payment, full year</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <Sparkles className="text-primary mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <Sparkle className="text-primary mt-0.5 h-4 w-4 flex-shrink-0" />
                   <span>Support independent development</span>
                 </li>
               </ul>

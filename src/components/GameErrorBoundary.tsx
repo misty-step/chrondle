@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { AlertTriangle, RotateCw, Home, Bug } from "lucide-react";
+import { Warning, ArrowClockwise, House, Bug } from "@phosphor-icons/react";
 import Link from "next/link";
 import { logger } from "@/lib/logger";
 
@@ -207,7 +207,7 @@ export class GameErrorBoundary extends Component<Props, State> {
             <div className="bg-card rounded border p-6 shadow-lg">
               <div className="text-center">
                 <div className="bg-destructive/10 mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full">
-                  <AlertTriangle className="text-destructive h-6 w-6" />
+                  <Warning className="text-destructive h-6 w-6" />
                 </div>
 
                 <h1 className="text-foreground mb-2 text-xl font-bold">
@@ -227,14 +227,14 @@ export class GameErrorBoundary extends Component<Props, State> {
                     onClick={this.handleSoftReload}
                     className="bg-primary text-body-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded px-4 py-2 transition-colors"
                   >
-                    <RotateCw className="h-4 w-4" />
+                    <ArrowClockwise className="h-4 w-4" />
                     Try Again
                   </button>
 
                   {/* Navigate to home */}
                   <Link href="/" className="block">
                     <button className="bg-secondary text-body-secondary-foreground hover:bg-secondary/90 flex w-full items-center justify-center gap-2 rounded px-4 py-2 transition-colors">
-                      <Home className="h-4 w-4" />
+                      <House className="h-4 w-4" />
                       Go to Today&apos;s Puzzle
                     </button>
                   </Link>

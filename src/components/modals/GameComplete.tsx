@@ -9,7 +9,15 @@ import type { RangeGuess } from "@/types/range";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/Separator";
-import { Target, Ruler, Lightbulb, Award, ChevronDown, Check, AlertCircle } from "lucide-react";
+import {
+  Target,
+  Ruler,
+  Lightbulb,
+  Medal,
+  CaretDown,
+  Check,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import { RangeProximity } from "@/components/game/RangeProximity";
 
 interface GameCompleteProps {
@@ -204,7 +212,7 @@ export function GameComplete({
   const shareButtonIcon = (() => {
     if (shareStatus === "success")
       return <Check className="size-4 animate-[check-in_250ms_ease-out_forwards]" />;
-    if (shareStatus === "error") return <AlertCircle className="size-4" />;
+    if (shareStatus === "error") return <WarningCircle className="size-4" />;
     return null;
   })();
 
@@ -289,7 +297,7 @@ export function GameComplete({
         aria-expanded={showDetails}
       >
         <span>{showDetails ? "Hide details" : "Show score breakdown"}</span>
-        <ChevronDown
+        <CaretDown
           className={cn("size-4 transition-transform duration-200", showDetails && "rotate-180")}
           aria-hidden="true"
         />
@@ -359,7 +367,7 @@ export function GameComplete({
               {/* Final score */}
               <div className="flex items-center justify-between pt-1">
                 <div className="flex items-center gap-2">
-                  <Award className="size-5" aria-hidden="true" />
+                  <Medal className="size-5" aria-hidden="true" />
                   <span className="font-semibold tracking-wide uppercase">Final Score</span>
                 </div>
                 <span className="text-body-primary font-mono text-lg font-bold">
