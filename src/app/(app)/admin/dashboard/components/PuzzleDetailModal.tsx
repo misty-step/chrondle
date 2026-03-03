@@ -11,7 +11,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/Badge";
-import { Loader2Icon, UsersIcon, TargetIcon, CheckCircleIcon, BookOpenIcon } from "lucide-react";
+import { CircleNotch, Users, Target, CheckCircle, BookOpen } from "@phosphor-icons/react";
 
 type PuzzleMode = "classic" | "order";
 
@@ -44,7 +44,7 @@ export function PuzzleDetailModal({ mode, puzzleNumber, onClose }: PuzzleDetailM
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         {!puzzleDetail ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2Icon className="text-text-secondary h-6 w-6 animate-spin" />
+            <CircleNotch className="text-text-secondary h-6 w-6 animate-spin" />
           </div>
         ) : (
           <>
@@ -63,7 +63,7 @@ export function PuzzleDetailModal({ mode, puzzleNumber, onClose }: PuzzleDetailM
                   "targetYear" in puzzleDetail &&
                   puzzleDetail.targetYear !== undefined && (
                     <StatCard
-                      icon={<TargetIcon className="h-4 w-4" />}
+                      icon={<Target className="h-4 w-4" />}
                       label="Target Year"
                       value={formatYear(puzzleDetail.targetYear)}
                     />
@@ -72,18 +72,18 @@ export function PuzzleDetailModal({ mode, puzzleNumber, onClose }: PuzzleDetailM
                   "eventSpan" in puzzleDetail &&
                   puzzleDetail.eventSpan !== undefined && (
                     <StatCard
-                      icon={<TargetIcon className="h-4 w-4" />}
+                      icon={<Target className="h-4 w-4" />}
                       label="Event Span"
                       value={`${formatYear(puzzleDetail.eventSpan.min)} – ${formatYear(puzzleDetail.eventSpan.max)}`}
                     />
                   )}
                 <StatCard
-                  icon={<UsersIcon className="h-4 w-4" />}
+                  icon={<Users className="h-4 w-4" />}
                   label="Players"
                   value={puzzleDetail.playCount.toLocaleString()}
                 />
                 <StatCard
-                  icon={<CheckCircleIcon className="h-4 w-4" />}
+                  icon={<CheckCircle className="h-4 w-4" />}
                   label="Completion Rate"
                   value={`${puzzleDetail.completionRate}%`}
                 />
@@ -91,7 +91,7 @@ export function PuzzleDetailModal({ mode, puzzleNumber, onClose }: PuzzleDetailM
                   "avgGuesses" in puzzleDetail &&
                   puzzleDetail.avgGuesses !== undefined && (
                     <StatCard
-                      icon={<TargetIcon className="h-4 w-4" />}
+                      icon={<Target className="h-4 w-4" />}
                       label="Avg Guesses"
                       value={puzzleDetail.avgGuesses.toFixed(1)}
                     />
@@ -146,7 +146,7 @@ export function PuzzleDetailModal({ mode, puzzleNumber, onClose }: PuzzleDetailM
                 puzzleDetail.historicalContext && (
                   <div>
                     <h3 className="text-text-primary mb-3 flex items-center gap-2 text-sm font-medium">
-                      <BookOpenIcon className="h-4 w-4" />
+                      <BookOpen className="h-4 w-4" />
                       Historical Context
                     </h3>
                     <div className="bg-surface-secondary text-text-secondary rounded-lg p-3 text-sm">

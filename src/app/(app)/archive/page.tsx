@@ -8,7 +8,12 @@ import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, History, BarChart } from "lucide-react";
+import {
+  CaretLeft,
+  CaretRight,
+  ClockCounterClockwise,
+  ChartBar,
+} from "@phosphor-icons/react/dist/ssr";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { ArchiveGrid } from "@/components/archive/ArchiveGrid";
 import { UserCreationHandler } from "@/components/UserCreationHandler";
@@ -299,13 +304,13 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
               href="/archive"
               className="bg-classic-bg text-classic-accent flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
             >
-              <History className="h-4 w-4" /> Classic
+              <ClockCounterClockwise className="h-4 w-4" /> Classic
             </Link>
             <Link
               href="/archive/order"
               className="text-muted-foreground hover:text-foreground hover:bg-surface-inset flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors"
             >
-              <BarChart className="h-4 w-4" /> Order
+              <ChartBar className="h-4 w-4" /> Order
             </Link>
           </div>
 
@@ -391,7 +396,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
                         size="default"
                         className="h-10 w-10 rounded-full p-0 sm:h-8 sm:w-8"
                       >
-                        <ChevronLeft className="h-4 w-4" />
+                        <CaretLeft className="h-4 w-4" />
                       </Button>
                     </Link>
                   ) : (
@@ -401,7 +406,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
                       disabled
                       className="h-10 w-10 rounded-full p-0 sm:h-8 sm:w-8"
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <CaretLeft className="h-4 w-4" />
                     </Button>
                   )}
 
@@ -416,7 +421,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
                         size="default"
                         className="h-10 w-10 rounded-full p-0 sm:h-8 sm:w-8"
                       >
-                        <ChevronRight className="h-4 w-4" />
+                        <CaretRight className="h-4 w-4" />
                       </Button>
                     </Link>
                   ) : (
@@ -426,7 +431,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
                       disabled
                       className="h-10 w-10 rounded-full p-0 sm:h-8 sm:w-8"
                     >
-                      <ChevronRight className="h-4 w-4" />
+                      <CaretRight className="h-4 w-4" />
                     </Button>
                   )}
                 </div>

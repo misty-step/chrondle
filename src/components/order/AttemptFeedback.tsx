@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { Check, X } from "lucide-react";
+import { Check, X } from "@phosphor-icons/react";
 import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
 import { getAccuracyPercent, getCorrectPositionCount } from "@/lib/order/attemptScoring";
 import type { OrderAttempt } from "@/types/orderGameState";

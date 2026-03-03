@@ -3,7 +3,7 @@
 import { useCallback, type ElementType } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { Crosshair, Shuffle } from "lucide-react";
+import { Crosshair, Shuffle } from "@phosphor-icons/react";
 
 import { setModePreferenceCookie, type ModeKey } from "@/lib/modePreference";
 import { cn } from "@/lib/utils";

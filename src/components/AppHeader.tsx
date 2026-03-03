@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Flame, Archive } from "lucide-react";
+import { Fire, Archive } from "@phosphor-icons/react";
 
 import { AuthButtons } from "@/components/AuthButtons";
 import { AdminButton } from "@/components/AdminButton";
@@ -93,7 +93,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   title={streakColors.milestone || `${currentStreak} day streak`}
                   aria-label={`Current streak: ${currentStreak} day streak`}
                 >
-                  <Flame className={`h-4 w-4 ${streakColors.textColor}`} />
+                  <Fire className={`h-4 w-4 ${streakColors.textColor}`} />
                   <span
                     className={`font-accent text-sm font-bold ${streakColors.textColor} whitespace-nowrap`}
                   >

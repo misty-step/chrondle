@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { NavbarButton } from "@/components/ui/NavbarButton";
-import { Settings } from "lucide-react";
+import { GearSix } from "@phosphor-icons/react";
 
 interface AdminButtonProps {
   className?: string;
@@ -40,7 +40,7 @@ export function AdminButton({ className }: AdminButtonProps) {
       overlayColor="primary"
       className={className}
     >
-      <Settings className="h-5 w-5" />
+      <GearSix className="h-5 w-5" />
     </NavbarButton>
   );
 }

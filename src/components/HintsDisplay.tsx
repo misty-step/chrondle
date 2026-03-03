@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { formatYear } from "@/lib/displayFormatting";
 import { Separator } from "@/components/ui/Separator";
-import { Check } from "lucide-react";
+import { Check } from "@phosphor-icons/react";
 import { HintText } from "@/components/ui/HintText";
 import { motion, AnimatePresence, LayoutGroup, useReducedMotion } from "motion/react";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";

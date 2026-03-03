@@ -13,7 +13,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
-import { Check, Lock } from "lucide-react";
+import { Check, Lock } from "@phosphor-icons/react";
 import { getLocalDateString } from "@/lib/time/dailyDate";
 import { formatDate } from "@/lib/displayFormatting";
 

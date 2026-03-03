@@ -11,7 +11,7 @@ vi.mock("@/components/ui/Separator", () => ({
   Separator: () => <hr data-testid="separator" />,
 }));
 
-vi.mock("lucide-react", () => ({
+vi.mock("@phosphor-icons/react", () => ({
   Check: () => <span data-testid="check-icon">✓</span>,
 }));
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 
 export default function NotFound() {
   return (
@@ -27,7 +27,7 @@ export default function NotFound() {
         <Button asChild size="lg" className="font-body min-w-[200px]">
           <Link href="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Return Home
+            Return House
           </Link>
         </Button>
       </LayoutContainer>

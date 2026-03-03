@@ -2,7 +2,7 @@
 
 import { useUser, SignInButton, UserButton } from "@clerk/nextjs";
 import { NavbarButton } from "@/components/ui/NavbarButton";
-import { LogIn } from "lucide-react";
+import { SignIn } from "@phosphor-icons/react";
 import { AuthSkeleton } from "@/components/skeletons/AuthSkeleton";
 import { isMobileDevice } from "@/lib/platformDetection";
 import { useEffect, useState } from "react";
@@ -57,7 +57,7 @@ export function AuthButtons({ className }: AuthButtonsProps) {
         overlayColor="primary"
         className={className}
       >
-        <LogIn className="h-5 w-5" />
+        <SignIn className="h-5 w-5" />
       </NavbarButton>
     </SignInButton>
   );

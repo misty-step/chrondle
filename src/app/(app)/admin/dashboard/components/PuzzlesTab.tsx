@@ -6,7 +6,7 @@ import { api } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Loader2Icon, TargetIcon, ClockIcon } from "lucide-react";
+import { CircleNotch, Target, Clock } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { PuzzleDetailModal } from "./PuzzleDetailModal";
 
@@ -69,7 +69,7 @@ export default function PuzzlesTab() {
       <Card className="p-6">
         {!puzzlesResult ? (
           <div className="text-text-secondary flex items-center gap-2">
-            <Loader2Icon className="h-4 w-4 animate-spin" />
+            <CircleNotch className="h-4 w-4 animate-spin" />
             Loading puzzles...
           </div>
         ) : puzzlesResult.puzzles.length === 0 ? (
@@ -169,7 +169,7 @@ function ModeToggle({
             : "text-text-secondary hover:text-text-primary",
         )}
       >
-        <TargetIcon className="mr-1.5 inline h-4 w-4" />
+        <Target className="mr-1.5 inline h-4 w-4" />
         Classic
       </button>
       <button
@@ -184,7 +184,7 @@ function ModeToggle({
             : "text-text-secondary hover:text-text-primary",
         )}
       >
-        <ClockIcon className="mr-1.5 inline h-4 w-4" />
+        <Clock className="mr-1.5 inline h-4 w-4" />
         Order
       </button>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Mail } from "lucide-react";
+import { Check, Envelope } from "@phosphor-icons/react";
 import { useCopyEmail } from "@/hooks/useCopyEmail";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { cn } from "@/lib/utils";
@@ -67,7 +67,7 @@ export function Footer() {
                 </>
               ) : (
                 <>
-                  <Mail className="h-3.5 w-3.5 opacity-70 transition-opacity group-hover:opacity-100" />
+                  <Envelope className="h-3.5 w-3.5 opacity-70 transition-opacity group-hover:opacity-100" />
                   <span>Feedback</span>
                 </>
               )}

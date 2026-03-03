@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Trophy, Calendar, Lightbulb } from "lucide-react";
+import { Trophy, Calendar, Lightbulb } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
 import { SCORING_CONSTANTS } from "@/lib/scoring";
 import { pluralize, pluralizeWord } from "@/lib/displayFormatting";
