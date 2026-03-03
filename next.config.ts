@@ -17,8 +17,9 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: appVersion,
   },
-  // Server Actions are enabled by default in Next.js 15
-  // No experimental configuration needed
+  experimental: {
+    optimizePackageImports: ["@phosphor-icons/react"],
+  },
 
   // Cache configuration for better development experience
   ...(process.env.NODE_ENV === "development" && {
