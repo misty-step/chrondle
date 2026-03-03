@@ -123,9 +123,6 @@ const sentryConfig = withSentryConfig(withBundleAnalyzer(nextConfig), {
   // Disable Sentry telemetry
   telemetry: false,
 
-  // Auto-instrument Vercel cron jobs
-  automaticVercelMonitors: true,
-
   // Source map configuration
   sourcemaps: {
     // Delete source maps after upload (don't expose in production)

@@ -48,13 +48,11 @@ export function initSentryClient(): void {
       ),
       replaysOnErrorSampleRate: 1.0, // Always capture on error
 
-      // Integrations
-      integrations: [
-        Sentry.replayIntegration({
-          maskAllText: true,
-          blockAllMedia: true,
-        }),
-      ],
+      // Integrations — replayIntegration is browser-only; guard against SSR
+      integrations:
+        typeof window !== "undefined"
+          ? [Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true })]
+          : [],
 
       // Filter out noisy errors
       beforeSend(event) {
