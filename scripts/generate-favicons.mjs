@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import toIco from "to-ico";
 import fs from "fs";
 import path from "path";
 
@@ -18,11 +19,13 @@ for (const { name, size } of sizes) {
   console.log(`Generated ${name}`);
 }
 
-// Generate favicon.ico (ICO = 32px PNG with ICO header approach)
-// For simplicity, just copy the 32x32 PNG as favicon.ico placeholder
-// A proper ICO would need an ico encoder library
-const png32 = await sharp(svgBuffer).resize(32, 32).png().toBuffer();
-fs.writeFileSync(path.join(publicDir, "favicon.ico"), png32);
-console.log("Generated favicon.ico (32px PNG as ICO)");
+// Generate favicon.ico with proper ICO container (16px + 32px layers)
+const [png16, png32] = await Promise.all([
+  sharp(svgBuffer).resize(16, 16).png().toBuffer(),
+  sharp(svgBuffer).resize(32, 32).png().toBuffer(),
+]);
+const icoBuffer = await toIco([png16, png32]);
+fs.writeFileSync(path.join(publicDir, "favicon.ico"), icoBuffer);
+console.log("Generated favicon.ico (ICO container with 16px + 32px layers)");
 
 console.log("Done!");

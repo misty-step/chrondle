@@ -57,12 +57,12 @@ export function MobileNavMenu({ archiveHref }: MobileNavMenuProps) {
         >
           {/* Accessible title (visually hidden) */}
           <VisuallyHidden asChild>
-            <DialogPrimitive.Title>Navigation List</DialogPrimitive.Title>
+            <DialogPrimitive.Title>Navigation Menu</DialogPrimitive.Title>
           </VisuallyHidden>
 
           {/* Header */}
           <div className="flex items-center justify-between border-b p-4">
-            <span className="text-muted-foreground text-sm font-medium">List</span>
+            <span className="text-muted-foreground text-sm font-medium">Menu</span>
             <DialogPrimitive.Close className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors">
               <X className="h-5 w-5" />
               <span className="sr-only">Close menu</span>

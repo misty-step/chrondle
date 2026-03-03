@@ -27,7 +27,7 @@ export default function NotFound() {
         <Button asChild size="lg" className="font-body min-w-[200px]">
           <Link href="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Return House
+            Return Home
           </Link>
         </Button>
       </LayoutContainer>

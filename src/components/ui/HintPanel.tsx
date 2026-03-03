@@ -287,7 +287,7 @@ function MobileHintPanel(props: InternalPanelProps) {
         })}
       </div>
 
-      {/* Hints ClockCounterClockwise - Collapsed accordion */}
+      {/* Hints History - Collapsed accordion */}
       {props.hints.length > 0 && (
         <Accordion.Root type="single" collapsible>
           <Accordion.Item value="hints-history">
