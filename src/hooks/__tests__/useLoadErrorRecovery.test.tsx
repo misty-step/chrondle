@@ -9,7 +9,6 @@ import { useLoadErrorRecovery } from "@/hooks/useLoadErrorRecovery";
 describe("useLoadErrorRecovery", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    window.sessionStorage.clear();
   });
 
   afterEach(() => {

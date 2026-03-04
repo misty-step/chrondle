@@ -190,7 +190,7 @@ export function GameIsland() {
   const recovery = useLoadErrorRecovery({
     error: gameLogic.error,
     onRetry: retryLoad,
-    persistenceKey: "classic-load-error-retries",
+    maxAutoRetries: 0,
   });
 
   return (

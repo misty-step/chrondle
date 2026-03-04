@@ -37,7 +37,7 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
   const recovery = useLoadErrorRecovery({
     error: loadError,
     onRetry: retryLoad,
-    persistenceKey: "order-load-error-retries",
+    maxAutoRetries: 0,
   });
 
   if (gameState.status === "loading-puzzle") {
