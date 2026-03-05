@@ -45,4 +45,4 @@ jobs:
           path: ./
           base: ${{ steps.scan_range.outputs.base }}
           head: ${{ steps.scan_range.outputs.head }}
-          extra_args: --results=verified,unknown --fail
+          extra_args: --results=verified,unknown

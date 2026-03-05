@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Preloaded, usePreloadedQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOrderGame } from "@/hooks/useOrderGame";
@@ -11,6 +11,8 @@ import { OrderGameBoard } from "@/components/order/OrderGameBoard";
 import { GameModeLayout } from "@/components/GameModeLayout";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { LoadErrorState } from "@/components/LoadErrorState";
+import { useLoadErrorRecovery } from "@/hooks/useLoadErrorRecovery";
 import { generateArchivalShareText } from "@/lib/order/shareCard";
 import type { ReadyState } from "@/types/orderGameState";
 
@@ -28,6 +30,15 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
     addToast,
   );
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+  const loadError = gameState.status === "error" ? gameState.error : null;
+  const retryLoad = useCallback(() => {
+    window.location.reload();
+  }, []);
+  const recovery = useLoadErrorRecovery({
+    error: loadError,
+    onRetry: retryLoad,
+    maxAutoRetries: 0,
+  });
 
   if (gameState.status === "loading-puzzle") {
     return (
@@ -53,11 +64,11 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
 
   if (gameState.status === "error") {
     return (
-      <LoadingScreen
-        intent="order"
-        stage="readying"
-        message="Something went wrong"
-        subMessage={gameState.error}
+      <LoadErrorState
+        title="Something went wrong"
+        message={gameState.error}
+        recoverability={recovery.recoverability}
+        onRetry={retryLoad}
       />
     );
   }

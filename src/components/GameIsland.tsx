@@ -18,12 +18,14 @@ import { useStreak } from "@/hooks/useStreak";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useVictoryConfetti } from "@/hooks/useVictoryConfetti";
 import { useScreenReaderAnnouncements } from "@/hooks/useScreenReaderAnnouncements";
+import { useLoadErrorRecovery } from "@/hooks/useLoadErrorRecovery";
 import { logger } from "@/lib/logger";
 import { GAME_CONFIG } from "@/lib/constants";
 import { AchievementModal, LazyModalWrapper } from "@/components/LazyModals";
 import { GameLayout, LiveAnnouncer } from "@/components/LazyComponents";
 import { ConfettiRef } from "@/components/magicui/confetti";
 import { GameModeLayout } from "@/components/GameModeLayout";
+import { LoadErrorState } from "@/components/LoadErrorState";
 
 // Lazy load AnalyticsDashboard for development/debug mode only
 const AnalyticsDashboard = lazy(() =>
@@ -181,6 +183,16 @@ export function GameIsland() {
     }
   }, []);
 
+  const retryLoad = useCallback(() => {
+    window.location.reload();
+  }, []);
+
+  const recovery = useLoadErrorRecovery({
+    error: gameLogic.error,
+    onRetry: retryLoad,
+    maxAutoRetries: 0,
+  });
+
   return (
     <GameModeLayout
       mode="classic"
@@ -202,18 +214,12 @@ export function GameIsland() {
       debugContent={<AnalyticsDashboard />}
     >
       {!gameLogic.isLoading && gameLogic.error && (
-        <div className="flex flex-1 items-center justify-center p-4">
-          <div className="bg-destructive/10 text-destructive max-w-md rounded p-6 text-center">
-            <h2 className="mb-2 text-xl font-bold">Unable to Load Puzzle</h2>
-            <p className="mb-4">{gameLogic.error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded px-4 py-2 transition-colors"
-            >
-              Reload Page
-            </button>
-          </div>
-        </div>
+        <LoadErrorState
+          title="Unable to Load Puzzle"
+          message={gameLogic.error}
+          recoverability={recovery.recoverability}
+          onRetry={retryLoad}
+        />
       )}
 
       {!gameLogic.error && (
