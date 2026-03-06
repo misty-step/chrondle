@@ -1,4 +1,4 @@
-name: CI/CD Pipeline with Regression Detection
+name: Quality Checks
 
 on:
   push:
@@ -480,3 +480,22 @@ jobs:
           CLERK_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
           CONVEX_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+
+  merge-gate:
+    name: merge-gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - quality-checks
+      - validation
+      - docs
+      - build
+      - e2e
+      - verify-environment
+      - verify-production-secrets
+    steps:
+      - run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]] || \
+             [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            exit 1
+          fi
