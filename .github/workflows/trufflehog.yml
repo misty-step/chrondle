@@ -40,7 +40,7 @@ jobs:
 
           echo "head=$HEAD_SHA" >> "$GITHUB_OUTPUT"
       - name: Run TruffleHog
-        uses: trufflesecurity/trufflehog@v3.93.6
+        uses: trufflesecurity/trufflehog@v3.93.8
         with:
           path: ./
           base: ${{ steps.scan_range.outputs.base }}
