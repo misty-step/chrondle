@@ -34,20 +34,11 @@ export const metadata: Metadata = {
   openGraph: {
     url: "https://chrondle.app",
     siteName: "Chrondle",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Chrondle - The Daily History Game",
-      },
-    ],
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    images: ["/og-image.png"],
   },
 };
 
