@@ -391,6 +391,25 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  # Single required status check for branch protection.
+  # Gates on all real CI jobs so only one check name needs to be configured.
+  merge-gate:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [quality-checks, validation, docs, build, e2e]
+    steps:
+      - name: Check all jobs
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "❌ One or more required jobs failed"
+            exit 1
+          fi
+          if [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "❌ One or more required jobs were cancelled"
+            exit 1
+          fi
+          echo "✅ All required jobs passed"
+
   # Verify environment configuration before merge
   # Validates format and presence of required env vars
   verify-environment:
