@@ -1,5 +1,3 @@
-import { logger } from "@/lib/logger";
-
 const DEFAULT_ENDPOINT = "https://canary-obs.fly.dev";
 const REQUEST_TIMEOUT_MS = 2_000;
 const SERVICE = "chrondle";
@@ -56,11 +54,13 @@ export async function captureCanaryException(
     });
 
     if (!res.ok && process.env.NODE_ENV === "development") {
-      logger.warn("[Canary] Failed to capture exception", { status: res.status });
+      // eslint-disable-next-line no-console
+      console.warn("[Canary] Failed to capture exception", { status: res.status });
     }
   } catch (captureError) {
     if (process.env.NODE_ENV === "development") {
-      logger.warn("[Canary] Failed to capture exception", { captureError });
+      // eslint-disable-next-line no-console
+      console.warn("[Canary] Failed to capture exception", { captureError });
     }
   }
 }

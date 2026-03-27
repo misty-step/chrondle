@@ -1,11 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/logger", () => ({
-  logger: {
-    warn: vi.fn(),
-  },
-}));
-
 const fetchMock = vi.fn();
 
 describe("captureCanaryException", () => {
