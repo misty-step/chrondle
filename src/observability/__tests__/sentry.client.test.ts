@@ -27,6 +27,10 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
+vi.mock("../canary", () => ({
+  captureCanaryException: vi.fn(),
+}));
+
 import * as Sentry from "@sentry/nextjs";
 import {
   initSentryClient,

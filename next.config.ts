@@ -6,6 +6,10 @@ import { readFileSync } from "fs";
 // Read version from package.json at build time
 const packageJson = JSON.parse(readFileSync("./package.json", "utf8"));
 const appVersion = packageJson.version;
+const canaryConnectSrc = resolveExternalOrigin(
+  process.env.NEXT_PUBLIC_CANARY_ENDPOINT,
+  "https://canary-obs.fly.dev",
+);
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -71,7 +75,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: blob: https://img.clerk.com https://www.gravatar.com", // Clerk avatar CDN and Gravatar fallback
               "font-src 'self' data: https://fonts.gstatic.com", // Required for Google Fonts
               "worker-src 'self' blob:", // Required for Clerk and canvas-confetti web workers
-              "connect-src 'self' wss://fleet-goldfish-183.convex.cloud https://fleet-goldfish-183.convex.cloud https://openrouter.ai https://query.wikidata.org https://api.wikimedia.org https://healthy-doe-23.clerk.accounts.dev https://clerk.chrondle.app https://clerk-telemetry.com https://vitals.vercel-insights.com https://vercel-insights.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io", // Convex, analytics, Sentry; PostHog via /ingest proxy (self)
+              `connect-src 'self' wss://fleet-goldfish-183.convex.cloud https://fleet-goldfish-183.convex.cloud https://openrouter.ai https://query.wikidata.org https://api.wikimedia.org https://healthy-doe-23.clerk.accounts.dev https://clerk.chrondle.app https://clerk-telemetry.com https://vitals.vercel-insights.com https://vercel-insights.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io ${canaryConnectSrc}`, // Convex, analytics, Sentry, Canary; PostHog via /ingest proxy (self)
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -134,3 +138,13 @@ const sentryConfig = withSentryConfig(withBundleAnalyzer(nextConfig), {
 });
 
 export default sentryConfig;
+
+function resolveExternalOrigin(rawValue: string | undefined, fallback: string): string {
+  const value = rawValue?.trim() || fallback;
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return new URL(fallback).origin;
+  }
+}

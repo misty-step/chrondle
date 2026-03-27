@@ -35,6 +35,10 @@ vi.mock("@/lib/logger", () => ({
   logger: mockLogger,
 }));
 
+vi.mock("../canary", () => ({
+  captureCanaryException: vi.fn(),
+}));
+
 describe("Sentry Server", () => {
   beforeEach(() => {
     vi.resetModules();
