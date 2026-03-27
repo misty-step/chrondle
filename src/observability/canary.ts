@@ -101,6 +101,10 @@ function sanitizeString(value: string): string {
 }
 
 function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+
   if (typeof value === "string") {
     return sanitizeString(value);
   }
@@ -120,7 +124,9 @@ function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
   seen.add(value);
 
   if (Array.isArray(value)) {
-    return value.map((entry) => sanitizeValue(entry, seen));
+    const result = value.map((entry) => sanitizeValue(entry, seen));
+    seen.delete(value);
+    return result;
   }
 
   const result: Record<string, unknown> = {};
@@ -128,6 +134,7 @@ function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
     result[key] = sanitizeValue(entry, seen);
   }
 
+  seen.delete(value);
   return result;
 }
 

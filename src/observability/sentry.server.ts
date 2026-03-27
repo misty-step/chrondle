@@ -63,7 +63,10 @@ export function initSentryServer(): void {
  * @param error - Error to capture
  * @param context - Additional tags/extras
  */
-export function captureServerException(error: unknown, context?: SentryContext): void {
+export async function captureServerException(
+  error: unknown,
+  context?: SentryContext,
+): Promise<void> {
   if (!isInitialized) {
     logger.error("[Sentry] Exception (not initialized)", { error, context });
   }
@@ -90,10 +93,10 @@ export function captureServerException(error: unknown, context?: SentryContext):
         Sentry.captureException(error);
       });
     }
-
-    void captureCanaryException(error, context);
   } catch (err) {
     logger.error("[Sentry] Failed to capture exception", { error, err });
+  } finally {
+    await captureCanaryException(error, context);
   }
 }
 

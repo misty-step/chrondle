@@ -61,6 +61,8 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     try {
+      const safeUrl = `${window.location.origin}${window.location.pathname}`;
+
       captureClientException(error, {
         level: "error",
         tags: {
@@ -70,7 +72,7 @@ export class ErrorBoundary extends Component<Props, State> {
           componentStack: errorInfo.componentStack,
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
-          url: window.location.href,
+          url: safeUrl,
           userId: this.getAnonymousUserId(),
         },
       });

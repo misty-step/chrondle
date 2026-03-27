@@ -29,7 +29,7 @@ export async function onRequestError(
 ): Promise<void> {
   const { captureServerException } = await import("./observability/sentry.server");
 
-  captureServerException(error, {
+  await captureServerException(error, {
     level: "error",
     tags: {
       source: "nextjs.onRequestError",

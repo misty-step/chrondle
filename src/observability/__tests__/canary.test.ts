@@ -11,14 +11,18 @@ describe("captureCanaryException", () => {
     vi.stubGlobal("fetch", fetchMock);
   });
 
-  it("preserves dates while redacting strings and circular references", async () => {
+  it("sanitizes values while preserving reusable structured context", async () => {
     fetchMock.mockResolvedValue({ ok: true });
 
     const { captureCanaryException } = await import("../canary");
     const happenedAt = new Date("2026-03-27T12:34:56.000Z");
+    const shared = { nestedEmail: "shared@example.com" };
     const extras: Record<string, unknown> = {
       email: "pat@example.com",
       happenedAt,
+      attempt: BigInt(42),
+      first: shared,
+      second: shared,
     };
     extras.self = extras;
 
@@ -34,6 +38,9 @@ describe("captureCanaryException", () => {
     expect(payload.context.extras).toEqual({
       email: "[EMAIL_REDACTED]",
       happenedAt: happenedAt.toISOString(),
+      attempt: "42",
+      first: { nestedEmail: "[EMAIL_REDACTED]" },
+      second: { nestedEmail: "[EMAIL_REDACTED]" },
       self: "[Circular]",
     });
   });

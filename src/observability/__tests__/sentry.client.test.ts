@@ -1,5 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Scope } from "@sentry/nextjs";
+
+const { mockCaptureCanaryException } = vi.hoisted(() => ({
+  mockCaptureCanaryException: vi.fn(),
+}));
 
 // Mock Sentry before importing our module
 vi.mock("@sentry/nextjs", () => ({
@@ -28,7 +32,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 vi.mock("../canary", () => ({
-  captureCanaryException: vi.fn(),
+  captureCanaryException: mockCaptureCanaryException,
 }));
 
 import * as Sentry from "@sentry/nextjs";
@@ -41,12 +45,21 @@ import {
 import { logger } from "@/lib/logger";
 
 describe("Sentry Client", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const initializeClientForTests = () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://test@sentry.io/456";
+    initSentryClient();
+    vi.clearAllMocks();
+  };
+
   describe("initSentryClient", () => {
     it("does not initialize when DSN missing", () => {
       const originalDsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
       delete process.env.NEXT_PUBLIC_SENTRY_DSN;
 
-      vi.clearAllMocks();
       initSentryClient();
 
       // Should not call init when DSN is missing
@@ -62,7 +75,6 @@ describe("Sentry Client", () => {
       process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT = "test";
       process.env.NEXT_PUBLIC_SENTRY_RELEASE = "abc123";
 
-      vi.clearAllMocks();
       initSentryClient();
 
       expect(Sentry.init).toHaveBeenCalledWith(
@@ -78,32 +90,37 @@ describe("Sentry Client", () => {
 
   describe("captureClientException", () => {
     it("captures exception with context", () => {
-      const error = new Error("Test error");
-      vi.clearAllMocks();
+      initializeClientForTests();
 
-      captureClientException(error, {
+      const error = new Error("Test error");
+      const context = {
         tags: { operation: "test" },
         extras: { detail: "info" },
-        level: "warning",
-      });
+        level: "warning" as const,
+      };
 
-      // Verify scope was configured
+      captureClientException(error, context);
+
       expect(Sentry.withScope).toHaveBeenCalled();
+      expect(mockCaptureCanaryException).toHaveBeenCalledWith(error, context);
     });
 
     it("does not throw on capture errors", () => {
+      initializeClientForTests();
+
       const error = new Error("Test error");
       vi.mocked(Sentry.withScope).mockImplementation(() => {
         throw new Error("Capture failed");
       });
 
       expect(() => captureClientException(error)).not.toThrow();
+      expect(mockCaptureCanaryException).toHaveBeenCalledWith(error, undefined);
     });
   });
 
   describe("setUserContext", () => {
     it("sets user with hashed ID", () => {
-      vi.clearAllMocks();
+      initializeClientForTests();
 
       setUserContext("user_123", "signed_in");
 
@@ -117,7 +134,7 @@ describe("Sentry Client", () => {
     });
 
     it("clears user when no ID provided", () => {
-      vi.clearAllMocks();
+      initializeClientForTests();
 
       setUserContext();
 
@@ -135,7 +152,7 @@ describe("Sentry Client", () => {
 
   describe("addBreadcrumb", () => {
     it("adds breadcrumb with message and data", () => {
-      vi.clearAllMocks();
+      initializeClientForTests();
 
       addBreadcrumb("Test action", { detail: "info" });
 

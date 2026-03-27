@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Scope } from "@sentry/nextjs";
 
+const { mockCaptureCanaryException } = vi.hoisted(() => ({
+  mockCaptureCanaryException: vi.fn(),
+}));
+
 // Store original env
 const originalEnv = { ...process.env };
 
@@ -36,7 +40,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 vi.mock("../canary", () => ({
-  captureCanaryException: vi.fn(),
+  captureCanaryException: mockCaptureCanaryException,
 }));
 
 describe("Sentry Server", () => {
@@ -137,12 +141,15 @@ describe("Sentry Server", () => {
       const { captureServerException } = await import("../sentry.server");
 
       const error = new Error("Test error");
-      captureServerException(error, { tags: { test: "tag" } });
+      const context = { tags: { test: "tag" } };
+
+      await captureServerException(error, context);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         "[Sentry] Exception (not initialized)",
         expect.objectContaining({ error }),
       );
+      expect(mockCaptureCanaryException).toHaveBeenCalledWith(error, context);
     });
 
     it("captures exception with tags and extras when initialized", async () => {
@@ -153,32 +160,36 @@ describe("Sentry Server", () => {
       initSentryServer();
 
       const error = new Error("Test error");
-      captureServerException(error, {
+      const context = {
         tags: { operation: "test" },
         extras: { detail: "info" },
         level: "warning",
-      });
+      } as const;
+      await captureServerException(error, context);
 
       expect(mockSentry.withScope).toHaveBeenCalled();
       expect(mockSentry.captureException).toHaveBeenCalledWith(error);
+      expect(mockCaptureCanaryException).toHaveBeenCalledWith(error, context);
     });
 
     it("handles capture errors gracefully", async () => {
       process.env.NEXT_PUBLIC_SENTRY_DSN = "https://test@sentry.io/789";
-      mockSentry.withScope.mockImplementation(() => {
-        throw new Error("Capture failed");
-      });
 
       const { initSentryServer, captureServerException } = await import("../sentry.server");
 
       initSentryServer();
+      mockSentry.withScope.mockImplementation(() => {
+        throw new Error("Capture failed");
+      });
       vi.clearAllMocks(); // Clear the init logs
 
-      expect(() => captureServerException(new Error("Test"))).not.toThrow();
+      const error = new Error("Test");
+      await expect(captureServerException(error)).resolves.toBeUndefined();
       expect(mockLogger.error).toHaveBeenCalledWith(
         "[Sentry] Failed to capture exception",
         expect.any(Object),
       );
+      expect(mockCaptureCanaryException).toHaveBeenCalledWith(error, undefined);
     });
   });
 

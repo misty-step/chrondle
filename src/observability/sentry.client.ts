@@ -86,8 +86,8 @@ export function captureClientException(error: unknown, context?: SentryContext):
     logger.debug("[Sentry] Not initialized, skipping exception capture", { error, context });
   }
 
-  try {
-    if (isInitialized) {
+  if (isInitialized) {
+    try {
       Sentry.withScope((scope) => {
         if (context?.tags) {
           Object.entries(context.tags).forEach(([key, value]) => {
@@ -107,12 +107,12 @@ export function captureClientException(error: unknown, context?: SentryContext):
 
         Sentry.captureException(error);
       });
+    } catch (err) {
+      logger.error("[Sentry] Failed to capture exception", { error, err });
     }
-
-    void captureCanaryException(error, context);
-  } catch (err) {
-    logger.error("[Sentry] Failed to capture exception", { error, err });
   }
+
+  void captureCanaryException(error, context);
 }
 
 /**
