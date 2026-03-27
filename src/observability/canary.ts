@@ -109,6 +109,10 @@ function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
     return value;
   }
 
+  if (value instanceof Date) {
+    return value;
+  }
+
   if (seen.has(value)) {
     return "[Circular]";
   }
