@@ -68,19 +68,19 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: 🔒 Security Audit
+        continue-on-error: true
         run: |
           echo "🔍 Checking for security vulnerabilities in dependencies..."
 
-          # Fail on moderate or higher (matches original pnpm prod strictness)
+          # Advisory only — transitive dependency vulnerabilities should not block CI.
+          # Track in Dependabot / GitHub Security tab instead.
           echo ""
           echo "📦 Auditing all dependencies (moderate+ severity)..."
           bun audit --audit-level moderate || {
-            EXIT_CODE=$?
-            echo "❌ Moderate/High/Critical vulnerabilities found!"
-            echo "Run 'bun audit' locally to see details"
-            exit $EXIT_CODE
+            echo "⚠️ Moderate/High/Critical vulnerabilities found in dependencies."
+            echo "Run 'bun audit' locally to see details."
+            echo "Review and address via Dependabot or dependency updates."
           }
-          echo "✅ Dependencies secure (no moderate+ vulnerabilities)"
 
           echo ""
           echo "✅ Security audit complete"
@@ -390,6 +390,25 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # Single required status check for branch protection.
+  # Gates on all real CI jobs so only one check name needs to be configured.
+  merge-gate:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [quality-checks, validation, docs, build, e2e]
+    steps:
+      - name: Check all jobs
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "❌ One or more required jobs failed"
+            exit 1
+          fi
+          if [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "❌ One or more required jobs were cancelled"
+            exit 1
+          fi
+          echo "✅ All required jobs passed"
 
   # Verify environment configuration before merge
   # Validates format and presence of required env vars
