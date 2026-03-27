@@ -18,6 +18,8 @@ Triage every currently open GitHub issue into an active `.backlog.d` item or a v
 - [x] `.backlog.d` is the local source of truth and `backlog.d` remains available as a compatibility symlink.
 
 ## Notes
+- Scope: this migration covers the live open issue set only. Closed issues remain in GitHub as historical record rather than being bulk-imported into `_done/`.
+- Open issue count at migration time: 35
 - Active mappings:
 - `002-simplify-classic-range-entry.md`: `#121`
 - `003-rebuild-archive-data-path.md`: `#105`
