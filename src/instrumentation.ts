@@ -14,3 +14,31 @@ export async function register() {
     initSentryServer();
   }
 }
+
+export async function onRequestError(
+  error: unknown,
+  request: {
+    path: string;
+    method: string;
+    headers: Record<string, string>;
+  },
+  context: {
+    routePath?: string;
+    routeType?: string;
+  },
+): Promise<void> {
+  const { captureServerException } = await import("./observability/sentry.server");
+
+  await captureServerException(error, {
+    level: "error",
+    tags: {
+      source: "nextjs.onRequestError",
+      route_type: context.routeType ?? "unknown",
+    },
+    extras: {
+      path: request.path,
+      method: request.method,
+      routePath: context.routePath,
+    },
+  });
+}

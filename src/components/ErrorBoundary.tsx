@@ -2,6 +2,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { logger } from "@/lib/logger";
+import { captureClientException } from "@/observability/sentry.client";
 // Storage import removed - no localStorage to clear
 
 interface Props {
@@ -60,23 +61,21 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     try {
-      // Prepare error data for telemetry
-      const errorData = {
-        message: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        url: window.location.href,
-        userId: this.getAnonymousUserId(),
-      };
+      const safeUrl = `${window.location.origin}${window.location.pathname}`;
 
-      // Send to console for basic telemetry
-      // In a real production app, you would send this to a service like Sentry, LogRocket, etc.
-      logger.error("PRODUCTION_ERROR:", JSON.stringify(errorData, null, 2));
-
-      // Optional: Send to a telemetry service
-      // Example: if (posthog.__loaded) posthog.capture("exception", { description: error.message, fatal: false });
+      captureClientException(error, {
+        level: "error",
+        tags: {
+          source: "react-error-boundary",
+        },
+        extras: {
+          componentStack: errorInfo.componentStack,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          url: safeUrl,
+          userId: this.getAnonymousUserId(),
+        },
+      });
     } catch (reportingError) {
       // Don't let error reporting crash the app
       logger.error("Failed to report error:", reportingError);

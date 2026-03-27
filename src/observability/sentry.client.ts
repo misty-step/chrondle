@@ -11,6 +11,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { hashIdentifier } from "./hash";
 import { logger } from "@/lib/logger";
+import { captureCanaryException } from "./canary";
 import type { SentryContext } from "./types";
 
 export type { SentryContext };
@@ -83,32 +84,35 @@ export function initSentryClient(): void {
 export function captureClientException(error: unknown, context?: SentryContext): void {
   if (!isInitialized) {
     logger.debug("[Sentry] Not initialized, skipping exception capture", { error, context });
-    return;
   }
 
-  try {
-    Sentry.withScope((scope) => {
-      if (context?.tags) {
-        Object.entries(context.tags).forEach(([key, value]) => {
-          scope.setTag(key, value);
-        });
-      }
+  if (isInitialized) {
+    try {
+      Sentry.withScope((scope) => {
+        if (context?.tags) {
+          Object.entries(context.tags).forEach(([key, value]) => {
+            scope.setTag(key, value);
+          });
+        }
 
-      if (context?.extras) {
-        Object.entries(context.extras).forEach(([key, value]) => {
-          scope.setExtra(key, value);
-        });
-      }
+        if (context?.extras) {
+          Object.entries(context.extras).forEach(([key, value]) => {
+            scope.setExtra(key, value);
+          });
+        }
 
-      if (context?.level) {
-        scope.setLevel(context.level);
-      }
+        if (context?.level) {
+          scope.setLevel(context.level);
+        }
 
-      Sentry.captureException(error);
-    });
-  } catch (err) {
-    logger.error("[Sentry] Failed to capture exception", { error, err });
+        Sentry.captureException(error);
+      });
+    } catch (err) {
+      logger.error("[Sentry] Failed to capture exception", { error, err });
+    }
   }
+
+  void captureCanaryException(error, context);
 }
 
 /**
