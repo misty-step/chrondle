@@ -6,10 +6,10 @@ The events CLI tool allows you to manage historical events in your Chrondle data
 
 ```bash
 # Verify all functions are deployed
-pnpm events verify
+bun run events verify
 
 # Show all available commands
-pnpm events --help
+bun run events --help
 ```
 
 ## Common Commands
@@ -18,53 +18,53 @@ pnpm events --help
 
 ```bash
 # List all years with event statistics
-pnpm events list
+bun run events list
 
 # Show all events for a specific year
-pnpm events show 1969
+bun run events show 1969
 
 # Validate data integrity
-pnpm events validate
+bun run events validate
 ```
 
 ### Managing Individual Events
 
 ```bash
 # Add a single event
-pnpm events add-one -y 1969 -e "Neil Armstrong walks on the moon"
+bun run events add-one -y 1969 -e "Neil Armstrong walks on the moon"
 
 # Update an event (use event number from 'show' command)
-pnpm events update-one -y 1969 -n 3 -t "Updated event text"
+bun run events update-one -y 1969 -n 3 -t "Updated event text"
 
 # Delete an event
-pnpm events delete-one -y 1969 -n 7
+bun run events delete-one -y 1969 -n 7
 ```
 
 ### Managing Year Events (Batch)
 
 ```bash
 # Add 6 events for a year (required for puzzles)
-pnpm events add -y 1969 -e "Event 1" "Event 2" "Event 3" "Event 4" "Event 5" "Event 6"
+bun run events add -y 1969 -e "Event 1" "Event 2" "Event 3" "Event 4" "Event 5" "Event 6"
 
 # Update all events for a year (only if not used in puzzles)
-pnpm events update -y 1969 -e "New Event 1" "New Event 2" "New Event 3" "New Event 4" "New Event 5" "New Event 6"
+bun run events update -y 1969 -e "New Event 1" "New Event 2" "New Event 3" "New Event 4" "New Event 5" "New Event 6"
 ```
 
 ## Important Notes
 
 - **Production Safety**: Events used in published puzzles cannot be modified or deleted
 - **Duplicate Prevention**: The system prevents adding duplicate events for the same year
-- **Deployment Required**: After updating `convex/events.ts`, run `npx convex deploy` to push changes to production
+- **Deployment Required**: After updating `convex/events.ts`, run `bunx convex deploy` to push changes to production
 - **Event Count**: Each year needs exactly 6 events to be used for puzzle generation
 
 ## Troubleshooting
 
 If you encounter errors:
 
-1. **"Could not find function" error**: Run `npx convex deploy` to deploy latest functions
-2. **"Event already exists" error**: Check for duplicates with `pnpm events show <year>`
+1. **"Could not find function" error**: Run `bunx convex deploy` to deploy latest functions
+2. **"Event already exists" error**: Check for duplicates with `bun run events show <year>`
 3. **"Used in puzzle" error**: Events in published puzzles are protected from changes
-4. **Verify deployment**: Run `pnpm events verify` to check all functions are deployed
+4. **Verify deployment**: Run `bun run events verify` to check all functions are deployed
 
 ## Database Statistics
 
@@ -72,7 +72,7 @@ Check current database status:
 
 ```bash
 # Get overall statistics
-pnpm events list
+bun run events list
 
 # Example output:
 # Year  | Total | Used | Available

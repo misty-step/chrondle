@@ -54,8 +54,8 @@ Both deployments contain the same data structure:
 git clone https://github.com/your-org/chrondle.git
 cd chrondle
 
-# Install dependencies (must use pnpm)
-pnpm install
+# Install dependencies
+bun install
 
 # Copy environment template
 cp .env.example .env.local
@@ -65,22 +65,15 @@ cp .env.example .env.local
 # - Use test Clerk keys (pk_test_, sk_test_)
 # - Set NODE_ENV=development
 
-# Start Convex in development mode
-npx convex dev
-
-# In another terminal, start Next.js
-pnpm dev
+# Start the full development stack
+bun run dev
 ```
 
 ### 2. Production Deployment (Vercel)
 
 #### A. Environment Setup
 
-1. **Create production environment file**
-
-   ```bash
-   cp .env.production .env.local
-   ```
+1. **Use `.env.example` as the production checklist**
 
 2. **Update with production values:**
    - Replace placeholder keys with actual production keys
@@ -91,20 +84,13 @@ pnpm dev
 #### B. Vercel Configuration
 
 1. **Add environment variables in Vercel Dashboard:**
-
    - Go to Project Settings → Environment Variables
-   - Add all required variables from `.env.production`
+   - Add all required variables from `.env.example`
    - Ensure production branch uses production values
 
 2. **Configure build settings:**
-
-   ```json
-   {
-     "buildCommand": "npx convex deploy --cmd 'pnpm build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL",
-     "outputDirectory": ".next",
-     "installCommand": "pnpm install"
-   }
-   ```
+   - Vercel should auto-detect the Next.js settings for this repository
+   - `vercel.json` only declares the framework, so no custom build or install command is required
 
 3. **Deploy:**
    ```bash
@@ -115,13 +101,13 @@ pnpm dev
 
 ```bash
 # Build for production
-pnpm build
+bun run build
 
 # Deploy Convex functions
-npx convex deploy --prod
+bunx convex deploy --prod
 
 # Start production server
-NODE_ENV=production pnpm start
+NODE_ENV=production bun run start
 ```
 
 ## Environment Configuration Patterns
@@ -136,7 +122,7 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 ```
 
-### Production Configuration (.env.production)
+### Example Production Configuration
 
 ```env
 NODE_ENV=production
@@ -210,19 +196,19 @@ CLERK_SECRET_KEY=sk_live_...
 
 ```bash
 # Check current Convex deployment
-npx convex dashboard
+bunx convex dashboard
 
 # Verify environment variables are loaded
-node -e "console.log(process.env.NEXT_PUBLIC_CONVEX_URL)"
+bun -e "console.log(process.env.NEXT_PUBLIC_CONVEX_URL)"
 
 # Test Convex connection
-npx convex run puzzles:getTotalPuzzles
+bunx convex run puzzles:getTotalPuzzles
 
 # Check build output
-pnpm build --debug
+bun run build --debug
 
 # Verify production build locally
-NODE_ENV=production pnpm build && pnpm start
+NODE_ENV=production bun run build && bun run start
 ```
 
 ### Environment Variable Validation Script
@@ -262,22 +248,18 @@ console.log("✅ Environment variables validated successfully");
 ## Security Best Practices
 
 1. **Never commit secrets to version control**
-
    - Use `.env.local` (gitignored)
    - Store production secrets in deployment platform
 
 2. **Use environment-specific keys**
-
    - Development: `pk_test_`, `sk_test_`
    - Production: `pk_live_`, `sk_live_`
 
 3. **Rotate keys regularly**
-
    - Set up key rotation schedule
    - Update after any potential exposure
 
 4. **Configure domain restrictions**
-
    - Set allowed origins in Clerk dashboard
    - Configure CORS in Convex functions
 
@@ -290,16 +272,16 @@ console.log("✅ Environment variables validated successfully");
 
 ### Pre-Deployment
 
-- [ ] All tests passing (`pnpm test`)
-- [ ] TypeScript compilation clean (`pnpm type-check`)
-- [ ] Linting passes (`pnpm lint`)
-- [ ] Puzzle validation passes (`pnpm validate-puzzles`)
+- [ ] All tests passing (`bun run test`)
+- [ ] TypeScript compilation clean (`bun run type-check`)
+- [ ] Linting passes (`bun run lint`)
+- [ ] Puzzle validation passes (`bun run validate-puzzles`)
 - [ ] Environment variables configured
 - [ ] Production keys obtained (not test keys)
 
 ### Deployment
 
-- [ ] Convex functions deployed (`npx convex deploy --prod`)
+- [ ] Convex functions deployed (`bunx convex deploy --prod`)
 - [ ] Environment variables set in platform
 - [ ] Build successful
 - [ ] Domain configured and SSL active

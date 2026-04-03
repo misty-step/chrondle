@@ -57,7 +57,7 @@ You can play Chrondle directly at [chrondle.app](https://chrondle.app).
 
 ### Dependency Management
 
-This project uses pnpm with specific dependency overrides to address security vulnerabilities in transitive dependencies. See [docs/dependency-overrides.md](docs/dependency-overrides.md) for details on:
+This project uses Bun with `package.json` overrides to address security vulnerabilities in transitive dependencies. See [docs/dependency-overrides.md](docs/dependency-overrides.md) for details on:
 
 - Current overrides and their rationale
 - Maintenance guidelines
@@ -154,7 +154,7 @@ This project is built with:
   ```bash
   nvm use
   ```
-- **pnpm**: This project uses pnpm exclusively as the package manager. npm and yarn are not supported.
+- **Bun**: This project uses Bun exclusively as the package manager. pnpm, npm, and yarn are not supported.
 - **ESM Modules**: The codebase uses ES modules throughout. All configuration files use `.mjs` extensions or TypeScript.
 
 ## Getting Started
@@ -171,7 +171,7 @@ This project is built with:
 2.  Install dependencies:
 
     ```bash
-    pnpm install
+    bun install
     ```
 
 3.  Set up environment variables:
@@ -182,15 +182,10 @@ This project is built with:
 
     Edit `.env.local` with your configuration (see Environment Setup below).
 
-4.  Start Convex development server:
+4.  Start the full development stack:
 
     ```bash
-    npx convex dev
-    ```
-
-5.  In a new terminal, start the Next.js development server:
-    ```bash
-    pnpm dev
+    bun run dev
     ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to play.
@@ -236,7 +231,7 @@ Chrondle requires several environment variables for production deployment. Copy 
 2. **Set up Convex:**
 
    ```bash
-   npx convex deploy --prod
+   bunx convex deploy --prod
    ```
 
    This will create a production deployment and provide your `NEXT_PUBLIC_CONVEX_URL`.
@@ -256,13 +251,8 @@ Chrondle requires several environment variables for production deployment. Copy 
      - `CLERK_WEBHOOK_SECRET` (if using Clerk webhooks)
 
 5. **Configure Build Settings:**
-   - Vercel should auto-detect Next.js settings
-   - The build command is already configured in `vercel.json`:
-     ```json
-     {
-       "buildCommand": "npx convex deploy --cmd 'npm run build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL"
-     }
-     ```
+   - Vercel should auto-detect the Next.js settings for this repository
+   - `vercel.json` only declares the framework, so no custom build or install command is required
 
 6. **Deploy:**
    - Click "Deploy"
@@ -297,13 +287,13 @@ Run the verification scripts to ensure production readiness:
 
 ```bash
 # Verify authentication configuration
-pnpm verify:auth:prod
+bun run verify:auth:prod
 
 # Check deployment readiness
-pnpm deployment:check
+bun run deployment:check
 
 # Validate Convex configuration
-pnpm verify:convex
+bun run verify:convex
 ```
 
 ### Troubleshooting
@@ -316,14 +306,14 @@ pnpm verify:convex
 
 **Authentication not working:**
 
-- Verify Clerk keys are correct (use `pnpm verify:auth:prod`)
+- Verify Clerk keys are correct (use `bun run verify:auth:prod`)
 - Check webhook configuration
 - Ensure `CLERK_WEBHOOK_SECRET` matches the webhook settings
 
 **Build failures:**
 
 - Check all required environment variables are set
-- Verify `vercel.json` is present in the repository
+- Verify `bun run build` succeeds locally
 - Review build logs for specific errors
 
 **Notification issues:**
@@ -339,7 +329,3 @@ pnpm verify:convex
 - Check that server timezone handling matches Central Time
 
 For more detailed setup instructions, see the [Convex Next.js Quickstart](https://docs.convex.dev/quickstart/nextjs) and [Clerk Next.js Documentation](https://clerk.com/docs/quickstarts/nextjs).
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
