@@ -80,12 +80,12 @@ program
           `❌ Error: Year ${year} already exists with ${existingEvents.length} events.`,
         );
         console.error(`\n💡 Options:`);
-        console.error(`   1. Use 'pnpm events show ${year}' to review existing events`);
+        console.error(`   1. Use 'bun run events show ${year}' to review existing events`);
         console.error(
-          `   2. Use 'pnpm events add-one -y ${year} -e "..."' to add individual events`,
+          `   2. Use 'bun run events add-one -y ${year} -e "..."' to add individual events`,
         );
         console.error(
-          `   3. Use 'pnpm events add -y ${year} -e ... --force' to force adding (creates duplicates)`,
+          `   3. Use 'bun run events add -y ${year} -e ... --force' to force adding (creates duplicates)`,
         );
         process.exit(1);
       }
@@ -252,7 +252,7 @@ program
       // Provide more helpful error messages
       if (error.message.includes("Could not find function")) {
         console.error("\n💡 Hint: The updateEvent function may not be deployed to production.");
-        console.error("   Run 'npx convex deploy' to deploy the latest functions.");
+        console.error("   Run 'bunx convex deploy' to deploy the latest functions.");
       } else if (error.message.includes("already exists")) {
         console.error("\n💡 Hint: An event with this exact text already exists for this year.");
       } else if (error.message.includes("used in a puzzle")) {
@@ -295,7 +295,7 @@ program
       // Provide more helpful error messages
       if (error.message.includes("Could not find function")) {
         console.error("\n💡 Hint: The deleteEvent function may not be deployed to production.");
-        console.error("   Run 'npx convex deploy' to deploy the latest functions.");
+        console.error("   Run 'bunx convex deploy' to deploy the latest functions.");
       } else if (error.message.includes("used in a puzzle")) {
         console.error(
           "\n💡 Hint: This event is already used in a published puzzle and cannot be deleted.",
@@ -482,7 +482,7 @@ program
         console.log("✅ All required functions are deployed and ready!");
       } else {
         console.log("❌ Some functions are missing.");
-        console.log("\n💡 Run 'npx convex deploy' to deploy the latest functions.");
+        console.log("\n💡 Run 'bunx convex deploy' to deploy the latest functions.");
         process.exit(1);
       }
     } catch (error: any) {

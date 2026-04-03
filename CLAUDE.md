@@ -95,7 +95,7 @@
 bun run lint && bun run type-check && bun run test
 
 # Convex DB integrity
-npx convex run puzzles:getTotalPuzzles
+bunx convex run puzzles:getTotalPuzzles
 
 # Start dev environment
 bunx convex dev  # Terminal 1
@@ -135,7 +135,7 @@ vi.mock("motion/react", () => ({
 ## Common Traps
 
 1. **Hydration:** Return safe defaults until `mounted=true`
-2. **Convex paths:** `npx convex run dir/file:fn` (NOT `dir:fn`)
+2. **Convex paths:** `bunx convex run dir/file:fn` (NOT `dir:fn`)
 3. **Perf tests:** CI needs 1.5× local threshold (25ms vs 16ms)
 4. **BC/AD:** Internal = negative numbers (BC), positive (AD)
 

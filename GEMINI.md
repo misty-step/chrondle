@@ -14,32 +14,32 @@
 ### Setup
 
 1.  **Node Environment:** `nvm use` (requires Node 20+).
-2.  **Package Manager:** `pnpm` (strictly enforced).
-3.  **Dependencies:** `pnpm install`.
+2.  **Package Manager:** `bun` (strictly enforced).
+3.  **Dependencies:** `bun install`.
 4.  **Environment:** Copy `.env.example` to `.env.local` and configure keys.
 
 ### Running the App
 
-- **Full Stack (Recommended):** `pnpm dev:full` (Runs both Next.js and Convex).
-- **Frontend Only:** `pnpm dev` (Next.js with Turbopack).
-- **Backend Only:** `npx convex dev`.
+- **Full Stack (Recommended):** `bun run dev` (Runs Next.js and Convex together).
+- **Frontend Only:** `bun run dev:next` (Next.js with Turbopack).
+- **Backend Only:** `bunx convex dev`.
 
 ### Testing
 
-- **All Tests:** `pnpm test` (Vitest).
-- **Unit Tests:** `pnpm test:unit`.
-- **Integration Tests:** `pnpm test:integration`.
-- **E2E Tests:** `pnpm test:e2e` (Playwright).
-- **Coverage:** `pnpm test:coverage`.
+- **All Tests:** `bun run test` (Vitest).
+- **Unit Tests:** `bun run test:unit`.
+- **Integration Tests:** `bun run test:integration`.
+- **E2E Tests:** `bun run test:e2e` (Playwright).
+- **Coverage:** `bun run test:coverage`.
 
 ### Code Quality & Verification
 
-- **Linting:** `pnpm lint` (ESLint).
-- **Type Check:** `pnpm type-check` (TypeScript).
-- **Formatting:** `pnpm format` (Prettier).
-- **Size Analysis:** `pnpm size`.
-- **Convex Verification:** `pnpm verify:convex`.
-- **Auth Verification:** `pnpm verify:auth` or `pnpm verify:auth:prod`.
+- **Linting:** `bun run lint` (ESLint).
+- **Type Check:** `bun run type-check` (TypeScript).
+- **Formatting:** `bun run format` (Prettier).
+- **Size Analysis:** `bun run size`.
+- **Convex Verification:** `bun run verify:convex`.
+- **Auth Verification:** `bun run verify:auth` or `bun run verify:auth:prod`.
 
 ## Architecture & Conventions
 

@@ -11,15 +11,15 @@ Thank you for your interest in contributing to Chrondle! This guide will help yo
    cd chrondle
    ```
 
-2. **Install dependencies (pnpm required):**
+2. **Install dependencies (Bun required):**
 
    ```bash
-   pnpm install
+   bun install
    ```
 
 3. **Start development server:**
    ```bash
-   pnpm dev
+   bun run dev
    ```
 
 ## 🏃‍♂️ Development Workflow
@@ -42,8 +42,8 @@ We separate tests for optimal developer experience:
 #### Unit Tests (<10s)
 
 ```bash
-pnpm test:unit          # Run unit tests
-pnpm test:unit:watch    # Watch mode for TDD
+bun run test:unit       # Run unit tests
+bun run test:unit:watch # Watch mode for TDD
 ```
 
 - Pure functions and simple logic
@@ -53,8 +53,8 @@ pnpm test:unit:watch    # Watch mode for TDD
 #### Integration Tests (<30s)
 
 ```bash
-pnpm test:integration       # Run integration tests
-pnpm test:integration:watch # Watch mode
+bun run test:integration       # Run integration tests
+bun run test:integration:watch # Watch mode
 ```
 
 - API routes, hooks, complex state
@@ -64,52 +64,55 @@ pnpm test:integration:watch # Watch mode
 #### All Tests
 
 ```bash
-pnpm test       # Run all tests once and exit
-pnpm test:watch # Run all tests in watch mode
-pnpm test:ci    # Same as test (for CI compatibility)
+bun run test       # Run all tests once and exit
+bun run test:watch # Run all tests in watch mode
+bun run test:ci    # Same as test (for CI compatibility)
 ```
 
 ### Code Quality Commands
 
 ```bash
-pnpm lint          # Check linting
-pnpm lint:fix      # Auto-fix linting issues
-pnpm type-check    # TypeScript type checking
-pnpm format        # Format with Prettier
-pnpm size          # Check bundle size (<170KB limit)
+bun run lint       # Check linting
+bun run lint:fix   # Auto-fix linting issues
+bun run type-check # TypeScript type checking
+bun run format     # Format with Prettier
+bun run size       # Check bundle size (<170KB limit)
 ```
 
 ## 🔧 CI/CD Setup Requirements
 
 ### Convex Code Generation
 
-This project uses **Convex** as its backend database. Convex auto-generates TypeScript definitions that are required for type checking but are **gitignored** to avoid merge conflicts.
+This project uses **Convex** as its backend database. The generated files in `convex/_generated/` are required for type checking and deployments, and they **must remain committed to Git**.
 
-#### Why are Convex files gitignored?
+#### Why are Convex files committed?
 
 - **Auto-generated**: Files in `convex/_generated/` are created from your schema
-- **Environment-specific**: Different deployments may have different schemas
-- **Merge conflicts**: Generated files would cause unnecessary conflicts
-- **Best practice**: Generated code should not be committed to version control
+- **Deployment-critical**: Vercel builds depend on these files being present
+- **Type-checking**: Local and CI verification fail without them
+- **Guard rails**: The repo includes checks to prevent accidental deletion or drift
 
 #### CI Pipeline Requirements
 
-The CI pipeline **must** generate these files before running type checks:
+CI should verify these files before running type checks:
 
 ```yaml
-# Required in .github/workflows/ci.yml
-- name: Generate Convex files
-  run: npx convex codegen
-  env:
-    CONVEX_DEPLOYMENT: fleet-goldfish-183 # Production deployment ID
+- name: Verify committed Convex files
+  run: bun run verify:convex
 ```
 
 #### Local Development
 
-For local development, Convex files are generated automatically when you run:
+For local development, Convex files are regenerated automatically when you run:
 
 ```bash
-npx convex dev  # Starts Convex in development mode and generates files
+bunx convex dev  # Starts Convex in development mode and generates files
+```
+
+If you need code generation without the long-running dev process:
+
+```bash
+bunx convex codegen
 ```
 
 #### Troubleshooting CI Failures
@@ -127,10 +130,10 @@ error TS2307: Cannot find module '../_generated/api'
 
 **Problem:** Vercel deployment fails with Convex import errors
 
-**Solution:** Add Convex codegen to your Vercel build command:
+**Solution:** Regenerate the files locally and confirm the build before deploying:
 
 ```bash
-npx convex codegen && pnpm build
+bunx convex codegen && bun run build
 ```
 
 ## ⚠️ Critical: Convex Generated Files
@@ -158,10 +161,10 @@ You must regenerate and commit these files when:
 
 ```bash
 # Option 1: Use dev server (auto-generates on save)
-npx convex dev
+bunx convex dev
 
 # Option 2: Generate without dev server
-npx convex codegen
+bunx convex codegen
 
 # Always commit the changes
 git add convex/_generated/
@@ -178,13 +181,13 @@ git commit -m "chore: update Convex generated files"
 
 ```bash
 # Check files are present and committed
-pnpm verify:convex
+bun run verify:convex
 
 # Full deployment readiness check
-pnpm deployment:check
+bun run deployment:check
 
 # Diagnose Vercel failures
-node scripts/diagnose-vercel-failure.mjs
+bun scripts/diagnose-vercel-failure.mjs
 ```
 
 ### CI Protection
@@ -195,27 +198,27 @@ Our CI pipeline includes multiple safeguards:
 - CI checks confirm files are committed
 - Deployment readiness scripts catch issues early
 
-See `convex/_generated/README.md` for detailed technical explanation.
+See `scripts/verify-convex-files.mjs` for the enforcement details.
 
 ## 📊 Quality Gates
 
 ### Performance Metrics
 
-| Metric            | Target | Measured By             |
-| ----------------- | ------ | ----------------------- |
-| Pre-commit hooks  | <1s    | Automated               |
-| Unit tests        | <10s   | `pnpm test:unit`        |
-| Integration tests | <30s   | `pnpm test:integration` |
-| Bundle size       | <170KB | `pnpm size`             |
-| CI pipeline       | <30s   | GitHub Actions          |
+| Metric            | Target | Measured By                |
+| ----------------- | ------ | -------------------------- |
+| Pre-commit hooks  | <1s    | Automated                  |
+| Unit tests        | <10s   | `bun run test:unit`        |
+| Integration tests | <30s   | `bun run test:integration` |
+| Bundle size       | <170KB | `bun run size`             |
+| CI pipeline       | <30s   | GitHub Actions             |
 
 ### Bundle Size Monitoring
 
 We use `size-limit` to ensure optimal performance:
 
 ```bash
-pnpm build    # Build the application
-pnpm size     # Check bundle sizes
+bun run build # Build the application
+bun run size  # Check bundle sizes
 ```
 
 Current limits:
@@ -277,18 +280,18 @@ src/
 
 ## 🚨 Troubleshooting
 
-For comprehensive troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+For comprehensive troubleshooting, see [the troubleshooting guide](../operations/troubleshooting.md).
 
-For CI/CD pipeline issues, see [CI_DEBUGGING_PLAYBOOK.md](CI_DEBUGGING_PLAYBOOK.md).
+For CI/CD pipeline issues, see [the CI debugging guide](../development/ci-debugging.md).
 
 ### Quick Fixes
 
 - **Tests hanging?** → `pkill -f node` and check for timers
 - **Hooks slow?** → `git commit --no-verify` (emergency only)
-- **Bundle too big?** → `pnpm size` to analyze
+- **Bundle too big?** → `bun run size` to analyze
 - **Build failing?** → Clear caches with `rm -rf .next node_modules/.cache`
 
-For detailed solutions to these and many more issues, refer to the full [Troubleshooting Guide](TROUBLESHOOTING.md).
+For detailed solutions to these and many more issues, refer to [the troubleshooting guide](../operations/troubleshooting.md).
 
 ## 📝 Commit Guidelines
 
@@ -303,7 +306,7 @@ chore: upgrade dependencies
 
 ## 🆘 Emergency Procedures
 
-For comprehensive emergency procedures, see [EMERGENCY.md](EMERGENCY.md).
+For comprehensive emergency procedures, see [the emergency guide](../operations/emergency.md).
 
 ### Quick Reference
 
@@ -312,7 +315,7 @@ For comprehensive emergency procedures, see [EMERGENCY.md](EMERGENCY.md).
 - **Tests hanging:** `pkill -f node` and clear caches
 - **Bundle too large:** Check recent dependencies with `git diff`
 
-For detailed procedures, recovery steps, and prevention tips, refer to the full [Emergency Guide](EMERGENCY.md).
+For detailed procedures, recovery steps, and prevention tips, refer to [the emergency guide](../operations/emergency.md).
 
 ## 🤝 Pull Request Process
 
@@ -325,14 +328,13 @@ For detailed procedures, recovery steps, and prevention tips, refer to the full 
 2. **Make your changes and test:**
 
    ```bash
-   pnpm test:unit        # Quick feedback
-   pnpm test:integration # Thorough testing
-   pnpm build           # Ensure it builds
-   pnpm size            # Check bundle size
+   bun run test:unit        # Quick feedback
+   bun run test:integration # Thorough testing
+   bun run build            # Ensure it builds
+   bun run size             # Check bundle size
    ```
 
 3. **Submit your PR:**
-
    - Write a clear description
    - Reference any related issues
    - Ensure all CI checks pass
@@ -343,7 +345,7 @@ For detailed procedures, recovery steps, and prevention tips, refer to the full 
 
 ## 📚 Additional Resources
 
-- [Project README](README.md)
+- [Project README](../../README.md)
 - [Next.js Documentation](https://nextjs.org/docs)
 - [React Documentation](https://react.dev)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs)
@@ -353,13 +355,13 @@ For detailed procedures, recovery steps, and prevention tips, refer to the full 
 1. **Use watch mode for TDD:**
 
    ```bash
-   pnpm test:unit:watch
+   bun run test:unit:watch
    ```
 
 2. **Run only affected tests:**
 
    ```bash
-   pnpm test:unit -- path/to/specific.test.ts
+   bun run test:unit -- path/to/specific.test.ts
    ```
 
 3. **Skip pre-commit for WIP commits:**
