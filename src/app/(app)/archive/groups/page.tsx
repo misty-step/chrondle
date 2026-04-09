@@ -15,6 +15,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { ArchiveGrid } from "@/components/archive/ArchiveGrid";
+import { GroupsUnavailableState } from "@/components/groups/GroupsUnavailableState";
 import { UserCreationHandler } from "@/components/UserCreationHandler";
 import { LoadingShell } from "@/components/LoadingShell";
 import { logger } from "@/lib/logger";
@@ -112,9 +113,11 @@ async function GroupsArchivePageContent({
       totalCount: 0,
       currentPage: 1,
     };
+  let archiveUnavailable = false;
   try {
     archiveData = await fetchArchiveGroupsPuzzles(client, currentPage, PUZZLES_PER_PAGE);
   } catch (error) {
+    archiveUnavailable = true;
     logger.error("[GroupsArchive] Failed to load puzzles:", error);
   }
 
@@ -210,7 +213,16 @@ async function GroupsArchivePageContent({
             </div>
           )}
 
-          {validPuzzles.length === 0 ? (
+          {archiveUnavailable ? (
+            <GroupsUnavailableState
+              title="Groups Archive Is Unavailable"
+              description="This environment is missing the Groups archive queries. Try again after the Convex deploy finishes, or jump back to the live daily modes."
+              primaryHref="/"
+              primaryLabel="Back to Home"
+              secondaryHref="/archive"
+              secondaryLabel="Classic Archive"
+            />
+          ) : validPuzzles.length === 0 ? (
             <div className="py-12 text-center">
               <p className="text-muted-foreground">No puzzles available yet. Check back soon!</p>
             </div>

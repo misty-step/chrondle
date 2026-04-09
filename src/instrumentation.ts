@@ -9,7 +9,7 @@
 
 export async function register() {
   // Only initialize on Node.js runtime (not Edge)
-  if (process.env.NEXT_RUNTIME === "nodejs") {
+  if (process.env.NEXT_RUNTIME === "nodejs" && isSentryConfigured()) {
     const { initSentryServer } = await import("./observability/sentry.server");
     initSentryServer();
   }
@@ -27,10 +27,8 @@ export async function onRequestError(
     routeType?: string;
   },
 ): Promise<void> {
-  const { captureServerException } = await import("./observability/sentry.server");
-
-  await captureServerException(error, {
-    level: "error",
+  const contextPayload = {
+    level: "error" as const,
     tags: {
       source: "nextjs.onRequestError",
       route_type: context.routeType ?? "unknown",
@@ -40,5 +38,19 @@ export async function onRequestError(
       method: request.method,
       routePath: context.routePath,
     },
-  });
+  };
+
+  if (!isSentryConfigured()) {
+    const { captureCanaryException } = await import("./observability/canary");
+    await captureCanaryException(error, contextPayload);
+    return;
+  }
+
+  const { captureServerException } = await import("./observability/sentry.server");
+
+  await captureServerException(error, contextPayload);
+}
+
+function isSentryConfigured(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN?.trim());
 }

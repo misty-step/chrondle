@@ -71,7 +71,6 @@ export function GamesGallery() {
   const router = useRouter();
   const classicPuzzle = useQuery(anyPublicApi.puzzles.getDailyPuzzle);
   const orderPuzzle = useQuery(anyPublicApi.orderPuzzles.getDailyOrderPuzzle);
-  const groupsPuzzle = useQuery(anyPublicApi.groupsPuzzles.getDailyGroupsPuzzle);
 
   const handleSelect = useCallback(
     (mode: ModeKey, route: string) => {
@@ -82,8 +81,11 @@ export function GamesGallery() {
   );
 
   const getPuzzleLabel = (modeKey: ModeKey) => {
-    const puzzle =
-      modeKey === "classic" ? classicPuzzle : modeKey === "order" ? orderPuzzle : groupsPuzzle;
+    if (modeKey === "groups") {
+      return "Daily Board";
+    }
+
+    const puzzle = modeKey === "classic" ? classicPuzzle : orderPuzzle;
     return puzzle?.puzzleNumber ? `Puzzle #${puzzle.puzzleNumber}` : null;
   };
 

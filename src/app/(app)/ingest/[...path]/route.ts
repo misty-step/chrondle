@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 const REQUEST_HEADERS_TO_STRIP = ["cookie", "authorization"];
 
 // Response headers that should never be exposed back to the browser
-const RESPONSE_HEADERS_TO_STRIP = ["set-cookie"];
+const RESPONSE_HEADERS_TO_STRIP = ["set-cookie", "content-encoding", "content-length"];
 
 // PostHog hosts
 const POSTHOG_MAIN_HOST = "https://us.i.posthog.com";

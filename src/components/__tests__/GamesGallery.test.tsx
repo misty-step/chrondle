@@ -60,7 +60,7 @@ describe("GamesGallery", () => {
       expect(screen.getByText("Daily history puzzles")).toBeInTheDocument();
     });
 
-    it("renders all mode cards with copy, CTAs, and puzzle numbers", () => {
+    it("renders all mode cards with copy, CTAs, and puzzle metadata", () => {
       render(<GamesGallery />);
 
       expect(screen.getByRole("button", { name: /classic/i })).toBeInTheDocument();
@@ -78,7 +78,8 @@ describe("GamesGallery", () => {
       expect(screen.getByText("Play Groups")).toBeInTheDocument();
 
       expect(screen.getAllByText("New")).toHaveLength(2);
-      expect(screen.getAllByText("Puzzle #247")).toHaveLength(3);
+      expect(screen.getAllByText("Puzzle #247")).toHaveLength(2);
+      expect(screen.getByText("Daily Board")).toBeInTheDocument();
     });
 
     it("renders mode icons", () => {
@@ -113,6 +114,14 @@ describe("GamesGallery", () => {
       fireEvent.click(screen.getByRole("button", { name: /groups/i }));
 
       expect(mockPush).toHaveBeenCalledWith("/groups");
+    });
+  });
+
+  describe("Data fetching", () => {
+    it("only requests puzzle numbers for deployed daily modes", () => {
+      render(<GamesGallery />);
+
+      expect(vi.mocked(useQuery)).toHaveBeenCalledTimes(2);
     });
   });
 
