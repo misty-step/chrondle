@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { GameAnalytics, AnalyticsEvent } from "../analytics";
+import { __setPostHogLoaderForTests, GameAnalytics, AnalyticsEvent } from "../analytics";
 import type { GameState } from "@/types/gameState";
 
 const mockCapture = vi.hoisted(() => vi.fn());
@@ -27,6 +27,11 @@ describe("GameAnalytics", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.removeItem("chrondle-anonymous-id");
+    __setPostHogLoaderForTests(async () => ({
+      capture: mockCapture,
+      get_distinct_id: mockGetDistinctId,
+      __loaded: true,
+    }));
 
     // Reset singleton
     (GameAnalytics as unknown as { instance: undefined }).instance = undefined;
@@ -45,6 +50,7 @@ describe("GameAnalytics", () => {
     analytics.reset();
     vi.clearAllTimers();
     window.localStorage.removeItem("chrondle-anonymous-id");
+    __setPostHogLoaderForTests(null);
 
     if (originalEndpoint === undefined) {
       delete process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
@@ -412,17 +418,16 @@ describe("GameAnalytics", () => {
     it("should call posthog when available", async () => {
       analytics.track(AnalyticsEvent.GAME_LOADED, { test: true }, "user-123");
 
-      // PostHog is now lazy-loaded via dynamic import
-      await Promise.resolve();
-
-      expect(mockCapture).toHaveBeenCalledWith(
-        AnalyticsEvent.GAME_LOADED,
-        expect.objectContaining({
-          test: true,
-          user_id: "user-123",
-          session_id: expect.any(String),
-        }),
-      );
+      await vi.waitFor(() => {
+        expect(mockCapture).toHaveBeenCalledWith(
+          AnalyticsEvent.GAME_LOADED,
+          expect.objectContaining({
+            test: true,
+            user_id: "user-123",
+            session_id: expect.any(String),
+          }),
+        );
+      });
     });
 
     it("should not track when disabled", () => {

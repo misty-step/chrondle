@@ -1,6 +1,7 @@
 import { dag, argument, Container, Directory, Secret, func, object } from "@dagger.io/dagger";
 
 const BUN_IMAGE = "oven/bun:1.3.9";
+const NODE_IMAGE = "node:22-bookworm-slim";
 const PLAYWRIGHT_IMAGE = "mcr.microsoft.com/playwright:v1.57.0-noble";
 const BUN_CACHE = "/root/.bun/install/cache";
 const COVERAGE_DIRECTORY = "coverage";
@@ -144,12 +145,26 @@ export class Ci {
     return container;
   }
 
-  private testCoverageArtifactsDirectory(source: Directory): Directory {
+  private verifiedWorkspaceDirectory(source: Directory): Directory {
     return this.appContainer(source)
       .withExec(["sh", "-lc", SECRET_SCAN_SCRIPT])
       .withExec(["sh", "-lc", SECURITY_AUDIT_SCRIPT])
       .withExec(["bun", "run", "verify:convex"])
-      .withExec(["bun", "run", "test:coverage"])
+      .directory(WORKDIR);
+  }
+
+  private testCoverageArtifactsDirectory(source: Directory): Directory {
+    return this.baseContainer(NODE_IMAGE)
+      .withDirectory(WORKDIR, this.verifiedWorkspaceDirectory(source))
+      .withWorkdir(WORKDIR)
+      .withExec([
+        "node",
+        "./node_modules/vitest/vitest.mjs",
+        "run",
+        "--coverage",
+        "--config",
+        "vitest.config.ts",
+      ])
       .withExec(["sh", "-lc", EXPORT_COVERAGE_ARTIFACTS_SCRIPT])
       .directory(COVERAGE_ARTIFACTS_DIRECTORY);
   }

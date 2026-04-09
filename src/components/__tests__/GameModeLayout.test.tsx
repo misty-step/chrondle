@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from "vitest";
 import { GameModeLayout } from "../GameModeLayout";
 
 // Mock lazy components
-vi.mock("../LazyComponents", () => ({
+vi.mock("@/components/LazyComponents", () => ({
   AppHeader: ({
     mode,
     puzzleNumber,
@@ -31,11 +31,11 @@ vi.mock("../LazyComponents", () => ({
   ),
 }));
 
-vi.mock("../Footer", () => ({
+vi.mock("@/components/Footer", () => ({
   Footer: () => <footer data-testid="footer">Footer</footer>,
 }));
 
-vi.mock("../GameErrorBoundary", () => ({
+vi.mock("@/components/GameErrorBoundary", () => ({
   GameErrorBoundary: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="error-boundary">{children}</div>
   ),

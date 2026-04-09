@@ -2,6 +2,8 @@ import { defineConfig } from "vitest/config";
 import type { UserConfig } from "vitest/config";
 import path from "path";
 
+const useForkPool = process.platform === "linux" && Boolean(process.versions.bun);
+
 const sharedExclude = [
   "**/node_modules/**",
   "**/dist/**",
@@ -67,14 +69,23 @@ export const baseVitestConfig = {
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
-    pool: "threads" as const,
-    poolOptions: {
-      threads: {
-        singleThread: false,
-        maxThreads: 4,
-        minThreads: 2,
-      },
-    },
+    // Bun on Linux exits early with thread pool + coverage; use forks in CI-like containers.
+    pool: useForkPool ? ("forks" as const) : ("threads" as const),
+    poolOptions: useForkPool
+      ? {
+          forks: {
+            singleFork: false,
+            maxForks: 4,
+            minForks: 2,
+          },
+        }
+      : {
+          threads: {
+            singleThread: false,
+            maxThreads: 4,
+            minThreads: 2,
+          },
+        },
     projects: [
       {
         extends: true as const,

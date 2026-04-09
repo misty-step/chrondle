@@ -15,15 +15,29 @@ import { GameState, isReady } from "@/types/gameState";
 type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
 type JsonObject = { [key: string]: JsonValue | undefined };
 type JsonArray = JsonValue[];
+type PostHogClient = Pick<typeof import("posthog-js").default, "capture"> & {
+  __loaded?: boolean;
+  get_distinct_id?: () => unknown;
+};
 
 // Lazy-loaded PostHog - avoids bundling in initial chunk
-let posthogPromise: Promise<typeof import("posthog-js").default> | null = null;
+let posthogPromise: Promise<PostHogClient> | null = null;
+let posthogLoaderOverride: (() => Promise<PostHogClient>) | null = null;
 
-function getPostHog(): Promise<typeof import("posthog-js").default> {
+function getPostHog(): Promise<PostHogClient> {
+  if (posthogLoaderOverride) {
+    return posthogLoaderOverride();
+  }
+
   if (!posthogPromise) {
     posthogPromise = import("posthog-js").then((m) => m.default);
   }
   return posthogPromise;
+}
+
+export function __setPostHogLoaderForTests(loader: (() => Promise<PostHogClient>) | null): void {
+  posthogLoaderOverride = loader;
+  posthogPromise = null;
 }
 
 /**
