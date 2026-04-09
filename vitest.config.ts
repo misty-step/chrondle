@@ -54,6 +54,11 @@ const coverageExclude = [
   "postcss.config.mjs",
   "lefthook.yml",
   "next.config.ts",
+
+  // Generated CI/module code and operational scripts are validated separately
+  "dagger/**",
+  "scripts/**",
+  "evals/**",
 ] as const;
 
 // Base configuration shared by test projects
