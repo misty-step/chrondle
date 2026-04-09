@@ -205,7 +205,7 @@ jobs:
           version: "0.20.3"
           verb: call
           module: .
-          args: e2e-artifacts --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --output=.dagger-e2e
+          args: e-2-e-artifacts --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --output=.dagger-e2e
 
       - name: Upload Playwright report
         if: always()
