@@ -1,4 +1,4 @@
-import { dag, argument, Container, Directory, Secret, func, object } from "@dagger.io/dagger";
+import { dag, argument, Container, Directory, File, Secret, func, object } from "@dagger.io/dagger";
 
 const BUN_IMAGE = "oven/bun:1.3.9";
 const PLAYWRIGHT_IMAGE = "mcr.microsoft.com/playwright:v1.57.0-noble";
@@ -101,14 +101,10 @@ export class Ci {
 
   private appContainer(source: Directory): Container {
     return this.baseContainer()
-      .withFile(`${WORKDIR}/package.json`, source.file("package.json"))
-      .withFile(`${WORKDIR}/bun.lock`, source.file("bun.lock"))
-      .withFile(`${WORKDIR}/dagger/package.json`, source.file("dagger/package.json"))
-      .withFile(`${WORKDIR}/dagger/bun.lock`, source.file("dagger/bun.lock"))
-      .withExec(["bun", "install", "--frozen-lockfile"])
-      .withExec(["bun", "install", "--cwd", "dagger", "--frozen-lockfile"])
       .withDirectory(WORKDIR, source)
-      .withWorkdir(WORKDIR);
+      .withWorkdir(WORKDIR)
+      .withExec(["bun", "install", "--frozen-lockfile"])
+      .withExec(["bun", "install", "--cwd", "dagger", "--frozen-lockfile"]);
   }
 
   private qualityContainer(source: Directory, check: "lint" | "type-check"): Container {
@@ -134,6 +130,20 @@ export class Ci {
       .withExec(["bun", "run", "verify:convex"])
       .withExec(["bun", "run", "test:coverage"])
       .directory(`${WORKDIR}/coverage`);
+  }
+
+  private testCoverageArchiveFile(source: Directory): File {
+    return this.appContainer(source)
+      .withExec(["sh", "-lc", SECRET_SCAN_SCRIPT])
+      .withExec(["sh", "-lc", SECURITY_AUDIT_SCRIPT])
+      .withExec(["bun", "run", "verify:convex"])
+      .withExec(["bun", "run", "test:coverage"])
+      .withExec([
+        "sh",
+        "-lc",
+        "test -f coverage/coverage-summary.json && test -f coverage/coverage-final.json && tar -C /work -czf /tmp/coverage.tgz coverage",
+      ])
+      .file("/tmp/coverage.tgz");
   }
 
   private validationContainer(source: Directory): Container {
@@ -341,6 +351,37 @@ export class Ci {
     source: Directory,
   ): Directory {
     return this.testCoverageArtifactsDirectory(source);
+  }
+
+  @func()
+  testCoverageArchive(
+    @argument({
+      defaultPath: "/",
+      ignore: [
+        ".git",
+        ".git/**",
+        "node_modules",
+        "node_modules/**",
+        ".next",
+        ".next/**",
+        ".nyc_output",
+        ".nyc_output/**",
+        "coverage",
+        "coverage/**",
+        "playwright-report",
+        "playwright-report/**",
+        "test-results",
+        "test-results/**",
+        ".dagger-e2e",
+        ".dagger-e2e/**",
+        ".env",
+        ".env.local",
+        ".env.production",
+      ],
+    })
+    source: Directory,
+  ): File {
+    return this.testCoverageArchiveFile(source);
   }
 
   @func()
