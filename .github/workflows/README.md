@@ -57,6 +57,8 @@ gh secret set CONVEX_DEPLOY_KEY --body "prod:project-name|..."
 
 The CI workflow includes a Dagger-driven `verify-environment` job that runs on PRs targeting main/master. It validates CI and production env requirements, including Stripe configuration, before merge.
 
+For Clerk specifically, `ci.yml` builds and runs Playwright against a fixed public test instance so localhost-backed smoke tests do not embed the production custom domain. The `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` secret is still validated in the production-oriented checks and used by deploy flows.
+
 ### Deploy Fail-Fast
 
 The deploy workflow validates all required secrets at the start, providing clear error messages:

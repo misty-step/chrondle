@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, master]
 
+env:
+  # CI builds run on localhost and must not embed the production Clerk custom domain.
+  # Production secrets are still validated separately in the deploy-oriented checks below.
+  CI_CLERK_PUBLISHABLE_KEY: pk_test_aGVhbHRoeS1kb2UtMjMuY2xlcmsuYWNjb3VudHMuZGV2JA
+
 jobs:
   quality-checks:
     runs-on: ubuntu-latest
@@ -173,7 +178,7 @@ jobs:
           version: "0.20.3"
           verb: call
           module: .
-          args: build-artifacts --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} --output=.next
+          args: build-artifacts --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ env.CI_CLERK_PUBLISHABLE_KEY }} --output=.next
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
@@ -205,7 +210,7 @@ jobs:
           version: "0.20.3"
           verb: call
           module: .
-          args: e-2-e-artifacts --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --output=.dagger-e2e
+          args: e-2-e-artifacts --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ env.CI_CLERK_PUBLISHABLE_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --output=.dagger-e2e
 
       - name: Upload Playwright report
         if: always()
@@ -266,7 +271,7 @@ jobs:
           version: "0.20.3"
           verb: call
           module: .
-          args: verify-env-config --environment=ci --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --convex-deploy-key=env:CONVEX_DEPLOY_KEY
+          args: verify-env-config --environment=ci --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ env.CI_CLERK_PUBLISHABLE_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --convex-deploy-key=env:CONVEX_DEPLOY_KEY
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
