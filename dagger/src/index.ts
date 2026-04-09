@@ -129,7 +129,12 @@ export class Ci {
       .withExec(["sh", "-lc", SECURITY_AUDIT_SCRIPT])
       .withExec(["bun", "run", "verify:convex"])
       .withExec(["bun", "run", "test:coverage"])
-      .directory(`${WORKDIR}/coverage`);
+      .withExec([
+        "sh",
+        "-lc",
+        "mkdir -p /tmp/coverage-artifacts && cp coverage/coverage-summary.json /tmp/coverage-artifacts/coverage-summary.json && cp coverage/coverage-final.json /tmp/coverage-artifacts/coverage-final.json",
+      ])
+      .directory("/tmp/coverage-artifacts");
   }
 
   private validationContainer(source: Directory): Container {
