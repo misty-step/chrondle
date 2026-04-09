@@ -55,7 +55,7 @@
     "ci:dagger:type-check": "./scripts/dagger-local.sh call quality --check=type-check",
     "ci:dagger:validation": "./scripts/dagger-local.sh call validation",
     "ci:dagger:docs": "./scripts/dagger-local.sh call docs-link-check",
-    "ci:dagger:coverage": "rm -f coverage.tgz && ./scripts/dagger-local.sh call test-coverage-archive --output=coverage.tgz && rm -rf coverage && tar -xzf coverage.tgz && rm coverage.tgz",
+    "ci:dagger:coverage": "./scripts/dagger-local.sh call test-coverage-artifacts --output=.dagger-coverage && ./scripts/normalize-coverage-artifacts.sh .dagger-coverage coverage",
     "verify:env": "node scripts/verify-env-config.mjs",
     "verify:env:prod": "node scripts/verify-env-config.mjs production",
     "verify:stripe": "node scripts/verify-stripe-config.mjs",

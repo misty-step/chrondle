@@ -38,15 +38,12 @@ jobs:
           version: "0.20.3"
           verb: call
           module: .
-          args: test-coverage-archive --output=coverage.tgz
+          args: test-coverage-artifacts --output=.dagger-coverage
 
       - name: Extract coverage artifacts
         if: matrix.check == 'test'
         run: |
-          rm -rf coverage
-          tar -xzf coverage.tgz
-          test -f coverage/coverage-summary.json
-          test -f coverage/coverage-final.json
+          ./scripts/normalize-coverage-artifacts.sh .dagger-coverage coverage
           ls -la coverage
 
       - name: Generate coverage summary
