@@ -120,7 +120,9 @@ export function useVictoryConfetti(
       (guessCount > 0 || lastFireGuessCount.current === null);
 
     if (shouldFireConfetti) {
-      triggerConfetti();
+      queueMicrotask(() => {
+        void triggerConfetti();
+      });
     }
   }, [
     hasWon,
@@ -137,7 +139,9 @@ export function useVictoryConfetti(
   useEffect(() => {
     // Reset if we're no longer in a won state
     if (!hasWon || !isGameComplete) {
-      setHasFiredConfetti(false);
+      queueMicrotask(() => {
+        setHasFiredConfetti(false);
+      });
       lastFireGuessCount.current = null;
     }
   }, [hasWon, isGameComplete]);

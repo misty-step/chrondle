@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 import { Card } from "@/components/ui/Card";
@@ -71,6 +71,7 @@ export default function EventsTab() {
   const [editingId, setEditingId] = useState<Id<"events"> | null>(null);
   const [editText, setEditText] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const editInputRef = useRef<HTMLInputElement | null>(null);
 
   // Delete confirmation state
   const [deleteTarget, setDeleteTarget] = useState<EventItem | null>(null);
@@ -108,6 +109,13 @@ export default function EventsTab() {
     setEditingId(event._id);
     setEditText(event.event);
   }, []);
+
+  useEffect(() => {
+    if (editingId) {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    }
+  }, [editingId]);
 
   const cancelEditing = useCallback(() => {
     setEditingId(null);
@@ -310,10 +318,10 @@ export default function EventsTab() {
                         {editingId === event._id ? (
                           <div className="flex items-center gap-2">
                             <Input
+                              ref={editInputRef}
                               value={editText}
                               onChange={(e) => setEditText(e.target.value)}
                               className="flex-1"
-                              autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") saveEdit();
                                 if (e.key === "Escape") cancelEditing();

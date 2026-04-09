@@ -64,8 +64,7 @@ export function useStreak(): UseStreakReturn {
   });
 
   // Achievement state
-  const [hasNewAchievement, setHasNewAchievement] = useState(false);
-  const [newAchievement, setNewAchievement] = useState<string | null>(null);
+  const [dismissedAchievement, setDismissedAchievement] = useState<string | null>(null);
 
   // Migration state - track if we've already migrated this session
   const hasMigratedRef = useRef(false);
@@ -262,24 +261,25 @@ export function useStreak(): UseStreakReturn {
       });
   }, [isSignedIn, clerkUser, convexUser, anonymousStreak, mergeStreakMutation]);
 
-  // Achievement checking (when streak increases)
-  useEffect(() => {
-    if (streakData.currentStreak > 0) {
-      const achievement = STREAK_CONFIG.ACHIEVEMENTS.find(
-        (a) => a.threshold === streakData.currentStreak,
-      );
-
-      if (achievement && !streakData.achievements.includes(achievement.name)) {
-        setNewAchievement(`${achievement.emoji} ${achievement.description}`);
-        setHasNewAchievement(true);
-      }
+  const currentAchievement = useMemo(() => {
+    if (streakData.currentStreak <= 0) {
+      return null;
     }
-  }, [streakData.currentStreak, streakData.achievements]);
+
+    return STREAK_CONFIG.ACHIEVEMENTS.find((a) => a.threshold === streakData.currentStreak) ?? null;
+  }, [streakData.currentStreak]);
+
+  const newAchievement =
+    currentAchievement &&
+    !streakData.achievements.includes(currentAchievement.name) &&
+    dismissedAchievement !== currentAchievement.name
+      ? `${currentAchievement.emoji} ${currentAchievement.description}`
+      : null;
+  const hasNewAchievement = newAchievement !== null;
 
   const clearNewAchievement = useCallback(() => {
-    setHasNewAchievement(false);
-    setNewAchievement(null);
-  }, []);
+    setDismissedAchievement(currentAchievement?.name ?? null);
+  }, [currentAchievement]);
 
   return useMemo(
     () => ({

@@ -7,9 +7,23 @@ import type { OrderEvent, OrderHint } from "@/types/orderGameState";
 // Mock motion components
 vi.mock("motion/react", () => ({
   motion: {
-    li: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
-      <li {...props}>{children}</li>
-    ),
+    li: ({
+      children,
+      layout: _layout,
+      animate: _animate,
+      exit: _exit,
+      initial: _initial,
+      transition: _transition,
+      ...props
+    }: {
+      children: React.ReactNode;
+      layout?: unknown;
+      animate?: unknown;
+      exit?: unknown;
+      initial?: unknown;
+      transition?: unknown;
+      [key: string]: unknown;
+    }) => <li {...props}>{children}</li>,
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   LayoutGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -295,7 +309,7 @@ describe("HintPanel", () => {
     });
 
     it("does not display error when error is null", () => {
-      const { container } = render(
+      render(
         <HintPanel events={mockEvents} hints={[]} onRequestHint={mockOnRequestHint} error={null} />,
       );
 

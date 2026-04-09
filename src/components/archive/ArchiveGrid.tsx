@@ -10,12 +10,12 @@
  * perspective). The server passes all puzzles; this component filters.
  */
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Check } from "@phosphor-icons/react";
 import { getLocalDateString } from "@/lib/time/dailyDate";
 import { formatDate } from "@/lib/displayFormatting";
+import { useClientSnapshot } from "@/hooks/useClientSnapshot";
 
 interface PuzzleData {
   puzzleNumber: number;
@@ -37,19 +37,14 @@ export function ArchiveGrid({
   linkPrefix = "/archive/puzzle",
   mode = "classic",
 }: ArchiveGridProps) {
-  // Initialize to null to prevent SSR from rendering unfiltered puzzles
-  // This avoids layout shift and prevents briefly exposing future puzzle hints
-  const [visiblePuzzles, setVisiblePuzzles] = useState<PuzzleData[] | null>(null);
-
-  useEffect(() => {
-    const localDate = getLocalDateString();
-    setVisiblePuzzles(
-      puzzles.filter((p) => {
-        if (!p.date) return true;
-        return p.date <= localDate;
-      }),
-    );
-  }, [puzzles]);
+  const localDate = useClientSnapshot(getLocalDateString, () => "");
+  const visiblePuzzles =
+    localDate === ""
+      ? null
+      : puzzles.filter((p) => {
+          if (!p.date) return true;
+          return p.date <= localDate;
+        });
 
   // Gate rendering until client-side filtering is complete
   if (visiblePuzzles === null) {

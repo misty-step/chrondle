@@ -4,31 +4,6 @@ const BUN_IMAGE = "oven/bun:1.3.9";
 const PLAYWRIGHT_IMAGE = "mcr.microsoft.com/playwright:v1.57.0-noble";
 const BUN_CACHE = "/root/.bun/install/cache";
 const WORKDIR = "/work";
-const SOURCE_IGNORE = [
-  ".git",
-  ".git/**",
-  "node_modules",
-  "node_modules/**",
-  ".next",
-  ".next/**",
-  ".nyc_output",
-  ".nyc_output/**",
-  "coverage",
-  "coverage/**",
-  "playwright-report",
-  "playwright-report/**",
-  "test-results",
-  "test-results/**",
-  ".dagger-e2e",
-  ".dagger-e2e/**",
-  ".env",
-  ".env.local",
-  ".env.production",
-];
-const E2E_SOURCE_IGNORE = SOURCE_IGNORE.filter(
-  (pattern) => pattern !== ".next" && pattern !== ".next/**",
-);
-
 const SECRET_SCAN_SCRIPT = `
 set -euo pipefail
 echo "🔍 Scanning for accidentally committed secrets..."
@@ -68,11 +43,7 @@ echo "✅ No secrets detected in repository"
 const SECURITY_AUDIT_SCRIPT = `
 set -euo pipefail
 echo "🔍 Checking for security vulnerabilities in dependencies..."
-bun audit --audit-level moderate || {
-  echo "⚠️ Moderate/High/Critical vulnerabilities found in dependencies."
-  echo "Run 'bun audit' locally to see details."
-  echo "Review and address via Dependabot or dependency updates."
-}
+bun audit --production --audit-level moderate
 echo "✅ Security audit complete"
 `;
 
@@ -147,7 +118,7 @@ export class Ci {
     if (check === "lint") {
       container = container.withExec(["bun", "run", "lint"]);
     } else {
-      container = container.withExec(["bun", "run", "type-check", "--", "--incremental", "false"]);
+      container = container.withExec(["bunx", "tsc", "--noEmit", "--incremental", "false"]);
     }
 
     return container;
@@ -305,9 +276,31 @@ export class Ci {
   @func()
   async quality(
     check: string,
+    // Keep ignore arrays inline. Dagger's TS introspector does not resolve shared
+    // top-level constants inside decorator metadata during module initialization.
     @argument({
       defaultPath: "/",
-      ignore: SOURCE_IGNORE,
+      ignore: [
+        ".git",
+        ".git/**",
+        "node_modules",
+        "node_modules/**",
+        ".next",
+        ".next/**",
+        ".nyc_output",
+        ".nyc_output/**",
+        "coverage",
+        "coverage/**",
+        "playwright-report",
+        "playwright-report/**",
+        "test-results",
+        "test-results/**",
+        ".dagger-e2e",
+        ".dagger-e2e/**",
+        ".env",
+        ".env.local",
+        ".env.production",
+      ],
     })
     source: Directory,
   ): Promise<string> {
@@ -320,7 +313,27 @@ export class Ci {
   testCoverageArtifacts(
     @argument({
       defaultPath: "/",
-      ignore: SOURCE_IGNORE,
+      ignore: [
+        ".git",
+        ".git/**",
+        "node_modules",
+        "node_modules/**",
+        ".next",
+        ".next/**",
+        ".nyc_output",
+        ".nyc_output/**",
+        "coverage",
+        "coverage/**",
+        "playwright-report",
+        "playwright-report/**",
+        "test-results",
+        "test-results/**",
+        ".dagger-e2e",
+        ".dagger-e2e/**",
+        ".env",
+        ".env.local",
+        ".env.production",
+      ],
     })
     source: Directory,
   ): Directory {
@@ -331,7 +344,27 @@ export class Ci {
   async validation(
     @argument({
       defaultPath: "/",
-      ignore: SOURCE_IGNORE,
+      ignore: [
+        ".git",
+        ".git/**",
+        "node_modules",
+        "node_modules/**",
+        ".next",
+        ".next/**",
+        ".nyc_output",
+        ".nyc_output/**",
+        "coverage",
+        "coverage/**",
+        "playwright-report",
+        "playwright-report/**",
+        "test-results",
+        "test-results/**",
+        ".dagger-e2e",
+        ".dagger-e2e/**",
+        ".env",
+        ".env.local",
+        ".env.production",
+      ],
     })
     source: Directory,
   ): Promise<string> {
@@ -344,7 +377,27 @@ export class Ci {
   async docsLinkCheck(
     @argument({
       defaultPath: "/",
-      ignore: SOURCE_IGNORE,
+      ignore: [
+        ".git",
+        ".git/**",
+        "node_modules",
+        "node_modules/**",
+        ".next",
+        ".next/**",
+        ".nyc_output",
+        ".nyc_output/**",
+        "coverage",
+        "coverage/**",
+        "playwright-report",
+        "playwright-report/**",
+        "test-results",
+        "test-results/**",
+        ".dagger-e2e",
+        ".dagger-e2e/**",
+        ".env",
+        ".env.local",
+        ".env.production",
+      ],
     })
     source: Directory,
   ): Promise<string> {
@@ -359,7 +412,27 @@ export class Ci {
     nextPublicClerkPublishableKey: string,
     @argument({
       defaultPath: "/",
-      ignore: SOURCE_IGNORE,
+      ignore: [
+        ".git",
+        ".git/**",
+        "node_modules",
+        "node_modules/**",
+        ".next",
+        ".next/**",
+        ".nyc_output",
+        ".nyc_output/**",
+        "coverage",
+        "coverage/**",
+        "playwright-report",
+        "playwright-report/**",
+        "test-results",
+        "test-results/**",
+        ".dagger-e2e",
+        ".dagger-e2e/**",
+        ".env",
+        ".env.local",
+        ".env.production",
+      ],
     })
     source: Directory,
   ): Directory {
@@ -372,7 +445,25 @@ export class Ci {
     nextPublicClerkPublishableKey: string,
     @argument({
       defaultPath: "/",
-      ignore: E2E_SOURCE_IGNORE,
+      ignore: [
+        ".git",
+        ".git/**",
+        "node_modules",
+        "node_modules/**",
+        ".nyc_output",
+        ".nyc_output/**",
+        "coverage",
+        "coverage/**",
+        "playwright-report",
+        "playwright-report/**",
+        "test-results",
+        "test-results/**",
+        ".dagger-e2e",
+        ".dagger-e2e/**",
+        ".env",
+        ".env.local",
+        ".env.production",
+      ],
     })
     source: Directory,
     clerkSecretKey?: Secret,
@@ -411,7 +502,27 @@ exit 0
     nextPublicClerkPublishableKey: string,
     @argument({
       defaultPath: "/",
-      ignore: SOURCE_IGNORE,
+      ignore: [
+        ".git",
+        ".git/**",
+        "node_modules",
+        "node_modules/**",
+        ".next",
+        ".next/**",
+        ".nyc_output",
+        ".nyc_output/**",
+        "coverage",
+        "coverage/**",
+        "playwright-report",
+        "playwright-report/**",
+        "test-results",
+        "test-results/**",
+        ".dagger-e2e",
+        ".dagger-e2e/**",
+        ".env",
+        ".env.local",
+        ".env.production",
+      ],
     })
     source: Directory,
     clerkSecretKey?: Secret,
@@ -447,7 +558,27 @@ exit 0
     requireLive: boolean,
     @argument({
       defaultPath: "/",
-      ignore: SOURCE_IGNORE,
+      ignore: [
+        ".git",
+        ".git/**",
+        "node_modules",
+        "node_modules/**",
+        ".next",
+        ".next/**",
+        ".nyc_output",
+        ".nyc_output/**",
+        "coverage",
+        "coverage/**",
+        "playwright-report",
+        "playwright-report/**",
+        "test-results",
+        "test-results/**",
+        ".dagger-e2e",
+        ".dagger-e2e/**",
+        ".env",
+        ".env.local",
+        ".env.production",
+      ],
     })
     source: Directory,
     stripeSecretKey: Secret,
@@ -471,7 +602,27 @@ exit 0
     nextPublicClerkPublishableKey: string,
     @argument({
       defaultPath: "/",
-      ignore: SOURCE_IGNORE,
+      ignore: [
+        ".git",
+        ".git/**",
+        "node_modules",
+        "node_modules/**",
+        ".next",
+        ".next/**",
+        ".nyc_output",
+        ".nyc_output/**",
+        "coverage",
+        "coverage/**",
+        "playwright-report",
+        "playwright-report/**",
+        "test-results",
+        "test-results/**",
+        ".dagger-e2e",
+        ".dagger-e2e/**",
+        ".env",
+        ".env.local",
+        ".env.production",
+      ],
     })
     source: Directory,
   ): Promise<string> {

@@ -74,9 +74,6 @@ export function useTodaysPuzzle(): UseTodaysPuzzleReturn {
   // Local date is the SINGLE SOURCE OF TRUTH
   const [localDate, setLocalDate] = useState(() => getLocalDateString());
 
-  // Track the previous local date to detect changes
-  const prevLocalDateRef = useRef(localDate);
-
   // === QUERY ===
 
   // Always query by local date
@@ -147,24 +144,7 @@ export function useTodaysPuzzle(): UseTodaysPuzzleReturn {
 
   // === DETERMINE FINAL PUZZLE ===
 
-  // Track if date just changed (to force loading state)
-  const dateJustChanged = prevLocalDateRef.current !== localDate;
-  useEffect(() => {
-    prevLocalDateRef.current = localDate;
-  }, [localDate]);
-
   const result = useMemo<UseTodaysPuzzleReturn>(() => {
-    // If date just changed, show loading while we fetch new puzzle
-    if (dateJustChanged) {
-      return {
-        puzzle: null,
-        isLoading: true,
-        error: null,
-        localDate,
-        revalidate,
-      };
-    }
-
     // Query still loading
     if (puzzleByDate === undefined) {
       return {
@@ -204,7 +184,7 @@ export function useTodaysPuzzle(): UseTodaysPuzzleReturn {
       localDate,
       revalidate,
     };
-  }, [puzzleByDate, localDate, dateJustChanged, revalidate]);
+  }, [puzzleByDate, localDate, revalidate]);
 
   return result;
 }

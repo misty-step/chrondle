@@ -13,8 +13,6 @@ const puzzlesQueries = apiRef["puzzles/queries"];
 
 const puzzlesMutations = apiRef["puzzles/mutations"];
 
-const playsQueries = apiRef["plays/queries"];
-
 /**
  * Puzzle Query Tests using convex-test
  *

@@ -22,6 +22,20 @@ Check which job failed in the GitHub Actions UI:
 - **build**: Next.js build or bundle size issues
 - **bundle-size**: Bundle size regression checks
 
+### 1a. Reproduce the Dagger Job Locally
+
+Chrondle's local CI path uses Colima on macOS. Start Colima, then run the same Dagger gates the GitHub workflow uses:
+
+```bash
+colima start --profile default
+bun run ci:dagger:lint
+bun run ci:dagger:type-check
+bun run ci:dagger:validation
+bun run ci:dagger:docs
+```
+
+If you need to test against the host Docker CLI instead, set `CHRONDLE_DAGGER_FORCE_DOCKER=1`.
+
 ### 2. Read Error Messages
 
 Look for these key patterns:
@@ -73,16 +87,14 @@ Test timeout of 5000ms exceeded
 2. Look for infinite loops in test setup
 3. Ensure fake timers are properly advanced
 
-### Problem: "pnpm: command not found"
+### Problem: "bun: command not found"
 
 **Solution:**
 
-```yaml
-# Ensure this is in CI workflow:
-- name: Setup pnpm
-  uses: pnpm/action-setup@v2
-  with:
-    version: 9.1.0
+```bash
+# Chrondle uses Bun exclusively
+brew install oven-sh/bun/bun
+bun --version
 ```
 
 ## Node.js & Module Issues
@@ -100,7 +112,7 @@ Test timeout of 5000ms exceeded
 2. Verify module system consistency:
 
    ```bash
-   pnpm test-module-system
+   bun run test-module-system
    ```
 
 3. Common fixes:
@@ -152,10 +164,10 @@ Don't update these without testing thoroughly!
 
 ```bash
 # Run single test file
-pnpm vitest run src/path/to/test.unit.test.ts
+bunx vitest run src/path/to/test.unit.test.ts
 
 # With timeout info
-pnpm vitest run --reporter=verbose
+bunx vitest run --reporter=verbose
 ```
 
 ## Build & Bundle Issues
@@ -165,8 +177,8 @@ pnpm vitest run --reporter=verbose
 **Quick Check:**
 
 ```bash
-pnpm build
-pnpm size
+bun run build
+bun run size
 ```
 
 **Solutions:**
@@ -175,7 +187,7 @@ pnpm size
 
    ```bash
    # Analyze bundle
-   pnpm build
+   bun run build
    npx bundle-analyzer
    ```
 
@@ -201,7 +213,6 @@ env:
 **Solution:**
 
 1. Clear caches in GitHub UI:
-
    - Go to Actions → Caches
    - Delete caches with the branch name
 
@@ -214,11 +225,10 @@ env:
 
 **Force fresh install:**
 
-```yaml
-- name: Install dependencies
-  run: |
-    pnpm store prune
-    pnpm install --frozen-lockfile --force
+```bash
+bun pm cache rm
+rm -rf node_modules
+bun install --frozen-lockfile
 ```
 
 ## Emergency Procedures
@@ -256,8 +266,9 @@ git push
 
 Before pushing:
 
-- [ ] Run `pnpm test:ci` locally
-- [ ] Check `pnpm build && pnpm size`
+- [ ] Run `bun run test:ci` locally
+- [ ] Check `bun run build && bun run size`
+- [ ] Reproduce any failing Dagger gate locally with `bun run ci:dagger:*`
 - [ ] Verify Node.js 20+ with `node --version`
 - [ ] Run `pnpm lint:fix` to auto-fix issues
 - [ ] Test with `NODE_ENV=production` if changing env logic

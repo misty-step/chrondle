@@ -5,7 +5,7 @@
  * via classicPuzzleId, orderPuzzleId, and groupsPuzzleId fields.
  */
 import { describe, it, expect } from "vitest";
-import { calculatePoolHealth, type PoolHealthMode } from "../lib/observability/metricsService";
+import { calculatePoolHealth } from "../lib/observability/metricsService";
 import type { Doc } from "../_generated/dataModel";
 
 describe("Dual-mode event usage tracking", () => {

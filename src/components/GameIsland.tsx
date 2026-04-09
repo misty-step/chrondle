@@ -26,6 +26,7 @@ import { GameLayout, LiveAnnouncer } from "@/components/LazyComponents";
 import { ConfettiRef } from "@/components/magicui/confetti";
 import { GameModeLayout } from "@/components/GameModeLayout";
 import { LoadErrorState } from "@/components/LoadErrorState";
+import { useClientSnapshot, useHydrated } from "@/hooks/useClientSnapshot";
 
 // Lazy load AnalyticsDashboard for development/debug mode only
 const AnalyticsDashboard = lazy(() =>
@@ -36,7 +37,10 @@ const AnalyticsDashboard = lazy(() =>
 
 export function GameIsland() {
   // Debug state
-  const [debugMode, setDebugMode] = useState(false);
+  const debugMode = useClientSnapshot(
+    () => new URLSearchParams(window.location.search).get("debug") === "true",
+    () => false,
+  );
 
   // Confetti ref for victory celebration
   const confettiRef = useRef<ConfettiRef>(null);
@@ -146,11 +150,7 @@ export function GameIsland() {
     handleGameOver,
   ]);
 
-  // Track client-side mount state for confetti
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useHydrated();
 
   // Victory confetti effect
   useVictoryConfetti(confettiRef, {
@@ -170,18 +170,11 @@ export function GameIsland() {
     setLastRangeCount: setScreenReaderLastRangeCount,
   });
 
-  // Check for debug mode on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      const debug = urlParams.get("debug") === "true";
-      setDebugMode(debug);
-
-      if (debug) {
-        logger.debug("Debug mode enabled via URL parameter");
-      }
+    if (debugMode) {
+      logger.debug("Debug mode enabled via URL parameter");
     }
-  }, []);
+  }, [debugMode]);
 
   const retryLoad = useCallback(() => {
     window.location.reload();

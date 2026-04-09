@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { generateShareText } from "@/lib/sharing/generator";
 import { useWebShare } from "@/hooks/useWebShare";
 import type { RangeGuess } from "@/types/range";
@@ -42,7 +42,7 @@ export function useShareGame(
     }
   }, [shareStatus]);
 
-  const shareGame = useCallback(async () => {
+  const shareGame = async () => {
     const success = await share(shareText);
 
     if (success) {
@@ -56,7 +56,7 @@ export function useShareGame(
       setShareStatus("error");
       onError?.();
     }
-  }, [share, shareText, hasWon, onSuccess, onError]);
+  };
 
   return {
     shareGame,

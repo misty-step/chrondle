@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useLayoutEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { useHydrated } from "@/hooks/useClientSnapshot";
 // Storage import removed - theme preference in-memory only
 // Authenticated users should use Convex for theme persistence
 
@@ -33,9 +34,7 @@ function getInitialSystemTheme(): "light" | "dark" {
   }
 
   try {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   } catch {
     return "light";
   }
@@ -47,41 +46,26 @@ function getInitialOverride(): ThemeOverride {
   return null;
 }
 
+function subscribeToSystemTheme(onStoreChange: () => void) {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  mediaQuery.addEventListener("change", onStoreChange);
+  return () => {
+    mediaQuery.removeEventListener("change", onStoreChange);
+  };
+}
+
 export function useSessionTheme(): UseSessionThemeReturn {
-  // Initialize with synchronously detected values to reduce flashing
   const [override, setOverride] = useState<ThemeOverride>(getInitialOverride);
-  const [systemTheme, setSystemTheme] = useState<"light" | "dark">(
+  const systemTheme = useSyncExternalStore<"light" | "dark">(
+    subscribeToSystemTheme,
     getInitialSystemTheme,
+    () => "light" as const,
   );
-  const [isMounted, setIsMounted] = useState(false);
-
-  // Use layout effect for theme-critical initialization that affects rendering
-  useLayoutEffect(() => {
-    if (typeof window === "undefined") {
-      setIsMounted(true);
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-
-    const updateSystemTheme = () => {
-      setSystemTheme(mediaQuery.matches ? "dark" : "light");
-    };
-
-    // Re-check system theme in case it changed since initial detection
-    updateSystemTheme();
-
-    // No localStorage to check
-
-    setIsMounted(true);
-
-    // Listen for system theme changes
-    mediaQuery.addEventListener("change", updateSystemTheme);
-
-    return () => {
-      mediaQuery.removeEventListener("change", updateSystemTheme);
-    };
-  }, [override]); // Run when override changes
+  const isMounted = useHydrated();
 
   // Current resolved theme: override takes precedence, otherwise system
   const currentTheme = override || systemTheme;

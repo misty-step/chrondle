@@ -10,6 +10,7 @@ import {
 import { getMillisUntilLocalMidnight } from "@/lib/time/dailyDate";
 import { anyPublicApi } from "@/lib/convexAnyApi";
 import { logger } from "@/lib/logger";
+import { useClientSnapshot } from "@/hooks/useClientSnapshot";
 
 export interface UseCountdownReturn {
   timeString: string;
@@ -61,6 +62,10 @@ export function useCountdown(options: UseCountdownOptions = {}): UseCountdownRet
     anyPublicApi.puzzles.getCronSchedule,
     shouldQueryServer ? {} : "skip",
   ) as { nextScheduledTime: number } | null | undefined;
+  const localMidnightTarget = useClientSnapshot(
+    () => Date.now() + getMillisUntilLocalMidnight(),
+    () => 0,
+  );
 
   // Calculate effective target timestamp based on strategy
   let effectiveTarget: number | undefined;
@@ -71,7 +76,7 @@ export function useCountdown(options: UseCountdownOptions = {}): UseCountdownRet
     effectiveTarget = targetTimestamp;
   } else if (strategy === "localMidnight") {
     // Local midnight strategy: compute from client time (never loading)
-    effectiveTarget = Date.now() + getMillisUntilLocalMidnight();
+    effectiveTarget = localMidnightTarget;
   } else {
     // Server midnight strategy: use cron schedule
     effectiveTarget = cronSchedule?.nextScheduledTime;
@@ -81,15 +86,22 @@ export function useCountdown(options: UseCountdownOptions = {}): UseCountdownRet
   // Reset completion state when target changes
   useEffect(() => {
     if (effectiveTarget && isComplete) {
-      setIsComplete(false);
-      logger.warn("[useCountdown] New target detected, resetting completion state");
+      const timeout = setTimeout(() => {
+        setIsComplete(false);
+        logger.warn("[useCountdown] New target detected, resetting completion state");
+      }, 0);
+
+      return () => clearTimeout(timeout);
     }
   }, [effectiveTarget, isComplete]);
 
   useEffect(() => {
     if (isLoading) {
-      setTimeString("00:00:00");
-      return;
+      const timeout = setTimeout(() => {
+        setTimeString("00:00:00");
+      }, 0);
+
+      return () => clearTimeout(timeout);
     }
 
     const updateCountdown = () => {

@@ -72,13 +72,6 @@ export function OrderEventList({
     latestOrderRef.current = localOrder;
   }, [localOrder]);
 
-  useEffect(() => {
-    if (activeId) {
-      return;
-    }
-    setLocalOrder((prev) => (ordersMatch(prev, ordering) ? prev : ordering));
-  }, [ordering, activeId]);
-
   const eventMap = useMemo(() => {
     const map = new Map<string, OrderEvent>();
     for (const event of events) {
@@ -88,6 +81,8 @@ export function OrderEventList({
   }, [events]);
 
   const handleDragStart = (event: DragStartEvent) => {
+    setLocalOrder(ordering);
+    latestOrderRef.current = ordering;
     setActiveId(String(event.active.id));
   };
 
@@ -131,7 +126,8 @@ export function OrderEventList({
   };
 
   const activeEvent = activeId ? eventMap.get(activeId) : null;
-  const activeIndex = activeId ? localOrder.indexOf(activeId) : -1;
+  const displayedOrder = activeId ? localOrder : ordering;
+  const activeIndex = activeId ? displayedOrder.indexOf(activeId) : -1;
 
   return (
     <div className="relative">
@@ -147,9 +143,9 @@ export function OrderEventList({
         collisionDetection={closestCenter}
         modifiers={[restrictToVerticalAxis]}
       >
-        <SortableContext items={localOrder} strategy={verticalListSortingStrategy}>
+        <SortableContext items={displayedOrder} strategy={verticalListSortingStrategy}>
           <ol className="space-y-4">
-            {localOrder.map((eventId, index) => {
+            {displayedOrder.map((eventId, index) => {
               const event = eventMap.get(eventId);
               if (!event) return null;
               return (
@@ -188,15 +184,4 @@ function reorder(items: string[], activeId: string, overId: string): string[] {
     return items;
   }
   return arrayMove(items, oldIndex, newIndex);
-}
-
-function ordersMatch(a: string[], b: string[]): boolean {
-  if (a === b) return true;
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) {
-      return false;
-    }
-  }
-  return true;
 }

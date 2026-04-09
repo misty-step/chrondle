@@ -17,15 +17,51 @@ vi.mock("@phosphor-icons/react", () => ({
 
 vi.mock("motion/react", () => ({
   motion: {
-    div: ({ children, ...props }: React.HTMLProps<HTMLDivElement>) => (
-      <div {...props}>{children}</div>
-    ),
-    p: ({ children, ...props }: React.HTMLProps<HTMLParagraphElement>) => (
-      <p {...props}>{children}</p>
-    ),
-    span: ({ children, ...props }: React.HTMLProps<HTMLSpanElement>) => (
-      <span {...props}>{children}</span>
-    ),
+    div: ({
+      children,
+      layout: _layout,
+      animate: _animate,
+      exit: _exit,
+      initial: _initial,
+      transition: _transition,
+      ...props
+    }: React.HTMLProps<HTMLDivElement> & {
+      layout?: unknown;
+      animate?: unknown;
+      exit?: unknown;
+      initial?: unknown;
+      transition?: unknown;
+    }) => <div {...props}>{children}</div>,
+    p: ({
+      children,
+      layout: _layout,
+      animate: _animate,
+      exit: _exit,
+      initial: _initial,
+      transition: _transition,
+      ...props
+    }: React.HTMLProps<HTMLParagraphElement> & {
+      layout?: unknown;
+      animate?: unknown;
+      exit?: unknown;
+      initial?: unknown;
+      transition?: unknown;
+    }) => <p {...props}>{children}</p>,
+    span: ({
+      children,
+      layout: _layout,
+      animate: _animate,
+      exit: _exit,
+      initial: _initial,
+      transition: _transition,
+      ...props
+    }: React.HTMLProps<HTMLSpanElement> & {
+      layout?: unknown;
+      animate?: unknown;
+      exit?: unknown;
+      initial?: unknown;
+      transition?: unknown;
+    }) => <span {...props}>{children}</span>,
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   LayoutGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,

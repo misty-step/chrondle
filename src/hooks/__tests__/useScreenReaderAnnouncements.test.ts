@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { useScreenReaderAnnouncements } from "../useScreenReaderAnnouncements";
 import type { RangeGuess } from "@/types/range";
 
@@ -19,14 +19,10 @@ vi.mock("@/lib/displayFormatting", () => ({
 }));
 
 describe("useScreenReaderAnnouncements", () => {
-  let lastRangeCount: number;
   let setLastRangeCount: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    lastRangeCount = 0;
-    setLastRangeCount = vi.fn((count: number) => {
-      lastRangeCount = count;
-    });
+    setLastRangeCount = vi.fn();
   });
 
   it("returns empty string initially with no ranges", () => {
@@ -42,7 +38,7 @@ describe("useScreenReaderAnnouncements", () => {
     expect(setLastRangeCount).not.toHaveBeenCalled();
   });
 
-  it("announces when a new range is added with score > 0", () => {
+  it("announces when a new range is added with score > 0", async () => {
     const ranges: RangeGuess[] = [createRange(1960, 1970, 50, 1)];
 
     const { result } = renderHook(() =>
@@ -55,10 +51,10 @@ describe("useScreenReaderAnnouncements", () => {
 
     expect(result.current).toContain("Range 1960 AD to 1970 AD submitted");
     expect(result.current).toContain("Contained the target for 50 points");
-    expect(setLastRangeCount).toHaveBeenCalledWith(1);
+    await waitFor(() => expect(setLastRangeCount).toHaveBeenCalledWith(1));
   });
 
-  it("announces width when score is 0 (missed target)", () => {
+  it("announces width when score is 0 (missed target)", async () => {
     const ranges: RangeGuess[] = [createRange(1900, 1910, 0, 1)];
 
     const { result } = renderHook(() =>
@@ -71,7 +67,7 @@ describe("useScreenReaderAnnouncements", () => {
 
     expect(result.current).toContain("Missed the target");
     expect(result.current).toContain("Width 11 years");
-    expect(setLastRangeCount).toHaveBeenCalledWith(1);
+    await waitFor(() => expect(setLastRangeCount).toHaveBeenCalledWith(1));
   });
 
   it("uses singular 'year' for width of 1", () => {
@@ -118,7 +114,7 @@ describe("useScreenReaderAnnouncements", () => {
     expect(setLastRangeCount).not.toHaveBeenCalled();
   });
 
-  it("announces only the latest range when multiple are added", () => {
+  it("announces only the latest range when multiple are added", async () => {
     const ranges: RangeGuess[] = [createRange(1950, 1960, 30, 0), createRange(1965, 1975, 80, 2)];
 
     const { result } = renderHook(() =>
@@ -132,7 +128,7 @@ describe("useScreenReaderAnnouncements", () => {
     // Should announce the second (latest) range
     expect(result.current).toContain("1965 AD to 1975 AD");
     expect(result.current).toContain("80 points");
-    expect(setLastRangeCount).toHaveBeenCalledWith(2);
+    await waitFor(() => expect(setLastRangeCount).toHaveBeenCalledWith(2));
   });
 
   it("updates announcement when ranges prop changes", () => {

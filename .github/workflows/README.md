@@ -92,6 +92,20 @@ Jobs:
 - `e2e`: Dagger-driven Playwright run with report artifact export and explicit exit-code gating
 - `verify-environment`: Dagger-driven CI/production env and Stripe validation (PRs only)
 
+### Local Reproduction
+
+For local macOS development, this repo uses Colima as the default Dagger backend via [`scripts/dagger-local.sh`](../../scripts/dagger-local.sh). CI itself is not Colima-specific; GitHub Actions runs Dagger directly on Ubuntu.
+
+```bash
+colima start --profile default
+bun run ci:dagger:lint
+bun run ci:dagger:type-check
+bun run ci:dagger:validation
+bun run ci:dagger:docs
+```
+
+If you need to bypass Colima and use the host Docker CLI, set `CHRONDLE_DAGGER_FORCE_DOCKER=1`.
+
 ## Troubleshooting
 
 ### "Missing publishableKey" Error

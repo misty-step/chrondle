@@ -34,6 +34,7 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
+  const isImmediate = delay <= 0;
 
   useEffect(() => {
     // Mark as mounted
@@ -45,9 +46,7 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
       timeoutRef.current = null;
     }
 
-    // If delay is 0 or negative, update immediately
-    if (delay <= 0) {
-      setDebouncedValue(value);
+    if (isImmediate) {
       return;
     }
 
@@ -81,9 +80,9 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
         timeoutRef.current = null;
       }
     };
-  }, [value, delay]);
+  }, [delay, isImmediate, value]);
 
-  return debouncedValue;
+  return isImmediate ? value : debouncedValue;
 }
 
 /**
@@ -125,18 +124,24 @@ export function useDebouncedValues<T extends Record<string, unknown>>(values: T,
   const [debouncedValues, setDebouncedValues] = useState<T>(values);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
+  const isImmediate = delay <= 0;
 
   // Development-mode check for reference stability
   const renderCountRef = useRef(0);
   const lastValuesRef = useRef(values);
 
-  if (process.env.NODE_ENV === "development") {
-    renderCountRef.current++;
-    // Check if object reference changed but contents are the same
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") {
+      return;
+    }
+
+    renderCountRef.current += 1;
+    const previousValues = lastValuesRef.current;
+
     if (
       renderCountRef.current > 1 &&
-      values !== lastValuesRef.current &&
-      JSON.stringify(values) === JSON.stringify(lastValuesRef.current)
+      values !== previousValues &&
+      JSON.stringify(values) === JSON.stringify(previousValues)
     ) {
       logger.warn(
         "[useDebouncedValues] Values object reference changed but contents are identical. " +
@@ -144,8 +149,9 @@ export function useDebouncedValues<T extends Record<string, unknown>>(values: T,
           "See the hook's JSDoc for examples.",
       );
     }
+
     lastValuesRef.current = values;
-  }
+  }, [values]);
 
   useEffect(() => {
     // Mark as mounted
@@ -157,9 +163,7 @@ export function useDebouncedValues<T extends Record<string, unknown>>(values: T,
       timeoutRef.current = null;
     }
 
-    // If delay is 0 or negative, update immediately
-    if (delay <= 0) {
-      setDebouncedValues(values);
+    if (isImmediate) {
       return;
     }
 
@@ -192,9 +196,9 @@ export function useDebouncedValues<T extends Record<string, unknown>>(values: T,
         timeoutRef.current = null;
       }
     };
-  }, [values, delay]);
+  }, [delay, isImmediate, values]);
 
-  return debouncedValues;
+  return isImmediate ? values : debouncedValues;
 }
 
 /**

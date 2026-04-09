@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { anyApi } from "convex/server";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import schema from "../schema";
 import { modules } from "../test.setup";
 import type { Id } from "../_generated/dataModel";
@@ -9,8 +9,6 @@ import type { Id } from "../_generated/dataModel";
 
 const apiRef = anyApi as any;
 const usersQueries = apiRef["users/queries"];
-
-const usersMutations = apiRef["users/mutations"];
 const internal = apiRef;
 
 /**
@@ -62,9 +60,8 @@ describe("users/queries", () => {
     it("returns exists: true when user found by clerkId", async () => {
       const t = convexTest(schema, modules);
 
-      let userId: Id<"users">;
       await t.run(async (ctx) => {
-        userId = await ctx.db.insert("users", {
+        await ctx.db.insert("users", {
           clerkId: "clerk_exists_test",
           email: "exists@example.com",
           currentStreak: 0,

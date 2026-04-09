@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { anyApi } from "convex/server";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import schema from "../schema";
 import { modules } from "../test.setup";
 import type { Id } from "../_generated/dataModel";

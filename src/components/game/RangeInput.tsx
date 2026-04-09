@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Lightbulb } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,49 @@ function createFullTimelineRange(_minYear: number, _maxYear: number): [number, n
   return [0, 0];
 }
 
+interface InternalRangeState {
+  boundsKey: string;
+  range: [number, number];
+}
+
+interface RangeDraftState {
+  syncedRangeKey: string;
+  startInput: string;
+  endInput: string;
+  startEra: Era;
+  endEra: Era;
+  startError: string | null;
+  endError: string | null;
+  hasBeenModified: boolean;
+}
+
+function getBoundsKey(minYear: number, maxYear: number) {
+  return `${minYear}:${maxYear}`;
+}
+
+function getRangeKey(range: [number, number]) {
+  return `${range[0]}:${range[1]}`;
+}
+
+function createDraftState(
+  range: [number, number],
+  hasBeenModified: boolean = false,
+): RangeDraftState {
+  const start = convertFromInternalYear(range[0]);
+  const end = convertFromInternalYear(range[1]);
+
+  return {
+    syncedRangeKey: getRangeKey(range),
+    startInput: String(start.year),
+    endInput: String(end.year),
+    startEra: start.era,
+    endEra: end.era,
+    startError: null,
+    endError: null,
+    hasBeenModified,
+  };
+}
+
 export function RangeInput({
   onCommit,
   minYear = GAME_CONFIG.MIN_YEAR,
@@ -45,48 +88,33 @@ export function RangeInput({
 }: RangeInputProps) {
   const prefersReducedMotion = useReducedMotion();
   const defaultRange = useMemo(() => createFullTimelineRange(minYear, maxYear), [minYear, maxYear]);
+  const boundsKey = useMemo(() => getBoundsKey(minYear, maxYear), [minYear, maxYear]);
   const isControlled = value !== undefined && onChange !== undefined;
-  const [internalRange, setInternalRange] = useState<[number, number]>(defaultRange);
+  const [internalRangeState, setInternalRangeState] = useState<InternalRangeState>(() => ({
+    boundsKey,
+    range: defaultRange,
+  }));
+  const internalRange =
+    internalRangeState.boundsKey === boundsKey ? internalRangeState.range : defaultRange;
   const range = isControlled ? value : internalRange;
+  const rangeKey = getRangeKey(range);
+  const [draftState, setDraftState] = useState<RangeDraftState>(() => createDraftState(range));
+  const draft = draftState.syncedRangeKey === rangeKey ? draftState : createDraftState(range);
+  const { startInput, endInput, startEra, endEra, startError, endError, hasBeenModified } = draft;
 
   const updateRange = useCallback(
     (newRange: [number, number]) => {
       if (isControlled) {
         onChange?.(newRange);
       } else {
-        setInternalRange(newRange);
+        setInternalRangeState({
+          boundsKey,
+          range: newRange,
+        });
       }
     },
-    [isControlled, onChange],
+    [boundsKey, isControlled, onChange],
   );
-
-  const [hasBeenModified, setHasBeenModified] = useState(false);
-  const startEraYear = convertFromInternalYear(range[0]);
-  const endEraYear = convertFromInternalYear(range[1]);
-
-  const [startInput, setStartInput] = useState(String(startEraYear.year));
-  const [endInput, setEndInput] = useState(String(endEraYear.year));
-  const [startEra, setStartEra] = useState<Era>(startEraYear.era);
-  const [endEra, setEndEra] = useState<Era>(endEraYear.era);
-  const [startError, setStartError] = useState<string | null>(null);
-  const [endError, setEndError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const start = convertFromInternalYear(range[0]);
-    const end = convertFromInternalYear(range[1]);
-
-    setStartInput(String(start.year));
-    setEndInput(String(end.year));
-    setStartEra(start.era);
-    setEndEra(end.era);
-  }, [range]);
-
-  useEffect(() => {
-    if (!isControlled) {
-      setInternalRange(defaultRange);
-    }
-    setHasBeenModified(false);
-  }, [defaultRange, isControlled]);
 
   const width = range[1] - range[0] + 1;
   const rangeTooWide = width > SCORING_CONSTANTS.W_MAX;
@@ -94,34 +122,47 @@ export function RangeInput({
   const progressPercent = Math.min((width / SCORING_CONSTANTS.W_MAX) * 100, 100);
 
   const resetRange = useCallback(() => {
-    updateRange(createFullTimelineRange(minYear, maxYear));
-    setHasBeenModified(false);
+    const nextRange = createFullTimelineRange(minYear, maxYear);
+    updateRange(nextRange);
+    setDraftState(createDraftState(nextRange));
   }, [minYear, maxYear, updateRange]);
 
   // --- Slider Interaction Logic ---
 
   const handleStartEraChange = (era: Era) => {
-    setStartEra(era);
     const parsed = parseInt(startInput, 10);
     if (!Number.isNaN(parsed)) {
       const internalYear = convertToInternalYear(parsed, era);
       if (internalYear >= minYear && internalYear <= maxYear) {
-        updateRange([internalYear, Math.max(internalYear, range[1])]);
-        setHasBeenModified(true);
+        const nextRange: [number, number] = [internalYear, Math.max(internalYear, range[1])];
+        updateRange(nextRange);
+        setDraftState(createDraftState(nextRange, true));
+        return;
       }
     }
+
+    setDraftState({
+      ...draft,
+      startEra: era,
+    });
   };
 
   const handleEndEraChange = (era: Era) => {
-    setEndEra(era);
     const parsed = parseInt(endInput, 10);
     if (!Number.isNaN(parsed)) {
       const internalYear = convertToInternalYear(parsed, era);
       if (internalYear >= minYear && internalYear <= maxYear) {
-        updateRange([Math.min(range[0], internalYear), internalYear]);
-        setHasBeenModified(true);
+        const nextRange: [number, number] = [Math.min(range[0], internalYear), internalYear];
+        updateRange(nextRange);
+        setDraftState(createDraftState(nextRange, true));
+        return;
       }
     }
+
+    setDraftState({
+      ...draft,
+      endEra: era,
+    });
   };
 
   const applyStartYear = () => {
@@ -129,20 +170,29 @@ export function RangeInput({
     if (!Number.isNaN(parsed) && parsed > 0) {
       const internalYear = convertToInternalYear(parsed, startEra);
       if (internalYear >= minYear && internalYear <= maxYear) {
-        updateRange([internalYear, Math.max(internalYear, range[1])]);
-        setHasBeenModified(true);
-        setStartError(null);
+        const nextRange: [number, number] = [internalYear, Math.max(internalYear, range[1])];
+        updateRange(nextRange);
+        setDraftState(createDraftState(nextRange, true));
       } else {
-        setStartError(formatValidRangeMessage());
-        // Keep the invalid input visible so user sees what they typed
+        setDraftState({
+          ...draft,
+          startError: formatValidRangeMessage(),
+        });
       }
     } else if (startInput.trim() === "") {
       // Empty input - reset silently
       const current = convertFromInternalYear(range[0]);
-      setStartInput(String(current.year));
-      setStartError(null);
+      setDraftState({
+        ...draft,
+        startInput: String(current.year),
+        startEra: current.era,
+        startError: null,
+      });
     } else {
-      setStartError("Enter a valid year");
+      setDraftState({
+        ...draft,
+        startError: "Enter a valid year",
+      });
     }
   };
 
@@ -151,20 +201,29 @@ export function RangeInput({
     if (!Number.isNaN(parsed) && parsed > 0) {
       const internalYear = convertToInternalYear(parsed, endEra);
       if (internalYear >= minYear && internalYear <= maxYear) {
-        updateRange([Math.min(range[0], internalYear), internalYear]);
-        setHasBeenModified(true);
-        setEndError(null);
+        const nextRange: [number, number] = [Math.min(range[0], internalYear), internalYear];
+        updateRange(nextRange);
+        setDraftState(createDraftState(nextRange, true));
       } else {
-        setEndError(formatValidRangeMessage());
-        // Keep the invalid input visible so user sees what they typed
+        setDraftState({
+          ...draft,
+          endError: formatValidRangeMessage(),
+        });
       }
     } else if (endInput.trim() === "") {
       // Empty input - reset silently
       const current = convertFromInternalYear(range[1]);
-      setEndInput(String(current.year));
-      setEndError(null);
+      setDraftState({
+        ...draft,
+        endInput: String(current.year),
+        endEra: current.era,
+        endError: null,
+      });
     } else {
-      setEndError("Enter a valid year");
+      setDraftState({
+        ...draft,
+        endError: "Enter a valid year",
+      });
     }
   };
 
@@ -252,8 +311,11 @@ export function RangeInput({
                   inputMode="numeric"
                   value={startInput}
                   onChange={(e) => {
-                    setStartInput(e.target.value);
-                    if (startError) setStartError(null);
+                    setDraftState({
+                      ...draft,
+                      startInput: e.target.value,
+                      startError: null,
+                    });
                   }}
                   onBlur={applyStartYear}
                   onKeyDown={(e) => handleInputKeyDown(e, applyStartYear)}
@@ -309,8 +371,11 @@ export function RangeInput({
                   inputMode="numeric"
                   value={endInput}
                   onChange={(e) => {
-                    setEndInput(e.target.value);
-                    if (endError) setEndError(null);
+                    setDraftState({
+                      ...draft,
+                      endInput: e.target.value,
+                      endError: null,
+                    });
                   }}
                   onBlur={applyEndYear}
                   onKeyDown={(e) => handleInputKeyDown(e, applyEndYear)}

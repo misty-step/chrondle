@@ -12,10 +12,31 @@ type MockSliderProps = { children?: React.ReactNode } & SliderHandlers & Record<
 vi.mock("@radix-ui/react-slider", () => {
   const rootPropsRef: { current: MockSliderProps | null } = { current: null };
 
-  const Root = ({ children, ...props }: MockSliderProps) => {
-    rootPropsRef.current = props;
+  const RootPropsCapture = ({ props }: { props: MockSliderProps }) => {
+    React.useEffect(() => {
+      rootPropsRef.current = props;
+    }, [props]);
+
+    return null;
+  };
+
+  const Root = ({
+    children,
+    onValueChange: _onValueChange,
+    onValueCommit: _onValueCommit,
+    minStepsBetweenThumbs: _minStepsBetweenThumbs,
+    ...props
+  }: MockSliderProps & { minStepsBetweenThumbs?: number }) => {
     return (
       <div data-testid="slider-root" {...props}>
+        <RootPropsCapture
+          props={{
+            ...props,
+            onValueChange: _onValueChange,
+            onValueCommit: _onValueCommit,
+            minStepsBetweenThumbs: _minStepsBetweenThumbs,
+          }}
+        />
         {children}
       </div>
     );

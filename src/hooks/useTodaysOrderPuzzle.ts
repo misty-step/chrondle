@@ -77,8 +77,6 @@ export function useTodaysOrderPuzzle(
 
   // === STATE ===
   const [localDate, setLocalDate] = useState(() => getLocalDateString());
-  const [usedPreload, setUsedPreload] = useState(false);
-  const prevLocalDateRef = useRef(localDate);
 
   // === DERIVED: Should we use preloaded data? ===
   const preloadMatchesLocalDate = useMemo(() => {
@@ -158,24 +156,7 @@ export function useTodaysOrderPuzzle(
     }
   }, [localDate]);
 
-  // === DETERMINE FINAL PUZZLE ===
-  const dateJustChanged = prevLocalDateRef.current !== localDate;
-  useEffect(() => {
-    prevLocalDateRef.current = localDate;
-  }, [localDate]);
-
   const result = useMemo<UseTodaysOrderPuzzleReturn>(() => {
-    if (dateJustChanged) {
-      return {
-        puzzle: null,
-        isLoading: true,
-        error: null,
-        localDate,
-        usedPreload: false,
-        revalidate,
-      };
-    }
-
     if (preloadMatchesLocalDate && preloadedPuzzle) {
       const normalizedPuzzle: TodaysOrderPuzzle = {
         id: preloadedPuzzle._id as Id<"orderPuzzles">,
@@ -233,21 +214,7 @@ export function useTodaysOrderPuzzle(
       usedPreload: false,
       revalidate,
     };
-  }, [
-    preloadMatchesLocalDate,
-    preloadedPuzzle,
-    puzzleByDate,
-    localDate,
-    dateJustChanged,
-    revalidate,
-  ]);
-
-  // Track preload usage as a side effect (cannot be inside useMemo)
-  useEffect(() => {
-    if (preloadMatchesLocalDate && preloadedPuzzle && !usedPreload) {
-      setUsedPreload(true);
-    }
-  }, [preloadMatchesLocalDate, preloadedPuzzle, usedPreload]);
+  }, [preloadMatchesLocalDate, preloadedPuzzle, puzzleByDate, localDate, revalidate]);
 
   useEffect(() => {
     if (preloadedPuzzle?.date && !preloadMatchesLocalDate) {

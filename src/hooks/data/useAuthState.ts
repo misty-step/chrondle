@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useUserCreation } from "@/components/UserCreationProvider";
 import { logger } from "@/lib/logger";
@@ -14,6 +14,13 @@ interface UseAuthStateReturn {
   isAuthenticated: boolean;
   isLoading: boolean;
 }
+
+type AuthPhase =
+  | "loading"
+  | "signed-out"
+  | "missing-clerk-id"
+  | "awaiting-convex-user"
+  | "authenticated";
 
 /**
  * Hook to provide stable authentication state with Convex database ID
@@ -35,144 +42,113 @@ export function useAuthState(): UseAuthStateReturn {
   const { user, isLoaded, isSignedIn } = useUser();
   const { currentUser, userCreationLoading } = useUserCreation();
   const prevStateRef = useRef<UseAuthStateReturn | null>(null);
+  const prevPhaseRef = useRef<AuthPhase | null>(null);
 
-  // Memoize the return value to ensure stable references
-  return useMemo<UseAuthStateReturn>(() => {
-    // Handle loading state - Clerk not yet loaded OR user creation in progress
+  const authPhase = useMemo<AuthPhase>(() => {
     if (!isLoaded || userCreationLoading) {
-      const result: UseAuthStateReturn = {
-        userId: null,
-        isAuthenticated: false,
-        isLoading: true,
-      };
+      return "loading";
+    }
+    if (!isSignedIn || !user) {
+      return "signed-out";
+    }
+    if (!user.id) {
+      return "missing-clerk-id";
+    }
+    if (!currentUser) {
+      return "awaiting-convex-user";
+    }
+    return "authenticated";
+  }, [currentUser, isLoaded, isSignedIn, user, userCreationLoading]);
 
-      // Development-only debug logging for state transitions
-      if (process.env.NODE_ENV === "development") {
-        if (!prevStateRef.current || prevStateRef.current.isLoading !== result.isLoading) {
+  const result = useMemo<UseAuthStateReturn>(() => {
+    switch (authPhase) {
+      case "loading":
+        return {
+          userId: null,
+          isAuthenticated: false,
+          isLoading: true,
+        };
+      case "signed-out":
+      case "missing-clerk-id":
+        return {
+          userId: null,
+          isAuthenticated: false,
+          isLoading: false,
+        };
+      case "awaiting-convex-user":
+        return {
+          userId: null,
+          isAuthenticated: true,
+          isLoading: true,
+        };
+      case "authenticated":
+        return {
+          userId: currentUser!._id,
+          isAuthenticated: true,
+          isLoading: false,
+        };
+    }
+  }, [authPhase, currentUser]);
+
+  useEffect(() => {
+    const prevState = prevStateRef.current;
+    const prevPhase = prevPhaseRef.current;
+
+    if (process.env.NODE_ENV === "development" && prevPhase !== authPhase) {
+      switch (authPhase) {
+        case "loading":
           logger.debug("[useAuthState] Auth loading...", {
             clerkLoaded: isLoaded,
             userCreationLoading,
           });
-        }
-      }
-
-      prevStateRef.current = result;
-      return result;
-    }
-
-    // Handle signed out state
-    if (!isSignedIn || !user) {
-      const result: UseAuthStateReturn = {
-        userId: null,
-        isAuthenticated: false,
-        isLoading: false,
-      };
-
-      // Development-only debug logging for state transitions
-      if (process.env.NODE_ENV === "development") {
-        if (
-          !prevStateRef.current ||
-          prevStateRef.current.isAuthenticated !== result.isAuthenticated
-        ) {
+          break;
+        case "signed-out":
           logger.debug("[useAuthState] User signed out");
-        }
+          break;
+        case "missing-clerk-id":
+          logger.warn("[useAuthState] Edge case: User object exists but no ID found", { user });
+          break;
+        case "awaiting-convex-user":
+          logger.warn("[useAuthState] Clerk authenticated but Convex user not ready:", {
+            clerkId: user?.id,
+            email: user?.primaryEmailAddress?.emailAddress,
+            currentUser,
+          });
+          break;
+        case "authenticated":
+          logger.debug("[useAuthState] User authenticated with Convex ID:", {
+            convexId: result.userId,
+            clerkId: user?.id,
+            previousState: prevState,
+          });
+          break;
       }
-
-      prevStateRef.current = result;
-      return result;
     }
 
-    // Handle edge case: user exists but no ID (defensive programming)
-    if (!user.id) {
-      const result: UseAuthStateReturn = {
-        userId: null,
-        isAuthenticated: false,
-        isLoading: false,
-      };
-
-      // Development-only debug logging for edge case
-      if (process.env.NODE_ENV === "development") {
-        logger.warn("[useAuthState] Edge case: User object exists but no ID found", { user });
-      }
-
-      prevStateRef.current = result;
-      return result;
-    }
-
-    // Handle authenticated state - need Convex user to be created
-    if (!currentUser) {
-      // User is authenticated in Clerk but Convex user doesn't exist yet
-      // This is a transient state while user creation happens
-      const result: UseAuthStateReturn = {
-        userId: null,
-        isAuthenticated: true, // User IS authenticated in Clerk, just waiting for Convex
-        isLoading: true, // Still loading from our perspective
-      };
-
-      // Development-only debug logging
-      if (process.env.NODE_ENV === "development") {
-        logger.warn("[useAuthState] Clerk authenticated but Convex user not ready:", {
-          clerkId: user.id,
-          email: user.primaryEmailAddress?.emailAddress,
-          currentUser,
-        });
-      }
-
-      // Production diagnostic: Capture to Sentry if this persists
-      // If we've been in this state for multiple renders, something is wrong
-      if (!prevStateRef.current || !prevStateRef.current.isLoading) {
-        // First time hitting this state - start tracking
-        prevStateRef.current = result;
-        return result;
-      }
-
-      // Still in this state on subsequent render - log to Sentry
+    if (authPhase === "awaiting-convex-user" && prevState?.isLoading && prevPhase !== authPhase) {
       captureClientException(
         new Error("Auth edge case: Clerk authenticated but Convex user not found"),
         {
           tags: {
             error_type: "auth_user_not_found",
-            clerk_id: user.id,
+            clerk_id: user?.id ?? "unknown",
           },
           extras: {
-            clerkId: user.id,
-            email: user.primaryEmailAddress?.emailAddress,
-            emailVerified: user.primaryEmailAddress?.verification?.status,
-            createdAt: user.createdAt,
+            clerkId: user?.id,
+            email: user?.primaryEmailAddress?.emailAddress,
+            emailVerified: user?.primaryEmailAddress?.verification?.status,
+            createdAt: user?.createdAt,
             userCreationLoading,
             hasCurrentUser: !!currentUser,
           },
           level: "warning",
         },
       );
-
-      prevStateRef.current = result;
-      return result;
     }
 
-    // Handle fully authenticated state with Convex user
-    const result: UseAuthStateReturn = {
-      userId: currentUser._id, // Return Convex database ID, not Clerk ID
-      isAuthenticated: true,
-      isLoading: false,
-    };
-
-    // Development-only debug logging for state transitions
-    if (process.env.NODE_ENV === "development") {
-      if (
-        !prevStateRef.current ||
-        prevStateRef.current.isAuthenticated !== result.isAuthenticated ||
-        prevStateRef.current.userId !== result.userId
-      ) {
-        logger.debug("[useAuthState] User authenticated with Convex ID:", {
-          convexId: result.userId,
-          clerkId: user.id,
-          previousState: prevStateRef.current,
-        });
-      }
-    }
-
+    prevPhaseRef.current = authPhase;
     prevStateRef.current = result;
-    return result;
-  }, [user, isLoaded, isSignedIn, currentUser, userCreationLoading]);
+  }, [authPhase, currentUser, isLoaded, result, user, userCreationLoading]);
+
+  return result;
 }

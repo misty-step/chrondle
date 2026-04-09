@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  getEraBucket,
-  pickBalancedYears,
-  type EraBucket,
-  type YearCandidateSource,
-} from "../workSelector";
+import { getEraBucket, pickBalancedYears, type YearCandidateSource } from "../workSelector";
 
 describe("workSelector helpers", () => {
   describe("getEraBucket", () => {

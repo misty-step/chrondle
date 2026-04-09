@@ -5,7 +5,7 @@ import { NavbarButton } from "@/components/ui/NavbarButton";
 import { SignIn } from "@phosphor-icons/react";
 import { AuthSkeleton } from "@/components/skeletons/AuthSkeleton";
 import { isMobileDevice } from "@/lib/platformDetection";
-import { useEffect, useState } from "react";
+import { useClientSnapshot } from "@/hooks/useClientSnapshot";
 
 interface AuthButtonsProps {
   className?: string;
@@ -13,12 +13,7 @@ interface AuthButtonsProps {
 
 export function AuthButtons({ className }: AuthButtonsProps) {
   const { isLoaded, isSignedIn } = useUser();
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Detect mobile device after mount to avoid hydration mismatch
-  useEffect(() => {
-    setIsMobile(isMobileDevice());
-  }, []);
+  const isMobile = useClientSnapshot(isMobileDevice, () => false);
 
   // Show skeleton while auth is loading to prevent flash
   if (!isLoaded) {

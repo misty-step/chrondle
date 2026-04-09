@@ -2,7 +2,7 @@ import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
 import schema from "../schema";
 import { modules } from "../test.setup";
-import { selectYearForPuzzle, selectDiverseEvents } from "../lib/puzzleHelpers";
+import { selectYearForPuzzle } from "../lib/puzzleHelpers";
 
 /**
  * Puzzle Helper Integration Tests using convex-test
