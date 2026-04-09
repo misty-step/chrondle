@@ -145,54 +145,78 @@ function EventCardContent({
         </div>
       </div>
 
-      <div
-        className={[
-          "flex flex-1 items-start gap-4 px-4 py-4 sm:px-5",
-          isInteractive && "cursor-pointer",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        onClick={onCardClick}
-        role={isInteractive ? "button" : undefined}
-        tabIndex={isInteractive ? 0 : undefined}
-        onKeyDown={(e) => {
-          if (!onCardClick) return;
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onCardClick();
-          }
-        }}
-        aria-describedby={isTruncated ? "truncation-hint" : undefined}
-      >
-        {/* Year Tab - Only shown in results view */}
-        {showYear && (
-          <div className="absolute top-3 -left-3 flex items-center">
-            <div className="bg-timeline-spine rounded px-2 py-1 text-white shadow-sm">
-              <span className="font-year text-xs whitespace-nowrap">{formatYear(event.year)}</span>
+      {isInteractive ? (
+        <button
+          type="button"
+          className="flex flex-1 cursor-pointer items-start gap-4 px-4 py-4 text-left sm:px-5"
+          onClick={onCardClick}
+          aria-describedby={isTruncated ? "truncation-hint" : undefined}
+        >
+          {/* Year Tab - Only shown in results view */}
+          {showYear && (
+            <div className="absolute top-3 -left-3 flex items-center">
+              <div className="bg-timeline-spine rounded px-2 py-1 text-white shadow-sm">
+                <span className="font-year text-xs whitespace-nowrap">
+                  {formatYear(event.year)}
+                </span>
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Position Indicator with Feedback */}
-        <div className="flex min-w-[36px] flex-shrink-0 items-center justify-center sm:min-w-[32px]">
-          <PositionBadge index={index} feedback={feedback} />
-        </div>
-
-        {/* Event Text */}
-        <div className="min-w-0 flex-1">
-          <p
-            ref={textRef}
-            className="font-event text-body-primary line-clamp-3 text-xl leading-relaxed"
-          >
-            {event.text}
-          </p>
-          {isTruncated && (
-            <span id="truncation-hint" className="text-muted-foreground mt-1 block text-sm">
-              Tap to read more
-            </span>
           )}
+
+          {/* Position Indicator with Feedback */}
+          <div className="flex min-w-[36px] flex-shrink-0 items-center justify-center sm:min-w-[32px]">
+            <PositionBadge index={index} feedback={feedback} />
+          </div>
+
+          {/* Event Text */}
+          <div className="min-w-0 flex-1">
+            <p
+              ref={textRef}
+              className="font-event text-body-primary line-clamp-3 text-xl leading-relaxed"
+            >
+              {event.text}
+            </p>
+            {isTruncated && (
+              <span id="truncation-hint" className="text-muted-foreground mt-1 block text-sm">
+                Tap to read more
+              </span>
+            )}
+          </div>
+        </button>
+      ) : (
+        <div className="flex flex-1 items-start gap-4 px-4 py-4 sm:px-5">
+          {/* Year Tab - Only shown in results view */}
+          {showYear && (
+            <div className="absolute top-3 -left-3 flex items-center">
+              <div className="bg-timeline-spine rounded px-2 py-1 text-white shadow-sm">
+                <span className="font-year text-xs whitespace-nowrap">
+                  {formatYear(event.year)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Position Indicator with Feedback */}
+          <div className="flex min-w-[36px] flex-shrink-0 items-center justify-center sm:min-w-[32px]">
+            <PositionBadge index={index} feedback={feedback} />
+          </div>
+
+          {/* Event Text */}
+          <div className="min-w-0 flex-1">
+            <p
+              ref={textRef}
+              className="font-event text-body-primary line-clamp-3 text-xl leading-relaxed"
+            >
+              {event.text}
+            </p>
+            {isTruncated && (
+              <span id="truncation-hint" className="text-muted-foreground mt-1 block text-sm">
+                Tap to read more
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

@@ -85,8 +85,8 @@ try {
   process.exit(1);
 }
 
-// Test 5: Check .nvmrc exists and matches CI
-console.log('\n5. Checking Node.js version consistency...');
+// Test 5: Check .nvmrc exists and enforces our minimum supported Node.js major.
+console.log('\n5. Checking Node.js version baseline...');
 const nvmrcPath = join(rootDir, '.nvmrc');
 if (!existsSync(nvmrcPath)) {
   console.error('❌ Missing .nvmrc file for Node.js version consistency');
@@ -94,10 +94,26 @@ if (!existsSync(nvmrcPath)) {
 }
 
 const nvmrcVersion = readFileSync(nvmrcPath, 'utf8').trim();
-if (majorVersion.toString() !== nvmrcVersion) {
-  console.warn(`⚠️  Node.js version mismatch: running ${majorVersion}, .nvmrc specifies ${nvmrcVersion}`);
+const requiredMajorVersion = Number.parseInt(nvmrcVersion, 10);
+
+if (Number.isNaN(requiredMajorVersion)) {
+  console.error(`❌ .nvmrc must contain a numeric major version, received: ${nvmrcVersion}`);
+  process.exit(1);
+}
+
+if (majorVersion < requiredMajorVersion) {
+  console.error(
+    `❌ Node.js ${majorVersion} is below the supported baseline in .nvmrc (${requiredMajorVersion})`,
+  );
+  process.exit(1);
+}
+
+if (majorVersion === requiredMajorVersion) {
+  console.log(`✅ Node.js version matches .nvmrc baseline: ${nvmrcVersion}`);
 } else {
-  console.log(`✅ Node.js version matches .nvmrc: ${nvmrcVersion}`);
+  console.log(
+    `✅ Node.js ${majorVersion} meets the .nvmrc baseline (${requiredMajorVersion})`,
+  );
 }
 
 console.log('\n🎉 All module system tests passed!');

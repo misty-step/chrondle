@@ -6,6 +6,7 @@ import { readFileSync } from "fs";
 // Read version from package.json at build time
 const packageJson = JSON.parse(readFileSync("./package.json", "utf8"));
 const appVersion = packageJson.version;
+const artifactBuildOnly = process.env.DAGGER_ARTIFACT_BUILD === "1";
 const canaryConnectSrc = resolveExternalOrigin(
   process.env.NEXT_PUBLIC_CANARY_ENDPOINT,
   "https://canary-obs.fly.dev",
@@ -110,6 +111,14 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.gravatar.com" },
     ],
   },
+
+  // Dagger runs type-check as a separate gate, so the artifact build can skip
+  // Next.js' duplicate type validation pass to stay within container limits.
+  ...(artifactBuildOnly && {
+    typescript: {
+      ignoreBuildErrors: true,
+    },
+  }),
 
   // Enable source maps for Sentry
   productionBrowserSourceMaps: true,

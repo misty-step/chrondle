@@ -51,11 +51,12 @@ Automation utilities for Chrondle development, deployment, and maintenance.
 
 ## Development Utilities
 
-| Script                   | Purpose                       | Usage                                    |
-| ------------------------ | ----------------------------- | ---------------------------------------- |
-| `check-cache-age.mjs`    | Check build cache age         | `bun run check-cache`                    |
-| `test-module-system.mjs` | Test module resolution        | `bun run test-module-system`             |
-| `test-responses-api.ts`  | Test OpenRouter Responses API | `bunx tsx scripts/test-responses-api.ts` |
+| Script                   | Purpose                       | Usage                                               |
+| ------------------------ | ----------------------------- | --------------------------------------------------- |
+| `check-cache-age.mjs`    | Check build cache age         | `bun run check-cache`                               |
+| `dagger-local.sh`        | Run local Dagger via Colima   | `bun run dagger:local -- call quality --check=lint` |
+| `test-module-system.mjs` | Test module resolution        | `bun run test-module-system`                        |
+| `test-responses-api.ts`  | Test OpenRouter Responses API | `bunx tsx scripts/test-responses-api.ts`            |
 
 ## Documentation
 
@@ -74,7 +75,28 @@ Key Bun scripts that wrap these utilities:
 ```bash
 bun run events           # Event management CLI
 bun run events:audit     # Run event audit
+bun run ci:dagger:lint   # Reproduce the Dagger lint gate locally
+bun run ci:dagger:docs   # Reproduce the Dagger docs gate locally
 bun run deploy:verify    # Verify deployment
 bun run verify:auth:prod # Verify production auth
 bun run check-cache      # Check cache age
 ```
+
+## Local Dagger on macOS
+
+Chrondle's local CI wrapper prefers Colima. Start the default profile once:
+
+```bash
+colima start --profile default
+```
+
+Then run Dagger through the repo-local wrapper:
+
+```bash
+bun run ci:dagger:lint
+bun run ci:dagger:type-check
+bun run ci:dagger:validation
+bun run ci:dagger:docs
+```
+
+If you need to force the plain Docker CLI instead, set `CHRONDLE_DAGGER_FORCE_DOCKER=1`.

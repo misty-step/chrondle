@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { anonymousStreakStorage } from "@/lib/secureStorage";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import {
   calculateStreakUpdate,
   applyStreakUpdate,
@@ -52,7 +52,7 @@ export function useStreak(): UseStreakReturn {
   const { isSignedIn, user: clerkUser } = useUser();
 
   // Convex user data (authenticated users only)
-  const convexUser = useQuery(api.users.getCurrentUser);
+  const convexUser = useQuery(anyPublicApi.users.getCurrentUser);
 
   // Anonymous streak from localStorage
   const [anonymousStreak, setAnonymousStreak] = useState(() => {
@@ -64,14 +64,13 @@ export function useStreak(): UseStreakReturn {
   });
 
   // Achievement state
-  const [hasNewAchievement, setHasNewAchievement] = useState(false);
-  const [newAchievement, setNewAchievement] = useState<string | null>(null);
+  const [dismissedAchievement, setDismissedAchievement] = useState<string | null>(null);
 
   // Migration state - track if we've already migrated this session
   const hasMigratedRef = useRef(false);
 
   // Convex mutation for merging anonymous streaks
-  const mergeStreakMutation = useMutation(api.users.mergeAnonymousStreak);
+  const mergeStreakMutation = useMutation(anyPublicApi.users.mergeAnonymousStreak);
 
   // Derive streak data based on auth state
   const streakData = useMemo((): StreakData => {
@@ -262,24 +261,25 @@ export function useStreak(): UseStreakReturn {
       });
   }, [isSignedIn, clerkUser, convexUser, anonymousStreak, mergeStreakMutation]);
 
-  // Achievement checking (when streak increases)
-  useEffect(() => {
-    if (streakData.currentStreak > 0) {
-      const achievement = STREAK_CONFIG.ACHIEVEMENTS.find(
-        (a) => a.threshold === streakData.currentStreak,
-      );
-
-      if (achievement && !streakData.achievements.includes(achievement.name)) {
-        setNewAchievement(`${achievement.emoji} ${achievement.description}`);
-        setHasNewAchievement(true);
-      }
+  const currentAchievement = useMemo(() => {
+    if (streakData.currentStreak <= 0) {
+      return null;
     }
-  }, [streakData.currentStreak, streakData.achievements]);
+
+    return STREAK_CONFIG.ACHIEVEMENTS.find((a) => a.threshold === streakData.currentStreak) ?? null;
+  }, [streakData.currentStreak]);
+
+  const newAchievement =
+    currentAchievement &&
+    !streakData.achievements.includes(currentAchievement.name) &&
+    dismissedAchievement !== currentAchievement.name
+      ? `${currentAchievement.emoji} ${currentAchievement.description}`
+      : null;
+  const hasNewAchievement = newAchievement !== null;
 
   const clearNewAchievement = useCallback(() => {
-    setHasNewAchievement(false);
-    setNewAchievement(null);
-  }, []);
+    setDismissedAchievement(currentAchievement?.name ?? null);
+  }, [currentAchievement]);
 
   return useMemo(
     () => ({

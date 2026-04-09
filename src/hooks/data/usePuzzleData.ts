@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
 import { Id } from "convex/_generated/dataModel";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { PuzzleWithContext } from "@/types/puzzle";
 import { useTodaysPuzzle } from "@/hooks/useTodaysPuzzle";
 
@@ -61,7 +61,7 @@ export function usePuzzleData(puzzleNumber?: number): UsePuzzleDataReturn {
 
   // For archive puzzles, fetch by puzzle number
   const archivePuzzle = useQuery(
-    api.puzzles.getPuzzleByNumber,
+    anyPublicApi.puzzles.getPuzzleByNumber,
     !isDaily ? { puzzleNumber } : "skip",
   ) as ConvexPuzzle | null | undefined;
 

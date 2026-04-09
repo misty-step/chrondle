@@ -29,13 +29,6 @@ describe("submitOrderPlay validation (security)", () => {
   describe("Attack: Forged hole-in-one", () => {
     it("rejects when final ordering doesn't solve puzzle", () => {
       const maliciousOrdering = ["b", "a", "c", "d", "e", "f"]; // Wrong!
-      const forgedAttempt = {
-        ordering: maliciousOrdering,
-        feedback: ["correct", "correct", "correct", "correct", "correct", "correct"], // Lied
-        pairsCorrect: 15,
-        totalPairs: 15,
-        timestamp: Date.now(),
-      };
 
       // This is what Layer 1 validation does:
       const isValid = wouldSolve(maliciousOrdering, mockPuzzle.events);

@@ -1,7 +1,10 @@
 "use node";
 
+import { anyApi } from "convex/server";
 import { internalAction } from "../_generated/server";
-import { api, internal } from "../_generated/api";
+
+const publicApi = anyApi as any;
+const internalApi = anyApi as any;
 
 // Define the puzzle data structure
 interface PuzzleData {
@@ -59,7 +62,7 @@ export const migrateEvents = internalAction({
 
       try {
         // Import all events for this year
-        const result = await ctx.runMutation(internal.events.importYearEvents, {
+        const result = await ctx.runMutation(internalApi.events.importYearEvents, {
           year,
           events,
         });
@@ -105,7 +108,7 @@ export const migrateEvents = internalAction({
     }
 
     // Get pool statistics
-    const poolStats = await ctx.runQuery(api.events.getEventPoolStats);
+    const poolStats = await ctx.runQuery(publicApi.events.getEventPoolStats, {});
     console.log("\nEvent pool statistics:");
     console.log(`  - Total events in database: ${poolStats.totalEvents}`);
     console.log(`  - Unique years: ${poolStats.uniqueYears}`);

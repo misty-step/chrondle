@@ -10,9 +10,14 @@ vi.mock("motion/react", () => ({
     button: ({
       children,
       type,
+      whileTap: _whileTap,
+      whileHover: _whileHover,
+      animate: _animate,
+      transition: _transition,
       ...props
     }: React.HTMLProps<HTMLButtonElement> & {
       whileTap?: unknown;
+      whileHover?: unknown;
       animate?: unknown;
       transition?: unknown;
       type?: "button" | "submit" | "reset";

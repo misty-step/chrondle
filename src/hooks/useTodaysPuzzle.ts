@@ -24,8 +24,8 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { Id } from "convex/_generated/dataModel";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { getLocalDateString } from "@/lib/time/dailyDate";
 import { useOnTabFocus } from "@/hooks/useVisibilityChange";
 import { logger } from "@/lib/logger";
@@ -74,16 +74,13 @@ export function useTodaysPuzzle(): UseTodaysPuzzleReturn {
   // Local date is the SINGLE SOURCE OF TRUTH
   const [localDate, setLocalDate] = useState(() => getLocalDateString());
 
-  // Track the previous local date to detect changes
-  const prevLocalDateRef = useRef(localDate);
-
   // === QUERY ===
 
   // Always query by local date
-  const puzzleByDate = useQuery(api.puzzles.getPuzzleByDate, { date: localDate });
+  const puzzleByDate = useQuery(anyPublicApi.puzzles.getPuzzleByDate, { date: localDate });
 
   // Mutation for on-demand puzzle generation
-  const ensurePuzzleForDate = useMutation(api.puzzles.ensurePuzzleForDate);
+  const ensurePuzzleForDate = useMutation(anyPublicApi.puzzles.ensurePuzzleForDate);
 
   // Track which date we've already triggered generation for (prevents duplicate calls)
   const generationTriggeredForRef = useRef<string | null>(null);
@@ -147,24 +144,7 @@ export function useTodaysPuzzle(): UseTodaysPuzzleReturn {
 
   // === DETERMINE FINAL PUZZLE ===
 
-  // Track if date just changed (to force loading state)
-  const dateJustChanged = prevLocalDateRef.current !== localDate;
-  useEffect(() => {
-    prevLocalDateRef.current = localDate;
-  }, [localDate]);
-
   const result = useMemo<UseTodaysPuzzleReturn>(() => {
-    // If date just changed, show loading while we fetch new puzzle
-    if (dateJustChanged) {
-      return {
-        puzzle: null,
-        isLoading: true,
-        error: null,
-        localDate,
-        revalidate,
-      };
-    }
-
     // Query still loading
     if (puzzleByDate === undefined) {
       return {
@@ -204,7 +184,7 @@ export function useTodaysPuzzle(): UseTodaysPuzzleReturn {
       localDate,
       revalidate,
     };
-  }, [puzzleByDate, localDate, dateJustChanged, revalidate]);
+  }, [puzzleByDate, localDate, revalidate]);
 
   return result;
 }

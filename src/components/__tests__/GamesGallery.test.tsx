@@ -35,6 +35,9 @@ vi.mock("@phosphor-icons/react", () => ({
     <svg data-testid="crosshair-icon" {...props} />
   ),
   Shuffle: (props: React.SVGProps<SVGSVGElement>) => <svg data-testid="shuffle-icon" {...props} />,
+  SquaresFour: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg data-testid="squares-four-icon" {...props} />
+  ),
 }));
 
 describe("GamesGallery", () => {
@@ -57,20 +60,26 @@ describe("GamesGallery", () => {
       expect(screen.getByText("Daily history puzzles")).toBeInTheDocument();
     });
 
-    it("renders both mode cards with copy, CTAs, and puzzle numbers", () => {
+    it("renders all mode cards with copy, CTAs, and puzzle metadata", () => {
       render(<GamesGallery />);
 
       expect(screen.getByRole("button", { name: /classic/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /order/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /groups/i })).toBeInTheDocument();
 
       expect(screen.getByText("Pin the year from six historical clues.")).toBeInTheDocument();
       expect(screen.getByText("Drag six events into chronological order.")).toBeInTheDocument();
+      expect(
+        screen.getByText("Sort sixteen events into four hidden exact years."),
+      ).toBeInTheDocument();
 
       expect(screen.getByText("Start Today's Classic")).toBeInTheDocument();
       expect(screen.getByText("Try Order Mode")).toBeInTheDocument();
+      expect(screen.getByText("Play Groups")).toBeInTheDocument();
 
-      expect(screen.getByText("New")).toBeInTheDocument();
+      expect(screen.getAllByText("New")).toHaveLength(2);
       expect(screen.getAllByText("Puzzle #247")).toHaveLength(2);
+      expect(screen.getByText("Daily Board")).toBeInTheDocument();
     });
 
     it("renders mode icons", () => {
@@ -78,6 +87,7 @@ describe("GamesGallery", () => {
 
       expect(screen.getByTestId("crosshair-icon")).toBeInTheDocument();
       expect(screen.getByTestId("shuffle-icon")).toBeInTheDocument();
+      expect(screen.getByTestId("squares-four-icon")).toBeInTheDocument();
     });
   });
 
@@ -97,6 +107,22 @@ describe("GamesGallery", () => {
 
       expect(mockPush).toHaveBeenCalledWith("/order");
     });
+
+    it("navigates to /groups when Groups card is clicked", () => {
+      render(<GamesGallery />);
+
+      fireEvent.click(screen.getByRole("button", { name: /groups/i }));
+
+      expect(mockPush).toHaveBeenCalledWith("/groups");
+    });
+  });
+
+  describe("Data fetching", () => {
+    it("only requests puzzle numbers for deployed daily modes", () => {
+      render(<GamesGallery />);
+
+      expect(vi.mocked(useQuery)).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("Accessibility", () => {
@@ -107,14 +133,16 @@ describe("GamesGallery", () => {
       expect(screen.getByRole("heading", { level: 1, name: "Chrondle" })).toBeInTheDocument();
       expect(screen.getByRole("heading", { level: 2, name: "Classic" })).toBeInTheDocument();
       expect(screen.getByRole("heading", { level: 2, name: "Order" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 2, name: "Groups" })).toBeInTheDocument();
     });
 
     it("exposes accessible buttons and hides icons from assistive tech", () => {
       render(<GamesGallery />);
 
-      expect(screen.getAllByRole("button")).toHaveLength(2);
+      expect(screen.getAllByRole("button")).toHaveLength(3);
       expect(screen.getByTestId("crosshair-icon")).toHaveAttribute("aria-hidden", "true");
       expect(screen.getByTestId("shuffle-icon")).toHaveAttribute("aria-hidden", "true");
+      expect(screen.getByTestId("squares-four-icon")).toHaveAttribute("aria-hidden", "true");
     });
   });
 });

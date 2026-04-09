@@ -4,7 +4,7 @@
  * Deep module: simple config, complex release automation hidden inside.
  * On push to master with conventional commits → version bump, changelog, GitHub release.
  */
-export default {
+const releaseConfig = {
   branches: ["master"],
   plugins: [
     // Analyze commits to determine version bump (major/minor/patch)
@@ -36,3 +36,5 @@ export default {
     "@semantic-release/github",
   ],
 };
+
+export default releaseConfig;

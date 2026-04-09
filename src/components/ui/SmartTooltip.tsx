@@ -171,12 +171,13 @@ export const SmartTooltip: React.FC<SmartTooltipProps> = ({
       onMouseEnter={!isMobile ? showTooltip : undefined}
       onMouseLeave={!isMobile ? hideTooltip : undefined}
     >
-      <div
-        onClick={isMobile ? showTooltip : undefined}
-        className={isMobile ? "cursor-pointer" : ""}
-      >
-        {children}
-      </div>
+      {isMobile ? (
+        <button type="button" onClick={showTooltip} className="cursor-pointer">
+          {children}
+        </button>
+      ) : (
+        <div>{children}</div>
+      )}
 
       {isVisible && (
         <div

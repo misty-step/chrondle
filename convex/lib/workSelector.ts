@@ -1,12 +1,13 @@
 import { v } from "convex/values";
 import { action, internalAction, type ActionCtx } from "../_generated/server";
-import { api } from "../_generated/api";
+import { anyApi } from "convex/server";
 import type { Doc } from "../_generated/dataModel";
 import { hasProperNoun, hasLeakage } from "./eventValidation";
 
 const MIN_EVENTS_PER_YEAR = 6;
 const YEAR_RANGE = { start: -776, end: 2008 };
 const QUALITY_INSPECTION_LIMIT = 40;
+const publicApi = anyApi as any;
 
 type YearStats = {
   year: number;
@@ -31,7 +32,8 @@ export async function chooseWorkYears(
   count: number,
 ): Promise<{ years: number[]; sourceBreakdown: YearCandidateSource[] }> {
   const requestedCount = Math.max(1, Math.min(count, 5));
-  const stats = (await ctx.runQuery(api.events.getAllYearsWithStats, {})) as YearStats[];
+  const getAllYearsWithStats = publicApi.events.getAllYearsWithStats;
+  const stats = (await ctx.runQuery(getAllYearsWithStats, {})) as YearStats[];
   const statsMap = new Map(stats.map((stat) => [stat.year, stat]));
 
   const missingCandidates = computeMissingYearCandidates(statsMap);
@@ -97,7 +99,7 @@ async function computeLowQualityCandidates(
   const candidates: YearCandidate[] = [];
 
   for (const stat of interestingYears) {
-    const events = (await ctx.runQuery(api.events.getYearEvents, {
+    const events = (await ctx.runQuery(publicApi.events.getYearEvents, {
       year: stat.year,
     })) as ReadonlyArray<Doc<"events">>;
     if (!events.length) continue;

@@ -2,11 +2,13 @@
 
 import { Command } from "commander";
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../convex/_generated/api.js";
+import { anyApi } from "convex/server";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs/promises";
+
+const apiRef = anyApi;
 
 const program = new Command();
 
@@ -43,7 +45,7 @@ program.action(async (options) => {
   if (options.year) {
     years.push(Number(options.year));
   } else {
-    const selector = await client.action(api.lib.workSelector.testSelectWorkYears, {
+    const selector = await client.action(apiRef.lib.workSelector.testSelectWorkYears, {
       count,
     });
     years.push(...selector.years);
@@ -54,7 +56,7 @@ program.action(async (options) => {
   for (const year of years) {
     console.log(`\n=== Year ${year} ===`);
     const result = await client.action(
-      api.actions.eventGeneration.orchestrator.testGenerateYearEvents,
+      apiRef.actions.eventGeneration.orchestrator.testGenerateYearEvents,
       {
         year,
       },

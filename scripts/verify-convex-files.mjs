@@ -38,49 +38,63 @@ async function verifyConvexFiles() {
     console.log("✅ All required files exist locally");
   }
 
-  // Step 2: Check if files are staged for deletion
+  let gitAvailable = true;
+
   try {
-    console.log("\nChecking Git staging area...");
-    const { stdout } = await execAsync("git diff --cached --name-status");
+    await execAsync("git --version");
+  } catch {
+    gitAvailable = false;
+  }
 
-    const stagedChanges = stdout.split("\n").filter((line) => line.trim());
-    const deletedFiles = stagedChanges
-      .filter((line) => line.startsWith("D"))
-      .map((line) => line.split("\t")[1])
-      .filter((file) => REQUIRED_FILES.includes(file));
+  if (!gitAvailable) {
+    console.log("\nℹ️ Skipping Git staging and tracking checks because git is unavailable");
+  }
 
-    if (deletedFiles.length > 0) {
-      console.error("\n❌ ERROR: Attempting to delete required Convex files!");
-      console.error("\nFiles marked for deletion:");
-      deletedFiles.forEach((file) => console.error(`   - ${file}`));
-      console.error("\n⚠️  These files MUST remain in Git for Vercel deployments to work.");
-      console.error("💡 If you need to update them:");
-      console.error("   1. Run `bunx convex codegen` to regenerate");
-      console.error("   2. Stage the updated files with `git add convex/_generated/`");
-      console.error("\nSee scripts/verify-convex-files.mjs for more information.");
-      hasErrors = true;
-    } else {
-      console.log("✅ No required files staged for deletion");
+  // Step 2: Check if files are staged for deletion
+  if (gitAvailable) {
+    try {
+      console.log("\nChecking Git staging area...");
+      const { stdout } = await execAsync("git diff --cached --name-status");
+
+      const stagedChanges = stdout.split("\n").filter((line) => line.trim());
+      const deletedFiles = stagedChanges
+        .filter((line) => line.startsWith("D"))
+        .map((line) => line.split("\t")[1])
+        .filter((file) => REQUIRED_FILES.includes(file));
+
+      if (deletedFiles.length > 0) {
+        console.error("\n❌ ERROR: Attempting to delete required Convex files!");
+        console.error("\nFiles marked for deletion:");
+        deletedFiles.forEach((file) => console.error(`   - ${file}`));
+        console.error("\n⚠️  These files MUST remain in Git for Vercel deployments to work.");
+        console.error("💡 If you need to update them:");
+        console.error("   1. Run `bunx convex codegen` to regenerate");
+        console.error("   2. Stage the updated files with `git add convex/_generated/`");
+        console.error("\nSee scripts/verify-convex-files.mjs for more information.");
+        hasErrors = true;
+      } else {
+        console.log("✅ No required files staged for deletion");
+      }
+
+      // Step 3: Check if files are tracked in Git
+      console.log("\nChecking Git tracking...");
+      const { stdout: trackedFiles } = await execAsync("git ls-files convex/_generated/");
+      const trackedList = trackedFiles.split("\n").filter((line) => line.trim());
+
+      const untrackedRequired = REQUIRED_FILES.filter((file) => !trackedList.includes(file));
+
+      if (untrackedRequired.length > 0) {
+        console.warn("\n⚠️  Warning: Some required files are not tracked in Git:");
+        untrackedRequired.forEach((file) => console.warn(`   - ${file}`));
+        console.warn("\n💡 Fix: Stage them with `git add convex/_generated/`");
+        // This is a warning, not an error, as they might be newly generated
+      } else {
+        console.log("✅ All required files are tracked in Git");
+      }
+    } catch (error) {
+      console.warn("⚠️  Could not verify Git status:", error.message);
+      console.warn("   Make sure you are in a Git repository");
     }
-
-    // Step 3: Check if files are tracked in Git
-    console.log("\nChecking Git tracking...");
-    const { stdout: trackedFiles } = await execAsync("git ls-files convex/_generated/");
-    const trackedList = trackedFiles.split("\n").filter((line) => line.trim());
-
-    const untrackedRequired = REQUIRED_FILES.filter((file) => !trackedList.includes(file));
-
-    if (untrackedRequired.length > 0) {
-      console.warn("\n⚠️  Warning: Some required files are not tracked in Git:");
-      untrackedRequired.forEach((file) => console.warn(`   - ${file}`));
-      console.warn("\n💡 Fix: Stage them with `git add convex/_generated/`");
-      // This is a warning, not an error, as they might be newly generated
-    } else {
-      console.log("✅ All required files are tracked in Git");
-    }
-  } catch (error) {
-    console.warn("⚠️  Could not verify Git status:", error.message);
-    console.warn("   Make sure you are in a Git repository");
   }
 
   // Final result

@@ -1,15 +1,13 @@
 /**
  * Sentry Client Initialization & Helpers
  *
- * Bootstraps Sentry for client-side error tracking with:
- * - No-op when DSN missing (dev-friendly)
- * - User context with hashed IDs
- * - Configurable sampling rates
- * - Release tracking
+ * Lightweight client telemetry bridge.
+ *
+ * Client-side Sentry added too much permanent bundle weight for the app shell,
+ * so browser error capture is forwarded through Canary instead while
+ * preserving the same call sites and API surface.
  */
 
-import * as Sentry from "@sentry/nextjs";
-import { hashIdentifier } from "./hash";
 import { logger } from "@/lib/logger";
 import { captureCanaryException } from "./canary";
 import type { SentryContext } from "./types";
@@ -33,47 +31,11 @@ export function initSentryClient(): void {
     return;
   }
 
-  try {
-    Sentry.init({
-      dsn,
-      environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || "development",
-      release: process.env.NEXT_PUBLIC_SENTRY_RELEASE,
-
-      // Performance monitoring
-      tracesSampleRate: parseFloat(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE || "0.1"),
-      sendDefaultPii: false,
-
-      // Session replay
-      replaysSessionSampleRate: parseFloat(
-        process.env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE || "0.1",
-      ),
-      replaysOnErrorSampleRate: 1.0, // Always capture on error
-
-      // Integrations — replayIntegration is browser-only; guard against SSR
-      integrations:
-        typeof window !== "undefined"
-          ? [Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true })]
-          : [],
-
-      // Filter out noisy errors
-      beforeSend(event) {
-        // Filter common browser extension errors
-        if (event.exception?.values?.[0]?.value?.includes("Extension context invalidated")) {
-          return null;
-        }
-        return event;
-      },
-    });
-
-    isInitialized = true;
-    logger.debug("[Sentry] Client initialized", {
-      environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT,
-      release: process.env.NEXT_PUBLIC_SENTRY_RELEASE,
-    });
-  } catch (error) {
-    logger.error("[Sentry] Failed to initialize client", { error });
-    // Don't throw - graceful degradation
-  }
+  isInitialized = true;
+  logger.debug("[Sentry] Client initialized via Canary bridge", {
+    environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT,
+    release: process.env.NEXT_PUBLIC_SENTRY_RELEASE,
+  });
 }
 
 /**
@@ -83,33 +45,10 @@ export function initSentryClient(): void {
  */
 export function captureClientException(error: unknown, context?: SentryContext): void {
   if (!isInitialized) {
-    logger.debug("[Sentry] Not initialized, skipping exception capture", { error, context });
-  }
-
-  if (isInitialized) {
-    try {
-      Sentry.withScope((scope) => {
-        if (context?.tags) {
-          Object.entries(context.tags).forEach(([key, value]) => {
-            scope.setTag(key, value);
-          });
-        }
-
-        if (context?.extras) {
-          Object.entries(context.extras).forEach(([key, value]) => {
-            scope.setExtra(key, value);
-          });
-        }
-
-        if (context?.level) {
-          scope.setLevel(context.level);
-        }
-
-        Sentry.captureException(error);
-      });
-    } catch (err) {
-      logger.error("[Sentry] Failed to capture exception", { error, err });
-    }
+    logger.debug("[Sentry] Not initialized, forwarding exception to Canary only", {
+      error,
+      context,
+    });
   }
 
   void captureCanaryException(error, context);
@@ -123,22 +62,7 @@ export function captureClientException(error: unknown, context?: SentryContext):
 export function setUserContext(userId?: string, authState?: "signed_in" | "anon"): void {
   if (!isInitialized) return;
 
-  try {
-    Sentry.setUser(
-      userId
-        ? {
-            id: hashIdentifier(userId),
-            username: `user_${hashIdentifier(userId).slice(0, 6)}`,
-          }
-        : null,
-    );
-
-    if (authState) {
-      Sentry.setTag("auth_state", authState);
-    }
-  } catch (error) {
-    logger.error("[Sentry] Failed to set user context", { error });
-  }
+  logger.debug("[Sentry] Client user context updated", { hasUserId: !!userId, authState });
 }
 
 /**
@@ -149,13 +73,5 @@ export function setUserContext(userId?: string, authState?: "signed_in" | "anon"
 export function addBreadcrumb(message: string, data?: Record<string, unknown>): void {
   if (!isInitialized) return;
 
-  try {
-    Sentry.addBreadcrumb({
-      message,
-      data,
-      timestamp: Date.now() / 1000,
-    });
-  } catch (error) {
-    logger.error("[Sentry] Failed to add breadcrumb", { error });
-  }
+  logger.debug("[Sentry] Client breadcrumb", { message, data });
 }

@@ -2,15 +2,15 @@
 
 import React, { useState } from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { CircleNotch, Target, Clock } from "@phosphor-icons/react";
+import { CircleNotch, Target, Clock, Users } from "@phosphor-icons/react";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { cn } from "@/lib/utils";
 import { PuzzleDetailModal } from "./PuzzleDetailModal";
 
-type PuzzleMode = "classic" | "order";
+type PuzzleMode = "classic" | "order" | "groups";
 
 interface ClassicPuzzleItem {
   _id: Id<"puzzles">;
@@ -35,13 +35,25 @@ interface OrderPuzzleItem {
   status: "active" | "completed" | "future";
 }
 
-type PuzzleItem = ClassicPuzzleItem | OrderPuzzleItem;
+interface GroupsPuzzleItem {
+  _id: Id<"groupsPuzzles">;
+  puzzleNumber: number;
+  date: string;
+  yearSpan: string;
+  eventCount: number;
+  groupCount: number;
+  playCount: number;
+  avgScore: null;
+  status: "active" | "completed" | "future";
+}
+
+type PuzzleItem = ClassicPuzzleItem | OrderPuzzleItem | GroupsPuzzleItem;
 
 /**
  * Puzzles Manager Tab - Browse and inspect puzzles
  *
  * Features:
- * - Mode toggle (Classic/Order)
+ * - Mode toggle (Classic/Order/Groups)
  * - Puzzle list with key metrics
  * - Click to view detailed puzzle modal
  */
@@ -50,7 +62,7 @@ export default function PuzzlesTab() {
   const [selectedPuzzleNumber, setSelectedPuzzleNumber] = useState<number | null>(null);
 
   // Query puzzles for current mode
-  const puzzlesResult = useQuery(api.admin.puzzles.listPuzzles, {
+  const puzzlesResult = useQuery(anyPublicApi.admin.puzzles.listPuzzles, {
     mode,
     limit: 50,
   });
@@ -82,7 +94,11 @@ export default function PuzzlesTab() {
                   <th className="text-text-secondary w-16 pb-2 font-medium">#</th>
                   <th className="text-text-secondary pb-2 font-medium">Date</th>
                   <th className="text-text-secondary pb-2 font-medium">
-                    {mode === "classic" ? "Target Year" : "Event Span"}
+                    {mode === "classic"
+                      ? "Target Year"
+                      : mode === "order"
+                        ? "Event Span"
+                        : "Year Span"}
                   </th>
                   <th className="text-text-secondary w-24 pb-2 font-medium">Plays</th>
                   {mode === "classic" && (
@@ -105,7 +121,9 @@ export default function PuzzlesTab() {
                     <td className="text-text-primary py-3 font-mono">
                       {mode === "classic"
                         ? formatYear((puzzle as ClassicPuzzleItem).targetYear)
-                        : (puzzle as OrderPuzzleItem).eventSpan}
+                        : mode === "order"
+                          ? (puzzle as OrderPuzzleItem).eventSpan
+                          : (puzzle as GroupsPuzzleItem).yearSpan}
                     </td>
                     <td className="text-text-secondary py-3">
                       {puzzle.playCount.toLocaleString()}
@@ -186,6 +204,21 @@ function ModeToggle({
       >
         <Clock className="mr-1.5 inline h-4 w-4" />
         Order
+      </button>
+      <button
+        role="radio"
+        aria-checked={mode === "groups"}
+        onClick={() => onChange("groups")}
+        className={cn(
+          "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+          "focus-visible:ring-accent-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+          mode === "groups"
+            ? "bg-surface-primary text-text-primary shadow-sm"
+            : "text-text-secondary hover:text-text-primary",
+        )}
+      >
+        <Users className="mr-1.5 inline h-4 w-4" />
+        Groups
       </button>
     </div>
   );

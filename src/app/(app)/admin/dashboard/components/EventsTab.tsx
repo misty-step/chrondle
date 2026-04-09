@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -24,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MagnifyingGlass, Trash, Check, X, CircleNotch } from "@phosphor-icons/react";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 
@@ -71,6 +71,7 @@ export default function EventsTab() {
   const [editingId, setEditingId] = useState<Id<"events"> | null>(null);
   const [editText, setEditText] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const editInputRef = useRef<HTMLInputElement | null>(null);
 
   // Delete confirmation state
   const [deleteTarget, setDeleteTarget] = useState<EventItem | null>(null);
@@ -96,18 +97,25 @@ export default function EventsTab() {
   );
 
   // Queries
-  const eventsResult = useQuery(api.admin.events.searchEvents, queryArgs);
-  const stats = useQuery(api.admin.events.getEventStats);
+  const eventsResult = useQuery(anyPublicApi.admin.events.searchEvents, queryArgs);
+  const stats = useQuery(anyPublicApi.admin.events.getEventStats);
 
   // Mutations
-  const updateEventText = useMutation(api.admin.events.updateEventText);
-  const deleteEvent = useMutation(api.admin.events.deleteEvent);
+  const updateEventText = useMutation(anyPublicApi.admin.events.updateEventText);
+  const deleteEvent = useMutation(anyPublicApi.admin.events.deleteEvent);
 
   // Edit handlers
   const startEditing = useCallback((event: EventItem) => {
     setEditingId(event._id);
     setEditText(event.event);
   }, []);
+
+  useEffect(() => {
+    if (editingId) {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    }
+  }, [editingId]);
 
   const cancelEditing = useCallback(() => {
     setEditingId(null);
@@ -310,10 +318,10 @@ export default function EventsTab() {
                         {editingId === event._id ? (
                           <div className="flex items-center gap-2">
                             <Input
+                              ref={editInputRef}
                               value={editText}
                               onChange={(e) => setEditText(e.target.value)}
                               className="flex-1"
-                              autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") saveEdit();
                                 if (e.key === "Escape") cancelEditing();

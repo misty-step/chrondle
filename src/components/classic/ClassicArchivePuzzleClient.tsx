@@ -23,8 +23,6 @@ interface ClassicArchivePuzzleClientProps {
 export function ClassicArchivePuzzleClient({ puzzleNumber }: ClassicArchivePuzzleClientProps) {
   const router = useRouter();
   const confettiRef = useRef<ConfettiRef>(null);
-  const [announcement, setAnnouncement] = useState("");
-  const [showSuccess, setShowSuccess] = useState(false);
   const [totalPuzzles, setTotalPuzzles] = useState<number | null>(null);
   const { addToast } = useToast();
   const toast = addToast;
@@ -62,16 +60,6 @@ export function ClassicArchivePuzzleClient({ puzzleNumber }: ClassicArchivePuzzl
     setLastRangeCount: setScreenReaderLastRangeCount,
   });
 
-  useEffect(() => {
-    if (gameState.status === "ready" && gameState.hasWon && !showSuccess) {
-      const lastRange = gameState.ranges.at(-1);
-      if (lastRange && lastRange.score > 0) {
-        setShowSuccess(true);
-        setAnnouncement(`Correct! The year was ${formatYear(targetYear)}`);
-      }
-    }
-  }, [gameState, targetYear, showSuccess]);
-
   // Show error toast in effect to avoid calling during render
   useEffect(() => {
     if (hasError && gameState.status === "error") {
@@ -101,7 +89,11 @@ export function ClassicArchivePuzzleClient({ puzzleNumber }: ClassicArchivePuzzl
     );
   }
 
-  const liveAnnouncement = announcement || rangeAnnouncement;
+  const successAnnouncement =
+    gameState.status === "ready" && gameState.hasWon && (gameState.ranges.at(-1)?.score ?? 0) > 0
+      ? `Correct! The year was ${formatYear(targetYear)}`
+      : "";
+  const liveAnnouncement = successAnnouncement || rangeAnnouncement;
 
   return (
     <div className="bg-background flex min-h-screen flex-col">

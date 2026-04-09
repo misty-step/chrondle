@@ -2,7 +2,6 @@
 
 import React from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../../../../convex/_generated/api";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/Badge";
 import { CircleNotch, Users, Target, CheckCircle, BookOpen } from "@phosphor-icons/react";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 
-type PuzzleMode = "classic" | "order";
+type PuzzleMode = "classic" | "order" | "groups";
 
 interface PuzzleDetailModalProps {
   mode: PuzzleMode;
@@ -35,7 +35,7 @@ export function PuzzleDetailModal({ mode, puzzleNumber, onClose }: PuzzleDetailM
 
   // Query puzzle detail when modal is open
   const puzzleDetail = useQuery(
-    api.admin.puzzles.getPuzzleDetail,
+    anyPublicApi.admin.puzzles.getPuzzleDetail,
     isOpen ? { mode, puzzleNumber: puzzleNumber! } : "skip",
   );
 
@@ -77,6 +77,15 @@ export function PuzzleDetailModal({ mode, puzzleNumber, onClose }: PuzzleDetailM
                       value={`${formatYear(puzzleDetail.eventSpan.min)} – ${formatYear(puzzleDetail.eventSpan.max)}`}
                     />
                   )}
+                {mode === "groups" &&
+                  "yearSpan" in puzzleDetail &&
+                  puzzleDetail.yearSpan !== undefined && (
+                    <StatCard
+                      icon={<Target className="h-4 w-4" />}
+                      label="Year Span"
+                      value={`${formatYear(puzzleDetail.yearSpan.min)} – ${formatYear(puzzleDetail.yearSpan.max)}`}
+                    />
+                  )}
                 <StatCard
                   icon={<Users className="h-4 w-4" />}
                   label="Players"
@@ -94,6 +103,15 @@ export function PuzzleDetailModal({ mode, puzzleNumber, onClose }: PuzzleDetailM
                       icon={<Target className="h-4 w-4" />}
                       label="Avg Guesses"
                       value={puzzleDetail.avgGuesses.toFixed(1)}
+                    />
+                  )}
+                {mode === "groups" &&
+                  "groupCount" in puzzleDetail &&
+                  puzzleDetail.groupCount !== undefined && (
+                    <StatCard
+                      icon={<Users className="h-4 w-4" />}
+                      label="Groups"
+                      value={String(puzzleDetail.groupCount)}
                     />
                   )}
               </div>
@@ -136,7 +154,51 @@ export function PuzzleDetailModal({ mode, puzzleNumber, onClose }: PuzzleDetailM
                             <span>{event.text}</span>
                           </div>
                         ))
-                      : null}
+                      : mode === "groups" &&
+                          "groups" in puzzleDetail &&
+                          Array.isArray(puzzleDetail.groups) &&
+                          "events" in puzzleDetail
+                        ? (() => {
+                            const boardEvents = puzzleDetail.events as Array<{
+                              id: string;
+                              text: string;
+                              year: number;
+                              groupId: string;
+                            }>;
+                            const groups = puzzleDetail.groups as Array<{
+                              id: string;
+                              year: number;
+                              tier: "easy" | "medium" | "hard" | "very hard";
+                              eventIds: string[];
+                            }>;
+                            const eventTextById = new Map(
+                              boardEvents.map((event) => [event.id, event.text]),
+                            );
+
+                            return groups.map((group) => (
+                              <div
+                                key={group.id}
+                                className="border-border/40 rounded-md border p-2"
+                              >
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                  <span className="text-text-primary font-mono text-xs">
+                                    {formatYear(group.year)}
+                                  </span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {group.tier}
+                                  </Badge>
+                                </div>
+                                <div className="space-y-1.5">
+                                  {group.eventIds.map((eventId) => (
+                                    <div key={eventId} className="text-text-secondary text-sm">
+                                      {eventTextById.get(eventId) ?? eventId}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ));
+                          })()
+                        : null}
                 </div>
               </div>
 

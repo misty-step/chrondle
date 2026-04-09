@@ -6,11 +6,13 @@
  */
 
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../convex/_generated/api.js";
+import { anyApi } from "convex/server";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs/promises";
+
+const apiRef = anyApi;
 
 // Load environment variables from .env.local
 const __filename = fileURLToPath(import.meta.url);
@@ -84,7 +86,7 @@ async function runTests(): Promise<void> {
     let puzzle: any;
     try {
       // Generate a puzzle for today (will trigger context generation)
-      puzzle = await client.query(api.puzzles.getDailyPuzzle);
+      puzzle = await client.query(apiRef.puzzles.getDailyPuzzle);
 
       if (!puzzle) {
         console.log("No puzzle exists for today, creating one...");

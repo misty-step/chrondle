@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { motion, useMotionValue, animate } from "motion/react";
 import { logger } from "@/lib/logger";
+import { useHydrated } from "@/hooks/useClientSnapshot";
 
 interface NumberTickerProps {
   value: number;
@@ -24,13 +25,8 @@ export const NumberTicker: React.FC<NumberTickerProps> = ({
   const ref = useRef<HTMLSpanElement>(null);
 
   // Track if component is mounted to prevent animation on first render
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useHydrated();
   const isFirstRenderRef = useRef(true);
-
-  // Use useLayoutEffect to set mounted state before paint
-  useLayoutEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     // Skip animation on first render - just set the value immediately
@@ -54,8 +50,7 @@ export const NumberTicker: React.FC<NumberTickerProps> = ({
 
     if (delta > maxDelta && startValue === undefined) {
       // For large jumps without explicit startValue, use a closer starting point
-      const clampedStart =
-        value > currentValue ? value - maxDelta : value + maxDelta;
+      const clampedStart = value > currentValue ? value - maxDelta : value + maxDelta;
 
       logger.debug(
         `NumberTicker clamping large jump: ${currentValue} → ${clampedStart} → ${value}`,

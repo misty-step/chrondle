@@ -123,12 +123,7 @@ export function AdminTabs() {
       </div>
 
       {/* Tab Panel */}
-      <div
-        id={`panel-${activeTab}`}
-        role="tabpanel"
-        aria-labelledby={`tab-${activeTab}`}
-        tabIndex={0}
-      >
+      <div id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
         <Suspense fallback={<TabSkeleton />}>
           {activeTab === "overview" && <OverviewTab />}
           {activeTab === "events" && <EventsTab />}

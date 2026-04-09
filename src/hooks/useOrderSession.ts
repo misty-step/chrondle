@@ -34,6 +34,11 @@ const DEFAULT_STATE: OrderSessionState = {
   score: null,
 };
 
+interface StoredOrderSessionState {
+  sessionKey: string;
+  state: OrderSessionState;
+}
+
 // =============================================================================
 // Hook Implementation
 // =============================================================================
@@ -44,9 +49,20 @@ export function useOrderSession(
   isAuthenticated: boolean,
 ): UseOrderSessionReturn {
   const baselineSignature = useMemo(() => baselineOrder.join("|"), [baselineOrder]);
-  const [state, setState] = useState<OrderSessionState>(() =>
-    baselineOrder.length ? { ...DEFAULT_STATE, ordering: baselineOrder } : DEFAULT_STATE,
+  const sessionKey = puzzleId ? `${puzzleId}:${baselineSignature}:${isAuthenticated}` : "empty";
+  const createBaseState = useCallback(
+    (): OrderSessionState =>
+      baselineOrder.length ? { ...DEFAULT_STATE, ordering: baselineOrder } : DEFAULT_STATE,
+    [baselineOrder],
   );
+  const [storedState, setStoredState] = useState<StoredOrderSessionState>(() => ({
+    sessionKey,
+    state: !puzzleId
+      ? DEFAULT_STATE
+      : isAuthenticated
+        ? createBaseState()
+        : (readSession(puzzleId, baselineOrder) ?? createBaseState()),
+  }));
 
   const writeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -81,30 +97,29 @@ export function useOrderSession(
     pruneStaleSessions();
   }, [shouldPersist, puzzleId]);
 
-  useEffect(() => {
-    if (!puzzleId) {
-      setState(DEFAULT_STATE);
-      return;
-    }
-
-    if (isAuthenticated) {
-      setState({ ...DEFAULT_STATE, ordering: baselineOrder });
-      return;
-    }
-
-    const stored = readSession(puzzleId, baselineOrder);
-    setState(stored ?? { ...DEFAULT_STATE, ordering: baselineOrder });
-  }, [puzzleId, baselineSignature, baselineOrder, isAuthenticated]);
+  const state =
+    storedState.sessionKey === sessionKey
+      ? storedState.state
+      : !puzzleId
+        ? DEFAULT_STATE
+        : isAuthenticated
+          ? createBaseState()
+          : (readSession(puzzleId, baselineOrder) ?? createBaseState());
 
   const updateState = useCallback(
     (updater: (prev: OrderSessionState) => OrderSessionState) => {
-      setState((prev) => {
-        const next = updater(prev);
+      setStoredState((prevStoredState) => {
+        const currentState =
+          prevStoredState.sessionKey === sessionKey ? prevStoredState.state : state;
+        const next = updater(currentState);
         schedulePersist(next);
-        return next;
+        return {
+          sessionKey,
+          state: next,
+        };
       });
     },
-    [schedulePersist],
+    [schedulePersist, sessionKey, state],
   );
 
   const setOrdering = useCallback(
@@ -146,10 +161,13 @@ export function useOrderSession(
         completedAt: null,
         score: null,
       };
-      setState(resetState);
+      setStoredState({
+        sessionKey,
+        state: resetState,
+      });
       schedulePersist(resetState);
     },
-    [schedulePersist],
+    [schedulePersist, sessionKey],
   );
 
   return useMemo(

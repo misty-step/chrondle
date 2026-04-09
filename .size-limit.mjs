@@ -1,4 +1,4 @@
-export default [
+const sizeLimits = [
   {
     name: "All JS Chunks",
     path: ".next/static/chunks/**/*.js",
@@ -14,3 +14,5 @@ export default [
     running: false,
   },
 ];
+
+export default sizeLimits;

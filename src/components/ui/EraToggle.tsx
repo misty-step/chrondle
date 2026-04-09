@@ -112,6 +112,7 @@ const EraToggle = React.forwardRef<HTMLDivElement, EraToggleProps>(
         aria-label="Select era: BC or AD"
         aria-disabled={disabled}
         aria-live="polite"
+        tabIndex={disabled ? -1 : 0}
         className={cn(toggleContainerVariants({ size, width }), className)}
         onKeyDown={handleKeyDown}
         {...props}

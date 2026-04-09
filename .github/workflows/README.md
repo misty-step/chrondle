@@ -55,7 +55,9 @@ gh secret set CONVEX_DEPLOY_KEY --body "prod:project-name|..."
 
 ### Pre-Merge Secret Verification
 
-The CI workflow includes a `verify-production-secrets` job that runs on PRs targeting main/master. This catches missing secrets **before** merge, preventing post-merge deploy failures.
+The CI workflow includes a Dagger-driven `verify-environment` job that runs on PRs targeting main/master. It validates CI and production env requirements, including Stripe configuration, before merge.
+
+For Clerk specifically, `ci.yml` builds and runs Playwright against a fixed public test instance so localhost-backed smoke tests do not embed the production custom domain. The `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` secret is still validated in the production-oriented checks and used by deploy flows.
 
 ### Deploy Fail-Fast
 
@@ -81,13 +83,30 @@ Steps:
 
 ### CI (`ci.yml`)
 
+Primary quality/build/e2e gates are executed through the repo's Dagger module (`dagger/src/index.ts`) and invoked from GitHub Actions via `dagger/dagger-for-github`.
+
 Jobs:
 
-- `quality-checks`: Lint, type-check, test (parallel matrix)
-- `validation`: Puzzle and data validation
-- `build`: Production build verification
-- `e2e`: Playwright end-to-end tests
-- `verify-production-secrets`: Pre-merge secrets check (PRs only)
+- `quality-checks`: Dagger-driven lint, type-check, and test coverage (parallel matrix)
+- `validation`: Dagger-driven puzzle/data validation
+- `docs`: Dagger-driven docs link check
+- `build`: Dagger-driven production build, env exposure verification, bundle-size enforcement, and `.next` artifact export
+- `e2e`: Dagger-driven Playwright run with report artifact export and explicit exit-code gating
+- `verify-environment`: Dagger-driven CI/production env and Stripe validation (PRs only)
+
+### Local Reproduction
+
+For local macOS development, this repo uses Colima as the default Dagger backend via [`scripts/dagger-local.sh`](../../scripts/dagger-local.sh). CI itself is not Colima-specific; GitHub Actions runs Dagger directly on Ubuntu.
+
+```bash
+colima start --profile default
+bun run ci:dagger:lint
+bun run ci:dagger:type-check
+bun run ci:dagger:validation
+bun run ci:dagger:docs
+```
+
+If you need to bypass Colima and use the host Docker CLI, set `CHRONDLE_DAGGER_FORCE_DOCKER=1`.
 
 ## Troubleshooting
 

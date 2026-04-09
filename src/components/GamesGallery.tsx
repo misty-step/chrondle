@@ -3,11 +3,11 @@
 import { useCallback, type ElementType } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { Crosshair, Shuffle } from "@phosphor-icons/react";
+import { Crosshair, Shuffle, SquaresFour } from "@phosphor-icons/react";
 
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { setModePreferenceCookie, type ModeKey } from "@/lib/modePreference";
 import { cn } from "@/lib/utils";
-import { api } from "../../convex/_generated/api";
 
 // --- Configuration (co-located, not exported) ---
 
@@ -39,6 +39,15 @@ const MODE_CARDS: ModeCardConfig[] = [
     icon: Shuffle,
     cta: "Try Order Mode",
   },
+  {
+    key: "groups",
+    title: "Groups",
+    description: "Sort sixteen events into four hidden exact years.",
+    route: "/groups",
+    badge: "New",
+    icon: SquaresFour,
+    cta: "Play Groups",
+  },
 ];
 
 const MODE_THEME = {
@@ -50,14 +59,18 @@ const MODE_THEME = {
     card: "bg-mode-order-bg text-mode-order-text border-mode-order-accent/30",
     accent: "text-mode-order-accent",
   },
+  groups: {
+    card: "bg-mode-groups-bg text-mode-groups-text border-mode-groups-accent/30",
+    accent: "text-mode-groups-accent",
+  },
 } as const;
 
 // --- Component ---
 
 export function GamesGallery() {
   const router = useRouter();
-  const classicPuzzle = useQuery(api.puzzles.getDailyPuzzle);
-  const orderPuzzle = useQuery(api.orderPuzzles.getDailyOrderPuzzle);
+  const classicPuzzle = useQuery(anyPublicApi.puzzles.getDailyPuzzle);
+  const orderPuzzle = useQuery(anyPublicApi.orderPuzzles.getDailyOrderPuzzle);
 
   const handleSelect = useCallback(
     (mode: ModeKey, route: string) => {
@@ -68,6 +81,10 @@ export function GamesGallery() {
   );
 
   const getPuzzleLabel = (modeKey: ModeKey) => {
+    if (modeKey === "groups") {
+      return "Daily Board";
+    }
+
     const puzzle = modeKey === "classic" ? classicPuzzle : orderPuzzle;
     return puzzle?.puzzleNumber ? `Puzzle #${puzzle.puzzleNumber}` : null;
   };

@@ -32,6 +32,10 @@ const MODE_CONFIG: Record<
     label: "Order",
     route: "/order",
   },
+  groups: {
+    label: "Groups",
+    route: "/groups",
+  },
 };
 
 interface ModeDropdownProps {
@@ -61,6 +65,7 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
   // Derive current mode from pathname (information hiding - caller doesn't need to know)
   const currentMode: ModeKey = useMemo(() => {
     if (!pathname) return "classic";
+    if (pathname.startsWith("/groups") || pathname.startsWith("/archive/groups")) return "groups";
     if (pathname.startsWith("/order") || pathname.startsWith("/archive/order")) return "order";
     return "classic";
   }, [pathname]);

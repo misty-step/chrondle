@@ -6,12 +6,17 @@ on:
   pull_request:
     branches: [main, master]
 
+env:
+  # CI builds run on localhost and must not embed the production Clerk custom domain.
+  # Production secrets are still validated separately in the deploy-oriented checks below.
+  CI_CLERK_PUBLISHABLE_KEY: pk_test_aGVhbHRoeS1kb2UtMjMuY2xlcmsuYWNjb3VudHMuZGV2JA
+
 jobs:
   quality-checks:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write  # Required for vitest-coverage-report-action to post PR comments
+      pull-requests: write # Required for vitest-coverage-report-action to post PR comments
     strategy:
       matrix:
         check: [lint, type-check, test]
@@ -22,85 +27,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔒 Secret Scanning
-        run: |
-          echo "🔍 Scanning for accidentally committed secrets..."
-
-          # Define secret patterns to check (pk_test_ excluded as they're safe publishable keys)
-          SECRET_PATTERNS='(sk_live_[a-zA-Z0-9]{20,}|sk_test_[a-zA-Z0-9]{20,}|pk_live_[a-zA-Z0-9]{20,}|whsec_[a-zA-Z0-9]{20,})'
-
-          # Check for secrets in all tracked files (excluding .env.example and similar)
-          FOUND_SECRETS=$(git ls-files | \
-            grep -v -E "(\.env\.example|\.env\.sample|example\.|sample\.)" | \
-            xargs grep -E "$SECRET_PATTERNS" 2>/dev/null | \
-            grep -v -E "(YOUR_|PLACEHOLDER|EXAMPLE|<.*>|docs/SECURITY\.md)" || true)
-
-          if [ -n "$FOUND_SECRETS" ]; then
-            echo "❌ SECURITY ALERT: Potential secrets found in repository!"
-            echo ""
-            echo "Found in files:"
-            echo "$FOUND_SECRETS" | head -10
-            echo ""
-            echo "Please remove secrets and use placeholders instead."
-            echo "See docs/SECURITY.md for proper secret handling."
-            exit 1
-          fi
-
-          echo "✅ No secrets detected in repository"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - name: Run Dagger quality gate
+        if: matrix.check != 'test'
+        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          node-version: 20
+          version: "0.20.3"
+          verb: call
+          module: .
+          args: quality --check=${{ matrix.check }}
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: 🔒 Security Audit
-        continue-on-error: true
-        run: |
-          echo "🔍 Checking for security vulnerabilities in dependencies..."
-
-          # Advisory only — transitive dependency vulnerabilities should not block CI.
-          # Track in Dependabot / GitHub Security tab instead.
-          echo ""
-          echo "📦 Auditing all dependencies (moderate+ severity)..."
-          bun audit --audit-level moderate || {
-            echo "⚠️ Moderate/High/Critical vulnerabilities found in dependencies."
-            echo "Run 'bun audit' locally to see details."
-            echo "Review and address via Dependabot or dependency updates."
-          }
-
-          echo ""
-          echo "✅ Security audit complete"
-
-      - name: Verify Convex files
-        uses: ./.github/actions/verify-convex
-        # NOTE: convex/_generated files are committed to git.
-        # DO NOT cache them - caching causes stale type definitions.
-
-      - name: Run linting
-        if: matrix.check == 'lint'
-        run: bun run lint
-
-      - name: Run type checking
-        if: matrix.check == 'type-check'
-        run: bun run type-check
-
-      - name: Run tests with coverage
+      - name: Run Dagger test coverage gate
         if: matrix.check == 'test'
-        run: bun run test:coverage
+        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        with:
+          version: "0.20.3"
+          verb: call
+          module: .
+          args: test-coverage-artifacts --output=coverage
+
+      - name: Verify coverage artifacts
+        if: matrix.check == 'test'
+        run: |
+          test -f coverage/coverage-summary.json
+          test -f coverage/coverage-final.json
+          ls -la coverage
 
       - name: Generate coverage summary
         if: matrix.check == 'test' && always()
@@ -169,30 +119,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - name: Run Dagger validation gate
+        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          node-version: 20
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Run puzzle validation
-        run: bun run validate-puzzles
-
-      - name: Test module system compatibility
-        run: bun run test-module-system
+          version: "0.20.3"
+          verb: call
+          module: .
+          args: validation
 
   docs:
     runs-on: ubuntu-latest
@@ -202,11 +135,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Check documentation links
-        uses: lycheeverse/lychee-action@v2
+      - name: Run Dagger docs link check
+        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          args: --offline --no-progress '**/*.md'
-          fail: false
+          version: "0.20.3"
+          verb: call
+          module: .
+          args: docs-link-check
 
   build:
     runs-on: ubuntu-latest
@@ -237,100 +172,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - name: Run Dagger build gate and export build artifacts
+        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          node-version: 20
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Cache Next.js build
-        uses: actions/cache@v5
-        with:
-          path: |
-            .next/cache
-            .next/.next-build-cache
-            .next/server
-            node_modules/.cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('bun.lock') }}-${{ hashFiles('src/**/*.[jt]sx?') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('bun.lock') }}-
-            ${{ runner.os }}-nextjs-
-
-      - name: Verify Convex files
-        uses: ./.github/actions/verify-convex
-        # NOTE: convex/_generated files are committed to git.
-        # DO NOT cache them - caching causes stale type definitions.
-
-      - name: Build application
-        run: bun run build
-        env:
-          # Client-side: Embedded in the JavaScript bundle for browser access
-          NEXT_PUBLIC_CONVEX_URL: https://fleet-goldfish-183.convex.cloud
-          # Client-side: Public key for Clerk authentication (safe to expose)
-          # This is a TEST publishable key - NOT a secret. Publishable keys are meant to be public.
-          # pk_test_ keys are specifically for test environments and safe in CI configurations
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_aGVhbHRoeS1kb2UtMjMuY2xlcmsuYWNjb3VudHMuZGV2JA
-
-      - name: Verify environment variable handling
-        run: |
-          echo "🔍 Verifying environment variable handling..."
-
-          # Check that NEXT_PUBLIC_ variables are included in the build output
-          if grep -q "NEXT_PUBLIC_CONVEX_URL" .next/static/chunks/*.js 2>/dev/null || \
-             grep -q "fleet-goldfish-183" .next/static/chunks/*.js 2>/dev/null; then
-            echo "✅ NEXT_PUBLIC_CONVEX_URL properly embedded in client bundle"
-          else
-            echo "⚠️ Warning: NEXT_PUBLIC_CONVEX_URL might not be properly embedded"
-          fi
-
-          # Ensure no actual sensitive values are exposed (not just variable names)
-          # Check for actual Clerk secret keys (start with sk_test_ or sk_live_ followed by 48+ chars)
-          if grep -E "sk_(test|live)_[A-Za-z0-9]{40,}" .next/static/chunks/*.js 2>/dev/null; then
-            echo "❌ ERROR: Actual Clerk secret key found in client bundle!"
-            echo "Secret keys must never be exposed in client-side code"
-            exit 1
-          fi
-
-          # Check for actual Convex deployment keys (format: prod:project-name|base64key)
-          if grep -E "(dev|prod):[a-z-]+\|[A-Za-z0-9+/=]{20,}" .next/static/chunks/*.js 2>/dev/null; then
-            echo "❌ ERROR: Convex deployment key found in client bundle!"
-            echo "Deployment keys must never be exposed in client-side code"
-            exit 1
-          fi
-
-          echo "✅ No sensitive secrets exposed in client bundle"
-
-          echo "✅ Environment variable verification passed"
-
-      - name: Check bundle size
-        run: |
-          echo "📊 Checking bundle sizes against configured limits..."
-          bun run size
-          if [ $? -ne 0 ]; then
-            echo "❌ Bundle size limits exceeded! Please optimize your code."
-            echo "💡 Tips:"
-            echo "   - Check for unnecessary dependencies"
-            echo "   - Use dynamic imports for large components"
-            echo "   - Analyze bundle with 'bun run bundle-analysis'"
-            exit 1
-          fi
-          echo "✅ Bundle sizes within limits"
-
-      - name: Remove files with colons (incompatible with artifact upload)
-        run: find .next -name '*:*' -delete
+          version: "0.20.3"
+          verb: call
+          module: .
+          args: build-artifacts --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ env.CI_CLERK_PUBLISHABLE_KEY }} --output=.next
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
@@ -348,55 +196,51 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 20
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
       - name: Download build artifacts
         uses: actions/download-artifact@v8
         with:
           name: build-output
           path: .next/
 
-      - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
-
-      - name: Run e2e tests
-        run: bun run test:e2e
+      - name: Run Dagger e2e gate and export report artifacts
+        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         env:
-          NEXT_PUBLIC_CONVEX_URL: https://handsome-raccoon-955.convex.cloud
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_aGVhbHRoeS1kb2UtMjMuY2xlcmsuYWNjb3VudHMuZGV2JA
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+        with:
+          version: "0.20.3"
+          verb: call
+          module: .
+          args: e-2-e-artifacts --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ env.CI_CLERK_PUBLISHABLE_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --output=.dagger-e2e
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
-          path: playwright-report/
+          path: .dagger-e2e/playwright-report/
           retention-days: 7
+
+      - name: Fail if e2e test run failed
+        run: |
+          if [ ! -f .dagger-e2e/exit-code ]; then
+            echo "❌ Missing e2e exit code artifact"
+            exit 1
+          fi
+
+          code=$(cat .dagger-e2e/exit-code)
+          if [ "$code" != "0" ]; then
+            echo "❌ e2e tests failed with exit code $code"
+            exit "$code"
+          fi
+
+          echo "✅ e2e tests passed"
 
   # Single required status check for branch protection.
   # Gates on all real CI jobs so only one check name needs to be configured.
   merge-gate:
     runs-on: ubuntu-latest
     if: always()
-    needs: [quality-checks, validation, docs, build, e2e]
+    needs: [quality-checks, validation, docs, build, e2e, verify-environment]
     steps:
       - name: Check all jobs
         run: |
@@ -421,81 +265,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - name: Run Dagger CI environment validation
+        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          node-version: 20
-
-      - name: Validate CI environment configuration
-        run: node scripts/verify-env-config.mjs ci
+          version: "0.20.3"
+          verb: call
+          module: .
+          args: verify-env-config --environment=ci --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ env.CI_CLERK_PUBLISHABLE_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --convex-deploy-key=env:CONVEX_DEPLOY_KEY
         env:
-          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
-      - name: Validate production environment configuration
-        run: node scripts/verify-env-config.mjs production
+      - name: Run Dagger production environment validation
+        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        with:
+          version: "0.20.3"
+          verb: call
+          module: .
+          args: verify-env-config --environment=production --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} --next-public-stripe-publishable-key=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} --stripe-price-monthly=${{ secrets.STRIPE_PRICE_MONTHLY }} --stripe-price-annual=${{ secrets.STRIPE_PRICE_ANNUAL }} --clerk-secret-key=env:CLERK_SECRET_KEY --stripe-secret-key=env:STRIPE_SECRET_KEY --stripe-webhook-secret=env:STRIPE_WEBHOOK_SECRET --stripe-sync-secret=env:STRIPE_SYNC_SECRET
         env:
-          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           STRIPE_SYNC_SECRET: ${{ secrets.STRIPE_SYNC_SECRET }}
-          STRIPE_PRICE_MONTHLY: ${{ secrets.STRIPE_PRICE_MONTHLY }}
-          STRIPE_PRICE_ANNUAL: ${{ secrets.STRIPE_PRICE_ANNUAL }}
-          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
 
-      - name: Validate Stripe configuration
-        run: node scripts/verify-stripe-config.mjs
+      - name: Run Dagger Stripe live validation
+        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        with:
+          version: "0.20.3"
+          verb: call
+          module: .
+          args: verify-stripe-config --next-public-stripe-publishable-key=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} --stripe-price-monthly=${{ secrets.STRIPE_PRICE_MONTHLY }} --stripe-price-annual=${{ secrets.STRIPE_PRICE_ANNUAL }} --require-live=true --stripe-secret-key=env:STRIPE_SECRET_KEY --stripe-webhook-secret=env:STRIPE_WEBHOOK_SECRET
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-          STRIPE_PRICE_MONTHLY: ${{ secrets.STRIPE_PRICE_MONTHLY }}
-          STRIPE_PRICE_ANNUAL: ${{ secrets.STRIPE_PRICE_ANNUAL }}
-          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-
-  # Verify production secrets are configured before merge
-  # Prevents post-merge deploy failures due to missing secrets
-  verify-production-secrets:
-    name: Verify Production Secrets
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && (github.base_ref == 'master' || github.base_ref == 'main')
-
-    steps:
-      - name: Check production secrets are configured
-        run: |
-          echo "🔐 Verifying production secrets for post-merge deploy..."
-          errors=0
-
-          check_secret() {
-            if [ -z "$1" ]; then
-              echo "::error::Production secret not configured: $2"
-              errors=$((errors + 1))
-            else
-              echo "✓ $2"
-            fi
-          }
-
-          echo "=== Required for Deploy ==="
-          check_secret "$CLERK_KEY" "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
-          check_secret "$CONVEX_URL" "NEXT_PUBLIC_CONVEX_URL"
-          check_secret "$CONVEX_KEY" "CONVEX_DEPLOY_KEY"
-
-          if [ $errors -gt 0 ]; then
-            echo ""
-            echo "::error::$errors production secret(s) missing!"
-            echo "Merging this PR will trigger a failing deploy."
-            echo ""
-            echo "Add missing secrets at:"
-            echo "GitHub repo → Settings → Secrets and variables → Actions"
-            exit 1
-          fi
-
-          echo ""
-          echo "✅ All required production secrets verified"
-        env:
-          CLERK_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
-          CONVEX_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}

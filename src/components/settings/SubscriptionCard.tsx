@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
 import {
   Card,
   CardContent,
@@ -13,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 
@@ -71,8 +71,8 @@ function formatBillingDate(timestamp?: number | null): string {
 }
 
 function formatPlan(plan: SubscriptionPlan): string {
-  if (plan === "annual") return "Annual Archive";
-  if (plan === "monthly") return "Monthly Archive";
+  if (plan === "annual") return "Annual Supporter";
+  if (plan === "monthly") return "Monthly Supporter";
   return "Free";
 }
 
@@ -82,7 +82,7 @@ export function SubscriptionCard({
   initialStatus,
   initialEndDate,
 }: SubscriptionCardProps) {
-  const subscription = useQuery(api.users.getSubscriptionStatus) as
+  const subscription = useQuery(anyPublicApi.users.getSubscriptionStatus) as
     | (SubscriptionSnapshot & { hasArchiveAccess?: boolean })
     | null
     | undefined;
@@ -113,7 +113,7 @@ export function SubscriptionCard({
     ? statusMeta.message(billingLabel)
     : hasStripeCustomer
       ? "Subscription details are syncing. Try again in a moment."
-      : "No subscription yet. Pick a plan to unlock the archive.";
+      : "No subscription yet. Subscribe if you want to support ongoing development.";
 
   const handleManageSubscription = async () => {
     setPortalLoading(true);

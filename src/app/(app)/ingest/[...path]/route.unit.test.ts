@@ -70,12 +70,14 @@ describe("PostHog ingest proxy route", () => {
     expect(String(url)).toBe("https://us.i.posthog.com/decide?v=3");
   });
 
-  it("strips set-cookie from upstream response headers", async () => {
+  it("strips unsafe upstream response headers", async () => {
     mockFetch.mockResolvedValue(
       new Response("ok", {
         status: 200,
         headers: {
           "cache-control": "max-age=30",
+          "content-encoding": "gzip",
+          "content-length": "512",
           "set-cookie": "ph_secret=1; HttpOnly",
         },
       }),
@@ -92,6 +94,8 @@ describe("PostHog ingest proxy route", () => {
     const response = await POST(request);
 
     expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.headers.get("content-encoding")).toBeNull();
+    expect(response.headers.get("content-length")).toBeNull();
     expect(response.headers.get("cache-control")).toBe("max-age=30");
   });
 });

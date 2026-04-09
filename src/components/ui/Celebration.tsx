@@ -29,10 +29,9 @@ export const Celebration: React.FC<CelebrationProps> = ({ trigger = false, durat
   // Handle trigger prop
   useEffect(() => {
     if (trigger) {
-      setIsActive(true);
-      setTimeout(() => setIsActive(false), duration);
+      window.dispatchEvent(new CustomEvent("chrondle:celebrate"));
     }
-  }, [trigger, duration]);
+  }, [trigger]);
 
   const particleStyles = useMemo(() => {
     const colors = [

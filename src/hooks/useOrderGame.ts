@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { api } from "../../convex/_generated/api";
 import { useAuthState } from "@/hooks/data/useAuthState";
 import { useOrderPuzzleData } from "@/hooks/data/useOrderPuzzleData";
 import { useOrderProgress } from "@/hooks/data/useOrderProgress";
@@ -17,6 +16,7 @@ import { deriveOrderGameState, type OrderDataSources } from "@/lib/deriveOrderGa
 import { createAttempt, calculateAttemptScore, isSolved } from "@/lib/order/attemptScoring";
 import { assertConvexId } from "@/lib/validation";
 import type { AttemptScore, OrderAttempt, OrderGameState } from "@/types/orderGameState";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { logger } from "@/lib/logger";
 import type { Toast } from "@/hooks/use-toast";
 
@@ -73,7 +73,7 @@ export function useOrderGame(
 
   const gameState = useMemo(() => deriveOrderGameState(dataSources), [dataSources]);
 
-  const submitOrderPlayMutation = useMutationWithRetry(api.orderPuzzles.submitOrderPlay, {
+  const submitOrderPlayMutation = useMutationWithRetry(anyPublicApi.orderPuzzles.submitOrderPlay, {
     maxRetries: 3,
     baseDelayMs: 800,
     onRetry: (attempt, error) => {

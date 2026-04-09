@@ -7,14 +7,15 @@ import { cn } from "@/lib/utils";
 /**
  * Mode Filter - Game mode selection for admin queries
  *
- * Toggles between: All, Classic, Order
+ * Toggles between: All, Classic, Order, Groups
  * Persists selection in URL search params for deep linking.
  */
 
-export type GameMode = "all" | "classic" | "order";
+export type GameMode = "all" | "classic" | "order" | "groups";
+type ModeFilterValue = GameMode;
 
 interface ModeOption {
-  value: GameMode;
+  value: ModeFilterValue;
   label: string;
 }
 
@@ -22,6 +23,7 @@ const MODE_OPTIONS: ModeOption[] = [
   { value: "all", label: "All" },
   { value: "classic", label: "Classic" },
   { value: "order", label: "Order" },
+  { value: "groups", label: "Groups" },
 ];
 
 interface ModeFilterProps {
@@ -37,13 +39,13 @@ export function ModeFilter({ onChange, className }: ModeFilterProps) {
   const pathname = usePathname();
 
   // Get current mode from URL, default to "all"
-  const currentMode = (searchParams.get("mode") as GameMode) || "all";
+  const currentMode = (searchParams.get("mode") as ModeFilterValue) || "all";
 
   // Validate mode
   const isValidMode = MODE_OPTIONS.some((opt) => opt.value === currentMode);
   const activeMode = isValidMode ? currentMode : "all";
 
-  const handleModeChange = (mode: GameMode) => {
+  const handleModeChange = (mode: ModeFilterValue) => {
     const params = new URLSearchParams(searchParams.toString());
     if (mode === "all") {
       // Remove mode param for default (cleaner URL)
@@ -91,6 +93,6 @@ export function ModeFilter({ onChange, className }: ModeFilterProps) {
  */
 export function useGameMode(): GameMode {
   const searchParams = useSearchParams();
-  const mode = searchParams.get("mode") as GameMode;
-  return mode === "classic" || mode === "order" ? mode : "all";
+  const mode = searchParams.get("mode") as ModeFilterValue;
+  return mode === "classic" || mode === "order" || mode === "groups" ? mode : "all";
 }

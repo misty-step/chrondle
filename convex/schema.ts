@@ -8,6 +8,7 @@ export default defineSchema({
     event: v.string(), // "Neil Armstrong walks on the moon"
     classicPuzzleId: v.optional(v.id("puzzles")), // Links to Classic mode puzzle (null = unused in Classic)
     orderPuzzleId: v.optional(v.id("orderPuzzles")), // Links to Order mode puzzle (null = unused in Order)
+    groupsPuzzleId: v.optional(v.id("groupsPuzzles")), // Links to Groups mode puzzle (null = unused in Groups)
     updatedAt: v.number(), // Manual timestamp (Convex provides _creationTime)
     /**
      * Optional metadata used to power richer game modes (Timeline, Category, per-era pool health, etc.).
@@ -54,8 +55,10 @@ export default defineSchema({
     .index("by_year", ["year"])
     .index("by_classic_puzzle", ["classicPuzzleId"]) // Classic puzzle-to-event lookup
     .index("by_order_puzzle", ["orderPuzzleId"]) // Order puzzle-to-event lookup
+    .index("by_groups_puzzle", ["groupsPuzzleId"]) // Groups puzzle-to-event lookup
     .index("by_year_classic_available", ["year", "classicPuzzleId"]) // Unused Classic events by year
-    .index("by_year_order_available", ["year", "orderPuzzleId"]), // Unused Order events by year
+    .index("by_year_order_available", ["year", "orderPuzzleId"]) // Unused Order events by year
+    .index("by_year_groups_available", ["year", "groupsPuzzleId"]), // Unused Groups events by year
 
   // Daily puzzles (starts empty, populated by cron job)
   puzzles: defineTable({
@@ -107,6 +110,37 @@ export default defineSchema({
     .index("by_number", ["puzzleNumber"])
     .index("by_date", ["date"]),
 
+  // Groups mode daily puzzles
+  groupsPuzzles: defineTable({
+    puzzleNumber: v.number(),
+    date: v.string(),
+    board: v.array(
+      v.object({
+        id: v.string(),
+        text: v.string(),
+        year: v.number(),
+        groupId: v.string(),
+      }),
+    ),
+    groups: v.array(
+      v.object({
+        id: v.string(),
+        year: v.number(),
+        tier: v.union(
+          v.literal("easy"),
+          v.literal("medium"),
+          v.literal("hard"),
+          v.literal("very hard"),
+        ),
+        eventIds: v.array(v.string()),
+      }),
+    ),
+    seed: v.string(),
+    updatedAt: v.number(),
+  })
+    .index("by_number", ["puzzleNumber"])
+    .index("by_date", ["date"]),
+
   // Authenticated Order plays
   orderPlays: defineTable({
     userId: v.id("users"),
@@ -134,6 +168,26 @@ export default defineSchema({
     hints: v.optional(v.array(v.string())),
     completedAt: v.optional(v.number()), // Timestamp when puzzle solved
     updatedAt: v.number(), // Last interaction timestamp
+  })
+    .index("by_user_puzzle", ["userId", "puzzleId"])
+    .index("by_user", ["userId"])
+    .index("by_puzzle", ["puzzleId"]),
+
+  // Authenticated Groups plays
+  groupsPlays: defineTable({
+    userId: v.id("users"),
+    puzzleId: v.id("groupsPuzzles"),
+    solvedGroupIds: v.array(v.string()),
+    mistakes: v.number(),
+    submissions: v.array(
+      v.object({
+        eventIds: v.array(v.string()),
+        result: v.union(v.literal("solved"), v.literal("one_away"), v.literal("miss")),
+        timestamp: v.number(),
+      }),
+    ),
+    completedAt: v.optional(v.number()),
+    updatedAt: v.number(),
   })
     .index("by_user_puzzle", ["userId", "puzzleId"])
     .index("by_user", ["userId"]),

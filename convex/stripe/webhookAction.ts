@@ -1,6 +1,8 @@
+import { anyApi } from "convex/server";
 import { v } from "convex/values";
 import { action } from "../_generated/server";
-import { internal } from "../_generated/api";
+
+const internalApi = anyApi as any;
 
 /**
  * Stripe Webhook Gateway - SINGLE public entry point for subscription updates
@@ -70,13 +72,13 @@ export const processWebhookEvent = action({
           throw new Error("checkout.session.completed requires clerkId");
         }
         // Link Stripe customer to user
-        await ctx.runMutation(internal.users.subscriptions.linkStripeCustomer, {
+        await ctx.runMutation(internalApi.users.subscriptions.linkStripeCustomer, {
           clerkId: payload.clerkId,
           stripeCustomerId: payload.stripeCustomerId,
         });
         // Activate subscription if status provided
         if (payload.subscriptionStatus) {
-          await ctx.runMutation(internal.users.subscriptions.updateSubscription, {
+          await ctx.runMutation(internalApi.users.subscriptions.updateSubscription, {
             stripeCustomerId: payload.stripeCustomerId,
             subscriptionStatus: payload.subscriptionStatus,
             subscriptionPlan: payload.subscriptionPlan,
@@ -92,7 +94,7 @@ export const processWebhookEvent = action({
         if (!payload.subscriptionStatus) {
           throw new Error("customer.subscription.updated requires subscriptionStatus");
         }
-        await ctx.runMutation(internal.users.subscriptions.updateSubscription, {
+        await ctx.runMutation(internalApi.users.subscriptions.updateSubscription, {
           stripeCustomerId: payload.stripeCustomerId,
           subscriptionStatus: payload.subscriptionStatus,
           subscriptionPlan: payload.subscriptionPlan,
@@ -104,7 +106,7 @@ export const processWebhookEvent = action({
       }
 
       case "customer.subscription.deleted": {
-        await ctx.runMutation(internal.users.subscriptions.clearSubscription, {
+        await ctx.runMutation(internalApi.users.subscriptions.clearSubscription, {
           stripeCustomerId: payload.stripeCustomerId,
           eventId,
           eventTimestamp,
@@ -113,7 +115,7 @@ export const processWebhookEvent = action({
       }
 
       case "invoice.payment_failed": {
-        await ctx.runMutation(internal.users.subscriptions.updateSubscription, {
+        await ctx.runMutation(internalApi.users.subscriptions.updateSubscription, {
           stripeCustomerId: payload.stripeCustomerId,
           subscriptionStatus: "past_due",
           eventId,
@@ -124,7 +126,7 @@ export const processWebhookEvent = action({
 
       case "invoice.payment_succeeded": {
         if (payload.subscriptionEndDate != null) {
-          await ctx.runMutation(internal.users.subscriptions.updateSubscription, {
+          await ctx.runMutation(internalApi.users.subscriptions.updateSubscription, {
             stripeCustomerId: payload.stripeCustomerId,
             subscriptionStatus: "active",
             subscriptionEndDate: payload.subscriptionEndDate,

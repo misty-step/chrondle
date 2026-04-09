@@ -124,7 +124,7 @@ function calculateStartTime(now: number, timeRange: TimeRange): number {
 /**
  * Game mode filter for pool health queries.
  */
-export type PoolHealthMode = "classic" | "order" | "all";
+export type PoolHealthMode = "classic" | "order" | "groups" | "all";
 
 /**
  * Calculates pool health metrics from events.
@@ -133,7 +133,8 @@ export type PoolHealthMode = "classic" | "order" | "all";
  * @param mode - Filter by game mode:
  *   - "classic": Events unused in Classic mode (classicPuzzleId === undefined)
  *   - "order": Events unused in Order mode (orderPuzzleId === undefined)
- *   - "all": Events unused in BOTH modes (default, backward compatible)
+ *   - "groups": Events unused in Groups mode (groupsPuzzleId === undefined)
+ *   - "all": Events unused in all live modes
  */
 export function calculatePoolHealth(
   events: readonly Doc<"events">[],
@@ -146,10 +147,16 @@ export function calculatePoolHealth(
         return e.classicPuzzleId === undefined;
       case "order":
         return e.orderPuzzleId === undefined;
+      case "groups":
+        return e.groupsPuzzleId === undefined;
       case "all":
       default:
-        // Unused in both modes = truly unused
-        return e.classicPuzzleId === undefined && e.orderPuzzleId === undefined;
+        // Unused everywhere = truly available shared-pool inventory
+        return (
+          e.classicPuzzleId === undefined &&
+          e.orderPuzzleId === undefined &&
+          e.groupsPuzzleId === undefined
+        );
     }
   });
 
@@ -173,9 +180,7 @@ export function calculatePoolHealth(
     }
   }
 
-  // Days until depletion varies by mode
-  // Classic uses 6 events/day, Order uses 6 events/day (varies but assume 6)
-  const eventsPerDay = 6;
+  const eventsPerDay = mode === "groups" ? 16 : mode === "all" ? 28 : 6;
 
   return {
     unusedEvents: unusedEvents.length,

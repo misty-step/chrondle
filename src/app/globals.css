@@ -40,6 +40,11 @@
   --mode-order-text: #1a1a1b;
   --mode-order-accent: #b45309;
 
+  /* Mode: Groups - Slate-blue dossier */
+  --mode-groups-bg: #eef4fb;
+  --mode-groups-text: #1a1a1b;
+  --mode-groups-accent: #28587b;
+
   --font-display: "Outfit", sans-serif;
   --font-body: "Karla", sans-serif;
   --font-mono: ui-monospace, "SF Mono", monospace;
@@ -70,6 +75,9 @@
   --mode-order-bg: #2a2015;
   --mode-order-accent: #fbbf24;
 
+  --mode-groups-bg: #172532;
+  --mode-groups-accent: #8ecae6;
+
   --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.3);
   --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
@@ -91,6 +99,11 @@ html.dark {
   --mode-order-bg: #2a2015;
   --mode-order-text: #e4e5f1;
   --mode-order-accent: #fbbf24;
+
+  /* Mode: Groups - Dark variant */
+  --mode-groups-bg: #172532;
+  --mode-groups-text: #e4e5f1;
+  --mode-groups-accent: #8ecae6;
 }
 
 @theme inline {
@@ -150,6 +163,11 @@ html.dark {
   --color-mode-order-bg: var(--mode-order-bg);
   --color-mode-order-text: var(--mode-order-text);
   --color-mode-order-accent: var(--mode-order-accent);
+  --color-groups-bg: var(--mode-groups-bg);
+  --color-groups-accent: var(--mode-groups-accent);
+  --color-mode-groups-bg: var(--mode-groups-bg);
+  --color-mode-groups-text: var(--mode-groups-text);
+  --color-mode-groups-accent: var(--mode-groups-accent);
 
   --shadow-elevation-1: var(--elevation-1);
   --shadow-elevation-2: var(--elevation-2);

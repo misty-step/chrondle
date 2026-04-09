@@ -1,7 +1,7 @@
-import { cronJobs } from "convex/server";
-import { internal } from "./_generated/api";
+import { anyApi, cronJobs } from "convex/server";
 
 const crons = cronJobs();
+const internalApi = anyApi as any;
 
 /**
  * Daily puzzle generation strategy:
@@ -18,7 +18,7 @@ const crons = cronJobs();
 crons.daily(
   "generate daily puzzle at UTC midnight",
   { hourUTC: 0, minuteUTC: 0 },
-  internal.puzzles.generateDailyPuzzle,
+  internalApi.puzzles.generateDailyPuzzle,
   {},
 );
 
@@ -26,14 +26,14 @@ crons.daily(
 crons.daily(
   "pre-generate tomorrow Classic puzzle",
   { hourUTC: 0, minuteUTC: 1 },
-  internal.puzzles.generateTomorrowPuzzle,
+  internalApi.puzzles.generateTomorrowPuzzle,
   {},
 );
 
 crons.daily(
   "autonomous event pool replenishment",
   { hourUTC: 2, minuteUTC: 0 },
-  internal.actions.eventGeneration.orchestrator.generateDailyBatch,
+  internalApi.actions.eventGeneration.orchestrator.generateDailyBatch,
   { targetCount: 10 },
 );
 
@@ -41,7 +41,7 @@ crons.daily(
 crons.daily(
   "generate daily Order puzzle at UTC midnight",
   { hourUTC: 0, minuteUTC: 0 },
-  internal.orderPuzzles.generateDailyOrderPuzzle,
+  internalApi.orderPuzzles.generateDailyOrderPuzzle,
   {},
 );
 
@@ -49,7 +49,23 @@ crons.daily(
 crons.daily(
   "pre-generate tomorrow Order puzzle",
   { hourUTC: 0, minuteUTC: 1 },
-  internal.orderPuzzles.generateTomorrowOrderPuzzle,
+  internalApi.orderPuzzles.generateTomorrowOrderPuzzle,
+  {},
+);
+
+// Generate today's Groups puzzle (UTC)
+crons.daily(
+  "generate daily Groups puzzle at UTC midnight",
+  { hourUTC: 0, minuteUTC: 0 },
+  internalApi.groupsPuzzles.generateDailyGroupsPuzzle,
+  {},
+);
+
+// Pre-generate tomorrow's Groups puzzle (for ahead-UTC timezones)
+crons.daily(
+  "pre-generate tomorrow Groups puzzle",
+  { hourUTC: 0, minuteUTC: 1 },
+  internalApi.groupsPuzzles.generateTomorrowGroupsPuzzle,
   {},
 );
 

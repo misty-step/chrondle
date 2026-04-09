@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { Card } from "@/components/ui/Card";
 
 /**
@@ -17,8 +17,10 @@ import { Card } from "@/components/ui/Card";
  * Auto-refreshes via Convex subscription.
  */
 export function CostTrendsChart() {
-  const costMetrics = useQuery(api.observability.getCostMetricsQuery, { timeRange: "7d" });
-  const last7Days = useQuery(api.generationLogs.getLast7DaysCosts, { days: 7 });
+  const costMetrics = useQuery(anyPublicApi.observability.getCostMetricsQuery, {
+    timeRange: "7d",
+  });
+  const last7Days = useQuery(anyPublicApi.generationLogs.getLast7DaysCosts, { days: 7 });
 
   if (!costMetrics || !last7Days) {
     return (

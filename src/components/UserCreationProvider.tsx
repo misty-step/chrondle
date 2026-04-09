@@ -3,9 +3,9 @@
 import React, { createContext, useContext, useEffect, useReducer, ReactNode } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { useMutationWithRetry } from "@/hooks/useMutationWithRetry";
 import { Doc, Id } from "../../convex/_generated/dataModel";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { getMigrationData, clearLocalGameState } from "@/lib/gameDataStore";
 import { logger } from "@/lib/logger";
 
@@ -165,10 +165,13 @@ export function UserCreationProvider({ children }: UserCreationProviderProps) {
   const [machineState, dispatch] = useReducer(authStateReducer, initialState);
 
   // Get current user for existence check
-  const currentUserFromQuery = useQuery(api.users.getCurrentUser);
+  const currentUserFromQuery = useQuery(anyPublicApi.users.getCurrentUser) as
+    | Doc<"users">
+    | null
+    | undefined;
 
   // JIT user creation mutation with retry logic for transient errors
-  const getOrCreateUser = useMutationWithRetry(api.users.getOrCreateCurrentUser, {
+  const getOrCreateUser = useMutationWithRetry(anyPublicApi.users.getOrCreateCurrentUser, {
     maxRetries: 3,
     baseDelayMs: 1000,
     onRetry: (attempt, error) => {
@@ -180,7 +183,7 @@ export function UserCreationProvider({ children }: UserCreationProviderProps) {
   });
 
   // Anonymous state migration mutation
-  const mergeAnonymousState = useMutationWithRetry(api.users.mergeAnonymousState, {
+  const mergeAnonymousState = useMutationWithRetry(anyPublicApi.users.mergeAnonymousState, {
     maxRetries: 2,
     baseDelayMs: 500,
     onRetry: (attempt, error) => {

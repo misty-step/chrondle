@@ -155,6 +155,7 @@ This project is built with:
   nvm use
   ```
 - **Bun**: This project uses Bun exclusively as the package manager. pnpm, npm, and yarn are not supported.
+- **Colima**: Local Dagger-backed CI uses Colima on macOS. Start it with `colima start --profile default`.
 - **ESM Modules**: The codebase uses ES modules throughout. All configuration files use `.mjs` extensions or TypeScript.
 
 ## Getting Started
@@ -189,6 +190,20 @@ This project is built with:
     ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to play.
+
+### Local CI
+
+Local Dagger runs are wrapped through Colima:
+
+```bash
+colima start --profile default
+bun run ci:dagger:lint
+bun run ci:dagger:type-check
+bun run ci:dagger:validation
+bun run ci:dagger:docs
+```
+
+The repo-local wrapper lives at [`scripts/dagger-local.sh`](./scripts/dagger-local.sh). Set `CHRONDLE_DAGGER_FORCE_DOCKER=1` only if you need to bypass Colima and use a healthy Docker CLI directly.
 
 ## Deployment
 

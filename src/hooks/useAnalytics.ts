@@ -64,8 +64,14 @@ export function useAnalytics({
 }: UseAnalyticsParams): UseAnalyticsReturn {
   // Track previous state for transitions
   const prevStateRef = useRef<GameState | null>(null);
-  const startTimeRef = useRef<number>(Date.now());
+  const startTimeRef = useRef<number>(0);
   const lastDivergenceCheckRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (startTimeRef.current === 0) {
+      startTimeRef.current = Date.now();
+    }
+  }, []);
 
   // Track state transitions
   useEffect(() => {

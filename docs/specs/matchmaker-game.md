@@ -1,6 +1,8 @@
 ### [FEATURE] Chrondle Matchmaker - NEW GAME MODE
 
-**Current State**: Single Chrondle Classic game mode only
+> Status note (April 8, 2026): this document predates Order mode shipping and is retained as an archived alternative. The current preferred third-mode direction is [Chrondle Groups](./groups-mode.md).
+
+**Current State**: Archived concept written before Order mode shipped
 **Perspectives**: product-visionary, user-experience-advocate
 **Opportunity**: New sister game mode with simpler, more accessible matching mechanic
 **Status**: Ship after Range/Chips A/B test completes and Order game stabilizes

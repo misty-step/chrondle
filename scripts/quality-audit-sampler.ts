@@ -2,12 +2,14 @@
 
 import { Command } from "commander";
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../convex/_generated/api.js";
+import { anyApi } from "convex/server";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs/promises";
 import { hasLeakage, hasProperNoun, isValidWordCount } from "../convex/lib/eventValidation";
+
+const apiRef = anyApi;
 
 interface AuditResult {
   year: number;
@@ -46,7 +48,7 @@ program.action(async (options) => {
   const count = Number(options.count) || 10;
   const client = await getClient();
 
-  const stats = await client.query(api.events.getAllYearsWithStats, {});
+  const stats = await client.query(apiRef.events.getAllYearsWithStats, {});
   const candidateYears = options.year
     ? [Number(options.year)]
     : stats.map((stat: any) => stat.year);
@@ -62,7 +64,7 @@ program.action(async (options) => {
   while (results.length < count && attempts < count * 5) {
     attempts += 1;
     const year = candidateYears[Math.floor(Math.random() * candidateYears.length)];
-    const events = await client.query(api.events.getYearEvents, { year });
+    const events = await client.query(apiRef.events.getYearEvents, { year });
     const filtered = options.unusedOnly
       ? events.filter((event: any) => !event.classicPuzzleId)
       : events;

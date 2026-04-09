@@ -2,11 +2,14 @@
 
 import { Command } from "commander";
 import { ConvexHttpClient } from "convex/browser";
-import { api, internal } from "../convex/_generated/api.js";
+import { anyApi } from "convex/server";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs/promises";
+
+const apiRef = anyApi;
+const internalRef = anyApi;
 
 // Load environment variables from .env.local
 const __filename = fileURLToPath(import.meta.url);
@@ -71,7 +74,7 @@ program
       const client = await getConvexClient();
 
       // Check if year already has events
-      const existingEvents = await client.query(api.events.getYearEvents, {
+      const existingEvents = await client.query(apiRef.events.getYearEvents, {
         year,
       });
 
@@ -98,8 +101,7 @@ program
 
       // Import the events
       console.log(`Adding ${events.length} events for year ${year}...`);
-      // @ts-expect-error - ConvexHttpClient doesn't support internal mutations (needs wrapper action)
-      const result = await client.mutation(internal.events.importYearEvents, {
+      const result = await client.mutation(internalRef.events.importYearEvents, {
         year,
         events,
       });
@@ -146,7 +148,7 @@ program
       const client = await getConvexClient();
 
       // Check if any events for this year are used in puzzles
-      const existingEvents = await client.query(api.events.getYearEvents, {
+      const existingEvents = await client.query(apiRef.events.getYearEvents, {
         year,
       });
       const usedEvents = existingEvents.filter((e: any) => e.classicPuzzleId !== undefined);
@@ -163,8 +165,7 @@ program
       // Delete existing events
       if (existingEvents.length > 0) {
         try {
-          // @ts-expect-error - ConvexHttpClient doesn't support internal mutations (needs wrapper action)
-          const deleteResult = await client.mutation(internal.events.deleteYearEvents, { year });
+          const deleteResult = await client.mutation(internalRef.events.deleteYearEvents, { year });
           console.log(`🗑️  Deleted ${deleteResult.deletedCount} old events`);
         } catch {
           // Fallback: show what would happen
@@ -176,8 +177,7 @@ program
       }
 
       // Add new events
-      // @ts-expect-error - ConvexHttpClient doesn't support internal mutations (needs wrapper action)
-      const addResult = await client.mutation(internal.events.importYearEvents, {
+      const addResult = await client.mutation(internalRef.events.importYearEvents, {
         year,
         events,
       });
@@ -204,8 +204,7 @@ program
   .action(async ({ year, event }) => {
     try {
       const client = await getConvexClient();
-      // @ts-expect-error - ConvexHttpClient doesn't support internal mutations (needs wrapper action)
-      const result = await client.mutation(internal.events.importEvent, {
+      const result = await client.mutation(internalRef.events.importEvent, {
         year,
         event,
       });
@@ -234,14 +233,13 @@ program
   .action(async ({ year, number, text }) => {
     try {
       const client = await getConvexClient();
-      const events = await client.query(api.events.getYearEvents, { year });
+      const events = await client.query(apiRef.events.getYearEvents, { year });
       if (number <= 0 || number > events.length) {
         console.error(`❌ Invalid event number. Use 'show ${year}' to see available events.`);
         process.exit(1);
       }
       const eventToUpdate = events[number - 1];
-      // @ts-expect-error - ConvexHttpClient doesn't support internal mutations (needs wrapper action)
-      await client.mutation(internal.events.updateEvent, {
+      await client.mutation(internalRef.events.updateEvent, {
         eventId: eventToUpdate._id,
         newEvent: text,
       });
@@ -278,14 +276,13 @@ program
   .action(async ({ year, number }) => {
     try {
       const client = await getConvexClient();
-      const events = await client.query(api.events.getYearEvents, { year });
+      const events = await client.query(apiRef.events.getYearEvents, { year });
       if (number <= 0 || number > events.length) {
         console.error(`❌ Invalid event number. Use 'show ${year}' to see available events.`);
         process.exit(1);
       }
       const eventToDelete = events[number - 1];
-      // @ts-expect-error - ConvexHttpClient doesn't support internal mutations (needs wrapper action)
-      await client.mutation(internal.events.deleteEvent, {
+      await client.mutation(internalRef.events.deleteEvent, {
         eventId: eventToDelete._id,
       });
       console.log(`✅ Successfully deleted event #${number} for year ${year}.`);
@@ -318,7 +315,7 @@ program
 
       console.log("📊 Fetching event statistics...\n");
 
-      const yearStats = await client.query(api.events.getAllYearsWithStats);
+      const yearStats = await client.query(apiRef.events.getAllYearsWithStats);
 
       if (yearStats.length === 0) {
         console.log("No events found in the database.");
@@ -391,7 +388,7 @@ program
       console.log(`📅 Events for year ${year}:\n`);
 
       // Get all events for the year
-      const events = await client.query(api.events.getYearEvents, { year });
+      const events = await client.query(apiRef.events.getYearEvents, { year });
 
       if (events.length === 0) {
         console.log(`No events found for year ${year}.`);
@@ -406,7 +403,7 @@ program
         if (event.classicPuzzleId) {
           try {
             // Get puzzle details
-            const puzzle = await client.query(api.puzzles.getPuzzleById, {
+            const puzzle = await client.query(apiRef.puzzles.getPuzzleById, {
               puzzleId: event.classicPuzzleId as any,
             });
 
@@ -464,7 +461,7 @@ program
         try {
           // Try to verify the function exists by checking if we can call a simple query
           if (func.name === "getEventPoolStats") {
-            await client.query(api.events.getEventPoolStats);
+            await client.query(apiRef.events.getEventPoolStats);
           }
           console.log(`✅ ${func.name} (${func.type})`);
         } catch (error: any) {
@@ -505,7 +502,7 @@ program
       const issues: string[] = [];
 
       // Get all year statistics
-      const yearStats = await client.query(api.events.getAllYearsWithStats);
+      const yearStats = await client.query(apiRef.events.getAllYearsWithStats);
 
       // Check 1: All years should have at least 6 events (minimum required for puzzles)
       console.log("✓ Checking event counts per year...");
@@ -534,7 +531,7 @@ program
       let duplicateIssues = 0;
       for (const stats of yearStats) {
         // Get all events for this year
-        const events = await client.query(api.events.getYearEvents, {
+        const events = await client.query(apiRef.events.getYearEvents, {
           year: stats.year,
         });
         const eventTexts = events.map((e: any) => e.event);
@@ -574,7 +571,7 @@ program
 
       // Collect all unique puzzle IDs from events
       for (const stats of yearStats) {
-        const events = await client.query(api.events.getYearEvents, {
+        const events = await client.query(apiRef.events.getYearEvents, {
           year: stats.year,
         });
         for (const event of events) {
@@ -587,7 +584,7 @@ program
       // Verify each puzzle ID exists
       for (const classicPuzzleId of classicPuzzleIdSet) {
         try {
-          const puzzle = await client.query(api.puzzles.getPuzzleById, {
+          const puzzle = await client.query(apiRef.puzzles.getPuzzleById, {
             puzzleId: classicPuzzleId as any,
           });
           if (!puzzle) {
@@ -668,7 +665,7 @@ program
         }
 
         try {
-          const events = await client.query(api.events.getYearEvents, { year });
+          const events = await client.query(apiRef.events.getYearEvents, { year });
 
           if (events.length > 0) {
             results.existing.push(year);
@@ -718,7 +715,7 @@ program
       console.log(`🔍 Finding missing years from ${from} to ${to}...\n`);
 
       // Get all existing years
-      const yearStats = await client.query(api.events.getAllYearsWithStats);
+      const yearStats = await client.query(apiRef.events.getAllYearsWithStats);
       const existingYears = new Set(yearStats.map((s: any) => s.year));
 
       const missingYears: number[] = [];
@@ -768,7 +765,7 @@ program
 
       console.log("🔍 Auditing database quality...\n");
 
-      const yearStats = await client.query(api.events.getAllYearsWithStats);
+      const yearStats = await client.query(apiRef.events.getAllYearsWithStats);
 
       // Categorize years
       const categories = {
@@ -793,7 +790,7 @@ program
         }
 
         // Check for quality issues
-        const events = await client.query(api.events.getYearEvents, {
+        const events = await client.query(apiRef.events.getYearEvents, {
           year: stats.year,
         });
 

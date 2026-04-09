@@ -66,11 +66,11 @@ export default function PricingPage() {
       <main className="mx-auto w-full max-w-3xl flex-grow px-4 py-8 sm:px-6 sm:py-12">
         <div className="mb-10 text-center">
           <h1 className="font-heading text-foreground mb-3 text-3xl font-bold sm:text-4xl">
-            Unlock the Archive
+            Support Chrondle
           </h1>
           <p className="text-muted-foreground mx-auto max-w-lg text-lg">
-            Play today&apos;s puzzle free, forever. Subscribe to unlock 150+ historical puzzles in
-            the archive.
+            Every Classic, Order, and Groups puzzle is free to play. Subscribing helps fund new
+            modes, event generation, and long-term maintenance.
           </p>
         </div>
 
@@ -90,11 +90,11 @@ export default function PricingPage() {
               <ul className="text-foreground/80 mb-6 flex-grow space-y-3 text-sm">
                 <li className="flex items-start gap-2">
                   <Check className="text-primary mt-0.5 h-4 w-4 flex-shrink-0" />
-                  <span>Full access to puzzle archive</span>
+                  <span>Help fund daily puzzle generation</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="text-primary mt-0.5 h-4 w-4 flex-shrink-0" />
-                  <span>Scores count toward streaks</span>
+                  <span>Support ongoing mode and archive improvements</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="text-primary mt-0.5 h-4 w-4 flex-shrink-0" />
@@ -130,11 +130,11 @@ export default function PricingPage() {
               <ul className="text-foreground/80 mb-6 flex-grow space-y-3 text-sm">
                 <li className="flex items-start gap-2">
                   <Check className="text-primary mt-0.5 h-4 w-4 flex-shrink-0" />
-                  <span>Full access to puzzle archive</span>
+                  <span>Help keep every mode free to play</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="text-primary mt-0.5 h-4 w-4 flex-shrink-0" />
-                  <span>Scores count toward streaks</span>
+                  <span>Support historical event expansion and QA</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="text-primary mt-0.5 h-4 w-4 flex-shrink-0" />
@@ -160,22 +160,22 @@ export default function PricingPage() {
         <div className="border-outline-default/30 bg-surface-elevated rounded border p-6">
           <h2 className="text-foreground mb-4 flex items-center gap-2 text-lg font-semibold">
             <Archive className="h-5 w-5" />
-            What&apos;s in the Archive?
+            What You&apos;re Supporting
           </h2>
           <ul className="text-foreground/80 grid gap-2 text-sm sm:grid-cols-2">
             <li>150+ unique historical puzzles</li>
             <li>Events spanning 5000+ years</li>
             <li>Classic mode: guess the year</li>
             <li>Order mode: arrange events chronologically</li>
-            <li>Track your progress and stats</li>
+            <li>Groups mode: find the hidden years</li>
             <li>New puzzles added daily</li>
           </ul>
         </div>
 
         {/* FAQ-like note */}
         <p className="text-muted-foreground mt-8 text-center text-sm">
-          Today&apos;s puzzle is always free. Secure payment via Stripe. Cancel anytime from your
-          account.
+          Every puzzle is free to play. Secure payment via Stripe. Cancel anytime from your account
+          if you want to stop supporting the project.
         </p>
       </main>
 

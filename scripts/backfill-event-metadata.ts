@@ -1,14 +1,15 @@
 #!/usr/bin/env tsx
-/* eslint-disable no-console */
 
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../convex/_generated/api.js";
+import { anyApi } from "convex/server";
 import dotenv from "dotenv";
 import { z } from "zod";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { createGemini3Client } from "../convex/lib/gemini3Client.js";
+
+const apiRef = anyApi;
 
 const BATCH_SIZE = 50;
 const MODEL = "google/gemini-3-flash-preview";
@@ -74,7 +75,7 @@ async function backfill() {
     cache_system_prompt: true,
   });
 
-  const missing = await convex.query(api.events.getEventsMissingMetadataPublic, {
+  const missing = await convex.query(apiRef.events.getEventsMissingMetadataPublic, {
     limit: 1000,
   });
 
@@ -110,7 +111,7 @@ async function backfill() {
     for (let j = 0; j < batch.length; j += 1) {
       const meta = items[j];
       const event = batch[j];
-      await convex.mutation(api.events.updateEventMetadataPublic, {
+      await convex.mutation(apiRef.events.updateEventMetadataPublic, {
         eventId: event._id,
         metadata: meta,
       });

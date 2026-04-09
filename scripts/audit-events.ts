@@ -2,11 +2,13 @@
 
 import { Command } from "commander";
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../convex/_generated/api.js";
+import { anyApi } from "convex/server";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs/promises";
+
+const apiRef = anyApi;
 
 // Load environment variables from .env.local
 const __filename = fileURLToPath(import.meta.url);
@@ -200,7 +202,7 @@ program
 
       console.log("🔍 Running deep quality analysis...\n");
 
-      const yearStats = await client.query(api.events.getAllYearsWithStats);
+      const yearStats = await client.query(apiRef.events.getAllYearsWithStats);
 
       let totalEvents = 0;
       let eventsWithIssues = 0;
@@ -208,7 +210,7 @@ program
       const examplesByType: { [key: string]: any[] } = {};
 
       for (const stats of yearStats) {
-        const events = await client.query(api.events.getYearEvents, {
+        const events = await client.query(apiRef.events.getYearEvents, {
           year: stats.year,
         });
 
@@ -302,12 +304,12 @@ program
 
       console.log(`🔍 Finding duplicate events (similarity > ${threshold})...\n`);
 
-      const yearStats = await client.query(api.events.getAllYearsWithStats);
+      const yearStats = await client.query(apiRef.events.getAllYearsWithStats);
       const allEvents: { year: number; event: string; id: string }[] = [];
 
       // Collect all events
       for (const stats of yearStats) {
-        const events = await client.query(api.events.getYearEvents, {
+        const events = await client.query(apiRef.events.getYearEvents, {
           year: stats.year,
         });
 
@@ -379,7 +381,7 @@ program
 
       console.log(`🔍 Analyzing year ${year} for improvements...\n`);
 
-      const events = await client.query(api.events.getYearEvents, { year });
+      const events = await client.query(apiRef.events.getYearEvents, { year });
 
       if (events.length === 0) {
         console.log(`Year ${year} not found in database.`);
@@ -474,7 +476,7 @@ program
 
       console.log("🎯 Generating Priority Work List...\n");
 
-      const yearStats = await client.query(api.events.getAllYearsWithStats);
+      const yearStats = await client.query(apiRef.events.getAllYearsWithStats);
 
       // Categorize and score years
       const priorities = {
@@ -505,7 +507,7 @@ program
           });
         } else if (stats.used === 0) {
           // Check for quality issues
-          const events = await client.query(api.events.getYearEvents, {
+          const events = await client.query(apiRef.events.getYearEvents, {
             year: stats.year,
           });
 

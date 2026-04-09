@@ -1,9 +1,11 @@
 // Migration Script: Regenerate All Historical Context with GPT-5
 // Updates all existing puzzles with new GPT-5 generated historical context in BC/AD format
 
+import { anyApi } from "convex/server";
 import { v } from "convex/values";
 import { internalMutation } from "../_generated/server";
-import { internal } from "../_generated/api";
+
+const internalApi = anyApi as any;
 
 /**
  * Migration to regenerate all historical context using GPT-5 model
@@ -54,9 +56,7 @@ export const regenerateHistoricalContextGPT5 = internalMutation({
     const previousModel = "google/gemini-2.5-flash";
     const newModel = "openai/gpt-5";
 
-    console.error(
-      `[GPT5-Migration] Starting GPT-5 historical context regeneration`,
-    );
+    console.error(`[GPT5-Migration] Starting GPT-5 historical context regeneration`);
     console.error(
       `[GPT5-Migration] Config: batchSize=${batchSize}, delayMs=${delayMs}, dryRun=${dryRun}, testMode=${testMode}`,
     );
@@ -68,9 +68,7 @@ export const regenerateHistoricalContextGPT5 = internalMutation({
 
       // Apply puzzle number filtering if specified
       if (startFromPuzzle > 1) {
-        puzzlesQuery = puzzlesQuery.filter((q) =>
-          q.gte(q.field("puzzleNumber"), startFromPuzzle),
-        );
+        puzzlesQuery = puzzlesQuery.filter((q) => q.gte(q.field("puzzleNumber"), startFromPuzzle));
       }
 
       // Order by puzzle number ascending for consistent processing
@@ -143,8 +141,7 @@ export const regenerateHistoricalContextGPT5 = internalMutation({
             scheduled: 0,
             errors: 0,
             batches: Math.ceil(sortedPuzzles.length / batchSize),
-            estimatedTimeSeconds:
-              Math.ceil(sortedPuzzles.length / batchSize) * (delayMs / 1000),
+            estimatedTimeSeconds: Math.ceil(sortedPuzzles.length / batchSize) * (delayMs / 1000),
             estimatedCostUSD: estimatedCost,
             migrationStartedAt,
             migrationCompletedAt: new Date().toISOString(),
@@ -158,9 +155,7 @@ export const regenerateHistoricalContextGPT5 = internalMutation({
       if (testMode) {
         let testPuzzle;
         if (testPuzzleNumber) {
-          testPuzzle = sortedPuzzles.find(
-            (p) => p.puzzleNumber === testPuzzleNumber,
-          );
+          testPuzzle = sortedPuzzles.find((p) => p.puzzleNumber === testPuzzleNumber);
           if (!testPuzzle) {
             throw new Error(`Test puzzle number ${testPuzzleNumber} not found`);
           }
@@ -179,7 +174,7 @@ export const regenerateHistoricalContextGPT5 = internalMutation({
           // Schedule context regeneration immediately for test
           await ctx.scheduler.runAfter(
             0, // Run immediately
-            internal.actions.historicalContext.generateHistoricalContext,
+            internalApi.actions.historicalContext.generateHistoricalContext,
             {
               puzzleId: testPuzzle._id,
               year: testPuzzle.targetYear,
@@ -247,12 +242,11 @@ export const regenerateHistoricalContextGPT5 = internalMutation({
         for (const puzzle of batch) {
           try {
             // Calculate delay for this puzzle (spread out within batch)
-            const puzzleDelay =
-              batchIndex * delayMs + batch.indexOf(puzzle) * 600; // 600ms between puzzles in batch (increased for GPT-5)
+            const puzzleDelay = batchIndex * delayMs + batch.indexOf(puzzle) * 600; // 600ms between puzzles in batch (increased for GPT-5)
 
             await ctx.scheduler.runAfter(
               puzzleDelay,
-              internal.actions.historicalContext.generateHistoricalContext,
+              internalApi.actions.historicalContext.generateHistoricalContext,
               {
                 puzzleId: puzzle._id,
                 year: puzzle.targetYear,
@@ -277,9 +271,7 @@ export const regenerateHistoricalContextGPT5 = internalMutation({
         }
 
         // Progress update
-        const progressPercent = Math.round(
-          (processed / sortedPuzzles.length) * 100,
-        );
+        const progressPercent = Math.round((processed / sortedPuzzles.length) * 100);
         console.error(
           `[GPT5-Migration] Progress: ${processed}/${sortedPuzzles.length} puzzles processed (${progressPercent}%), ${scheduled} scheduled, ${errors} errors`,
         );
@@ -307,10 +299,7 @@ export const regenerateHistoricalContextGPT5 = internalMutation({
         newModel,
       };
 
-      console.error(
-        `[GPT5-Migration] Migration scheduling completed:`,
-        finalStats,
-      );
+      console.error(`[GPT5-Migration] Migration scheduling completed:`, finalStats);
 
       if (errors > 0) {
         console.error(

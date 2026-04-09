@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 
@@ -35,7 +35,9 @@ interface GenerationLog {
  * Auto-refreshes via Convex subscription.
  */
 export function RecentGenerationsTable() {
-  const recentAttempts = useQuery(api.observability.getRecentGenerationsQuery, { limit: 20 });
+  const recentAttempts = useQuery(anyPublicApi.observability.getRecentGenerationsQuery, {
+    limit: 20,
+  });
 
   if (!recentAttempts) {
     return (

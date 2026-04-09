@@ -27,11 +27,17 @@ export const CurrentHintCard: React.FC<CurrentHintCardProps> = React.memo(
     useEffect(() => {
       // If hint number increased and this isn't the initial mount
       if (hintNumber > prevHintNumber.current && prevHintNumber.current > 0) {
-        setShowFeedback(true);
+        const animationFrame = requestAnimationFrame(() => {
+          setShowFeedback(true);
+        });
         const timeout = setTimeout(() => {
           setShowFeedback(false);
         }, ANIMATION_DURATIONS.HINT_FEEDBACK);
-        return () => clearTimeout(timeout);
+        prevHintNumber.current = hintNumber;
+        return () => {
+          cancelAnimationFrame(animationFrame);
+          clearTimeout(timeout);
+        };
       }
       prevHintNumber.current = hintNumber;
     }, [hintNumber]);

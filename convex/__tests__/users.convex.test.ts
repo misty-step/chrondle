@@ -1,15 +1,15 @@
 import { convexTest } from "convex-test";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { api, internal } from "../_generated/api";
+import { anyApi } from "convex/server";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import schema from "../schema";
 import { modules } from "../test.setup";
 import type { Id } from "../_generated/dataModel";
 
 // Type assertion for path-based API access
 
-const usersQueries = (api as any)["users/queries"];
-
-const usersMutations = (api as any)["users/mutations"];
+const apiRef = anyApi as any;
+const usersQueries = apiRef["users/queries"];
+const internal = apiRef;
 
 /**
  * Users Query and Mutation Tests using convex-test
@@ -60,9 +60,8 @@ describe("users/queries", () => {
     it("returns exists: true when user found by clerkId", async () => {
       const t = convexTest(schema, modules);
 
-      let userId: Id<"users">;
       await t.run(async (ctx) => {
-        userId = await ctx.db.insert("users", {
+        await ctx.db.insert("users", {
           clerkId: "clerk_exists_test",
           email: "exists@example.com",
           currentStreak: 0,

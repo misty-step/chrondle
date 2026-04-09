@@ -4,7 +4,6 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import { RangeInput } from "../RangeInput";
 import { GAME_CONFIG } from "@/lib/constants";
-import { SCORING_CONSTANTS } from "@/lib/scoring";
 
 // Mock EraToggle to simplify testing
 vi.mock("@/components/ui/EraToggle", () => ({

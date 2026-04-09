@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
 import { safeConvexId } from "@/lib/validation";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import type { Id } from "convex/_generated/dataModel";
 import type { AttemptScore, OrderAttempt } from "@/types/orderGameState";
 import type { OrderProgressData } from "@/lib/deriveOrderGameState";
@@ -37,7 +37,7 @@ export function useOrderProgress(
   const shouldQuery = validUserId !== null && validPuzzleId !== null;
 
   const convexPlay = useQuery(
-    api.orderPlays.getOrderPlay,
+    anyPublicApi.orderPlays.getOrderPlay,
     shouldQuery
       ? {
           userId: validUserId as Id<"users">,
