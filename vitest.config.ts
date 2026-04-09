@@ -101,6 +101,7 @@ export const baseVitestConfig = {
     coverage: {
       provider: "v8" as const,
       reporter: ["text", "json", "html", "json-summary"],
+      reportsDirectory: "coverage",
       reportOnFailure: true,
       exclude: [...coverageExclude],
       // Coverage thresholds - ratcheted to current levels

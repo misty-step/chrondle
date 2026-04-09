@@ -3,6 +3,8 @@ import { dag, argument, Container, Directory, Secret, func, object } from "@dagg
 const BUN_IMAGE = "oven/bun:1.3.9";
 const PLAYWRIGHT_IMAGE = "mcr.microsoft.com/playwright:v1.57.0-noble";
 const BUN_CACHE = "/root/.bun/install/cache";
+const COVERAGE_DIRECTORY = "coverage";
+const COVERAGE_ARTIFACTS_DIRECTORY = "/tmp/coverage-artifacts";
 const WORKDIR = "/work";
 const SECRET_SCAN_SCRIPT = `
 set -euo pipefail
@@ -71,6 +73,25 @@ fi
 echo "✅ No sensitive secrets exposed in client bundle"
 echo "✅ Environment variable verification passed"
 `;
+const EXPORT_COVERAGE_ARTIFACTS_SCRIPT = `
+set -euo pipefail
+
+if [ ! -d "${COVERAGE_DIRECTORY}" ]; then
+  echo "❌ Coverage directory was not produced"
+  exit 1
+fi
+
+if [ ! -f "${COVERAGE_DIRECTORY}/coverage-summary.json" ] || [ ! -f "${COVERAGE_DIRECTORY}/coverage-final.json" ]; then
+  echo "❌ Expected coverage artifacts were not produced"
+  echo "Contents of ${COVERAGE_DIRECTORY}:"
+  find "${COVERAGE_DIRECTORY}" -maxdepth 3 -type f | sort || true
+  exit 1
+fi
+
+mkdir -p "${COVERAGE_ARTIFACTS_DIRECTORY}"
+cp "${COVERAGE_DIRECTORY}/coverage-summary.json" "${COVERAGE_ARTIFACTS_DIRECTORY}/coverage-summary.json"
+cp "${COVERAGE_DIRECTORY}/coverage-final.json" "${COVERAGE_ARTIFACTS_DIRECTORY}/coverage-final.json"
+`;
 
 @object()
 export class Ci {
@@ -117,7 +138,7 @@ export class Ci {
     if (check === "lint") {
       container = container.withExec(["bun", "run", "lint"]);
     } else {
-      container = container.withExec(["bunx", "tsc", "--noEmit", "--incremental", "false"]);
+      container = container.withExec(["bun", "run", "type-check"]);
     }
 
     return container;
@@ -129,12 +150,8 @@ export class Ci {
       .withExec(["sh", "-lc", SECURITY_AUDIT_SCRIPT])
       .withExec(["bun", "run", "verify:convex"])
       .withExec(["bun", "run", "test:coverage"])
-      .withExec([
-        "sh",
-        "-lc",
-        "mkdir -p /tmp/coverage-artifacts && cp coverage/coverage-summary.json /tmp/coverage-artifacts/coverage-summary.json && cp coverage/coverage-final.json /tmp/coverage-artifacts/coverage-final.json",
-      ])
-      .directory("/tmp/coverage-artifacts");
+      .withExec(["sh", "-lc", EXPORT_COVERAGE_ARTIFACTS_SCRIPT])
+      .directory(COVERAGE_ARTIFACTS_DIRECTORY);
   }
 
   private validationContainer(source: Directory): Container {
