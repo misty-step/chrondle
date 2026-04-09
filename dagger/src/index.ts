@@ -165,7 +165,7 @@ export class Ci {
         "--config",
         "vitest.config.ts",
       ])
-      .withExec(["sh", "-lc", EXPORT_COVERAGE_ARTIFACTS_SCRIPT])
+      .withExec(["bash", "-lc", EXPORT_COVERAGE_ARTIFACTS_SCRIPT])
       .directory(COVERAGE_ARTIFACTS_DIRECTORY);
   }
 
