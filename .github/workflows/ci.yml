@@ -40,6 +40,26 @@ jobs:
           module: .
           args: test-coverage-artifacts --output=coverage
 
+      - name: Normalize coverage artifacts
+        if: matrix.check == 'test'
+        run: |
+          mkdir -p coverage
+
+          if [ -f coverage/coverage-summary.json ] && [ -f coverage/coverage-final.json ]; then
+            exit 0
+          fi
+
+          summary_path=$(find coverage -type f -name 'coverage-summary.json' | head -n1 || true)
+          final_path=$(find coverage -type f -name 'coverage-final.json' | head -n1 || true)
+
+          if [ -n "$summary_path" ] && [ "$summary_path" != "coverage/coverage-summary.json" ]; then
+            cp "$summary_path" coverage/coverage-summary.json
+          fi
+
+          if [ -n "$final_path" ] && [ "$final_path" != "coverage/coverage-final.json" ]; then
+            cp "$final_path" coverage/coverage-final.json
+          fi
+
       - name: Generate coverage summary
         if: matrix.check == 'test' && always()
         run: |

@@ -103,7 +103,10 @@ export class Ci {
     return this.baseContainer()
       .withFile(`${WORKDIR}/package.json`, source.file("package.json"))
       .withFile(`${WORKDIR}/bun.lock`, source.file("bun.lock"))
+      .withFile(`${WORKDIR}/dagger/package.json`, source.file("dagger/package.json"))
+      .withFile(`${WORKDIR}/dagger/bun.lock`, source.file("dagger/bun.lock"))
       .withExec(["bun", "install", "--frozen-lockfile"])
+      .withExec(["bun", "install", "--cwd", "dagger", "--frozen-lockfile"])
       .withDirectory(WORKDIR, source)
       .withWorkdir(WORKDIR);
   }
