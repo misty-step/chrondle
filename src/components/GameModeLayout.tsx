@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 interface GameModeLayoutProps {
   children: ReactNode;
-  mode: "classic" | "order";
+  mode: "classic" | "order" | "groups";
   puzzleNumber?: number;
   puzzleDate?: string;
   isArchive?: boolean;

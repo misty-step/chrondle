@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { Card } from "@/components/ui/Card";
 
 /**
@@ -17,7 +17,9 @@ import { Card } from "@/components/ui/Card";
  * Auto-refreshes via Convex subscription.
  */
 export function QualityMetricsGrid() {
-  const qualityMetrics = useQuery(api.observability.getQualityMetricsQuery, { timeRange: "7d" });
+  const qualityMetrics = useQuery(anyPublicApi.observability.getQualityMetricsQuery, {
+    timeRange: "7d",
+  });
 
   if (!qualityMetrics) {
     return (

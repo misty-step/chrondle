@@ -5,7 +5,7 @@
 import { logger } from "./logger";
 import type { Puzzle } from "@/types/puzzle";
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../../convex/_generated/api";
+import { api } from "./convexServer";
 import { Id } from "convex/_generated/dataModel";
 
 // Re-export Puzzle type for convenience

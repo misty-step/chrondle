@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
-import { api } from "convex/_generated/api";
 import {
   calculateCountdownTime,
   shouldTriggerCompletion,
   didCountdownRestart,
 } from "@/lib/time/countdownCalculation";
 import { getMillisUntilLocalMidnight } from "@/lib/time/dailyDate";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { logger } from "@/lib/logger";
 
 export interface UseCountdownReturn {
@@ -57,7 +57,10 @@ export function useCountdown(options: UseCountdownOptions = {}): UseCountdownRet
 
   // Only fetch cron schedule if using serverMidnight strategy and no explicit target
   const shouldQueryServer = strategy === "serverMidnight" && !targetTimestamp;
-  const cronSchedule = useQuery(api.puzzles.getCronSchedule, shouldQueryServer ? {} : "skip");
+  const cronSchedule = useQuery(
+    anyPublicApi.puzzles.getCronSchedule,
+    shouldQueryServer ? {} : "skip",
+  ) as { nextScheduledTime: number } | null | undefined;
 
   // Calculate effective target timestamp based on strategy
   let effectiveTarget: number | undefined;

@@ -10,7 +10,7 @@ const [mainConfig, tsConfig, ignoresConfig] = nextConfig;
 
 const eslintConfig = [
   {
-    ignores: ["**/*.css"]
+    ignores: ["**/*.css", "dagger/sdk/**"]
   },
   // Main Next.js config
   mainConfig,

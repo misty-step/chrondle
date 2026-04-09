@@ -228,9 +228,12 @@ export const deleteYearEvents = internalMutation({
       .withIndex("by_year", (q) => q.eq("year", year))
       .collect();
 
-    // Check if any events are used in puzzles (either mode)
+    // Check if any events are used in puzzles (any mode)
     const usedEvents = events.filter(
-      (e) => e.classicPuzzleId !== undefined || e.orderPuzzleId !== undefined,
+      (e) =>
+        e.classicPuzzleId !== undefined ||
+        e.orderPuzzleId !== undefined ||
+        e.groupsPuzzleId !== undefined,
     );
     if (usedEvents.length > 0) {
       throw new Error(

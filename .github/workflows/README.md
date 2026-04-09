@@ -55,7 +55,7 @@ gh secret set CONVEX_DEPLOY_KEY --body "prod:project-name|..."
 
 ### Pre-Merge Secret Verification
 
-The CI workflow includes a `verify-production-secrets` job that runs on PRs targeting main/master. This catches missing secrets **before** merge, preventing post-merge deploy failures.
+The CI workflow includes a Dagger-driven `verify-environment` job that runs on PRs targeting main/master. It validates CI and production env requirements, including Stripe configuration, before merge.
 
 ### Deploy Fail-Fast
 
@@ -81,13 +81,16 @@ Steps:
 
 ### CI (`ci.yml`)
 
+Primary quality/build/e2e gates are executed through the repo's Dagger module (`dagger/src/index.ts`) and invoked from GitHub Actions via `dagger/dagger-for-github`.
+
 Jobs:
 
-- `quality-checks`: Lint, type-check, test (parallel matrix)
-- `validation`: Puzzle and data validation
-- `build`: Production build verification
-- `e2e`: Playwright end-to-end tests
-- `verify-production-secrets`: Pre-merge secrets check (PRs only)
+- `quality-checks`: Dagger-driven lint, type-check, and test coverage (parallel matrix)
+- `validation`: Dagger-driven puzzle/data validation
+- `docs`: Dagger-driven docs link check
+- `build`: Dagger-driven production build, env exposure verification, bundle-size enforcement, and `.next` artifact export
+- `e2e`: Dagger-driven Playwright run with report artifact export and explicit exit-code gating
+- `verify-environment`: Dagger-driven CI/production env and Stripe validation (PRs only)
 
 ## Troubleshooting
 

@@ -1,11 +1,13 @@
 #!/usr/bin/env tsx
 
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../convex/_generated/api.js";
+import { anyApi } from "convex/server";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs/promises";
+
+const apiRef = anyApi;
 
 async function loadEnv(): Promise<void> {
   const __filename = fileURLToPath(import.meta.url);
@@ -86,7 +88,7 @@ async function runLoadTest() {
     const promises = batch.map(async (year) => {
       try {
         const result = await client.action(
-          api.actions.eventGeneration.orchestrator.testGenerateYearEvents,
+          apiRef.actions.eventGeneration.orchestrator.testGenerateYearEvents,
           { year },
         );
         if (result.status === "success") {

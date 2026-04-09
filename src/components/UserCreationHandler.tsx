@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
-import { api } from "../../convex/_generated/api";
 import { useMutationWithRetry } from "@/hooks/useMutationWithRetry";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { logger } from "@/lib/logger";
 
 interface AuthState {
@@ -28,7 +28,7 @@ interface UserCreationHandlerProps {
 export function UserCreationHandler({ authState, children }: UserCreationHandlerProps) {
   const { isSignedIn } = useUser();
   const getOrCreateUser = useMutationWithRetry(
-    api.users.getOrCreateCurrentUser,
+    anyPublicApi.users.getOrCreateCurrentUser,
     useMemo(
       () => ({
         maxRetries: 3,

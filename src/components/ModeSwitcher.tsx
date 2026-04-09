@@ -33,6 +33,12 @@ const MODE_CONFIG: Record<
     description: "Arrange six events chronologically",
     route: "/order",
   },
+  groups: {
+    label: "Groups · Sort the Years",
+    shortLabel: "Groups",
+    description: "Find four hidden years from sixteen events",
+    route: "/groups",
+  },
 };
 
 interface ModeSwitcherProps {
@@ -46,6 +52,9 @@ export function ModeSwitcher({ className }: ModeSwitcherProps) {
   const currentMode: ModeKey = useMemo(() => {
     if (!pathname) {
       return "classic";
+    }
+    if (pathname.startsWith("/groups") || pathname.startsWith("/archive/groups")) {
+      return "groups";
     }
     if (pathname.startsWith("/order")) {
       return "order";

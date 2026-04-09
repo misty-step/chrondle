@@ -11,6 +11,7 @@ import {
   CaretRight,
   ClockCounterClockwise,
   ChartBar,
+  SquaresFour,
 } from "@phosphor-icons/react/dist/ssr";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { ArchiveGrid } from "@/components/archive/ArchiveGrid";
@@ -132,19 +133,6 @@ async function OrderArchivePageContent({
 
   const completedCount = completedPuzzleIds.size;
 
-  // Check archive access (subscription status)
-  let hasArchiveAccess = false;
-  if (clerkUser && convexUser) {
-    try {
-      hasArchiveAccess = await client.query(api.users.hasArchiveAccess, {
-        clerkId: clerkUser.id,
-      });
-    } catch (error) {
-      logger.warn("[OrderArchive] hasArchiveAccess check failed:", error);
-      hasArchiveAccess = false;
-    }
-  }
-
   const authState = {
     hasClerkUser: !!clerkUser,
     hasConvexUser: !!convexUser,
@@ -180,6 +168,12 @@ async function OrderArchivePageContent({
               className="bg-order-bg text-order-accent flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
             >
               <ChartBar className="h-4 w-4" /> Order
+            </Link>
+            <Link
+              href="/archive/groups"
+              className="text-muted-foreground hover:text-foreground hover:bg-surface-inset flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors"
+            >
+              <SquaresFour className="h-4 w-4" /> Groups
             </Link>
           </div>
 
@@ -228,12 +222,7 @@ async function OrderArchivePageContent({
           ) : (
             <>
               {/* Archive grid - filters by local date to hide future puzzles */}
-              <ArchiveGrid
-                puzzles={paginatedData}
-                linkPrefix="/archive/order"
-                hasAccess={hasArchiveAccess}
-                mode="order"
-              />
+              <ArchiveGrid puzzles={paginatedData} linkPrefix="/archive/order" mode="order" />
 
               {/* Pagination controls */}
               {totalPages > 1 && (

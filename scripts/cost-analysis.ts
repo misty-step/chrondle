@@ -2,11 +2,13 @@
 
 import { Command } from "commander";
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../convex/_generated/api.js";
+import { anyApi } from "convex/server";
 import dotenv from "dotenv";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import fs from "fs/promises";
+
+const apiRef = anyApi;
 
 async function loadEnv(): Promise<void> {
   const __filename = fileURLToPath(import.meta.url);
@@ -38,7 +40,7 @@ program.action(async (options) => {
   const alertThreshold = options.alert ? Number(options.alert) : undefined;
   const client = await getClient();
 
-  const buckets = await client.query(api.generationLogs.getLast7DaysCosts, { days });
+  const buckets = await client.query(apiRef.generationLogs.getLast7DaysCosts, { days });
 
   const totalCost = buckets.reduce((sum: number, bucket: any) => sum + bucket.totalCost, 0);
   const totalEvents = buckets.reduce((sum: number, bucket: any) => sum + bucket.eventsGenerated, 0);

@@ -1,9 +1,7 @@
-import { notFound, redirect } from "next/navigation";
-import { currentUser } from "@clerk/nextjs/server";
-import { api, getConvexClient } from "@/lib/convexServer";
+import { notFound } from "next/navigation";
+import { getConvexClient } from "@/lib/convexServer";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { ClassicArchivePuzzleClient } from "@/components/classic/ClassicArchivePuzzleClient";
-import { logger } from "@/lib/logger";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -19,33 +17,9 @@ export default async function ArchiveClassicPuzzlePage(props: PageProps) {
     notFound();
   }
 
-  // Server-side entitlement check
-  const user = await currentUser();
-
-  // If not logged in, redirect to sign-in then back to this puzzle
-  if (!user) {
-    redirect(`/sign-in?redirect_url=/archive/puzzle/${puzzleNumber}`);
-  }
-
-  // Check archive access via Convex
   const client = getConvexClient();
-
-  // If Convex client unavailable, don't allow access - paywall requires verification
   if (!client) {
     notFound();
-  }
-
-  let hasAccess = false;
-  try {
-    hasAccess = await client.query(api.users.hasArchiveAccess, {
-      clerkId: user.id,
-    });
-  } catch (error) {
-    logger.warn("[ArchiveClassicPuzzle] hasArchiveAccess check failed:", error);
-  }
-
-  if (!hasAccess) {
-    redirect("/pricing");
   }
 
   return (

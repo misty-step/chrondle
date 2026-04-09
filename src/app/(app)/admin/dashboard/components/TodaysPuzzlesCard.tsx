@@ -2,19 +2,43 @@
 
 import React from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../../../../convex/_generated/api";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { CircleNotch, Target, Clock, Users, Calendar } from "@phosphor-icons/react";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 
 /**
  * Today's Puzzles Card - Daily Ops Visibility
  *
- * Shows today's Classic and Order puzzles side by side.
+ * Shows today's Classic, Order, and Groups puzzles side by side.
  * At-a-glance view: Is today's content live? How many players so far?
  */
 export function TodaysPuzzlesCard() {
-  const todaysPuzzles = useQuery(api.admin.puzzles.getTodaysPuzzles);
+  const todaysPuzzles = useQuery(anyPublicApi.admin.puzzles.getTodaysPuzzles) as
+    | {
+        date: string;
+        classic: {
+          puzzleNumber: number;
+          targetYear: number;
+          eventCount: number;
+          playCount: number;
+          hasHistoricalContext: boolean;
+        } | null;
+        order: {
+          puzzleNumber: number;
+          eventSpan: string;
+          eventCount: number;
+          playCount: number;
+        } | null;
+        groups: {
+          puzzleNumber: number;
+          yearSpan: string;
+          eventCount: number;
+          groupCount: number;
+          playCount: number;
+        } | null;
+      }
+    | undefined;
 
   return (
     <Card className="p-6">
@@ -36,7 +60,7 @@ export function TodaysPuzzlesCard() {
           Loading today&apos;s puzzles...
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           {/* Classic Puzzle */}
           <PuzzleCard
             mode="classic"
@@ -70,6 +94,24 @@ export function TodaysPuzzlesCard() {
                 : null
             }
           />
+
+          {/* Groups Puzzle */}
+          <PuzzleCard
+            mode="groups"
+            icon={<Users className="h-5 w-5" />}
+            puzzle={
+              todaysPuzzles.groups
+                ? {
+                    puzzleNumber: todaysPuzzles.groups.puzzleNumber,
+                    targetDisplay: todaysPuzzles.groups.yearSpan,
+                    eventCount: todaysPuzzles.groups.eventCount,
+                    groupCount: todaysPuzzles.groups.groupCount,
+                    playCount: todaysPuzzles.groups.playCount,
+                    hasContext: false,
+                  }
+                : null
+            }
+          />
         </div>
       )}
     </Card>
@@ -82,17 +124,18 @@ function PuzzleCard({
   icon,
   puzzle,
 }: {
-  mode: "classic" | "order";
+  mode: "classic" | "order" | "groups";
   icon: React.ReactNode;
   puzzle: {
     puzzleNumber: number;
     targetDisplay: string;
     eventCount: number;
+    groupCount?: number;
     playCount: number;
     hasContext: boolean;
   } | null;
 }) {
-  const modeLabel = mode === "classic" ? "Classic" : "Order";
+  const modeLabel = mode === "classic" ? "Classic" : mode === "order" ? "Order" : "Groups";
 
   if (!puzzle) {
     return (
@@ -125,7 +168,7 @@ function PuzzleCard({
         {/* Target/Span */}
         <div className="flex items-center justify-between">
           <span className="text-text-tertiary text-sm">
-            {mode === "classic" ? "Target Year" : "Event Span"}
+            {mode === "classic" ? "Target Year" : mode === "order" ? "Event Span" : "Year Span"}
           </span>
           <span className="text-text-primary font-mono font-medium">{puzzle.targetDisplay}</span>
         </div>
@@ -135,6 +178,14 @@ function PuzzleCard({
           <span className="text-text-tertiary text-sm">Events</span>
           <span className="text-text-secondary">{puzzle.eventCount}</span>
         </div>
+
+        {/* Group Count (Groups mode only) */}
+        {mode === "groups" && (
+          <div className="flex items-center justify-between">
+            <span className="text-text-tertiary text-sm">Groups</span>
+            <span className="text-text-secondary">{puzzle.groupCount ?? 0}</span>
+          </div>
+        )}
 
         {/* Play Count */}
         <div className="flex items-center justify-between">

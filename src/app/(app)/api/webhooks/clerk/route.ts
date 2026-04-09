@@ -1,10 +1,10 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
-import { api } from "convex/_generated/api";
 import { ConvexHttpClient } from "convex/browser";
 import { getEnvVar, isProduction } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { api } from "@/lib/convexServer";
 
 type ClerkEventType = "user.created" | "user.updated";
 

@@ -1,7 +1,10 @@
 import type { EraBucket, YearCandidateSource } from "./workSelector";
 import { getEraBucket } from "./workSelector";
-import { api } from "../_generated/api";
+import { anyApi } from "convex/server";
+import type { Doc } from "../_generated/dataModel";
 import type { ActionCtx } from "../_generated/server";
+
+const publicApi = anyApi as any;
 
 /**
  * Strategy for selecting years to generate events for in a batch.
@@ -68,7 +71,7 @@ const ERA_TOTALS: Record<EraBucket, number> = {
  */
 export async function analyzeCoverageGaps(ctx: ActionCtx): Promise<CoverageGaps> {
   // Query all years with event counts
-  const yearStats = (await ctx.runQuery(api.events.getAllYearsWithStats, {})) as Array<{
+  const yearStats = (await ctx.runQuery(publicApi.events.getAllYearsWithStats, {})) as Array<{
     year: number;
     total: number;
     used: number;
@@ -117,7 +120,9 @@ export async function analyzeCoverageGaps(ctx: ActionCtx): Promise<CoverageGaps>
  * @returns Puzzle demand analysis
  */
 export async function analyzePuzzleDemand(ctx: ActionCtx): Promise<PuzzleDemand> {
-  const puzzles = await ctx.runQuery(api.puzzles.queries.getAllPuzzles, {});
+  const puzzles = (await ctx.runQuery(publicApi.puzzles.queries.getAllPuzzles, {})) as Array<
+    Doc<"puzzles">
+  >;
 
   const selectionFrequency = puzzles.reduce(
     (acc: Map<number, number>, p) => acc.set(p.targetYear, (acc.get(p.targetYear) || 0) + 1),

@@ -1,11 +1,11 @@
 import { convexTest } from "convex-test";
+import { anyApi } from "convex/server";
 import { describe, it, expect } from "vitest";
-import { api } from "../_generated/api";
 import schema from "../schema";
 import { modules } from "../test.setup";
 import type { Id } from "../_generated/dataModel";
 
-const orderQueries = (api as any)["orderPuzzles/queries"];
+const orderQueries = (anyApi as any)["orderPuzzles/queries"];
 
 /**
  * Order Puzzles Query Tests using convex-test

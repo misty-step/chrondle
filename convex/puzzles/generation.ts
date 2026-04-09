@@ -1,6 +1,6 @@
+import { anyApi } from "convex/server";
 import { v } from "convex/values";
 import { mutation, internalMutation } from "../_generated/server";
-import { internal } from "../_generated/api";
 import { selectYearForPuzzle } from "../lib/puzzleHelpers";
 import { isPuzzleJudgeEnabled } from "../lib/featureFlags";
 
@@ -23,6 +23,7 @@ import type { Id } from "../_generated/dataModel";
 import type { GenericMutationCtx, GenericDataModel } from "convex/server";
 
 type SchedulerCtx = Pick<GenericMutationCtx<GenericDataModel>, "scheduler">;
+const internalApi = anyApi as any;
 
 interface ScheduleOptimizationParams {
   puzzleId: Id<"puzzles">;
@@ -46,7 +47,7 @@ async function schedulePuzzleOptimization(
     try {
       await ctx.scheduler.runAfter(
         0,
-        internal.actions.puzzleComposition.optimizePuzzle.optimizePuzzleComposition,
+        internalApi.actions.puzzleComposition.optimizePuzzle.optimizePuzzleComposition,
         { puzzleId, year, events },
       );
     } catch (schedulerError) {
@@ -56,11 +57,15 @@ async function schedulePuzzleOptimization(
 
   // Schedule historical context generation (non-blocking)
   try {
-    await ctx.scheduler.runAfter(0, internal.actions.historicalContext.generateHistoricalContext, {
-      puzzleId,
-      year,
-      events,
-    });
+    await ctx.scheduler.runAfter(
+      0,
+      internalApi.actions.historicalContext.generateHistoricalContext,
+      {
+        puzzleId,
+        year,
+        events,
+      },
+    );
   } catch (schedulerError) {
     console.error(`[${source}] Failed to schedule context generation:`, schedulerError);
   }

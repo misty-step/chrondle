@@ -1,8 +1,8 @@
 /**
- * Integration tests for dual-mode event usage tracking.
+ * Integration tests for multi-mode event usage tracking.
  *
- * Verifies that Classic and Order modes independently track event usage
- * via classicPuzzleId and orderPuzzleId fields.
+ * Verifies that Classic, Order, and Groups modes independently track event usage
+ * via classicPuzzleId, orderPuzzleId, and groupsPuzzleId fields.
  */
 import { describe, it, expect } from "vitest";
 import { calculatePoolHealth, type PoolHealthMode } from "../lib/observability/metricsService";
@@ -20,6 +20,7 @@ describe("Dual-mode event usage tracking", () => {
     options: {
       classicPuzzleId?: string;
       orderPuzzleId?: string;
+      groupsPuzzleId?: string;
     } = {},
   ): Doc<"events"> {
     return {
@@ -29,6 +30,7 @@ describe("Dual-mode event usage tracking", () => {
       event: `Test event ${id}`,
       classicPuzzleId: options.classicPuzzleId as Doc<"puzzles">["_id"] | undefined,
       orderPuzzleId: options.orderPuzzleId as Doc<"orderPuzzles">["_id"] | undefined,
+      groupsPuzzleId: options.groupsPuzzleId as Doc<"groupsPuzzles">["_id"] | undefined,
       updatedAt: now,
     } as Doc<"events">;
   }
@@ -41,16 +43,19 @@ describe("Dual-mode event usage tracking", () => {
       createMockEvent("evt2", 1969, { classicPuzzleId: "classic-puzzle-1" }),
       // Event 3: Used in Order only
       createMockEvent("evt3", 1500, { orderPuzzleId: "order-puzzle-1" }),
-      // Event 4: Used in BOTH modes
+      // Event 4: Used in ALL modes
       createMockEvent("evt4", 400, {
         classicPuzzleId: "classic-puzzle-1",
         orderPuzzleId: "order-puzzle-1",
+        groupsPuzzleId: "groups-puzzle-1",
       }),
       // Event 5: Unused in both modes
       createMockEvent("evt5", 1776),
+      // Event 6: Used in Groups only
+      createMockEvent("evt6", 1200, { groupsPuzzleId: "groups-puzzle-1" }),
     ];
 
-    it("mode='all' counts events unused in BOTH modes", () => {
+    it("mode='all' counts events unused in all live modes", () => {
       const result = calculatePoolHealth(mockEvents, "all");
 
       // Only evt1 and evt5 are unused in both modes
@@ -61,17 +66,25 @@ describe("Dual-mode event usage tracking", () => {
     it("mode='classic' counts events unused in Classic mode", () => {
       const result = calculatePoolHealth(mockEvents, "classic");
 
-      // evt1, evt3, evt5 are unused in Classic (evt3 is used in Order only)
-      expect(result.unusedEvents).toBe(3);
-      expect(result.yearsReady).toBe(3); // 1969, 1500, 1776
+      // evt1, evt3, evt5, evt6 are unused in Classic
+      expect(result.unusedEvents).toBe(4);
+      expect(result.yearsReady).toBe(4); // 1969, 1500, 1776, 1200
     });
 
     it("mode='order' counts events unused in Order mode", () => {
       const result = calculatePoolHealth(mockEvents, "order");
 
-      // evt1, evt2, evt5 are unused in Order (evt2 is used in Classic only)
-      expect(result.unusedEvents).toBe(3);
-      expect(result.yearsReady).toBe(2); // 1969 (evt1, evt2), 1776
+      // evt1, evt2, evt5, evt6 are unused in Order
+      expect(result.unusedEvents).toBe(4);
+      expect(result.yearsReady).toBe(3); // 1969, 1776, 1200
+    });
+
+    it("mode='groups' counts events unused in Groups mode", () => {
+      const result = calculatePoolHealth(mockEvents, "groups");
+
+      // evt1, evt2, evt3, evt5 are unused in Groups
+      expect(result.unusedEvents).toBe(4);
+      expect(result.yearsReady).toBe(3); // 1969, 1500, 1776
     });
 
     it("default mode is 'all' when not specified", () => {
@@ -83,13 +96,14 @@ describe("Dual-mode event usage tracking", () => {
     });
   });
 
-  describe("same event can be used in both modes independently", () => {
-    it("event with both classicPuzzleId and orderPuzzleId is used in both modes", () => {
+  describe("same event can be used across modes independently", () => {
+    it("event used in all three modes is unavailable everywhere", () => {
       const events: Doc<"events">[] = [
         // Event used in both modes
         createMockEvent("dual-used", 1969, {
           classicPuzzleId: "classic-1",
           orderPuzzleId: "order-1",
+          groupsPuzzleId: "groups-1",
         }),
         // Event unused in both
         createMockEvent("unused", 1776),
@@ -102,6 +116,10 @@ describe("Dual-mode event usage tracking", () => {
       // Order mode: only "unused" is available
       const orderHealth = calculatePoolHealth(events, "order");
       expect(orderHealth.unusedEvents).toBe(1);
+
+      // Groups mode: only "unused" is available
+      const groupsHealth = calculatePoolHealth(events, "groups");
+      expect(groupsHealth.unusedEvents).toBe(1);
 
       // All mode: only "unused" is available
       const allHealth = calculatePoolHealth(events, "all");
@@ -119,7 +137,10 @@ describe("Dual-mode event usage tracking", () => {
       // Order: 1 available (not used in Order)
       expect(calculatePoolHealth(events, "order").unusedEvents).toBe(1);
 
-      // All: 0 available (not unused in both)
+      // Groups: 1 available (not used in Groups)
+      expect(calculatePoolHealth(events, "groups").unusedEvents).toBe(1);
+
+      // All: 0 available (not unused everywhere)
       expect(calculatePoolHealth(events, "all").unusedEvents).toBe(0);
     });
 
@@ -134,7 +155,21 @@ describe("Dual-mode event usage tracking", () => {
       // Order: 0 available (used)
       expect(calculatePoolHealth(events, "order").unusedEvents).toBe(0);
 
-      // All: 0 available (not unused in both)
+      // Groups: 1 available (not used in Groups)
+      expect(calculatePoolHealth(events, "groups").unusedEvents).toBe(1);
+
+      // All: 0 available (not unused everywhere)
+      expect(calculatePoolHealth(events, "all").unusedEvents).toBe(0);
+    });
+
+    it("event used in Groups only is still available for Classic and Order", () => {
+      const events: Doc<"events">[] = [
+        createMockEvent("groups-only", 1200, { groupsPuzzleId: "groups-1" }),
+      ];
+
+      expect(calculatePoolHealth(events, "classic").unusedEvents).toBe(1);
+      expect(calculatePoolHealth(events, "order").unusedEvents).toBe(1);
+      expect(calculatePoolHealth(events, "groups").unusedEvents).toBe(0);
       expect(calculatePoolHealth(events, "all").unusedEvents).toBe(0);
     });
   });
@@ -147,9 +182,9 @@ describe("Dual-mode event usage tracking", () => {
       // Medieval (500-1499): 1 unused in all, 1 used in Order
       createMockEvent("medieval-1", 1000),
       createMockEvent("medieval-2", 1200, { orderPuzzleId: "order-1" }),
-      // Modern (>= 1500): 2 unused in all
+      // Modern (>= 1500): 1 unused in all, 1 used in Groups
       createMockEvent("modern-1", 1776),
-      createMockEvent("modern-2", 1969),
+      createMockEvent("modern-2", 1969, { groupsPuzzleId: "groups-1" }),
     ];
 
     it("era breakdown respects mode filter - all", () => {
@@ -157,8 +192,8 @@ describe("Dual-mode event usage tracking", () => {
 
       expect(result.coverageByEra.ancient).toBe(1); // ancient-1 only
       expect(result.coverageByEra.medieval).toBe(1); // medieval-1 only
-      expect(result.coverageByEra.modern).toBe(2); // modern-1, modern-2
-      expect(result.unusedEvents).toBe(4);
+      expect(result.coverageByEra.modern).toBe(1); // modern-1 only
+      expect(result.unusedEvents).toBe(3);
     });
 
     it("era breakdown respects mode filter - classic", () => {
@@ -166,6 +201,7 @@ describe("Dual-mode event usage tracking", () => {
 
       // ancient-2 is used in Classic, so not counted
       // medieval-2 is used in Order only, so still available for Classic
+      // modern-2 is used in Groups only, so still available for Classic
       expect(result.coverageByEra.ancient).toBe(1); // ancient-1
       expect(result.coverageByEra.medieval).toBe(2); // medieval-1, medieval-2
       expect(result.coverageByEra.modern).toBe(2); // modern-1, modern-2
@@ -177,23 +213,45 @@ describe("Dual-mode event usage tracking", () => {
 
       // ancient-2 is used in Classic only, so still available for Order
       // medieval-2 is used in Order, so not counted
+      // modern-2 is used in Groups only, so still available for Order
       expect(result.coverageByEra.ancient).toBe(2); // ancient-1, ancient-2
       expect(result.coverageByEra.medieval).toBe(1); // medieval-1
       expect(result.coverageByEra.modern).toBe(2); // modern-1, modern-2
       expect(result.unusedEvents).toBe(5);
     });
+
+    it("era breakdown respects mode filter - groups", () => {
+      const result = calculatePoolHealth(events, "groups");
+
+      // ancient-2/classic-only and medieval-2/order-only stay available for Groups
+      // modern-2 is used in Groups, so not counted
+      expect(result.coverageByEra.ancient).toBe(2); // ancient-1, ancient-2
+      expect(result.coverageByEra.medieval).toBe(2); // medieval-1, medieval-2
+      expect(result.coverageByEra.modern).toBe(1); // modern-1
+      expect(result.unusedEvents).toBe(5);
+    });
   });
 
   describe("days until depletion calculation", () => {
-    it("calculates depletion based on 6 events per day", () => {
+    it("calculates combined depletion for the shared pool", () => {
       const events: Doc<"events">[] = Array.from({ length: 30 }, (_, i) =>
         createMockEvent(`evt-${i}`, 1900 + i),
       );
 
       const result = calculatePoolHealth(events, "all");
 
-      // 30 events / 6 per day = 5 days
-      expect(result.daysUntilDepletion).toBe(5);
+      // 30 events / 28 per day across Classic, Order, and Groups = 1 day
+      expect(result.daysUntilDepletion).toBe(1);
+    });
+
+    it("calculates Groups depletion based on 16 events per day", () => {
+      const events: Doc<"events">[] = Array.from({ length: 32 }, (_, i) =>
+        createMockEvent(`groups-${i}`, 1800 + i),
+      );
+
+      const result = calculatePoolHealth(events, "groups");
+
+      expect(result.daysUntilDepletion).toBe(2);
     });
 
     it("returns 0 when no events available", () => {

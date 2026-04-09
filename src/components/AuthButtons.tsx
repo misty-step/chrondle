@@ -52,7 +52,7 @@ export function AuthButtons({ className }: AuthButtonsProps) {
     <SignInButton mode={isMobile ? "redirect" : "modal"}>
       <NavbarButton
         as="div"
-        title="Sign in to save progress and access archive"
+        title="Sign in to save progress across devices"
         aria-label="Sign in to your account"
         overlayColor="primary"
         className={className}

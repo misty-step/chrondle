@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
 import { safeConvexId } from "@/lib/validation";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { RangeGuess } from "@/types/range";
 
@@ -79,7 +79,7 @@ export function useUserProgress(
   const shouldQuery = validUserId !== null && validPuzzleId !== null;
 
   const convexPlay = useQuery(
-    api.puzzles.getUserPlay,
+    anyPublicApi.puzzles.getUserPlay,
     shouldQuery
       ? {
           userId: validUserId,

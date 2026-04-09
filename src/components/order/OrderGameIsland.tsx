@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from "react";
 import { Preloaded, usePreloadedQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
 import { useOrderGame } from "@/hooks/useOrderGame";
 import { useToast } from "@/hooks/use-toast";
 import { useWebShare } from "@/hooks/useWebShare";
@@ -17,7 +16,7 @@ import { generateArchivalShareText } from "@/lib/order/shareCard";
 import type { ReadyState } from "@/types/orderGameState";
 
 interface OrderGameIslandProps {
-  preloadedPuzzle: Preloaded<typeof api.orderPuzzles.getDailyOrderPuzzle>;
+  preloadedPuzzle: Preloaded<any>;
 }
 
 export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {

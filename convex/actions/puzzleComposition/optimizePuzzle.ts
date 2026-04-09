@@ -1,10 +1,12 @@
 "use node";
 
+import { anyApi } from "convex/server";
 import { v } from "convex/values";
 import { internalAction } from "../../_generated/server";
-import { internal } from "../../_generated/api";
 import { judgePuzzleComposition } from "./judge";
 import { logStageError, logStageSuccess } from "../../lib/logging";
+
+const internalApi = anyApi as any;
 
 /**
  * Optimize Puzzle Action
@@ -52,7 +54,7 @@ export const optimizePuzzleComposition = internalAction({
         : events; // Keep original order if not approved
 
       // Update puzzle with ordered events and quality scores
-      await ctx.runMutation(internal.puzzles.mutations.updatePuzzleEvents, {
+      await ctx.runMutation(internalApi.puzzles.mutations.updatePuzzleEvents, {
         puzzleId,
         events: orderedEvents,
         puzzleQuality: {

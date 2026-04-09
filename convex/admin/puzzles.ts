@@ -2,7 +2,7 @@
  * Admin Puzzles API
  *
  * Deep module for puzzle management:
- * - Unified listing for Classic and Order puzzles
+ * - Unified listing for Classic, Order, and Groups puzzles
  * - Detailed puzzle view with events and stats
  *
  * Principle: Single interface hides mode-specific table complexity.
@@ -12,7 +12,7 @@ import { query } from "../_generated/server";
 import { v } from "convex/values";
 import { requireAdmin } from "../lib/auth";
 
-const modeValidator = v.union(v.literal("classic"), v.literal("order"));
+const modeValidator = v.union(v.literal("classic"), v.literal("order"), v.literal("groups"));
 
 /**
  * List puzzles for a given mode.
@@ -51,7 +51,7 @@ export const listPuzzles = query({
       }));
 
       return { puzzles: mappedPuzzles, nextCursor, totalCount };
-    } else {
+    } else if (args.mode === "order") {
       // Query Order puzzles
       const puzzles = await ctx.db
         .query("orderPuzzles")
@@ -92,6 +92,34 @@ export const listPuzzles = query({
           status: getPuzzleStatus(p.date),
         };
       });
+
+      return { puzzles: mappedPuzzles, nextCursor, totalCount };
+    } else {
+      // Query Groups puzzles
+      const puzzles = await ctx.db
+        .query("groupsPuzzles")
+        .withIndex("by_number")
+        .order("desc")
+        .collect();
+
+      const totalCount = puzzles.length;
+      const paginatedPuzzles = puzzles.slice(cursorIndex, cursorIndex + limit);
+      const nextCursor = cursorIndex + limit < totalCount ? String(cursorIndex + limit) : null;
+
+      // Map to unified format
+      const mappedPuzzles = await Promise.all(
+        paginatedPuzzles.map(async (p) => ({
+          _id: p._id,
+          puzzleNumber: p.puzzleNumber,
+          date: p.date,
+          yearSpan: getYearSpan(p.groups),
+          eventCount: p.board.length,
+          groupCount: p.groups.length,
+          playCount: await getGroupsPlayCountForPuzzle(ctx, p._id),
+          avgScore: null,
+          status: getPuzzleStatus(p.date),
+        })),
+      );
 
       return { puzzles: mappedPuzzles, nextCursor, totalCount };
     }
@@ -142,7 +170,7 @@ export const getPuzzleDetail = query({
         historicalContextGeneratedAt: puzzle.historicalContextGeneratedAt,
         status: getPuzzleStatus(puzzle.date),
       };
-    } else {
+    } else if (args.mode === "order") {
       const puzzle = await ctx.db
         .query("orderPuzzles")
         .withIndex("by_number", (q) => q.eq("puzzleNumber", args.puzzleNumber))
@@ -156,7 +184,7 @@ export const getPuzzleDetail = query({
       const plays = await ctx.db.query("orderPlays").withIndex("by_user_puzzle").collect();
 
       const puzzlePlays = plays.filter((p) => p.puzzleId.toString() === puzzle._id.toString());
-      const completedPlays = puzzlePlays.filter((p) => p.completedAt !== undefined);
+      const completedPlays = puzzlePlays.filter((p: any) => p.completedAt !== undefined);
       const completionRate =
         puzzlePlays.length > 0 ? (completedPlays.length / puzzlePlays.length) * 100 : 0;
 
@@ -177,12 +205,49 @@ export const getPuzzleDetail = query({
         seed: puzzle.seed,
         status: getPuzzleStatus(puzzle.date),
       };
+    } else {
+      const puzzle = await ctx.db
+        .query("groupsPuzzles")
+        .withIndex("by_number", (q) => q.eq("puzzleNumber", args.puzzleNumber))
+        .first();
+
+      if (!puzzle) {
+        return null;
+      }
+
+      // Get play statistics from groupsPlays
+      const puzzlePlays = (await (ctx.db.query("groupsPlays") as any)
+        .withIndex("by_puzzle", (q: any) => q.eq("puzzleId", puzzle._id))
+        .collect()) as any[];
+      const completedPlays = puzzlePlays.filter((p) => p.completedAt !== undefined);
+      const completionRate =
+        puzzlePlays.length > 0 ? (completedPlays.length / puzzlePlays.length) * 100 : 0;
+
+      const years = puzzle.groups.map((group) => group.year);
+      const minYear = Math.min(...years);
+      const maxYear = Math.max(...years);
+
+      return {
+        _id: puzzle._id,
+        mode: "groups" as const,
+        puzzleNumber: puzzle.puzzleNumber,
+        date: puzzle.date,
+        events: puzzle.board,
+        groups: puzzle.groups,
+        yearSpan: { min: minYear, max: maxYear },
+        eventCount: puzzle.board.length,
+        groupCount: puzzle.groups.length,
+        playCount: puzzlePlays.length,
+        completionRate: Math.round(completionRate),
+        seed: puzzle.seed,
+        status: getPuzzleStatus(puzzle.date),
+      };
     }
   },
 });
 
 /**
- * Get today's puzzles for both modes.
+ * Get today's puzzles for all game modes.
  * Used by OverviewTab "Today's Puzzles" card.
  */
 export const getTodaysPuzzles = query({
@@ -202,6 +267,12 @@ export const getTodaysPuzzles = query({
       .withIndex("by_date", (q) => q.eq("date", today))
       .first();
 
+    // Get today's Groups puzzle
+    const groupsPuzzle = await ctx.db
+      .query("groupsPuzzles")
+      .withIndex("by_date", (q) => q.eq("date", today))
+      .first();
+
     // Get play count for Order puzzle
     let orderPlayCount = 0;
     if (orderPuzzle) {
@@ -209,6 +280,12 @@ export const getTodaysPuzzles = query({
       orderPlayCount = plays.filter(
         (p) => p.puzzleId.toString() === orderPuzzle._id.toString(),
       ).length;
+    }
+
+    // Get play count for Groups puzzle
+    let groupsPlayCount = 0;
+    if (groupsPuzzle) {
+      groupsPlayCount = await getGroupsPlayCountForPuzzle(ctx, groupsPuzzle._id);
     }
 
     return {
@@ -230,6 +307,16 @@ export const getTodaysPuzzles = query({
             eventSpan: getEventSpan(orderPuzzle.events),
             eventCount: orderPuzzle.events.length,
             playCount: orderPlayCount,
+          }
+        : null,
+      groups: groupsPuzzle
+        ? {
+            _id: groupsPuzzle._id,
+            puzzleNumber: groupsPuzzle.puzzleNumber,
+            yearSpan: getYearSpan(groupsPuzzle.groups),
+            eventCount: groupsPuzzle.board.length,
+            groupCount: groupsPuzzle.groups.length,
+            playCount: groupsPlayCount,
           }
         : null,
     };
@@ -254,6 +341,24 @@ function formatYear(year: number): string {
 function getEventSpan(events: Array<{ year: number }>): string {
   if (!events || events.length === 0) return "No events";
   const years = events.map((e) => e.year);
+  const minYear = Math.min(...years);
+  const maxYear = Math.max(...years);
+  return `${formatYear(minYear)} – ${formatYear(maxYear)}`;
+}
+
+// Helper: Get year span string from groups
+async function getGroupsPlayCountForPuzzle(ctx: any, puzzleId: any) {
+  const plays = await ctx.db
+    .query("groupsPlays" as any)
+    .withIndex("by_puzzle", (q: any) => q.eq("puzzleId", puzzleId))
+    .collect();
+
+  return plays.length;
+}
+
+function getYearSpan(groups: Array<{ year: number }>): string {
+  if (!groups || groups.length === 0) return "No years";
+  const years = groups.map((group) => group.year);
   const minYear = Math.min(...years);
   const maxYear = Math.max(...years);
   return `${formatYear(minYear)} – ${formatYear(maxYear)}`;

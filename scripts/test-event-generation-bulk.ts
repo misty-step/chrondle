@@ -2,11 +2,13 @@
 
 import { Command } from "commander";
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../convex/_generated/api.js";
+import { anyApi } from "convex/server";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs/promises";
+
+const apiRef = anyApi;
 
 async function loadEnv(): Promise<void> {
   const __filename = fileURLToPath(import.meta.url);
@@ -42,7 +44,7 @@ program.action(async (options) => {
     years = options.years.split(",").map((year: string) => Number(year.trim()));
   } else {
     const count = Number(options.count) || 3;
-    const selector = await client.action(api.lib.workSelector.testSelectWorkYears, {
+    const selector = await client.action(apiRef.lib.workSelector.testSelectWorkYears, {
       count,
     });
     years = selector.years;
@@ -53,7 +55,7 @@ program.action(async (options) => {
   const summaries = await Promise.all(
     years.map(async (year) => {
       const result = await client.action(
-        api.actions.eventGeneration.orchestrator.testGenerateYearEvents,
+        apiRef.actions.eventGeneration.orchestrator.testGenerateYearEvents,
         {
           year,
         },

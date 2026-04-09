@@ -1,9 +1,9 @@
 "use node";
 
 import { v } from "convex/values";
+import { anyApi } from "convex/server";
 import { z } from "zod";
 import { action, internalAction, type ActionCtx } from "../_generated/server";
-import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { createGemini3Client, type Gemini3Client } from "../lib/gemini3Client";
 import { logStageError, logStageSuccess } from "../lib/logging";
@@ -66,6 +66,7 @@ const BatchMetadataSchema = z.array(
 );
 
 let cachedBackfillClient: Gemini3Client | null = null;
+const internalApi = anyApi as any;
 
 function getBackfillClient(): Gemini3Client {
   if (!cachedBackfillClient) {
@@ -152,7 +153,7 @@ function findMatchingMetadata(
  */
 async function runBackfillBatch(ctx: ActionCtx, batchSize: number): Promise<BackfillResult> {
   // Get events missing metadata
-  const eventsToBackfill = (await ctx.runQuery(internal.events.getEventsMissingMetadata, {
+  const eventsToBackfill = (await ctx.runQuery(internalApi.events.getEventsMissingMetadata, {
     limit: batchSize,
   })) as EventToBackfill[];
 
@@ -229,7 +230,7 @@ Return a JSON array with one object per event, in the same order:
       usedIndices.add(match.index);
 
       try {
-        await ctx.runMutation(internal.events.updateEventMetadata, {
+        await ctx.runMutation(internalApi.events.updateEventMetadata, {
           eventId: eventToUpdate._id,
           metadata: match.result.metadata,
         });
@@ -289,7 +290,7 @@ export const triggerMetadataBackfill = action({
   },
   handler: async (ctx, args): Promise<BackfillResult> => {
     // Check how many events need backfill
-    const eventsMissing = (await ctx.runQuery(internal.events.getEventsMissingMetadata, {
+    const eventsMissing = (await ctx.runQuery(internalApi.events.getEventsMissingMetadata, {
       limit: 1,
     })) as EventToBackfill[];
 

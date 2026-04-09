@@ -1,7 +1,7 @@
 import { useQuery } from "convex/react";
-import { api } from "convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
 import { useUserCreation } from "@/components/UserCreationProvider";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 
 export function useUserData() {
   const { isLoaded: clerkLoaded, isSignedIn } = useUser();
@@ -9,7 +9,7 @@ export function useUserData() {
 
   // Only fetch user stats when user is ready (signed in + user record exists + not creating)
   const userStats = useQuery(
-    api.users.getUserStats,
+    anyPublicApi.users.getUserStats,
     isUserReady && currentUser ? {} : undefined,
   );
 

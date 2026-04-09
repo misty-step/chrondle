@@ -20,8 +20,8 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { Id } from "convex/_generated/dataModel";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { getLocalDateString } from "@/lib/time/dailyDate";
 import { useOnTabFocus } from "@/hooks/useVisibilityChange";
 import { logger } from "@/lib/logger";
@@ -90,11 +90,11 @@ export function useTodaysOrderPuzzle(
   const shouldQueryByDate = !preloadMatchesLocalDate;
 
   const puzzleByDate = useQuery(
-    api.orderPuzzles.getOrderPuzzleByDate,
+    anyPublicApi.orderPuzzles.getOrderPuzzleByDate,
     shouldQueryByDate ? { date: localDate } : "skip",
   ) as ConvexOrderPuzzle | null | undefined;
 
-  const ensurePuzzleForDate = useMutation(api.orderPuzzles.ensureOrderPuzzleForDate);
+  const ensurePuzzleForDate = useMutation(anyPublicApi.orderPuzzles.ensureOrderPuzzleForDate);
 
   // Track which date we've already triggered generation for (prevents duplicate calls)
   const generationTriggeredForRef = useRef<string | null>(null);

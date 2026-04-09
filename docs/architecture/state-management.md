@@ -242,10 +242,7 @@ export function deriveGameState(sources: DataSources): GameState {
 ### Guess Merging Strategy
 
 ```typescript
-export function mergeGuesses(
-  serverGuesses: number[],
-  sessionGuesses: number[],
-): number[] {
+export function mergeGuesses(serverGuesses: number[], sessionGuesses: number[]): number[] {
   // Server guesses are source of truth
   const merged = [...serverGuesses];
 
@@ -346,15 +343,11 @@ it("shows completed puzzle even when progress loads late", async () => {
 
   // Puzzle loads
   mockPuzzleData.mockResolvedValue(puzzleData);
-  await waitFor(() =>
-    expect(result.current.gameState.status).toBe("loading-auth"),
-  );
+  await waitFor(() => expect(result.current.gameState.status).toBe("loading-auth"));
 
   // Auth loads
   mockAuthState.mockResolvedValue(authData);
-  await waitFor(() =>
-    expect(result.current.gameState.status).toBe("loading-progress"),
-  );
+  await waitFor(() => expect(result.current.gameState.status).toBe("loading-progress"));
 
   // Progress loads with completion
   mockUserProgress.mockResolvedValue({
@@ -555,7 +548,7 @@ The pattern is not just a fix for the race condition bug - it's a fundamental im
 
 ### Resources
 
-- [Source Code: useChrondle Hook](../../src/hooks/useChrondle.ts)
+- [Source Code: useRangeGame Hook](../../src/hooks/useRangeGame.ts)
 - [Source Code: deriveGameState Function](../../src/lib/deriveGameState.ts)
-- [Tests: Race Condition Tests](../../src/hooks/__tests__/useChrondle.race-condition.test.tsx)
+- [Tests: Race Condition Tests](../../src/hooks/__tests__/useRangeGame.race-condition.test.tsx)
 - [Tests: Unit Tests](../../src/lib/__tests__/deriveGameState.unit.test.ts)

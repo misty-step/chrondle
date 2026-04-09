@@ -1,9 +1,8 @@
-import { notFound, redirect } from "next/navigation";
-import { currentUser } from "@clerk/nextjs/server";
+import { notFound } from "next/navigation";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { ArchiveOrderPuzzleClient } from "@/components/order/ArchiveOrderPuzzleClient";
 import { logger } from "@/lib/logger";
-import { api, fetchOrderPuzzleByNumber, getConvexClient } from "@/lib/convexServer";
+import { fetchOrderPuzzleByNumber, getConvexClient } from "@/lib/convexServer";
 
 interface ArchiveOrderPuzzlePageProps {
   params: Promise<{ puzzleNumber: string }>;
@@ -16,14 +15,6 @@ export default async function ArchiveOrderPuzzlePage(props: ArchiveOrderPuzzlePa
     notFound();
   }
 
-  // Server-side entitlement check
-  const user = await currentUser();
-
-  // If not logged in, redirect to sign-in then back to this puzzle
-  if (!user) {
-    redirect(`/sign-in?redirect_url=/archive/order/${parsedNumber}`);
-  }
-
   const client = getConvexClient();
 
   // If Convex client unavailable (missing env var), let client-side handle it
@@ -32,20 +23,6 @@ export default async function ArchiveOrderPuzzlePage(props: ArchiveOrderPuzzlePa
       "[ArchiveOrderPuzzlePage] Convex client unavailable - missing NEXT_PUBLIC_CONVEX_URL",
     );
     notFound();
-  }
-
-  // Check archive access via Convex
-  let hasAccess = false;
-  try {
-    hasAccess = await client.query(api.users.hasArchiveAccess, {
-      clerkId: user.id,
-    });
-  } catch (error) {
-    logger.warn("[ArchiveOrderPuzzle] hasArchiveAccess check failed:", error);
-  }
-
-  if (!hasAccess) {
-    redirect("/pricing");
   }
 
   const convexPuzzle = await fetchOrderPuzzleByNumber(client, parsedNumber);

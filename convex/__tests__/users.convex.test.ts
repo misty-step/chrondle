@@ -1,15 +1,17 @@
 import { convexTest } from "convex-test";
+import { anyApi } from "convex/server";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { api, internal } from "../_generated/api";
 import schema from "../schema";
 import { modules } from "../test.setup";
 import type { Id } from "../_generated/dataModel";
 
 // Type assertion for path-based API access
 
-const usersQueries = (api as any)["users/queries"];
+const apiRef = anyApi as any;
+const usersQueries = apiRef["users/queries"];
 
-const usersMutations = (api as any)["users/mutations"];
+const usersMutations = apiRef["users/mutations"];
+const internal = apiRef;
 
 /**
  * Users Query and Mutation Tests using convex-test

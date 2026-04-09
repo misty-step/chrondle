@@ -2,7 +2,7 @@
 
 import { v } from "convex/values";
 import { action, internalAction, type ActionCtx } from "../../_generated/server";
-import { internal } from "../../_generated/api";
+import { anyApi } from "convex/server";
 import type { TokenUsage } from "../../lib/gemini3Client";
 import { generateCandidatesForYear } from "./generator";
 import { critiqueCandidatesForYear } from "./critic";
@@ -173,6 +173,7 @@ const defaultDeps: PipelineDeps = {
   critic: critiqueCandidatesForYear,
   reviser: reviseCandidatesForYear,
 };
+const internalApi = anyApi as any;
 
 export async function runGenerationPipeline(
   year: number,
@@ -492,6 +493,7 @@ function addUsage(
 async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<YearGenerationResult> {
   const result = await runGenerationPipeline(year);
   const era = deriveEra(year);
+  const logGenerationAttempt = internalApi.generationLogs.logGenerationAttempt;
 
   logStageSuccess("Orchestrator", `Pipeline completed for ${year}`, {
     status: result.status,
@@ -499,7 +501,7 @@ async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<Year
     qualityOverall: result.qualityScores?.overall,
   });
 
-  await ctx.runMutation(internal.generationLogs.logGenerationAttempt, {
+  await ctx.runMutation(logGenerationAttempt, {
     year,
     era,
     status: result.status,
@@ -525,7 +527,7 @@ async function executeYearGeneration(ctx: ActionCtx, year: number): Promise<Year
       event: event.event_text,
       metadata: event.metadata,
     }));
-    await ctx.runMutation(internal.events.importYearEventsWithMetadata, {
+    await ctx.runMutation(internalApi.events.importYearEventsWithMetadata, {
       year,
       events: payload,
     });

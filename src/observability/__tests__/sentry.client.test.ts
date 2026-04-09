@@ -1,26 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Scope } from "@sentry/nextjs";
 
 const { mockCaptureCanaryException } = vi.hoisted(() => ({
   mockCaptureCanaryException: vi.fn(),
-}));
-
-// Mock Sentry before importing our module
-vi.mock("@sentry/nextjs", () => ({
-  init: vi.fn(),
-  captureException: vi.fn(),
-  withScope: vi.fn((callback: (scope: Scope) => void) => {
-    const mockScope = {
-      setTag: vi.fn(),
-      setExtra: vi.fn(),
-      setLevel: vi.fn(),
-    } as unknown as Scope;
-    callback(mockScope);
-  }),
-  setUser: vi.fn(),
-  setTag: vi.fn(),
-  addBreadcrumb: vi.fn(),
-  replayIntegration: vi.fn(() => ({})),
 }));
 
 // Mock logger
@@ -35,7 +16,6 @@ vi.mock("../canary", () => ({
   captureCanaryException: mockCaptureCanaryException,
 }));
 
-import * as Sentry from "@sentry/nextjs";
 import {
   initSentryClient,
   captureClientException,
@@ -77,12 +57,11 @@ describe("Sentry Client", () => {
 
       initSentryClient();
 
-      expect(Sentry.init).toHaveBeenCalledWith(
+      expect(logger.debug).toHaveBeenCalledWith(
+        "[Sentry] Client initialized via Canary bridge",
         expect.objectContaining({
-          dsn: "https://test@sentry.io/456",
           environment: "test",
           release: "abc123",
-          sendDefaultPii: false,
         }),
       );
     });
@@ -101,17 +80,11 @@ describe("Sentry Client", () => {
 
       captureClientException(error, context);
 
-      expect(Sentry.withScope).toHaveBeenCalled();
       expect(mockCaptureCanaryException).toHaveBeenCalledWith(error, context);
     });
 
-    it("does not throw on capture errors", () => {
-      initializeClientForTests();
-
+    it("forwards to Canary even before init", () => {
       const error = new Error("Test error");
-      vi.mocked(Sentry.withScope).mockImplementation(() => {
-        throw new Error("Capture failed");
-      });
 
       expect(() => captureClientException(error)).not.toThrow();
       expect(mockCaptureCanaryException).toHaveBeenCalledWith(error, undefined);
@@ -119,57 +92,55 @@ describe("Sentry Client", () => {
   });
 
   describe("setUserContext", () => {
-    it("sets user with hashed ID", () => {
+    it("logs user context updates", () => {
       initializeClientForTests();
 
       setUserContext("user_123", "signed_in");
 
-      expect(Sentry.setUser).toHaveBeenCalledWith(
+      expect(logger.debug).toHaveBeenCalledWith(
+        "[Sentry] Client user context updated",
         expect.objectContaining({
-          id: expect.stringMatching(/^[0-9a-f]{8}$/),
-          username: expect.stringMatching(/^user_[0-9a-f]{6}$/),
+          hasUserId: true,
+          authState: "signed_in",
         }),
       );
-      expect(Sentry.setTag).toHaveBeenCalledWith("auth_state", "signed_in");
     });
 
-    it("clears user when no ID provided", () => {
+    it("does nothing before init", () => {
+      expect(() => setUserContext("user_123")).not.toThrow();
+    });
+
+    it("handles missing user IDs", () => {
       initializeClientForTests();
 
       setUserContext();
 
-      expect(Sentry.setUser).toHaveBeenCalledWith(null);
-    });
-
-    it("handles errors gracefully", () => {
-      vi.mocked(Sentry.setUser).mockImplementation(() => {
-        throw new Error("Set user failed");
-      });
-
-      expect(() => setUserContext("user_123")).not.toThrow();
+      expect(logger.debug).toHaveBeenCalledWith(
+        "[Sentry] Client user context updated",
+        expect.objectContaining({
+          hasUserId: false,
+          authState: undefined,
+        }),
+      );
     });
   });
 
   describe("addBreadcrumb", () => {
-    it("adds breadcrumb with message and data", () => {
+    it("logs breadcrumb details after init", () => {
       initializeClientForTests();
 
       addBreadcrumb("Test action", { detail: "info" });
 
-      expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
+      expect(logger.debug).toHaveBeenCalledWith(
+        "[Sentry] Client breadcrumb",
         expect.objectContaining({
           message: "Test action",
           data: { detail: "info" },
-          timestamp: expect.any(Number),
         }),
       );
     });
 
-    it("handles errors gracefully", () => {
-      vi.mocked(Sentry.addBreadcrumb).mockImplementation(() => {
-        throw new Error("Add breadcrumb failed");
-      });
-
+    it("does nothing before init", () => {
       expect(() => addBreadcrumb("Test")).not.toThrow();
     });
   });

@@ -1,7 +1,9 @@
+import { anyApi } from "convex/server";
 import { v } from "convex/values";
 import { action } from "../_generated/server";
-import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
+
+const internalApi = anyApi as any;
 
 /**
  * Clerk Webhook Gateway - Single entry point for user sync from Clerk
@@ -40,7 +42,7 @@ export const processWebhookEvent = action({
     }
 
     // Create or update user via internal mutation
-    const userId: Id<"users"> = await ctx.runMutation(internal.users.mutations.createUser, {
+    const userId: Id<"users"> = await ctx.runMutation(internalApi.users.mutations.createUser, {
       clerkId: payload.clerkId,
       email: payload.email,
     });

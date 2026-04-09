@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { anonymousStreakStorage } from "@/lib/secureStorage";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import {
   calculateStreakUpdate,
   applyStreakUpdate,
@@ -52,7 +52,7 @@ export function useStreak(): UseStreakReturn {
   const { isSignedIn, user: clerkUser } = useUser();
 
   // Convex user data (authenticated users only)
-  const convexUser = useQuery(api.users.getCurrentUser);
+  const convexUser = useQuery(anyPublicApi.users.getCurrentUser);
 
   // Anonymous streak from localStorage
   const [anonymousStreak, setAnonymousStreak] = useState(() => {
@@ -71,7 +71,7 @@ export function useStreak(): UseStreakReturn {
   const hasMigratedRef = useRef(false);
 
   // Convex mutation for merging anonymous streaks
-  const mergeStreakMutation = useMutation(api.users.mergeAnonymousStreak);
+  const mergeStreakMutation = useMutation(anyPublicApi.users.mergeAnonymousStreak);
 
   // Derive streak data based on auth state
   const streakData = useMemo((): StreakData => {

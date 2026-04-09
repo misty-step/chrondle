@@ -1,13 +1,13 @@
 import { convexTest } from "convex-test";
+import { anyApi } from "convex/server";
 import { describe, it, expect } from "vitest";
-import { api } from "../_generated/api";
 import schema from "../schema";
 import { modules } from "../test.setup";
 import type { Id } from "../_generated/dataModel";
 
 // Type assertion for path-based API access (works at runtime, not type-checked)
 
-const playsQueries = (api as any)["plays/queries"];
+const playsQueries = (anyApi as any)["plays/queries"];
 
 /**
  * Plays Query Tests using convex-test

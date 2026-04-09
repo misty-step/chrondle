@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { Card } from "@/components/ui/Card";
 
 /**
@@ -17,7 +17,7 @@ import { Card } from "@/components/ui/Card";
  * Auto-refreshes via Convex subscription.
  */
 
-type PoolMode = "all" | "classic" | "order";
+type PoolMode = "all" | "classic" | "order" | "groups";
 
 interface PoolHealthCardProps {
   /** Game mode filter for pool health metrics */
@@ -25,11 +25,13 @@ interface PoolHealthCardProps {
 }
 
 export function PoolHealthCard({ mode = "all" }: PoolHealthCardProps) {
-  const poolHealth = useQuery(api.observability.getPoolHealthQuery, { mode });
+  const poolHealth = useQuery(anyPublicApi.observability.getPoolHealthQuery, { mode });
 
   // Mode label for display
   const modeLabel =
-    mode === "all" ? "Pool Health" : `Pool Health (${mode === "classic" ? "Classic" : "Order"})`;
+    mode === "all"
+      ? "Pool Health"
+      : `Pool Health (${mode === "classic" ? "Classic" : mode === "order" ? "Order" : "Groups"})`;
 
   if (!poolHealth) {
     return (

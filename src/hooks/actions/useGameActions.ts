@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { api } from "../../../convex/_generated/api";
 import { DataSources } from "@/lib/deriveGameState";
 import { useToast } from "@/hooks/use-toast";
+import { anyPublicApi } from "@/lib/convexAnyApi";
 import { assertConvexId, isConvexIdValidationError } from "@/lib/validation";
 import {
   validateGuessSubmission,
@@ -53,7 +53,7 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
   const toastContext = useToast();
 
   // Convex mutation for submitting guesses with retry logic
-  const submitGuessMutation = useMutationWithRetry(api.puzzles.submitGuess, {
+  const submitGuessMutation = useMutationWithRetry(anyPublicApi.puzzles.submitGuess, {
     maxRetries: 3,
     baseDelayMs: 1000,
     onRetry: (attempt, error) => {
@@ -69,7 +69,7 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
     },
   });
 
-  const submitRangeMutation = useMutationWithRetry(api.puzzles.submitRange, {
+  const submitRangeMutation = useMutationWithRetry(anyPublicApi.puzzles.submitRange, {
     maxRetries: 3,
     baseDelayMs: 1000,
     onRetry: (attempt, error) => {

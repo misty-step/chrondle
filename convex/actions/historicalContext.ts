@@ -6,7 +6,7 @@
 
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
-import { internal } from "../_generated/api";
+import { anyApi } from "convex/server";
 import type { ActionCtx } from "../_generated/server";
 import {
   ErrorWithStatus,
@@ -339,7 +339,7 @@ Use BC/AD dating exclusively. Aim for 175-225 words.`;
       );
 
       // Call internal mutation to update puzzle with enhanced context
-      const updateResult = await ctx.runMutation(internal.puzzles.updateHistoricalContext, {
+      const updateResult = await ctx.runMutation(internalApi.puzzles.updateHistoricalContext, {
         puzzleId,
         context: enhancedContext,
       });
@@ -372,3 +372,4 @@ Use BC/AD dating exclusively. Aim for 175-225 words.`;
     }
   },
 });
+const internalApi = anyApi as any;
