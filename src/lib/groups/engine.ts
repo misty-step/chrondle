@@ -26,6 +26,7 @@ export interface GroupsProgress {
   revealedGroups: GroupsRevealedGroup[];
 }
 
+export const GROUPS_SELECTION_SIZE = 4;
 export const MAX_GROUPS_MISTAKES = 4;
 
 type SolvedSelection = {
@@ -67,15 +68,17 @@ export function evaluateGroupSelection(
   eventIds: string[],
 ): GroupsSelectionOutcome {
   const normalizedSelection = normalizeSelection(eventIds);
-  if (normalizedSelection.length !== 4) {
-    throw new Error("Groups selection must contain exactly 4 unique event ids.");
+  if (normalizedSelection.length !== GROUPS_SELECTION_SIZE) {
+    throw new Error(
+      `Groups selection must contain exactly ${GROUPS_SELECTION_SIZE} unique event ids.`,
+    );
   }
 
   for (const group of groups) {
     const normalizedGroup = normalizeSelection(group.eventIds);
     const overlap = countOverlap(normalizedSelection, normalizedGroup);
 
-    if (overlap === 4) {
+    if (overlap === GROUPS_SELECTION_SIZE) {
       return {
         result: "solved",
         matchedGroupId: group.id,
@@ -153,8 +156,10 @@ export function applyGroupsSelection({
   timestamp = Date.now(),
 }: ApplyGroupsSelectionArgs): ApplyGroupsSelectionResult {
   const normalizedEventIds = normalizeSelection(eventIds);
-  if (normalizedEventIds.length !== 4) {
-    throw new Error("Groups selection must contain exactly 4 unique event ids.");
+  if (normalizedEventIds.length !== GROUPS_SELECTION_SIZE) {
+    throw new Error(
+      `Groups selection must contain exactly ${GROUPS_SELECTION_SIZE} unique event ids.`,
+    );
   }
 
   const boardEventIdSet = new Set(boardEventIds);

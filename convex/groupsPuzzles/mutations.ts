@@ -6,6 +6,7 @@ import { buildGroupsBoard, type GroupsEventCandidate } from "./generation";
 import {
   countMistakes,
   evaluateGroupSelection as evaluateGroupSelectionHelper,
+  GROUPS_SELECTION_SIZE,
   isGroupsPuzzleComplete,
   MAX_GROUPS_MISTAKES,
 } from "./logic";
@@ -215,8 +216,10 @@ export const submitGroupSelection = mutation({
     }
 
     const normalizedEventIds = normalizeEventIds(args.eventIds);
-    if (normalizedEventIds.length !== 4) {
-      throw new Error("Groups selection must contain exactly 4 unique event ids.");
+    if (normalizedEventIds.length !== GROUPS_SELECTION_SIZE) {
+      throw new Error(
+        `Groups selection must contain exactly ${GROUPS_SELECTION_SIZE} unique event ids.`,
+      );
     }
 
     const boardEventIds = new Set(puzzle.board.map((card) => card.id));

@@ -25,25 +25,30 @@ export function GroupsReveal({ gameState, onShare }: GroupsRevealProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-3">
           {gameState.revealedGroups.map((group) => (
             <div
               key={group.id}
-              className="border-groups-accent/20 bg-groups-accent/8 rounded-lg border p-4"
+              className="border-groups-accent/20 bg-groups-accent/8 rounded-2xl border p-4"
             >
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-lg font-semibold">{formatYear(group.year)}</h3>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.18em] uppercase">
+                    Revealed Year
+                  </p>
+                  <h3 className="text-lg font-semibold">{formatYear(group.year)}</h3>
+                </div>
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-semibold tracking-[0.12em] uppercase ${tierTone(group.tier)}`}
                 >
                   {group.tier}
                 </span>
               </div>
-              <div className="space-y-2">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {group.eventIds.map((eventId) => (
                   <div
                     key={eventId}
-                    className="border-groups-accent/15 bg-background rounded-md border px-3 py-2 text-sm"
+                    className="border-groups-accent/15 bg-background rounded-xl border px-3 py-2 text-sm leading-snug"
                   >
                     {boardText.get(eventId) ?? eventId}
                   </div>

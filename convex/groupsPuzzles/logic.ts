@@ -3,6 +3,7 @@ export {
   buildGroupsProgress,
   countMistakes,
   evaluateGroupSelection,
+  GROUPS_SELECTION_SIZE,
   isGroupsPuzzleComplete,
   MAX_GROUPS_MISTAKES,
   serializeRevealedGroups,

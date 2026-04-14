@@ -7,7 +7,11 @@ import { useGroupsPuzzleData } from "@/hooks/data/useGroupsPuzzleData";
 import { useGroupsSession } from "@/hooks/useGroupsSession";
 import { useMutationWithRetry } from "@/hooks/useMutationWithRetry";
 import type { Toast } from "@/hooks/use-toast";
-import { applyGroupsSelection, MAX_GROUPS_MISTAKES } from "@/lib/groups/engine";
+import {
+  applyGroupsSelection,
+  GROUPS_SELECTION_SIZE,
+  MAX_GROUPS_MISTAKES,
+} from "@/lib/groups/engine";
 import type {
   CompletedState,
   GroupsGameState,
@@ -231,7 +235,7 @@ export function useGroupsGame(
   }, [activeCards]);
 
   const submitSelection = useCallback(async () => {
-    if (selectedIds.length !== 4 || isSubmitting) {
+    if (selectedIds.length !== GROUPS_SELECTION_SIZE || isSubmitting) {
       return;
     }
 
