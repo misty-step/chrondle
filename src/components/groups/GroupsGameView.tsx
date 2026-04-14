@@ -105,7 +105,7 @@ export function GroupsGameView({
         puzzleDate={gameState.puzzle.date}
         isArchive={isArchive}
       >
-        <LayoutContainer className="flex max-w-5xl flex-col gap-6">
+        <LayoutContainer className="flex max-w-6xl flex-col gap-6">
           {backHref && backLabel ? <BackLink href={backHref} label={backLabel} /> : null}
           <GroupsReveal gameState={gameState} onShare={handleShare} />
           {shareFeedback && (
@@ -125,7 +125,7 @@ export function GroupsGameView({
       puzzleDate={gameState.puzzle.date}
       isArchive={isArchive}
     >
-      <LayoutContainer className="flex max-w-6xl flex-col gap-6">
+      <LayoutContainer className="flex max-w-7xl flex-col gap-6">
         {backHref && backLabel ? <BackLink href={backHref} label={backLabel} /> : null}
         <GroupsBoard
           gameState={gameState}
