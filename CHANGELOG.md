@@ -2,6 +2,23 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.2.0](https://github.com/misty-step/chrondle/compare/v1.1.0...v1.2.0) (2026-04-14)
+
+### Bug Fixes
+
+- harden Sentry and PostHog privacy defaults ([#189](https://github.com/misty-step/chrondle/issues/189)) ([46af47d](https://github.com/misty-step/chrondle/commit/46af47d584358886c2c8ee006db9687f8135b72b))
+- remove stale [@ts-expect-error](https://github.com/ts-expect-error) in stripe.ts ([c490a51](https://github.com/misty-step/chrondle/commit/c490a519f8ab8941e7caffe3aacdf74155b3840a))
+- **security:** strip auth cookies from PostHog proxy ([#199](https://github.com/misty-step/chrondle/issues/199)) ([dfeeed0](https://github.com/misty-step/chrondle/commit/dfeeed07937622a7684bb6c8b778175a7e519171)), closes [#193](https://github.com/misty-step/chrondle/issues/193) [#193](https://github.com/misty-step/chrondle/issues/193)
+
+### Features
+
+- add recovery actions for game load errors ([#210](https://github.com/misty-step/chrondle/issues/210)) ([e613979](https://github.com/misty-step/chrondle/commit/e61397951ba89cb4bc592d8281975bc9a2b03061))
+- establish Clio persona and repo-local Pi foundation ([#204](https://github.com/misty-step/chrondle/issues/204)) ([4b4a01e](https://github.com/misty-step/chrondle/commit/4b4a01e440e0b478b7c367f4032b83a1bfaa4a0c))
+- migrate to Phosphor Icons + update logo/favicon ([#205](https://github.com/misty-step/chrondle/issues/205)) ([#206](https://github.com/misty-step/chrondle/issues/206)) ([4b37b9f](https://github.com/misty-step/chrondle/commit/4b37b9f827fca046b950fffe14377e94e2e2c09a))
+- redesign OG share image with dynamic Next.js generation ([#226](https://github.com/misty-step/chrondle/issues/226)) ([c49a7ba](https://github.com/misty-step/chrondle/commit/c49a7ba79bc0b60faa86a1f2e5a243f814e44b7e))
+- refine groups board layout ([76a3d01](https://github.com/misty-step/chrondle/commit/76a3d01b265cfec92ff4a5ffbfc2ca25e46b4ef6))
+- wire analytics endpoint and payload shape ([d9b0e5d](https://github.com/misty-step/chrondle/commit/d9b0e5d58e144e931aecaf8ea39a4f9e5d5b0806))
+
 # [1.1.0](https://github.com/misty-step/chrondle/compare/v1.0.4...v1.1.0) (2026-02-22)
 
 ### Bug Fixes
