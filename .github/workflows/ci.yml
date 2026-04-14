@@ -29,7 +29,7 @@ jobs:
 
       - name: Run Dagger quality gate
         if: matrix.check != 'test'
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: "0.20.3"
           verb: call
@@ -38,7 +38,7 @@ jobs:
 
       - name: Run Dagger test coverage gate
         if: matrix.check == 'test'
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: "0.20.3"
           verb: call
@@ -120,7 +120,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run Dagger validation gate
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: "0.20.3"
           verb: call
@@ -136,7 +136,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run Dagger docs link check
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: "0.20.3"
           verb: call
@@ -173,7 +173,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run Dagger build gate and export build artifacts
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: "0.20.3"
           verb: call
@@ -203,7 +203,7 @@ jobs:
           path: .next/
 
       - name: Run Dagger e2e gate and export report artifacts
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
         with:
@@ -266,7 +266,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run Dagger CI environment validation
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: "0.20.3"
           verb: call
@@ -277,7 +277,7 @@ jobs:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
       - name: Run Dagger production environment validation
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: "0.20.3"
           verb: call
@@ -290,7 +290,7 @@ jobs:
           STRIPE_SYNC_SECRET: ${{ secrets.STRIPE_SYNC_SECRET }}
 
       - name: Run Dagger Stripe live validation
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: "0.20.3"
           verb: call
