@@ -13,6 +13,20 @@ interface EnvValidationResult {
   warnings: string[];
 }
 
+const REQUIRED_PUBLIC_BOOTSTRAP_ENV_VARS = [
+  "NEXT_PUBLIC_CONVEX_URL",
+  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+] as const;
+
+function hasNonEmptyEnvVar(key: string): boolean {
+  const value = process.env[key];
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+export function getMissingPublicBootstrapEnvVars(): string[] {
+  return REQUIRED_PUBLIC_BOOTSTRAP_ENV_VARS.filter((key) => !hasNonEmptyEnvVar(key));
+}
+
 /**
  * Validates all required environment variables (client and server)
  * @returns Validation result with missing variables
@@ -35,14 +49,9 @@ export function validateEnvironment(): EnvValidationResult {
     warnings: [],
   };
 
-  // Check required client-side variables
-  if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
-    result.missingVars.push("NEXT_PUBLIC_CONVEX_URL");
-    result.isValid = false;
-  }
-
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
-    result.missingVars.push("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY");
+  const missingPublicVars = getMissingPublicBootstrapEnvVars();
+  if (missingPublicVars.length > 0) {
+    result.missingVars.push(...missingPublicVars);
     result.isValid = false;
   }
 

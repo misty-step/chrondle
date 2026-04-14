@@ -8,21 +8,25 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { UserCreationProvider } from "@/components/UserCreationProvider";
 import { MigrationProvider } from "@/components/providers/MigrationProvider";
 import { ToastProvider } from "@/hooks/use-toast";
-import { validateEnvironment, getEnvErrorMessage, isProduction } from "@/lib/env";
+import { getEnvErrorMessage, getMissingPublicBootstrapEnvVars, isProduction } from "@/lib/env";
 import { initSentryClient } from "@/observability/sentry.client";
 
 // Initialize Sentry at module scope (before React components render)
 // This ensures Sentry is ready before any component can call captureClientException
 initSentryClient();
 
-// Validate environment variables using enhanced validation
-const envValidation = validateEnvironment();
-const missingEnvVars = envValidation.missingVars;
+const convexClients = new Map<string, ConvexReactClient>();
 
-// Only initialize Convex client if we have the URL
-const convex = process.env.NEXT_PUBLIC_CONVEX_URL
-  ? new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL)
-  : null;
+function getOrCreateConvexClient(url: string): ConvexReactClient {
+  const existingClient = convexClients.get(url);
+  if (existingClient) {
+    return existingClient;
+  }
+
+  const client = new ConvexReactClient(url);
+  convexClients.set(url, client);
+  return client;
+}
 
 // Component to display when environment variables are missing
 function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
@@ -89,8 +93,11 @@ function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  // Show error UI if environment variables are missing
-  if (missingEnvVars.length > 0) {
+  const missingEnvVars = getMissingPublicBootstrapEnvVars();
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
+  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+
+  if (missingEnvVars.length > 0 || !convexUrl || !clerkKey) {
     return (
       <ErrorBoundary>
         <MissingEnvironmentVariables variables={missingEnvVars} />
@@ -98,15 +105,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // TypeScript knows these are defined now due to the check above
-  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+  const convex = getOrCreateConvexClient(convexUrl);
 
   return (
     <ErrorBoundary>
       <ToastProvider>
         <MigrationProvider>
           <ClerkProvider publishableKey={clerkKey} dynamic>
-            <ConvexProviderWithClerk client={convex!} useAuth={useAuth}>
+            <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
               <UserCreationProvider>
                 <SessionThemeProvider>{children}</SessionThemeProvider>
               </UserCreationProvider>
