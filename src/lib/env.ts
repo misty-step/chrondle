@@ -18,13 +18,39 @@ const REQUIRED_PUBLIC_BOOTSTRAP_ENV_VARS = [
   "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
 ] as const;
 
-function hasNonEmptyEnvVar(key: string): boolean {
-  const value = process.env[key];
-  return typeof value === "string" && value.trim().length > 0;
+type PublicBootstrapEnvKey = (typeof REQUIRED_PUBLIC_BOOTSTRAP_ENV_VARS)[number];
+
+interface PublicBootstrapEnv {
+  convexUrl: string | null;
+  clerkPublishableKey: string | null;
+  missingVars: PublicBootstrapEnvKey[];
 }
 
-export function getMissingPublicBootstrapEnvVars(): string[] {
-  return REQUIRED_PUBLIC_BOOTSTRAP_ENV_VARS.filter((key) => !hasNonEmptyEnvVar(key));
+function normalizeEnvValue(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+export function getPublicBootstrapEnv(): PublicBootstrapEnv {
+  // Use static NEXT_PUBLIC property access so Next can inline these values in
+  // the client bundle. Dynamic process.env indexing is not reliable here.
+  const envValues: Record<PublicBootstrapEnvKey, string | null> = {
+    NEXT_PUBLIC_CONVEX_URL: normalizeEnvValue(process.env.NEXT_PUBLIC_CONVEX_URL),
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: normalizeEnvValue(
+      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    ),
+  };
+  const missingVars = REQUIRED_PUBLIC_BOOTSTRAP_ENV_VARS.filter((key) => !envValues[key]);
+
+  return {
+    convexUrl: envValues.NEXT_PUBLIC_CONVEX_URL,
+    clerkPublishableKey: envValues.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    missingVars,
+  };
+}
+
+export function getMissingPublicBootstrapEnvVars(): PublicBootstrapEnvKey[] {
+  return getPublicBootstrapEnv().missingVars;
 }
 
 /**

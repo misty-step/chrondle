@@ -8,7 +8,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { UserCreationProvider } from "@/components/UserCreationProvider";
 import { MigrationProvider } from "@/components/providers/MigrationProvider";
 import { ToastProvider } from "@/hooks/use-toast";
-import { getEnvErrorMessage, getMissingPublicBootstrapEnvVars, isProduction } from "@/lib/env";
+import { getEnvErrorMessage, getPublicBootstrapEnv, isProduction } from "@/lib/env";
 import { initSentryClient } from "@/observability/sentry.client";
 
 // Initialize Sentry at module scope (before React components render)
@@ -93,9 +93,11 @@ function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const missingEnvVars = getMissingPublicBootstrapEnvVars();
-  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
-  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+  const {
+    missingVars: missingEnvVars,
+    convexUrl,
+    clerkPublishableKey: clerkKey,
+  } = getPublicBootstrapEnv();
 
   if (missingEnvVars.length > 0 || !convexUrl || !clerkKey) {
     return (
