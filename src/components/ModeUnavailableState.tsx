@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-interface GroupsUnavailableStateProps {
+interface ModeUnavailableStateProps {
   title: string;
   description: string;
   primaryHref: string;
@@ -11,7 +11,7 @@ interface GroupsUnavailableStateProps {
   className?: string;
 }
 
-export function GroupsUnavailableState({
+export function ModeUnavailableState({
   title,
   description,
   primaryHref,
@@ -19,7 +19,7 @@ export function GroupsUnavailableState({
   secondaryHref,
   secondaryLabel,
   className,
-}: GroupsUnavailableStateProps) {
+}: ModeUnavailableStateProps) {
   return (
     <section
       className={cn(

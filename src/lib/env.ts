@@ -13,6 +13,46 @@ interface EnvValidationResult {
   warnings: string[];
 }
 
+const REQUIRED_PUBLIC_BOOTSTRAP_ENV_VARS = [
+  "NEXT_PUBLIC_CONVEX_URL",
+  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+] as const;
+
+type PublicBootstrapEnvKey = (typeof REQUIRED_PUBLIC_BOOTSTRAP_ENV_VARS)[number];
+
+interface PublicBootstrapEnv {
+  convexUrl: string | null;
+  clerkPublishableKey: string | null;
+  missingVars: PublicBootstrapEnvKey[];
+}
+
+function normalizeEnvValue(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+export function getPublicBootstrapEnv(): PublicBootstrapEnv {
+  // Use static NEXT_PUBLIC property access so Next can inline these values in
+  // the client bundle. Dynamic process.env indexing is not reliable here.
+  const envValues: Record<PublicBootstrapEnvKey, string | null> = {
+    NEXT_PUBLIC_CONVEX_URL: normalizeEnvValue(process.env.NEXT_PUBLIC_CONVEX_URL),
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: normalizeEnvValue(
+      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    ),
+  };
+  const missingVars = REQUIRED_PUBLIC_BOOTSTRAP_ENV_VARS.filter((key) => !envValues[key]);
+
+  return {
+    convexUrl: envValues.NEXT_PUBLIC_CONVEX_URL,
+    clerkPublishableKey: envValues.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    missingVars,
+  };
+}
+
+export function getMissingPublicBootstrapEnvVars(): PublicBootstrapEnvKey[] {
+  return getPublicBootstrapEnv().missingVars;
+}
+
 /**
  * Validates all required environment variables (client and server)
  * @returns Validation result with missing variables
@@ -35,14 +75,9 @@ export function validateEnvironment(): EnvValidationResult {
     warnings: [],
   };
 
-  // Check required client-side variables
-  if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
-    result.missingVars.push("NEXT_PUBLIC_CONVEX_URL");
-    result.isValid = false;
-  }
-
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
-    result.missingVars.push("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY");
+  const missingPublicVars = getMissingPublicBootstrapEnvVars();
+  if (missingPublicVars.length > 0) {
+    result.missingVars.push(...missingPublicVars);
     result.isValid = false;
   }
 

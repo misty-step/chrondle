@@ -1,38 +1,48 @@
 import React, { Suspense } from "react";
 import { preloadQuery } from "convex/nextjs";
+import { GameModeUnavailableState } from "@/components/GameModeUnavailableState";
 import { GroupsGameIsland } from "@/components/groups/GroupsGameIsland";
-import { GroupsUnavailableState } from "@/components/groups/GroupsUnavailableState";
-import { GameModeLayout } from "@/components/GameModeLayout";
 import { LoadingShell } from "@/components/LoadingShell";
 import { api } from "@/lib/convexServer";
 import { logger } from "@/lib/logger";
+import { isBackendUnavailablePreloadError } from "@/lib/preloadQueryAvailability";
 
 export default async function GroupsPage() {
   let preloadedPuzzle = null;
-  let backendUnavailable = false;
 
   try {
     preloadedPuzzle = await preloadQuery(api.groupsPuzzles.getDailyGroupsPuzzle);
   } catch (error) {
-    backendUnavailable = true;
+    if (!isBackendUnavailablePreloadError(error)) {
+      throw error;
+    }
+
     logger.warn("[GroupsPage] Failed to preload Groups puzzle", { error });
+    return (
+      <GameModeUnavailableState
+        mode="groups"
+        title="Groups Is Unavailable"
+        description="This build cannot load the daily Groups puzzle yet because the backend configuration or deployment is incomplete. Classic and Order remain available while Groups catches up."
+        primaryHref="/"
+        primaryLabel="Back to Home"
+        secondaryHref="/classic"
+        secondaryLabel="Play Classic"
+      />
+    );
   }
 
-  if (backendUnavailable || !preloadedPuzzle) {
+  if (!preloadedPuzzle) {
+    logger.warn("[GroupsPage] Daily Groups puzzle unavailable during preload");
     return (
-      <GameModeLayout mode="groups">
-        <div className="flex flex-1 items-center px-4">
-          <GroupsUnavailableState
-            title="Groups Is Warming Up"
-            description="This build is connected to a backend that has not deployed the Groups queries yet. Classic and Order are still available, and Groups will light up once the Convex deploy completes."
-            primaryHref="/"
-            primaryLabel="Back to Home"
-            secondaryHref="/classic"
-            secondaryLabel="Play Classic"
-            className="my-auto"
-          />
-        </div>
-      </GameModeLayout>
+      <GameModeUnavailableState
+        mode="groups"
+        title="Groups Is Unavailable"
+        description="This build cannot load the daily Groups puzzle yet because the backend configuration or deployment is incomplete. Classic and Order remain available while Groups catches up."
+        primaryHref="/"
+        primaryLabel="Back to Home"
+        secondaryHref="/classic"
+        secondaryLabel="Play Classic"
+      />
     );
   }
 
