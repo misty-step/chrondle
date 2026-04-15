@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.2.1](https://github.com/misty-step/chrondle/compare/v1.2.0...v1.2.1) (2026-04-15)
+
+### Bug Fixes
+
+- harden envless builds and stabilize dagger ci ([#237](https://github.com/misty-step/chrondle/issues/237)) ([1c39923](https://github.com/misty-step/chrondle/commit/1c39923e127d8237b5e4b58c2bb2f5fb44e51ee8))
+
 # [1.2.0](https://github.com/misty-step/chrondle/compare/v1.1.0...v1.2.0) (2026-04-14)
 
 ### Bug Fixes
