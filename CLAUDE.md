@@ -183,9 +183,6 @@ stripe events retrieve evt_xxx | jq '.pending_webhooks'
 
 Or manually:
 
-1. `~/.claude/skills/billing-security/scripts/verify-webhook-url.sh https://www.chrondle.app/api/webhooks/stripe`
-2. `~/.claude/skills/billing-security/scripts/verify-env-parity.sh`
-3. `python3 ~/.claude/skills/billing-security/scripts/audit-stripe-config.py --domain chrondle.app`
 
 ## References
 
