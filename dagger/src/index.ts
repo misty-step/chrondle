@@ -139,7 +139,9 @@ export class Ci {
     if (check === "lint") {
       container = container.withExec(["bun", "run", "lint"]);
     } else {
-      container = container.withExec(["bun", "run", "type-check"]);
+      // Dagger runs in ephemeral containers, so incremental TypeScript state adds
+      // memory pressure without saving any work. Use the non-incremental CI entrypoint.
+      container = container.withExec(["bun", "run", "type-check:ci"]);
     }
 
     return container;

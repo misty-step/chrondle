@@ -11,6 +11,7 @@
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit --incremental",
+    "type-check:ci": "tsc --noEmit --incremental false",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
+import { ModeUnavailableState } from "@/components/ModeUnavailableState";
 import { ArchiveGroupsPuzzleClient } from "@/components/groups/ArchiveGroupsPuzzleClient";
-import { GroupsUnavailableState } from "@/components/groups/GroupsUnavailableState";
 import { logger } from "@/lib/logger";
 import { fetchGroupsPuzzleByNumber, getConvexClient } from "@/lib/convexServer";
 
@@ -35,7 +35,7 @@ export default async function ArchiveGroupsPuzzlePage(props: ArchiveGroupsPuzzle
     return (
       <ArchiveErrorBoundary>
         <div className="bg-background flex min-h-screen items-center px-4 py-8">
-          <GroupsUnavailableState
+          <ModeUnavailableState
             title="This Groups Puzzle Is Unavailable"
             description="The archive detail query is not available on this backend yet. Try the homepage or the classic archive while the Convex deploy catches up."
             primaryHref="/"

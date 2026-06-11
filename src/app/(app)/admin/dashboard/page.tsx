@@ -5,6 +5,10 @@ import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { AdminTabs } from "./components/AdminTabs";
 
+// Authenticated admin pages must render per-request. Static prerendering
+// evaluates Clerk during build and fails when local secrets are absent.
+export const dynamic = "force-dynamic";
+
 /**
  * Admin Dashboard - Event Generation Command Center
  *

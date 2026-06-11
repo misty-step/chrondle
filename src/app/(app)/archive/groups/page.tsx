@@ -15,7 +15,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { ArchiveGrid } from "@/components/archive/ArchiveGrid";
-import { GroupsUnavailableState } from "@/components/groups/GroupsUnavailableState";
+import { ModeUnavailableState } from "@/components/ModeUnavailableState";
 import { UserCreationHandler } from "@/components/UserCreationHandler";
 import { LoadingShell } from "@/components/LoadingShell";
 import { logger } from "@/lib/logger";
@@ -214,7 +214,7 @@ async function GroupsArchivePageContent({
           )}
 
           {archiveUnavailable ? (
-            <GroupsUnavailableState
+            <ModeUnavailableState
               title="Groups Archive Is Unavailable"
               description="This environment is missing the Groups archive queries. Try again after the Convex deploy finishes, or jump back to the live daily modes."
               primaryHref="/"
