@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.2.2](https://github.com/misty-step/chrondle/compare/v1.2.1...v1.2.2) (2026-06-11)
+
+### Bug Fixes
+
+- bound ingest proxy upstream failures ([3fd9b3f](https://github.com/misty-step/chrondle/commit/3fd9b3fa79911843b58d16dae334c3048aee8f6a))
+
 ## [1.2.1](https://github.com/misty-step/chrondle/compare/v1.2.0...v1.2.1) (2026-04-15)
 
 ### Bug Fixes
