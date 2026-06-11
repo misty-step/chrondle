@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createTimeoutSignal } from "@/lib/fetch-utils";
 
 /**
  * PostHog proxy Route Handler
@@ -23,6 +24,7 @@ const RESPONSE_HEADERS_TO_STRIP = ["set-cookie", "content-encoding", "content-le
 // PostHog hosts
 const POSTHOG_MAIN_HOST = "https://us.i.posthog.com";
 const POSTHOG_ASSETS_HOST = "https://us-assets.i.posthog.com";
+const UPSTREAM_TIMEOUT_MS = 10_000;
 
 /**
  * Determine which PostHog host to use based on the path
@@ -62,23 +64,61 @@ async function proxyToPostHog(request: NextRequest): Promise<NextResponse> {
 
   // Prepare headers (strip auth-sensitive request headers)
   const cleanHeaders = stripHeaders(request.headers, REQUEST_HEADERS_TO_STRIP);
+  const [signal, cleanup] = createTimeoutSignal(UPSTREAM_TIMEOUT_MS);
 
-  // Forward the request
-  const response = await fetch(targetUrl, {
-    method: request.method,
-    headers: cleanHeaders,
-    body: request.method !== "GET" && request.method !== "HEAD" ? await request.text() : undefined,
-    redirect: "follow",
-  });
+  try {
+    // Forward the request
+    const response = await fetch(targetUrl, {
+      method: request.method,
+      headers: cleanHeaders,
+      body:
+        request.method !== "GET" && request.method !== "HEAD" ? await request.text() : undefined,
+      redirect: "follow",
+      signal,
+    });
 
-  // Build response with PostHog headers (strip any set-cookie from upstream)
-  const responseHeaders = stripHeaders(response.headers, RESPONSE_HEADERS_TO_STRIP);
+    // Build response with PostHog headers (strip any set-cookie from upstream)
+    const responseHeaders = stripHeaders(response.headers, RESPONSE_HEADERS_TO_STRIP);
 
-  return new NextResponse(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: responseHeaders,
-  });
+    return new NextResponse(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+    });
+  } catch (error) {
+    return buildUpstreamFailureResponse(request.method, error);
+  } finally {
+    cleanup();
+  }
+}
+
+function buildUpstreamFailureResponse(method: string, error: unknown): NextResponse {
+  const status = isAbortError(error) ? 504 : 502;
+
+  if (method === "HEAD") {
+    return new NextResponse(null, { status });
+  }
+
+  return NextResponse.json(
+    {
+      error:
+        status === 504 ? "PostHog upstream request timed out" : "PostHog upstream request failed",
+    },
+    { status },
+  );
+}
+
+function isAbortError(error: unknown): boolean {
+  if (error instanceof DOMException) {
+    return error.name === "AbortError" || error.name === "TimeoutError";
+  }
+
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error.name === "AbortError" || error.name === "TimeoutError")
+  );
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {

@@ -98,4 +98,43 @@ describe("PostHog ingest proxy route", () => {
     expect(response.headers.get("content-length")).toBeNull();
     expect(response.headers.get("cache-control")).toBe("max-age=30");
   });
+
+  it("returns 502 when the upstream fetch rejects", async () => {
+    mockFetch.mockRejectedValue(new TypeError("fetch failed"));
+
+    const request = new NextRequest("https://www.chrondle.app/ingest/batch", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ event: "test" }),
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "PostHog upstream request failed",
+    });
+  });
+
+  it("returns 504 when the upstream fetch aborts", async () => {
+    const abortError = new DOMException("The operation was aborted.", "AbortError");
+    mockFetch.mockRejectedValue(abortError);
+
+    const request = new NextRequest("https://www.chrondle.app/ingest/batch", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ event: "test" }),
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(504);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "PostHog upstream request timed out",
+    });
+  });
 });
