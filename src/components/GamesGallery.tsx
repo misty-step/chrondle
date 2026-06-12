@@ -1,23 +1,21 @@
 "use client";
 
-import { useCallback, type ElementType } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { Crosshair, Shuffle, SquaresFour } from "@phosphor-icons/react";
 
 import { anyPublicApi } from "@/lib/convexAnyApi";
 import { setModePreferenceCookie, type ModeKey } from "@/lib/modePreference";
+import { MODES } from "@/lib/modes";
 import { cn } from "@/lib/utils";
 
-// --- Configuration (co-located, not exported) ---
+// --- Gallery copy (identity — label/route/icon/theme — lives in src/lib/modes) ---
 
 type ModeCardConfig = {
   key: ModeKey;
   title: string;
   description: string;
-  route: string;
   badge?: string;
-  icon: ElementType;
   cta: string;
 };
 
@@ -26,44 +24,23 @@ const MODE_CARDS: ModeCardConfig[] = [
     key: "classic",
     title: "Classic",
     description: "Pin the year from six historical clues.",
-    route: "/classic",
-    icon: Crosshair,
     cta: "Start Today's Classic",
   },
   {
     key: "order",
     title: "Order",
     description: "Drag six events into chronological order.",
-    route: "/order",
     badge: "New",
-    icon: Shuffle,
     cta: "Try Order Mode",
   },
   {
-    key: "groups",
-    title: "Groups",
-    description: "Sort sixteen events into four hidden exact years.",
-    route: "/groups",
+    key: "duel",
+    title: "Duel",
+    description: "Two events. Tap the one that happened first. How long can you last?",
     badge: "New",
-    icon: SquaresFour,
-    cta: "Play Groups",
+    cta: "Start a Run",
   },
 ];
-
-const MODE_THEME = {
-  classic: {
-    card: "bg-mode-classic-bg text-mode-classic-text border-mode-classic-accent/30",
-    accent: "text-mode-classic-accent",
-  },
-  order: {
-    card: "bg-mode-order-bg text-mode-order-text border-mode-order-accent/30",
-    accent: "text-mode-order-accent",
-  },
-  groups: {
-    card: "bg-mode-groups-bg text-mode-groups-text border-mode-groups-accent/30",
-    accent: "text-mode-groups-accent",
-  },
-} as const;
 
 // --- Component ---
 
@@ -81,8 +58,8 @@ export function GamesGallery() {
   );
 
   const getPuzzleLabel = (modeKey: ModeKey) => {
-    if (modeKey === "groups") {
-      return "Daily Board";
+    if (modeKey === "duel") {
+      return "Endless";
     }
 
     const puzzle = modeKey === "classic" ? classicPuzzle : orderPuzzle;
@@ -108,14 +85,15 @@ export function GamesGallery() {
         {/* Mode Cards */}
         <div className="flex flex-col gap-3">
           {MODE_CARDS.map((mode) => {
-            const theme = MODE_THEME[mode.key];
-            const Icon = mode.icon;
+            const info = MODES[mode.key];
+            const theme = { card: info.cardClass, accent: info.accentClass };
+            const Icon = info.icon;
 
             return (
               <button
                 key={mode.key}
                 type="button"
-                onClick={() => handleSelect(mode.key, mode.route)}
+                onClick={() => handleSelect(mode.key, info.route)}
                 className={cn(
                   "flex w-full flex-col gap-3 rounded border-2 p-4 text-left md:p-5",
                   "transition-transform duration-200 ease-out",

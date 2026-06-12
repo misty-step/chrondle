@@ -17,7 +17,7 @@ import { Card } from "@/components/ui/Card";
  * Auto-refreshes via Convex subscription.
  */
 
-type PoolMode = "all" | "classic" | "order" | "groups";
+type PoolMode = "all" | "classic" | "order";
 
 interface PoolHealthCardProps {
   /** Game mode filter for pool health metrics */
@@ -29,9 +29,7 @@ export function PoolHealthCard({ mode = "all" }: PoolHealthCardProps) {
 
   // Mode label for display
   const modeLabel =
-    mode === "all"
-      ? "Pool Health"
-      : `Pool Health (${mode === "classic" ? "Classic" : mode === "order" ? "Order" : "Groups"})`;
+    mode === "all" ? "Pool Health" : `Pool Health (${mode === "classic" ? "Classic" : "Order"})`;
 
   if (!poolHealth) {
     return (

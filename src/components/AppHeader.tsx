@@ -20,7 +20,7 @@ interface AppHeaderProps {
   puzzleNumber?: number;
   puzzleDate?: string;
   isArchive?: boolean;
-  mode?: "classic" | "order" | "groups";
+  mode?: "classic" | "order" | "duel";
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -32,8 +32,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   mode = "classic",
 }) => {
   const streakColors = currentStreak ? getStreakColorClasses(currentStreak) : null;
-  const archiveHref =
-    mode === "order" ? "/archive/order" : mode === "groups" ? "/archive/groups" : "/archive";
+  const archiveHref = mode === "order" ? "/archive/order" : "/archive";
 
   return (
     <>

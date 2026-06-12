@@ -1,6 +1,6 @@
 "use client";
 
-export type ModeKey = "classic" | "order" | "groups";
+export type ModeKey = "classic" | "order" | "duel";
 
 export const MODE_COOKIE = "chrondle_mode";
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;

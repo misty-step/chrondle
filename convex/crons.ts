@@ -53,20 +53,4 @@ crons.daily(
   {},
 );
 
-// Generate today's Groups puzzle (UTC)
-crons.daily(
-  "generate daily Groups puzzle at UTC midnight",
-  { hourUTC: 0, minuteUTC: 0 },
-  internalApi.groupsPuzzles.generateDailyGroupsPuzzle,
-  {},
-);
-
-// Pre-generate tomorrow's Groups puzzle (for ahead-UTC timezones)
-crons.daily(
-  "pre-generate tomorrow Groups puzzle",
-  { hourUTC: 0, minuteUTC: 1 },
-  internalApi.groupsPuzzles.generateTomorrowGroupsPuzzle,
-  {},
-);
-
 export default crons;

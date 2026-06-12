@@ -69,8 +69,8 @@ export default function PricingPage() {
             Support Chrondle
           </h1>
           <p className="text-muted-foreground mx-auto max-w-lg text-lg">
-            Every Classic, Order, and Groups puzzle is free to play. Subscribing helps fund new
-            modes, event generation, and long-term maintenance.
+            Every Classic and Order puzzle is free to play. Subscribing helps fund new modes, event
+            generation, and long-term maintenance.
           </p>
         </div>
 
@@ -167,7 +167,6 @@ export default function PricingPage() {
             <li>Events spanning 5000+ years</li>
             <li>Classic mode: guess the year</li>
             <li>Order mode: arrange events chronologically</li>
-            <li>Groups mode: find the hidden years</li>
             <li>New puzzles added daily</li>
           </ul>
         </div>

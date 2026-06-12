@@ -11,32 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { setModePreferenceCookie, type ModeKey } from "@/lib/modePreference";
+import { MODES, MODE_ORDER } from "@/lib/modes";
 import { cn } from "@/lib/utils";
-
-/**
- * Mode configuration with routes and display labels.
- * Adding new modes is trivial - just extend this record.
- */
-const MODE_CONFIG: Record<
-  ModeKey,
-  {
-    label: string;
-    route: string;
-  }
-> = {
-  classic: {
-    label: "Classic",
-    route: "/classic",
-  },
-  order: {
-    label: "Order",
-    route: "/order",
-  },
-  groups: {
-    label: "Groups",
-    route: "/groups",
-  },
-};
 
 interface ModeDropdownProps {
   className?: string;
@@ -65,8 +41,8 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
   // Derive current mode from pathname (information hiding - caller doesn't need to know)
   const currentMode: ModeKey = useMemo(() => {
     if (!pathname) return "classic";
-    if (pathname.startsWith("/groups") || pathname.startsWith("/archive/groups")) return "groups";
     if (pathname.startsWith("/order") || pathname.startsWith("/archive/order")) return "order";
+    if (pathname.startsWith("/duel")) return "duel";
     return "classic";
   }, [pathname]);
 
@@ -76,7 +52,7 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
     if (modeKey === currentMode) return;
 
     setModePreferenceCookie(modeKey);
-    router.push(MODE_CONFIG[modeKey].route);
+    router.push(MODES[modeKey].route);
   };
 
   return (
@@ -116,7 +92,7 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
         position="popper"
         sideOffset={8}
       >
-        {(Object.keys(MODE_CONFIG) as ModeKey[]).map((mode) => (
+        {MODE_ORDER.map((mode) => (
           <SelectItem
             key={mode}
             value={mode}
@@ -132,7 +108,7 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
               "hover:bg-muted focus:bg-muted",
             )}
           >
-            {MODE_CONFIG[mode].label}
+            {MODES[mode].label}
           </SelectItem>
         ))}
       </SelectContent>

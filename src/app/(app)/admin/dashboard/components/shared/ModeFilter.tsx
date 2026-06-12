@@ -7,11 +7,11 @@ import { cn } from "@/lib/utils";
 /**
  * Mode Filter - Game mode selection for admin queries
  *
- * Toggles between: All, Classic, Order, Groups
+ * Toggles between: All, Classic, Order
  * Persists selection in URL search params for deep linking.
  */
 
-export type GameMode = "all" | "classic" | "order" | "groups";
+export type GameMode = "all" | "classic" | "order";
 type ModeFilterValue = GameMode;
 
 interface ModeOption {
@@ -23,7 +23,6 @@ const MODE_OPTIONS: ModeOption[] = [
   { value: "all", label: "All" },
   { value: "classic", label: "Classic" },
   { value: "order", label: "Order" },
-  { value: "groups", label: "Groups" },
 ];
 
 interface ModeFilterProps {
@@ -94,5 +93,5 @@ export function ModeFilter({ onChange, className }: ModeFilterProps) {
 export function useGameMode(): GameMode {
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode") as ModeFilterValue;
-  return mode === "classic" || mode === "order" || mode === "groups" ? mode : "all";
+  return mode === "classic" || mode === "order" ? mode : "all";
 }

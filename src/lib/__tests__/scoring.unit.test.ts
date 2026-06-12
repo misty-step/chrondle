@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { SCORING_CONSTANTS, scoreRange, scoreRangeDetailed } from "../scoring";
+import {
+  SCORING_CONSTANTS,
+  computeScoreBreakdown,
+  scoreRange,
+  scoreRangeDetailed,
+} from "../scoring";
 
 describe("scoreRange", () => {
   it("awards the maximum score for a perfect one-year range", () => {
@@ -135,5 +140,53 @@ describe("scoreRangeDetailed", () => {
     // Width 150, 3 hints: quadratic formula yields exactly 36
     const score150 = scoreRange(1900, 2049, 2000, 0, 3);
     expect(score150).toBe(36);
+  });
+});
+
+describe("computeScoreBreakdown", () => {
+  it("matches the real score for every width/hint combination", () => {
+    // The breakdown is what the UI shows players; it must never drift from
+    // the actual scoring curve (regression: the old UI used a linear width
+    // factor while scoring is quadratic).
+    const widths = [1, 2, 5, 10, 25, 50, 100, 150, 200, 250];
+    const hintLevels = [0, 1, 2, 3, 4, 5, 6] as const;
+
+    for (const width of widths) {
+      for (const hints of hintLevels) {
+        const start = 1500;
+        const end = start + width - 1;
+        const answerInside = start + Math.floor(width / 2);
+
+        const breakdown = computeScoreBreakdown(start, end, hints);
+        const actual = scoreRange(start, end, answerInside, 0, hints);
+
+        expect(breakdown.potentialScore).toBe(actual);
+        expect(breakdown.width).toBe(width);
+        expect(breakdown.cappedScore).toBe(SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[hints]);
+        expect(breakdown.hintPenalty).toBe(
+          SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[0] - breakdown.cappedScore,
+        );
+      }
+    }
+  });
+
+  it("uses the quadratic width factor, not the old linear one", () => {
+    // Width 50, 0 hints: linear math said 80; the real curve gives 96.
+    const breakdown = computeScoreBreakdown(1900, 1949, 0);
+    expect(breakdown.potentialScore).toBe(96);
+    expect(breakdown.potentialScore).toBe(scoreRange(1900, 1949, 1925, 0, 0));
+  });
+
+  it("spans the full width-factor range", () => {
+    expect(computeScoreBreakdown(2000, 2000, 0).widthFactor).toBeCloseTo(1, 6);
+    expect(computeScoreBreakdown(1751, 2000, 0).widthFactor).toBeCloseTo(
+      SCORING_CONSTANTS.MIN_WIDTH_FACTOR_FLOOR,
+      6,
+    );
+  });
+
+  it("rejects invalid widths like the scorer does", () => {
+    expect(() => computeScoreBreakdown(2000, 1999, 0)).toThrow();
+    expect(() => computeScoreBreakdown(1000, 1000 + SCORING_CONSTANTS.W_MAX, 0)).toThrow();
   });
 });

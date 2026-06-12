@@ -2,7 +2,7 @@ import { GameModeLayout } from "@/components/GameModeLayout";
 import { ModeUnavailableState } from "@/components/ModeUnavailableState";
 
 interface GameModeUnavailableStateProps {
-  mode: "classic" | "order" | "groups";
+  mode: "classic" | "order";
   title: string;
   description: string;
   primaryHref: string;

@@ -124,7 +124,7 @@ function calculateStartTime(now: number, timeRange: TimeRange): number {
 /**
  * Game mode filter for pool health queries.
  */
-export type PoolHealthMode = "classic" | "order" | "groups" | "all";
+export type PoolHealthMode = "classic" | "order" | "all";
 
 /**
  * Calculates pool health metrics from events.
@@ -133,7 +133,6 @@ export type PoolHealthMode = "classic" | "order" | "groups" | "all";
  * @param mode - Filter by game mode:
  *   - "classic": Events unused in Classic mode (classicPuzzleId === undefined)
  *   - "order": Events unused in Order mode (orderPuzzleId === undefined)
- *   - "groups": Events unused in Groups mode (groupsPuzzleId === undefined)
  *   - "all": Events unused in all live modes
  */
 export function calculatePoolHealth(
@@ -147,16 +146,10 @@ export function calculatePoolHealth(
         return e.classicPuzzleId === undefined;
       case "order":
         return e.orderPuzzleId === undefined;
-      case "groups":
-        return e.groupsPuzzleId === undefined;
       case "all":
       default:
         // Unused everywhere = truly available shared-pool inventory
-        return (
-          e.classicPuzzleId === undefined &&
-          e.orderPuzzleId === undefined &&
-          e.groupsPuzzleId === undefined
-        );
+        return e.classicPuzzleId === undefined && e.orderPuzzleId === undefined;
     }
   });
 
@@ -180,7 +173,7 @@ export function calculatePoolHealth(
     }
   }
 
-  const eventsPerDay = mode === "groups" ? 16 : mode === "all" ? 28 : 6;
+  const eventsPerDay = mode === "all" ? 12 : 6;
 
   return {
     unusedEvents: unusedEvents.length,

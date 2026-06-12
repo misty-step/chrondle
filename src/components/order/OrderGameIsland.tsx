@@ -8,6 +8,7 @@ import { useWebShare } from "@/hooks/useWebShare";
 import { OrderReveal } from "@/components/order/OrderReveal";
 import { OrderGameBoard } from "@/components/order/OrderGameBoard";
 import { GameModeLayout } from "@/components/GameModeLayout";
+import { KeepPlaying } from "@/components/KeepPlaying";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { LoadErrorState } from "@/components/LoadErrorState";
@@ -104,6 +105,7 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
               {shareFeedback}
             </p>
           )}
+          <KeepPlaying currentMode="order" />
         </LayoutContainer>
       </GameModeLayout>
     );

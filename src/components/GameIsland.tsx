@@ -20,7 +20,6 @@ import { useVictoryConfetti } from "@/hooks/useVictoryConfetti";
 import { useScreenReaderAnnouncements } from "@/hooks/useScreenReaderAnnouncements";
 import { useLoadErrorRecovery } from "@/hooks/useLoadErrorRecovery";
 import { logger } from "@/lib/logger";
-import { GAME_CONFIG } from "@/lib/constants";
 import { AchievementModal, LazyModalWrapper } from "@/components/LazyModals";
 import { GameLayout, LiveAnnouncer } from "@/components/LazyComponents";
 import { ConfettiRef } from "@/components/magicui/confetti";
@@ -86,11 +85,6 @@ export function GameIsland() {
       // Completion state (use deferred for non-critical)
       isGameComplete: deferredReady ? deferredGameState.isComplete : false,
       hasWon: deferredReady ? deferredGameState.hasWon : false,
-
-      // Remaining attempts
-      remainingAttempts: deferredReady
-        ? deferredGameState.remainingAttempts
-        : GAME_CONFIG.MAX_GUESSES,
 
       // Actions
       submitRange,
@@ -223,7 +217,6 @@ export function GameIsland() {
           isLoading={gameLogic.isLoading}
           error={gameLogic.error}
           onRangeCommit={gameLogic.submitRange}
-          remainingAttempts={gameLogic.remainingAttempts}
           countdown={countdown}
           confettiRef={confettiRef}
           onValidationError={setValidationError}

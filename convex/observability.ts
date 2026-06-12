@@ -39,13 +39,11 @@ export const getMetricsQuery = query({
  * Query for pool health metrics only.
  * Optimized for lightweight dashboard cards that only need event pool status.
  *
- * @param mode - Optional filter: "classic" | "order" | "groups" | "all" (default: "all")
+ * @param mode - Optional filter: "classic" | "order" | "all" (default: "all")
  */
 export const getPoolHealthQuery = query({
   args: {
-    mode: v.optional(
-      v.union(v.literal("classic"), v.literal("order"), v.literal("groups"), v.literal("all")),
-    ),
+    mode: v.optional(v.union(v.literal("classic"), v.literal("order"), v.literal("all"))),
   },
   handler: async (ctx, args): Promise<PoolHealthMetrics> => {
     const mode = (args.mode ?? "all") as PoolHealthMode;
@@ -56,7 +54,7 @@ export const getPoolHealthQuery = query({
 
 /**
  * Query for pool health metrics across ALL modes at once.
- * Returns separate metrics for Classic, Order, Groups, and truly unused events.
+ * Returns separate metrics for Classic, Order, and truly unused events.
  * Useful for dashboard overview showing all modes simultaneously.
  */
 export const getPoolHealthByModeQuery = query({
@@ -65,7 +63,6 @@ export const getPoolHealthByModeQuery = query({
   ): Promise<{
     classic: PoolHealthMetrics;
     order: PoolHealthMetrics;
-    groups: PoolHealthMetrics;
     all: PoolHealthMetrics;
     totalEvents: number;
   }> => {
@@ -73,7 +70,6 @@ export const getPoolHealthByModeQuery = query({
     return {
       classic: calculatePoolHealth(events, "classic"),
       order: calculatePoolHealth(events, "order"),
-      groups: calculatePoolHealth(events, "groups"),
       all: calculatePoolHealth(events, "all"),
       totalEvents: events.length,
     };

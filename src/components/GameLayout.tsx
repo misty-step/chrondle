@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { GameInstructions } from "@/components/GameInstructions";
+import { KeepPlaying } from "@/components/KeepPlaying";
 import { RangeInput } from "@/components/game/RangeInput";
 import { HintIndicator } from "@/components/game/HintIndicator";
 import { Confetti, ConfettiRef } from "@/components/magicui/confetti";
@@ -62,7 +63,6 @@ export interface GameLayoutProps {
 
   // Archive indicator
   isArchive?: boolean;
-  remainingAttempts: number;
 }
 
 interface GameLayoutSessionState {
@@ -269,15 +269,18 @@ export function GameLayout(props: GameLayoutProps) {
 
           {/* Game Complete Summary */}
           {isGameComplete && (
-            <GameComplete
-              ranges={gameState.ranges}
-              totalScore={totalScore}
-              hasWon={hasWon}
-              puzzleNumber={puzzleNumber}
-              targetYear={targetYear}
-              totalHints={gameState.puzzle?.events.length}
-              events={gameState.puzzle?.events}
-            />
+            <>
+              <GameComplete
+                ranges={gameState.ranges}
+                totalScore={totalScore}
+                hasWon={hasWon}
+                puzzleNumber={puzzleNumber}
+                targetYear={targetYear}
+                totalHints={gameState.puzzle?.events.length}
+                events={gameState.puzzle?.events}
+              />
+              <KeepPlaying currentMode="classic" />
+            </>
           )}
         </div>
       </main>

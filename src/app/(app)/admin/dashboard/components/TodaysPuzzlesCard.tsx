@@ -10,7 +10,7 @@ import { anyPublicApi } from "@/lib/convexAnyApi";
 /**
  * Today's Puzzles Card - Daily Ops Visibility
  *
- * Shows today's Classic, Order, and Groups puzzles side by side.
+ * Shows today's Classic and Order puzzles side by side.
  * At-a-glance view: Is today's content live? How many players so far?
  */
 export function TodaysPuzzlesCard() {
@@ -28,13 +28,6 @@ export function TodaysPuzzlesCard() {
           puzzleNumber: number;
           eventSpan: string;
           eventCount: number;
-          playCount: number;
-        } | null;
-        groups: {
-          puzzleNumber: number;
-          yearSpan: string;
-          eventCount: number;
-          groupCount: number;
           playCount: number;
         } | null;
       }
@@ -60,7 +53,7 @@ export function TodaysPuzzlesCard() {
           Loading today&apos;s puzzles...
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           {/* Classic Puzzle */}
           <PuzzleCard
             mode="classic"
@@ -94,24 +87,6 @@ export function TodaysPuzzlesCard() {
                 : null
             }
           />
-
-          {/* Groups Puzzle */}
-          <PuzzleCard
-            mode="groups"
-            icon={<Users className="h-5 w-5" />}
-            puzzle={
-              todaysPuzzles.groups
-                ? {
-                    puzzleNumber: todaysPuzzles.groups.puzzleNumber,
-                    targetDisplay: todaysPuzzles.groups.yearSpan,
-                    eventCount: todaysPuzzles.groups.eventCount,
-                    groupCount: todaysPuzzles.groups.groupCount,
-                    playCount: todaysPuzzles.groups.playCount,
-                    hasContext: false,
-                  }
-                : null
-            }
-          />
         </div>
       )}
     </Card>
@@ -124,18 +99,17 @@ function PuzzleCard({
   icon,
   puzzle,
 }: {
-  mode: "classic" | "order" | "groups";
+  mode: "classic" | "order";
   icon: React.ReactNode;
   puzzle: {
     puzzleNumber: number;
     targetDisplay: string;
     eventCount: number;
-    groupCount?: number;
     playCount: number;
     hasContext: boolean;
   } | null;
 }) {
-  const modeLabel = mode === "classic" ? "Classic" : mode === "order" ? "Order" : "Groups";
+  const modeLabel = mode === "classic" ? "Classic" : "Order";
 
   if (!puzzle) {
     return (
@@ -168,7 +142,7 @@ function PuzzleCard({
         {/* Target/Span */}
         <div className="flex items-center justify-between">
           <span className="text-text-tertiary text-sm">
-            {mode === "classic" ? "Target Year" : mode === "order" ? "Event Span" : "Year Span"}
+            {mode === "classic" ? "Target Year" : "Event Span"}
           </span>
           <span className="text-text-primary font-mono font-medium">{puzzle.targetDisplay}</span>
         </div>
@@ -178,14 +152,6 @@ function PuzzleCard({
           <span className="text-text-tertiary text-sm">Events</span>
           <span className="text-text-secondary">{puzzle.eventCount}</span>
         </div>
-
-        {/* Group Count (Groups mode only) */}
-        {mode === "groups" && (
-          <div className="flex items-center justify-between">
-            <span className="text-text-tertiary text-sm">Groups</span>
-            <span className="text-text-secondary">{puzzle.groupCount ?? 0}</span>
-          </div>
-        )}
 
         {/* Play Count */}
         <div className="flex items-center justify-between">

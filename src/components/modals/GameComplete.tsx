@@ -3,9 +3,9 @@
 import React, { useState } from "react";
 
 import { formatYear, pluralize } from "@/lib/displayFormatting";
-import { SCORING_CONSTANTS } from "@/lib/scoring";
+import { SCORING_CONSTANTS, computeScoreBreakdown } from "@/lib/scoring";
 import { useShareGame } from "@/hooks/useShareGame";
-import type { RangeGuess } from "@/types/range";
+import type { HintCount, RangeGuess } from "@/types/range";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/Separator";
@@ -34,36 +34,30 @@ interface GameCompleteProps {
 const BASE_POTENTIAL = SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[0];
 const MAX_HINT_INDEX = SCORING_CONSTANTS.MAX_SCORES_BY_HINTS.length - 1;
 
-function calculateHintPenalty(hintsUsed: number): { totalPenalty: number; cappedScore: number } {
-  const safeLevel = Math.min(Math.max(hintsUsed, 0), MAX_HINT_INDEX);
-  const cappedScore = SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[safeLevel];
-  return {
-    totalPenalty: BASE_POTENTIAL - cappedScore,
-    cappedScore,
-  };
+function clampHintCount(hintsUsed: number): HintCount {
+  return Math.min(Math.max(Math.floor(hintsUsed), 0), MAX_HINT_INDEX) as HintCount;
 }
 
-function getWidthStats(range: RangeGuess | undefined, cappedScore: number) {
-  if (!range) {
-    return {
-      width: null,
-      retentionPercent: null,
-      widthPenalty: 0,
-    };
+function cappedScoreFor(hintsUsed: number): number {
+  return SCORING_CONSTANTS.MAX_SCORES_BY_HINTS[clampHintCount(hintsUsed)];
+}
+
+/**
+ * Breakdown of the primary range using the real scoring curve
+ * (computeScoreBreakdown), so the explanation always equals the final score.
+ */
+function getBreakdown(range: RangeGuess | undefined) {
+  if (!range || range.end < range.start) {
+    return null;
   }
 
-  const width = range.end - range.start + 1;
-  const widthFactor = Math.max(
-    0,
-    Math.min(1, (SCORING_CONSTANTS.W_MAX - width + 1) / SCORING_CONSTANTS.W_MAX),
-  );
-  const widthPenalty = Math.max(0, cappedScore - Math.floor(cappedScore * widthFactor));
-
-  return {
-    width,
-    retentionPercent: Math.round(widthFactor * 100),
-    widthPenalty,
-  };
+  try {
+    return computeScoreBreakdown(range.start, range.end, clampHintCount(range.hintsUsed ?? 0));
+  } catch {
+    // Defensive: legacy/corrupt ranges (e.g. width beyond W_MAX) — hide the
+    // breakdown rather than show wrong math.
+    return null;
+  }
 }
 
 function describeMiss(range: RangeGuess, targetYear?: number): string | null {
@@ -160,15 +154,11 @@ export function GameComplete({
   const ladderSlots = optionalHintSlots ?? Math.max(hintsUsed, 1);
   const ladderFilled = Math.min(hintsUsed, ladderSlots);
 
-  const { totalPenalty: hintPenalty, cappedScore } = calculateHintPenalty(hintsUsed);
-  const widthStats = getWidthStats(primaryRange, cappedScore);
-  const widthFactor = widthStats.width
-    ? Math.max(
-        0,
-        Math.min(1, (SCORING_CONSTANTS.W_MAX - widthStats.width + 1) / SCORING_CONSTANTS.W_MAX),
-      )
-    : 0;
-  const widthScore = Math.floor(cappedScore * widthFactor);
+  const breakdown = getBreakdown(primaryRange);
+  const hintPenalty = breakdown?.hintPenalty ?? BASE_POTENTIAL - cappedScoreFor(hintsUsed);
+  const cappedScore = breakdown?.cappedScore ?? cappedScoreFor(hintsUsed);
+  const widthFactor = breakdown?.widthFactor ?? 0;
+  const widthScore = breakdown?.potentialScore ?? 0;
   const finalRangeScore = primaryRange?.score ?? 0;
   const displayedFinalScore = hasWon ? finalRangeScore : 0;
   const outcomeCopy = buildOutcomeCopy(hasWon, primaryRange, targetYear);
@@ -341,7 +331,7 @@ export function GameComplete({
                 <div className="flex items-center gap-2">
                   <Ruler className="text-muted-foreground size-4" aria-hidden="true" />
                   <span className="text-muted-foreground">
-                    Range width ({widthStats.width ? pluralize(widthStats.width, "year") : "—"})
+                    Range width ({breakdown ? pluralize(breakdown.width, "year") : "—"})
                   </span>
                 </div>
                 <span className="font-mono">

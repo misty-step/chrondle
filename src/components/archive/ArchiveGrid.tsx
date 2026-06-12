@@ -29,7 +29,7 @@ interface ArchiveGridProps {
   /** Base path for puzzle links. Default: "/archive/puzzle" for Classic */
   linkPrefix?: string;
   /** Visual mode for accent tokens. Default: "classic" */
-  mode?: "classic" | "order" | "groups";
+  mode?: "classic" | "order";
 }
 
 export function ArchiveGrid({
@@ -51,36 +51,12 @@ export function ArchiveGrid({
     return null;
   }
 
-  const accentBg =
-    mode === "order"
-      ? "bg-order-accent"
-      : mode === "groups"
-        ? "bg-groups-accent"
-        : "bg-classic-accent";
-  const accentText =
-    mode === "order"
-      ? "text-order-accent"
-      : mode === "groups"
-        ? "text-groups-accent"
-        : "text-classic-accent";
-  const accentBorder =
-    mode === "order"
-      ? "border-l-order-accent"
-      : mode === "groups"
-        ? "border-l-groups-accent"
-        : "border-l-classic-accent";
+  const accentBg = mode === "order" ? "bg-order-accent" : "bg-classic-accent";
+  const accentText = mode === "order" ? "text-order-accent" : "text-classic-accent";
+  const accentBorder = mode === "order" ? "border-l-order-accent" : "border-l-classic-accent";
   const accentBorderFaded =
-    mode === "order"
-      ? "border-l-order-accent/80"
-      : mode === "groups"
-        ? "border-l-groups-accent/80"
-        : "border-l-classic-accent/80";
-  const completedTint =
-    mode === "order"
-      ? "bg-order-accent/5"
-      : mode === "groups"
-        ? "bg-groups-accent/5"
-        : "bg-classic-accent/5";
+    mode === "order" ? "border-l-order-accent/80" : "border-l-classic-accent/80";
+  const completedTint = mode === "order" ? "bg-order-accent/5" : "bg-classic-accent/5";
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
