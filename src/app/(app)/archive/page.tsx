@@ -13,7 +13,6 @@ import {
   CaretRight,
   ClockCounterClockwise,
   ChartBar,
-  SquaresFour,
 } from "@phosphor-icons/react/dist/ssr";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { ArchiveGrid } from "@/components/archive/ArchiveGrid";
@@ -299,12 +298,6 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
               className="text-muted-foreground hover:text-foreground hover:bg-surface-inset flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors"
             >
               <ChartBar className="h-4 w-4" /> Order
-            </Link>
-            <Link
-              href="/archive/groups"
-              className="text-muted-foreground hover:text-foreground hover:bg-surface-inset flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors"
-            >
-              <SquaresFour className="h-4 w-4" /> Groups
             </Link>
           </div>
 

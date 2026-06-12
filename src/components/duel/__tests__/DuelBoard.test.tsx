@@ -223,7 +223,6 @@ describe("DuelBoard — run over", () => {
     expect(screen.getByText("Keep playing")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Classic/ })).toHaveAttribute("href", "/classic");
     expect(screen.getByRole("link", { name: /Order/ })).toHaveAttribute("href", "/order");
-    expect(screen.getByRole("link", { name: /Groups/ })).toHaveAttribute("href", "/groups");
     expect(screen.queryByRole("link", { name: /Duel/ })).not.toBeInTheDocument();
   });
 });

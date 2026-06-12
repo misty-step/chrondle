@@ -41,7 +41,6 @@ export function ModeDropdown({ className }: ModeDropdownProps) {
   // Derive current mode from pathname (information hiding - caller doesn't need to know)
   const currentMode: ModeKey = useMemo(() => {
     if (!pathname) return "classic";
-    if (pathname.startsWith("/groups") || pathname.startsWith("/archive/groups")) return "groups";
     if (pathname.startsWith("/order") || pathname.startsWith("/archive/order")) return "order";
     if (pathname.startsWith("/duel")) return "duel";
     return "classic";

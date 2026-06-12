@@ -27,12 +27,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
-      url: `${BASE_URL}/groups`,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 0.9,
-    },
-    {
       url: `${BASE_URL}/archive`,
       lastModified: new Date(),
       changeFrequency: "daily",
@@ -40,12 +34,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${BASE_URL}/archive/order`,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 0.8,
-    },
-    {
-      url: `${BASE_URL}/archive/groups`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.8,
@@ -77,13 +65,9 @@ async function fetchPuzzleRoutes(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const client = new ConvexHttpClient(convexUrl);
-    const [{ count: classicCount }, orderArchive, groupsArchive] = await Promise.all([
+    const [{ count: classicCount }, orderArchive] = await Promise.all([
       client.query(serverApi.puzzles.getTotalPuzzles),
       client.query(serverApi.orderPuzzles.getArchiveOrderPuzzles, {
-        page: 1,
-        pageSize: 1,
-      }),
-      client.query(serverApi.groupsPuzzles.getArchiveGroupsPuzzles, {
         page: 1,
         pageSize: 1,
       }),
@@ -105,15 +89,7 @@ async function fetchPuzzleRoutes(): Promise<MetadataRoute.Sitemap> {
       }),
     );
 
-    const groupsRoutes = Array.from({ length: groupsArchive.totalCount }, (_, i) => i + 1).map(
-      (puzzleNumber) => ({
-        url: `${BASE_URL}/archive/groups/${puzzleNumber}`,
-        changeFrequency: "never" as const,
-        priority: 0.6,
-      }),
-    );
-
-    return [...classicRoutes, ...orderRoutes, ...groupsRoutes];
+    return [...classicRoutes, ...orderRoutes];
   } catch (error) {
     logger.error("Failed to fetch puzzle count for sitemap:", error);
     return [];

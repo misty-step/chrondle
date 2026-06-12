@@ -110,7 +110,9 @@ export default defineSchema({
     .index("by_number", ["puzzleNumber"])
     .index("by_date", ["date"]),
 
-  // Groups mode daily puzzles
+  // Groups mode daily puzzles.
+  // NOTE: Groups mode was retired 2026-06. Table kept for data preservation
+  // (non-destructive deploy); no application code reads or writes it.
   groupsPuzzles: defineTable({
     puzzleNumber: v.number(),
     date: v.string(),
@@ -173,7 +175,9 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_puzzle", ["puzzleId"]),
 
-  // Authenticated Groups plays
+  // Authenticated Groups plays.
+  // NOTE: Groups mode was retired 2026-06. Table kept for data preservation
+  // (non-destructive deploy); no application code reads or writes it.
   groupsPlays: defineTable({
     userId: v.id("users"),
     puzzleId: v.id("groupsPuzzles"),

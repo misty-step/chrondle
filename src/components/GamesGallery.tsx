@@ -34,13 +34,6 @@ const MODE_CARDS: ModeCardConfig[] = [
     cta: "Try Order Mode",
   },
   {
-    key: "groups",
-    title: "Groups",
-    description: "Sort sixteen events into four hidden exact years.",
-    badge: "New",
-    cta: "Play Groups",
-  },
-  {
     key: "duel",
     title: "Duel",
     description: "Two events. Tap the one that happened first. How long can you last?",
@@ -65,9 +58,6 @@ export function GamesGallery() {
   );
 
   const getPuzzleLabel = (modeKey: ModeKey) => {
-    if (modeKey === "groups") {
-      return "Daily Board";
-    }
     if (modeKey === "duel") {
       return "Endless";
     }

@@ -1,5 +1,5 @@
 import type { ElementType } from "react";
-import { Crosshair, Shuffle, SquaresFour, Sword } from "@phosphor-icons/react";
+import { Crosshair, Shuffle, Sword } from "@phosphor-icons/react";
 import type { ModeKey } from "@/lib/modePreference";
 
 /**
@@ -42,15 +42,6 @@ export const MODES: Record<ModeKey, ModeInfo> = {
     cardClass: "bg-mode-order-bg text-mode-order-text border-mode-order-accent/30",
     accentClass: "text-mode-order-accent",
   },
-  groups: {
-    key: "groups",
-    label: "Groups",
-    route: "/groups",
-    icon: SquaresFour,
-    tagline: "Crack today's board",
-    cardClass: "bg-mode-groups-bg text-mode-groups-text border-mode-groups-accent/30",
-    accentClass: "text-mode-groups-accent",
-  },
   duel: {
     key: "duel",
     label: "Duel",
@@ -63,4 +54,4 @@ export const MODES: Record<ModeKey, ModeInfo> = {
 };
 
 /** Display order across surfaces. */
-export const MODE_ORDER: readonly ModeKey[] = ["classic", "order", "groups", "duel"];
+export const MODE_ORDER: readonly ModeKey[] = ["classic", "order", "duel"];
