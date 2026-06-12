@@ -110,7 +110,6 @@ export function ClassicArchivePuzzleClient({ puzzleNumber }: ClassicArchivePuzzl
         isLoading={isLoading}
         error={null}
         onRangeCommit={chrondle.submitRange}
-        remainingAttempts={gameState.remainingAttempts}
         confettiRef={confettiRef}
         isArchive={true}
         headerContent={

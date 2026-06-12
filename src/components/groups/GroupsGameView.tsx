@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { GameModeLayout } from "@/components/GameModeLayout";
+import { KeepPlaying } from "@/components/KeepPlaying";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { LoadErrorState } from "@/components/LoadErrorState";
@@ -113,6 +114,7 @@ export function GroupsGameView({
               {shareFeedback}
             </p>
           )}
+          <KeepPlaying currentMode="groups" />
         </LayoutContainer>
       </GameModeLayout>
     );

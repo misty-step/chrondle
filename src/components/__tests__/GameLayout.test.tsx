@@ -97,7 +97,6 @@ describe("GameLayout", () => {
     isLoading: false,
     error: null,
     onRangeCommit: mockOnRangeCommit,
-    remainingAttempts: 6,
   });
 
   beforeEach(() => {
@@ -215,7 +214,6 @@ describe("GameLayout", () => {
         isLoading: false,
         error: null,
         onRangeCommit: () => {},
-        remainingAttempts: 4,
         headerContent: <div>Header</div>,
         footerContent: <div>Footer</div>,
         confettiRef: { current: null },

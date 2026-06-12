@@ -96,25 +96,15 @@ export function scoreRangeDetailed(
     };
   }
 
-  // New flat deduction scoring system:
-  // 1. Get max possible score based on hints used
-  // 2. Scale by range width (narrower = better), ensuring a minimum floor (5%)
-  // 3. Round down to integer
-  const maxScoreForHints = MAX_SCORES_BY_HINTS[hintsUsed];
-
-  const minFloor = SCORING_CONSTANTS.MIN_WIDTH_FACTOR_FLOOR;
-  // Progress from 0.0 (width 1) to 1.0 (width W_MAX), squared for quadratic curve
-  const progress = Math.pow((width - 1) / (SCORING_CONSTANTS.W_MAX - 1), 2);
-  // Quadratic interpolation: gentle slope in playable range, steep at extremes
-  const widthFactor = 1 - progress * (1 - minFloor);
-
-  const baseScore = maxScoreForHints * widthFactor;
-  const score = Math.floor(baseScore);
+  // Flat deduction scoring: max score for the hint tier, scaled by the
+  // quadratic width factor. The math lives in computeScoreBreakdown so the
+  // in-game explanations can never drift from the real curve.
+  const breakdown = computeScoreBreakdown(start, end, hintsUsed);
 
   return {
-    score,
+    score: breakdown.potentialScore,
     contained: true,
-    baseScore,
+    baseScore: breakdown.cappedScore * breakdown.widthFactor,
     width,
   };
 }
@@ -130,4 +120,56 @@ export function scoreRange(
   hintsUsed: HintCount = 0,
 ): number {
   return scoreRangeDetailed(start, end, answer, tolerance, hintsUsed).score;
+}
+
+export interface ScoreBreakdown {
+  /** Maximum possible score with zero hints and a 1-year range */
+  basePotential: number;
+  hintsUsed: HintCount;
+  /** Points lost to hints: basePotential - cappedScore */
+  hintPenalty: number;
+  /** Maximum score at this hint level before the width factor */
+  cappedScore: number;
+  width: number;
+  /** Quadratic width factor in [MIN_WIDTH_FACTOR_FLOOR, 1] */
+  widthFactor: number;
+  /**
+   * Points this range earns IF it contains the answer:
+   * floor(cappedScore * widthFactor). Matches scoreRange exactly.
+   */
+  potentialScore: number;
+}
+
+/**
+ * Explains the score a range would earn if it contained the answer.
+ *
+ * This is the same math as scoreRangeDetailed with containment assumed —
+ * used for the live "worth N pts" preview while picking a range and for the
+ * post-game breakdown. Keeping it here guarantees the explanation can never
+ * drift from the actual scoring curve.
+ */
+export function computeScoreBreakdown(
+  start: number,
+  end: number,
+  hintsUsed: HintCount = 0,
+): ScoreBreakdown {
+  validateInputs(start, end, 0, 0, hintsUsed);
+  const width = calculateWidth(start, end);
+
+  const basePotential = MAX_SCORES_BY_HINTS[0];
+  const cappedScore = MAX_SCORES_BY_HINTS[hintsUsed];
+
+  const minFloor = SCORING_CONSTANTS.MIN_WIDTH_FACTOR_FLOOR;
+  const progress = Math.pow((width - 1) / (SCORING_CONSTANTS.W_MAX - 1), 2);
+  const widthFactor = 1 - progress * (1 - minFloor);
+
+  return {
+    basePotential,
+    hintsUsed,
+    hintPenalty: basePotential - cappedScore,
+    cappedScore,
+    width,
+    widthFactor,
+    potentialScore: Math.floor(cappedScore * widthFactor),
+  };
 }

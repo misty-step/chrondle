@@ -1,15 +1,16 @@
 "use client";
 
 import React, { useCallback, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Lightbulb } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { EraToggle } from "@/components/ui/EraToggle";
-import { SCORING_CONSTANTS } from "@/lib/scoring";
+import { SCORING_CONSTANTS, computeScoreBreakdown } from "@/lib/scoring";
 import { GAME_CONFIG } from "@/lib/constants";
 import { convertToInternalYear, convertFromInternalYear, type Era } from "@/lib/eraUtils";
 import { cn } from "@/lib/utils";
 import { useReducedMotion } from "@/lib/animationConstants";
+import type { HintCount } from "@/types/range";
 
 interface RangeInputProps {
   onCommit: (payload: { start: number; end: number; hintsUsed: number }) => void;
@@ -121,13 +122,23 @@ export function RangeInput({
   const commitDisabled = disabled || rangeTooWide || !hasBeenModified;
   const progressPercent = Math.min((width / SCORING_CONSTANTS.W_MAX) * 100, 100);
 
+  // Live risk/reward readout: what this range pays if it contains the answer.
+  // Reacts to both width changes and hints taken, using the real curve.
+  const clampedHints = Math.min(Math.max(hintsUsed, 0), 6) as HintCount;
+  const potentialScore = useMemo(() => {
+    if (rangeTooWide) return null;
+    try {
+      return computeScoreBreakdown(range[0], range[1], clampedHints).potentialScore;
+    } catch {
+      return null;
+    }
+  }, [range, rangeTooWide, clampedHints]);
+
   const resetRange = useCallback(() => {
     const nextRange = createFullTimelineRange(minYear, maxYear);
     updateRange(nextRange);
     setDraftState(createDraftState(nextRange));
   }, [minYear, maxYear, updateRange]);
-
-  // --- Slider Interaction Logic ---
 
   const handleStartEraChange = (era: Era) => {
     const parsed = parseInt(startInput, 10);
@@ -431,30 +442,36 @@ export function RangeInput({
               {width.toLocaleString()} of {SCORING_CONSTANTS.W_MAX.toLocaleString()} years
             </span>
 
-            <AnimatePresence mode="wait">
-              {rangeTooWide ? (
+            {rangeTooWide ? (
+              <motion.span
+                key="error"
+                initial={prefersReducedMotion ? false : { scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                className="text-feedback-error text-xs font-semibold"
+              >
+                Exceeds Limit
+              </motion.span>
+            ) : hasBeenModified && potentialScore !== null ? (
+              <motion.span
+                key="worth"
+                initial={prefersReducedMotion ? false : { scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="text-feedback-success text-xs font-semibold"
+              >
+                ✓ Worth{" "}
                 <motion.span
-                  key="error"
-                  initial={prefersReducedMotion ? false : { scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  className="text-feedback-error text-xs font-semibold"
+                  key={potentialScore}
+                  initial={prefersReducedMotion ? false : { scale: 1.25 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                  className="inline-block font-mono text-sm font-bold tabular-nums"
                 >
-                  Exceeds Limit
-                </motion.span>
-              ) : hasBeenModified ? (
-                <motion.span
-                  key="valid"
-                  initial={prefersReducedMotion ? false : { scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  className="text-feedback-success text-xs font-medium"
-                >
-                  ✓ Valid
-                </motion.span>
-              ) : null}
-            </AnimatePresence>
+                  {potentialScore}
+                </motion.span>{" "}
+                pts if right
+              </motion.span>
+            ) : null}
           </div>
         </div>
 

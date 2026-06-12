@@ -37,7 +37,6 @@ describe("propValidation", () => {
         isGameOver: false,
       },
       onRangeCommit: vi.fn(),
-      remainingAttempts: 4,
       isGameComplete: false,
       hasWon: false,
       isLoading: false,
@@ -80,7 +79,6 @@ describe("propValidation", () => {
           isGameOver: false,
         },
         onRangeCommit: vi.fn(),
-        remainingAttempts: 4,
         isGameComplete: false,
         hasWon: false,
         isLoading: false,
@@ -96,23 +94,6 @@ describe("propValidation", () => {
           isGameOver: false,
         },
         onRangeCommit: "not a function",
-        remainingAttempts: 4,
-        isGameComplete: false,
-        hasWon: false,
-        isLoading: false,
-      });
-    });
-
-    it("validates remainingAttempts bounds", () => {
-      validateGameLayoutProps({
-        gameState: {
-          guesses: [],
-          totalScore: 0,
-          ranges: [],
-          isGameOver: false,
-        },
-        onRangeCommit: vi.fn(),
-        remainingAttempts: 10, // Out of bounds
         isGameComplete: false,
         hasWon: false,
         isLoading: false,
@@ -128,7 +109,6 @@ describe("propValidation", () => {
           isGameOver: false,
         },
         onRangeCommit: vi.fn(),
-        remainingAttempts: 4,
         isGameComplete: "not a boolean",
         hasWon: 123,
         isLoading: null,

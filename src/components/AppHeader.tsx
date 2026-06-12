@@ -20,7 +20,7 @@ interface AppHeaderProps {
   puzzleNumber?: number;
   puzzleDate?: string;
   isArchive?: boolean;
-  mode?: "classic" | "order" | "groups";
+  mode?: "classic" | "order" | "groups" | "duel";
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({

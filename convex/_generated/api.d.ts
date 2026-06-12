@@ -25,6 +25,9 @@ import type * as admin_events from "../admin/events.js";
 import type * as admin_puzzles from "../admin/puzzles.js";
 import type * as clerk_webhookAction from "../clerk/webhookAction.js";
 import type * as crons from "../crons.js";
+import type * as duel from "../duel.js";
+import type * as duel_queries from "../duel/queries.js";
+import type * as duel_selection from "../duel/selection.js";
 import type * as events from "../events.js";
 import type * as generationLogs from "../generationLogs.js";
 import type * as groupsPlays from "../groupsPlays.js";
@@ -55,6 +58,7 @@ import type * as lib_observability_metricsCollector from "../lib/observability/m
 import type * as lib_observability_metricsService from "../lib/observability/metricsService.js";
 import type * as lib_observability_sentryNotifier from "../lib/observability/sentryNotifier.js";
 import type * as lib_orderValidation from "../lib/orderValidation.js";
+import type * as lib_prng from "../lib/prng.js";
 import type * as lib_prompts_eventGeneration from "../lib/prompts/eventGeneration.js";
 import type * as lib_puzzleHelpers from "../lib/puzzleHelpers.js";
 import type * as lib_puzzleType from "../lib/puzzleType.js";
@@ -115,6 +119,9 @@ declare const fullApi: ApiFromModules<{
   "admin/puzzles": typeof admin_puzzles;
   "clerk/webhookAction": typeof clerk_webhookAction;
   crons: typeof crons;
+  duel: typeof duel;
+  "duel/queries": typeof duel_queries;
+  "duel/selection": typeof duel_selection;
   events: typeof events;
   generationLogs: typeof generationLogs;
   groupsPlays: typeof groupsPlays;
@@ -145,6 +152,7 @@ declare const fullApi: ApiFromModules<{
   "lib/observability/metricsService": typeof lib_observability_metricsService;
   "lib/observability/sentryNotifier": typeof lib_observability_sentryNotifier;
   "lib/orderValidation": typeof lib_orderValidation;
+  "lib/prng": typeof lib_prng;
   "lib/prompts/eventGeneration": typeof lib_prompts_eventGeneration;
   "lib/puzzleHelpers": typeof lib_puzzleHelpers;
   "lib/puzzleType": typeof lib_puzzleType;

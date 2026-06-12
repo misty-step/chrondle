@@ -362,6 +362,62 @@ describe("RangeInput", () => {
     });
   });
 
+  describe("Potential Score Preview", () => {
+    const setRange = (startYear: string, endYear: string) => {
+      const startInput = screen.getByLabelText(/from year/i);
+      const endInput = screen.getByLabelText(/to year/i);
+
+      fireEvent.change(startInput, { target: { value: startYear } });
+      fireEvent.blur(startInput);
+      fireEvent.change(endInput, { target: { value: endYear } });
+      fireEvent.blur(endInput);
+
+      // The preview swaps via AnimatePresence mode="wait"; let the exit and
+      // enter animations finish under fake timers.
+      act(() => {
+        vi.advanceTimersByTime(1500);
+      });
+    };
+
+    it("is hidden until the range is modified", () => {
+      renderRangeInput();
+      expect(screen.queryByText(/pts if right/i)).not.toBeInTheDocument();
+    });
+
+    it("shows the real quadratic-curve score for the current width", () => {
+      renderRangeInput();
+
+      // Width 50, 0 hints: quadratic curve pays 96 (the old linear UI math
+      // would have claimed 80 — regression guard).
+      setRange("1900", "1949");
+
+      expect(screen.getByText(/pts if right/i)).toBeInTheDocument();
+      expect(screen.getByText("96")).toBeInTheDocument();
+    });
+
+    it("shows the full 100 for a one-year range", () => {
+      renderRangeInput();
+      setRange("1969", "1969");
+      expect(screen.getByText("100")).toBeInTheDocument();
+    });
+
+    it("accounts for hints already taken", () => {
+      renderRangeInput({ hintsUsed: 3 });
+
+      // Width 50 at hint tier 3 (max 55): floor(55 × 0.9628…) = 52.
+      setRange("1900", "1949");
+      expect(screen.getByText("52")).toBeInTheDocument();
+    });
+
+    it("yields to the width error when the range is too wide", () => {
+      renderRangeInput();
+      setRange("1000", "1500");
+
+      expect(screen.getByText(/exceeds limit/i)).toBeInTheDocument();
+      expect(screen.queryByText(/pts if right/i)).not.toBeInTheDocument();
+    });
+  });
+
   describe("Commit Functionality", () => {
     it("commits the current range and resets state", () => {
       const handleCommit = vi.fn();

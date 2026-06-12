@@ -58,12 +58,6 @@ export function validateGameLayoutProps(props: unknown, componentName = "GameLay
     warn(componentName, "onRangeCommit must be a function");
   }
 
-  if (typeof p.remainingAttempts !== "number") {
-    warn(componentName, "remainingAttempts must be a number");
-  } else if (p.remainingAttempts < 0 || p.remainingAttempts > 6) {
-    warn(componentName, "remainingAttempts must be between 0 and 6");
-  }
-
   // Check numeric props (removed currentHintIndex - now calculated internally)
 
   // Check boolean props
