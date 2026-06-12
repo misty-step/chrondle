@@ -44,6 +44,15 @@ const nextConfig: NextConfig = {
   // PostHog proxy moved to Route Handler (src/app/(app)/ingest/[...path]/route.ts)
   // This ensures auth cookies are stripped before forwarding to PostHog
 
+  // Groups mode retired 2026-06; its URLs were indexed (sitemap) and bookmarked
+  async redirects() {
+    return [
+      { source: "/groups", destination: "/", permanent: true },
+      { source: "/archive/groups", destination: "/archive", permanent: true },
+      { source: "/archive/groups/:path*", destination: "/archive", permanent: true },
+    ];
+  },
+
   // Security headers configuration
   async headers() {
     return [

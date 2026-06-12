@@ -54,6 +54,8 @@ export interface DuelRunState {
   /** True once the run has ended */
   over: boolean;
   endReason: "miss" | "exhausted" | null;
+  /** Server returned an empty batch; stop requesting more rounds */
+  poolExhausted: boolean;
 }
 
 export type DuelRunAction =
@@ -86,6 +88,7 @@ export function createInitialRunState(seed: number): DuelRunState {
     wasCorrect: null,
     over: false,
     endReason: null,
+    poolExhausted: false,
   };
 }
 
@@ -109,6 +112,7 @@ export function duelRunReducer(state: DuelRunState, action: DuelRunAction): Duel
         return {
           ...state,
           pendingBatch: null,
+          poolExhausted: true,
           over: state.over || nothingLeft,
           endReason: state.endReason ?? (nothingLeft ? "exhausted" : null),
         };
@@ -160,7 +164,7 @@ export function duelRunReducer(state: DuelRunState, action: DuelRunAction): Duel
       };
 
       const remaining = advanced.rounds.length - nextIndex;
-      if (!advanced.pendingBatch && remaining <= PREFETCH_THRESHOLD) {
+      if (!advanced.pendingBatch && !advanced.poolExhausted && remaining <= PREFETCH_THRESHOLD) {
         return {
           ...advanced,
           batchNumber: advanced.batchNumber + 1,

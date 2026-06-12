@@ -55,7 +55,10 @@ describe("duel/queries", () => {
       });
 
       expect(result.rounds).toHaveLength(5);
-      expect(result.poolSize).toBe(101);
+      // poolSize is the sampled candidate count (bounded year-window reads),
+      // not the full table size.
+      expect(result.poolSize).toBeGreaterThan(0);
+      expect(result.poolSize).toBeLessThanOrEqual(101);
 
       for (const round of result.rounds) {
         expect(typeof round.first.year).toBe("number");
