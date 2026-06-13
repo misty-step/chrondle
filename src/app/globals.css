@@ -1,368 +1,209 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@misty-step/aesthetic" layer(base);
 
 @custom-variant dark (&:is(.dark *));
 
-/* Prevent white flash for dark mode users before JS hydrates */
-@media (prefers-color-scheme: dark) {
-  html:not(.light):not(.dark) {
-    color-scheme: dark;
-    background: #121213;
-    color: #e4e5f1;
-  }
-}
-
+/* ── steering: the scholar's green ─────────────────────────────────────
+   The one place chrondle colors the system. Everything else is the
+   shared aesthetic identity (ink, hairlines, Geist, radius 0). */
 :root {
-  --bg: #ffffff;
-  --text: #1a1a1b;
-  --muted: #787c7e;
-  --border: #d3d6da;
-  --success: #4a9b7f;
-  --warning: #d4a84b;
-  --neutral: #787c7e;
+  --ae-accent: #1f7a55;
+  --ae-accent-dark: #6ee7b7;
 
-  /* Surfaces */
-  --surface-primary: #ffffff;
-  --surface-elevated: #ffffff;
-  --surface-elevated-hover: #fafafa;
-  --surface-inset: #f4f4f5;
+  /* fonts arrive via next/font (see app/layout.tsx) */
+  --ae-font: var(--font-geist), "Helvetica Neue", sans-serif;
+  --ae-font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  /* Borders */
-  --border-subtle: #f4f4f5;
-
-  /* Mode: Classic - Archival green/teal */
-  --mode-classic-bg: #f0f7f4;
-  --mode-classic-text: #1a1a1b;
-  --mode-classic-accent: #2d6a4f;
-
-  /* Mode: Order - Warm amber timeline */
-  --mode-order-bg: #fef7ed;
-  --mode-order-text: #1a1a1b;
-  --mode-order-accent: #b45309;
-
-  /* Mode: Groups - Slate-blue dossier */
-  --mode-groups-bg: #eef4fb;
-  --mode-groups-text: #1a1a1b;
-  --mode-groups-accent: #28587b;
-
-  --font-display: "Outfit", sans-serif;
-  --font-body: "Karla", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", monospace;
-
-  --radius: 4px;
-  --radius-sm: 3px;
-
-  /* Elevation shadows */
-  --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.1);
-
-  --shadow-focus: 0 4px 10px rgba(26, 26, 27, 0.12);
-  --shadow-hover: 0 2px 0 rgba(26, 26, 27, 0.15);
+  /* project tokens (008 doctrine): one hue per game mode, AA-checked on
+     both surfaces, spent on glyphs and type — never on filled pills.
+     Classic rides the accent itself.
+       order  #b45309 4.89:1 on #fcfcfc · #fbbf24 11.22:1 on #121212
+       groups #28587b 7.38:1 on #fcfcfc · #8ecae6 10.47:1 on #121212
+       duel   #a81e3f 7.00:1 on #fcfcfc · #fb7185  6.96:1 on #121212 */
+  --chrondle-order: #b45309;
+  --chrondle-order-dark: #fbbf24;
+  --chrondle-groups: #28587b;
+  --chrondle-groups-dark: #8ecae6;
+  --chrondle-duel: #a81e3f;
+  --chrondle-duel-dark: #fb7185;
 }
 
-.dark {
-  --surface-primary: #121213;
-  --surface-elevated: #1e1e1f;
-  --surface-elevated-hover: #27272a;
-  --surface-inset: #18181b;
-
-  --border: #3a3a3c;
-  --border-subtle: #27272a;
-
-  --mode-classic-bg: #1a2f25;
-  --mode-classic-accent: #6ee7b7;
-
-  --mode-order-bg: #2a2015;
-  --mode-order-accent: #fbbf24;
-
-  --mode-groups-bg: #172532;
-  --mode-groups-accent: #8ecae6;
-
-  --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.4);
+/* project tokens flip with the mode, same as the system tokens */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not([data-ae-mode="light"]) {
+    --chrondle-order: var(--chrondle-order-dark);
+    --chrondle-groups: var(--chrondle-groups-dark);
+    --chrondle-duel: var(--chrondle-duel-dark);
+  }
 }
 
-html.dark {
-  --bg: #121213;
-  --text: #e4e5f1;
-  --muted: #9ca3af;
-  --border: #3a3a3c;
-  --success: #5fb899;
-  --warning: #fbbf24;
-
-  /* Mode: Classic - Dark variant */
-  --mode-classic-bg: #1a2f25;
-  --mode-classic-text: #e4e5f1;
-  --mode-classic-accent: #6ee7b7;
-
-  /* Mode: Order - Dark variant */
-  --mode-order-bg: #2a2015;
-  --mode-order-text: #e4e5f1;
-  --mode-order-accent: #fbbf24;
-
-  /* Mode: Groups - Dark variant */
-  --mode-groups-bg: #172532;
-  --mode-groups-text: #e4e5f1;
-  --mode-groups-accent: #8ecae6;
+.dark,
+[data-ae-mode="dark"] {
+  --chrondle-order: var(--chrondle-order-dark);
+  --chrondle-groups: var(--chrondle-groups-dark);
+  --chrondle-duel: var(--chrondle-duel-dark);
 }
 
+/* ── Tailwind v4 bridge (ADOPTING §5) ──────────────────────────────────
+   Utilities resolve to aesthetic; no parallel color system grows. */
 @theme inline {
-  --font-display: "Outfit", sans-serif;
-  --font-heading: "Outfit", sans-serif;
-  --font-body: "Karla", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", monospace;
-  --font-sans: "Karla", sans-serif;
-  --font-accent: "Outfit", sans-serif;
+  --color-surface: var(--ae-surface);
+  --color-wash: var(--ae-wash);
+  --color-ink: var(--ae-ink);
+  --color-ink-muted: var(--ae-ink-muted);
+  --color-ink-faint: var(--ae-ink-faint);
+  --color-line: var(--ae-line);
+  --color-accent: var(--ae-accent);
+  --color-ok: var(--ae-ok);
+  --color-warn: var(--ae-warn);
+  --color-err: var(--ae-err);
+  --font-sans: var(--ae-font);
+  --font-mono: var(--ae-font-mono);
+  --radius-*: initial; /* radius is 0; the scale should not exist */
+}
 
-  --color-surface-primary: var(--surface-primary);
-  --color-surface-elevated: var(--surface-elevated);
-  --color-surface-elevated-hover: var(--surface-elevated-hover);
-  --color-surface-inset: var(--surface-inset);
+/* legacy utility names, collapsed onto the system. These keep ~100
+   existing call sites on aesthetic tokens; new code should prefer the
+   bridge names above. No raw color survives outside the steering block. */
+@theme inline {
+  --color-background: var(--ae-surface);
+  --color-foreground: var(--ae-ink);
+  --color-card: var(--ae-surface);
+  --color-card-foreground: var(--ae-ink);
+  --color-popover: var(--ae-surface);
+  --color-popover-foreground: var(--ae-ink);
+  --color-primary: var(--ae-ink);
+  --color-primary-foreground: var(--ae-surface);
+  --color-secondary: var(--ae-wash);
+  --color-secondary-foreground: var(--ae-ink);
+  --color-muted: var(--ae-wash);
+  --color-muted-foreground: var(--ae-ink-muted);
+  --color-destructive: var(--ae-err);
+  --color-destructive-foreground: var(--ae-surface);
+  --color-border: var(--ae-line);
+  --color-border-subtle: var(--ae-line);
+  --color-input: var(--ae-line);
+  --color-ring: var(--ae-ink);
 
-  --color-background: var(--bg);
-  --color-foreground: var(--text);
-  --color-card: var(--bg);
-  --color-card-foreground: var(--text);
-  --color-popover: var(--bg);
-  --color-popover-foreground: var(--text);
-  --color-primary: var(--text);
-  --color-primary-foreground: var(--bg);
-  --color-secondary: var(--border);
-  --color-secondary-foreground: var(--text);
-  --color-muted: var(--border);
-  --color-muted-foreground: var(--muted);
-  --color-accent: var(--border);
-  --color-accent-foreground: var(--text);
-  --color-destructive: #b42318;
-  --color-destructive-foreground: #ffffff;
-  --color-border: var(--border);
-  --color-border-subtle: var(--border-subtle);
-  --color-input: var(--border);
-  --color-ring: var(--text);
+  --color-text-primary: var(--ae-ink);
+  --color-text-secondary: var(--ae-ink-muted);
+  --color-text-tertiary: var(--ae-ink-faint);
 
-  --color-text-primary: var(--text);
-  --color-text-secondary: var(--muted);
-  --color-text-tertiary: var(--neutral);
+  /* status rides the glyph; direction rides the arrow */
+  --color-feedback-success: var(--ae-ok);
+  --color-feedback-warning: var(--ae-warn);
+  --color-feedback-error: var(--ae-err);
+  --color-feedback-info: var(--ae-accent);
+  --color-feedback-correct: var(--ae-ok);
+  --color-feedback-earlier: var(--ae-warn);
+  --color-feedback-later: var(--ae-accent);
 
-  --color-feedback-success: var(--success);
-  --color-feedback-warning: var(--warning);
-  --color-feedback-error: #b42318;
-  --color-feedback-info: #2563eb;
-  --color-feedback-correct: var(--success);
-  --color-feedback-earlier: var(--warning);
-  --color-feedback-later: #2563eb;
+  /* game-mode hues: the project tokens, for type and glyphs only */
+  --color-mode-classic-accent: var(--ae-accent);
+  --color-mode-order-accent: var(--chrondle-order);
+  --color-mode-groups-accent: var(--chrondle-groups);
+  --color-mode-duel-accent: var(--chrondle-duel);
 
-  /* Mode-specific colors */
-  --color-classic-bg: var(--mode-classic-bg);
-  --color-classic-accent: var(--mode-classic-accent);
-  --color-order-bg: var(--mode-order-bg);
-  --color-order-accent: var(--mode-order-accent);
-  --color-mode-classic-bg: var(--mode-classic-bg);
-  --color-mode-classic-text: var(--mode-classic-text);
-  --color-mode-classic-accent: var(--mode-classic-accent);
-  --color-mode-order-bg: var(--mode-order-bg);
-  --color-mode-order-text: var(--mode-order-text);
-  --color-mode-order-accent: var(--mode-order-accent);
-  --color-groups-bg: var(--mode-groups-bg);
-  --color-groups-accent: var(--mode-groups-accent);
-  --color-mode-groups-bg: var(--mode-groups-bg);
-  --color-mode-groups-text: var(--mode-groups-text);
-  --color-mode-groups-accent: var(--mode-groups-accent);
-
-  --shadow-elevation-1: var(--elevation-1);
-  --shadow-elevation-2: var(--elevation-2);
-
-  --radius: 4px;
-  --radius-sm: 4px;
-  --radius-md: 4px;
-  --radius-lg: 4px;
-  --radius-xl: 4px;
-  --radius-2xl: 4px;
-  --radius-3xl: 4px;
-  --radius-full: 999px;
-
-  --radius-archival: var(--radius);
-  --radius-soft: var(--radius);
-  --radius-card: var(--radius);
-
-  --animate-fade-in: fade-in 0.2s ease-out;
-  --animate-spin: spin 1s linear infinite;
-
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
+  --font-display: var(--ae-font);
+  --font-heading: var(--ae-font);
+  --font-body: var(--ae-font);
+  --font-accent: var(--ae-font);
 }
 
 @layer utilities {
-  .bg-surface-primary {
-    background-color: var(--bg);
-  }
-
-  .bg-surface-elevated {
-    background-color: var(--bg);
-  }
-
-  html.dark .bg-surface-elevated {
-    background-color: #1e1e1f;
-  }
-
-  .bg-surface-overlay {
-    background-color: var(--bg);
-  }
-
-  .text-body-primary {
-    color: var(--text);
-  }
-
-  .text-body-secondary {
-    color: var(--muted);
-  }
-
-  .text-body-tertiary {
-    color: var(--neutral);
-  }
-
-  .text-inverse {
-    color: var(--bg);
-  }
-
-  .border-outline-default {
-    border-color: var(--border);
-  }
-
-  .ring-outline-focus {
-    --tw-ring-color: var(--text);
-  }
-
-  .text-body {
-    font-family: var(--font-body);
-    font-weight: 400;
-    letter-spacing: 0.01em;
-  }
-
-  .text-mono-year {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.03em;
-  }
-
-  .font-heading {
-    font-family: var(--font-display);
-    font-weight: 700;
-  }
-
-  .font-event {
-    font-family: var(--font-body);
-    font-weight: 400;
-  }
-
+  /* figures are tabular mono (.ae-num semantics) */
+  .text-mono-year,
   .font-year {
-    font-family: var(--font-mono);
+    font-family: var(--ae-font-mono);
     font-variant-numeric: tabular-nums;
   }
 
-  .font-display {
-    font-family: var(--font-display);
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
-  }
-
+  /* hierarchy comes from ink and weight, never from scale */
+  .font-heading,
+  .text-display,
   .text-archival-hero {
-    font-family: var(--font-display);
-    font-size: clamp(3rem, 10vw, 7rem);
-    font-weight: 500;
-    line-height: 0.9;
-    letter-spacing: -0.02em;
-    text-transform: none;
-  }
-
-  .text-manuscript {
-    font-family: var(--font-body);
-    font-style: italic;
-    font-size: 1.25rem;
-    line-height: 1.8;
-    text-indent: 2em;
-  }
-
-  .text-ink-annotation {
-    font-family: var(--font-body);
-    font-size: 0.875rem;
-    font-style: italic;
-    color: var(--muted);
-    transform: rotate(-2deg);
-    display: inline-block;
-  }
-
-  .text-display {
-    font-family: var(--font-display);
-    font-size: clamp(2rem, 5vw, 3rem);
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-    font-weight: 600;
+    font-family: var(--ae-font);
+    font-weight: 800;
   }
 
   .text-section-title {
-    font-family: var(--font-display);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font-weight: 550;
+    color: var(--ae-ink-muted);
+    letter-spacing: 0.18em;
     text-transform: uppercase;
   }
 
+  .text-body {
+    font-family: var(--ae-font);
+    font-weight: 400;
+  }
+
+  .font-event,
   .text-ui {
-    font-family: var(--font-body);
+    font-family: var(--ae-font);
   }
 
-  .number-badge {
-    @apply flex h-8 w-8 items-center justify-center;
-    @apply bg-primary rounded text-white;
-    @apply text-lg leading-none font-bold;
-    box-shadow: var(--shadow-hover);
+  .font-display {
+    font-family: var(--ae-font);
+    font-weight: 550;
   }
 
-  html.dark .number-badge {
-    @apply bg-[#4a9b7f] text-white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  .text-manuscript {
+    color: var(--ae-ink-muted);
   }
 
-  @keyframes loading-shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
+  .text-ink-annotation {
+    font-size: 13px;
+    color: var(--ae-ink-muted);
   }
 
+  /* waiting is still wash, never a shimmer */
   .loading-shimmer {
-    background-size: 200% 100%;
-    animation: loading-shimmer 1.6s ease-in-out infinite;
+    background: var(--ae-wash);
+    animation: none;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .loading-shimmer {
-      animation: none;
-    }
+  /* radius is 0 everywhere; the static circle utility is no exception */
+  .rounded-full {
+    border-radius: 0;
   }
 }
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
+/* ── portal costumes ───────────────────────────────────────────────────
+   Radix portals render div[role="dialog"], not <dialog>, so the system's
+   element-qualified dialog costume gets a class form here. Values match
+   aesthetic.css exactly. */
+@layer components {
+  /* Phosphor icons are fill-based; the system's .ae-icon assumes
+     stroke-based glyphs. .is-fill restores the fill without losing the
+     sizing and alignment of the icon costume. */
+  .ae-icon.is-fill {
+    fill: currentColor;
+    stroke: none;
+  }
+
+  .ae-dialog-panel {
+    background: var(--ae-surface);
+    color: var(--ae-ink);
+    width: min(26em, calc(100vw - 3em));
+    box-sizing: border-box;
+    padding: 2em;
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 5%),
+      0 12px 36px rgb(0 0 0 / 9%);
+  }
+
+  .dark .ae-dialog-panel {
+    background: var(--ae-wash);
+    box-shadow: none;
+  }
+
+  .ae-dialog-dim {
+    background: rgb(252 252 252 / 40%);
+  }
+
+  .dark .ae-dialog-dim {
+    background: rgb(18 18 18 / 40%);
+  }
 }

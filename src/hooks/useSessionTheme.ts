@@ -2,19 +2,14 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { useHydrated } from "@/hooks/useClientSnapshot";
-// Storage import removed - theme preference in-memory only
-// Authenticated users should use Convex for theme persistence
 
 /**
- * Theme override hook with localStorage persistence
+ * Theme override hook (aesthetic mode semantics, recipes/mode.js)
  *
- * CSS handles system theme detection via media queries.
- * JavaScript manages user theme preferences with persistence.
- *
- * Behavior:
- * - Page load: Check localStorage for saved preference, otherwise use system theme
- * - User toggle: Override to opposite theme and persist to localStorage
- * - Refresh: Restore saved preference if exists
+ * CSS handles system theme detection via media queries; the override is
+ * persisted under the system's `ae-mode` key and booted before first
+ * paint by the inline script in app/layout.tsx, so the page never
+ * flashes the wrong mode.
  */
 
 type ThemeOverride = "light" | "dark" | null;
@@ -40,10 +35,18 @@ function getInitialSystemTheme(): "light" | "dark" {
   }
 }
 
-// Helper function to get initial override synchronously
+// Read the persisted override (the same key the boot script reads)
 function getInitialOverride(): ThemeOverride {
-  // No localStorage persistence - theme won't persist for anonymous users
-  return null;
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const stored = localStorage.getItem("ae-mode");
+    return stored === "dark" || stored === "light" ? stored : null;
+  } catch {
+    return null;
+  }
 }
 
 function subscribeToSystemTheme(onStoreChange: () => void) {
@@ -70,11 +73,15 @@ export function useSessionTheme(): UseSessionThemeReturn {
   // Current resolved theme: override takes precedence, otherwise system
   const currentTheme = override || systemTheme;
 
-  // Toggle: set override to opposite of current theme (in-memory only)
+  // Toggle: pin the opposite of the effective scheme and persist it
   const toggle = () => {
     const newTheme = currentTheme === "light" ? "dark" : "light";
     setOverride(newTheme);
-    // No localStorage persistence - theme preference won't persist for anonymous users
+    try {
+      localStorage.setItem("ae-mode", newTheme);
+    } catch {
+      // private mode: the override still applies for this session
+    }
   };
 
   return {

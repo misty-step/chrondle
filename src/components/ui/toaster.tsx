@@ -3,12 +3,12 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { X } from "@phosphor-icons/react";
+import { X, XCircle } from "@phosphor-icons/react";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
 /**
- * Individual toast item component
+ * The toast (aesthetic costume): news arrives at the edge and waits to
+ * be read. A slip with the status on its glyph — the words stay ink.
  */
 function ToastItem({
   title,
@@ -28,49 +28,36 @@ function ToastItem({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 100, scale: 0.95 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className={cn(
-        "pointer-events-auto relative flex w-full max-w-md items-start gap-3 overflow-hidden rounded border p-4 shadow-lg",
-        variant === "destructive"
-          ? "border-destructive bg-destructive/10 text-destructive"
-          : "border-border bg-card text-card-foreground",
-      )}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.24, ease: [0.23, 1, 0.32, 1] }}
+      className="ae-toast pointer-events-auto w-full"
       role="alert"
       aria-live="polite"
       aria-atomic="true"
     >
-      <div className="flex-1 space-y-1">
-        {title && <div className="text-sm leading-tight font-semibold">{title}</div>}
-        {description && <div className="text-sm leading-snug opacity-90">{description}</div>}
+      {variant === "destructive" && (
+        <XCircle className="ae-icon is-fill ae-err shrink-0" aria-hidden="true" />
+      )}
+      <div className="flex-1">
+        {title && <span className="ae-item">{title}</span>}
+        {title && description && " "}
+        {description && <span className="ae-dim">{description}</span>}
         {actionLabel && onAction && (
           <button
             onClick={() => {
               onAction();
               onDismiss();
             }}
-            className={cn(
-              "mt-2 inline-flex items-center rounded px-3 py-1.5 text-xs font-medium transition-colors",
-              variant === "destructive"
-                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                : "bg-primary text-body-primary-foreground hover:bg-primary/90",
-            )}
+            className="ae-button ae-button-quiet ae-button-compact mt-2 block"
           >
             {actionLabel}
           </button>
         )}
       </div>
-      <button
-        onClick={onDismiss}
-        className={cn(
-          "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded transition-opacity hover:opacity-70",
-          variant === "destructive" ? "text-destructive" : "text-muted-foreground",
-        )}
-        aria-label="Dismiss notification"
-      >
-        <X className="h-4 w-4" />
+      <button onClick={onDismiss} className="ae-toast-x" aria-label="Dismiss notification">
+        <X className="ae-icon is-fill" aria-hidden="true" />
       </button>
     </motion.div>
   );
@@ -78,7 +65,7 @@ function ToastItem({
 
 /**
  * Toast container that renders toasts via portal
- * Positioned at bottom-right with aria-live region
+ * The tray stacks bottom-right (aesthetic .ae-toasts).
  */
 export function Toaster() {
   const { toasts, removeToast } = useToast();
@@ -94,11 +81,7 @@ export function Toaster() {
   }
 
   const toastContainer = (
-    <div
-      className="pointer-events-none fixed right-0 bottom-0 z-50 flex max-h-screen w-full flex-col-reverse gap-2 p-4 sm:right-4 sm:bottom-4 sm:max-w-md"
-      aria-label="Notifications"
-      role="region"
-    >
+    <div className="ae-toasts pointer-events-none" aria-label="Notifications" role="region">
       <AnimatePresence mode="popLayout">
         {toasts.map((toast) => (
           <ToastItem
