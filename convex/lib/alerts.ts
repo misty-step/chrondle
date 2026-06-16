@@ -15,7 +15,7 @@
 import type { ActionCtx } from "../_generated/server";
 import { getMetrics } from "./observability/metricsService";
 import { AlertEngine, STANDARD_ALERT_RULES } from "./observability/alertEngine";
-import { sendToSentry } from "./observability/sentryNotifier";
+import { sendToCanary } from "./observability/canaryNotifier";
 import { sendEmail } from "./observability/emailNotifier";
 import type { AlertChannel, Notifier } from "./observability/alertEngine";
 
@@ -23,7 +23,7 @@ import type { AlertChannel, Notifier } from "./observability/alertEngine";
  * Run alert checks after batch generation completes.
  *
  * Aggregates metrics from last 24 hours, evaluates alert rules,
- * and sends notifications via configured channels (Sentry, email).
+ * and sends notifications via configured channels (Canary, email).
  *
  * @param ctx - Action context with database access
  */
@@ -34,7 +34,7 @@ export async function runAlertChecks(ctx: ActionCtx): Promise<void> {
 
     // Set up notifiers for each channel
     const notifiers = new Map<AlertChannel, Notifier>([
-      ["sentry", sendToSentry],
+      ["canary", sendToCanary],
       ["email", sendEmail],
     ]);
 

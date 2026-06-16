@@ -46,10 +46,10 @@ import type * as lib_logging from "../lib/logging.js";
 import type * as lib_migrationHelpers from "../lib/migrationHelpers.js";
 import type * as lib_observability from "../lib/observability.js";
 import type * as lib_observability_alertEngine from "../lib/observability/alertEngine.js";
+import type * as lib_observability_canaryNotifier from "../lib/observability/canaryNotifier.js";
 import type * as lib_observability_emailNotifier from "../lib/observability/emailNotifier.js";
 import type * as lib_observability_metricsCollector from "../lib/observability/metricsCollector.js";
 import type * as lib_observability_metricsService from "../lib/observability/metricsService.js";
-import type * as lib_observability_sentryNotifier from "../lib/observability/sentryNotifier.js";
 import type * as lib_orderValidation from "../lib/orderValidation.js";
 import type * as lib_prng from "../lib/prng.js";
 import type * as lib_prompts_eventGeneration from "../lib/prompts/eventGeneration.js";
@@ -88,11 +88,7 @@ import type * as users_queries from "../users/queries.js";
 import type * as users_statistics from "../users/statistics.js";
 import type * as users_subscriptions from "../users/subscriptions.js";
 
-import type {
-  ApiFromModules,
-  FilterApi,
-  FunctionReference,
-} from "convex/server";
+import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
   "actions/eventGeneration/critic": typeof actions_eventGeneration_critic;
@@ -133,10 +129,10 @@ declare const fullApi: ApiFromModules<{
   "lib/migrationHelpers": typeof lib_migrationHelpers;
   "lib/observability": typeof lib_observability;
   "lib/observability/alertEngine": typeof lib_observability_alertEngine;
+  "lib/observability/canaryNotifier": typeof lib_observability_canaryNotifier;
   "lib/observability/emailNotifier": typeof lib_observability_emailNotifier;
   "lib/observability/metricsCollector": typeof lib_observability_metricsCollector;
   "lib/observability/metricsService": typeof lib_observability_metricsService;
-  "lib/observability/sentryNotifier": typeof lib_observability_sentryNotifier;
   "lib/orderValidation": typeof lib_orderValidation;
   "lib/prng": typeof lib_prng;
   "lib/prompts/eventGeneration": typeof lib_prompts_eventGeneration;
@@ -184,10 +180,7 @@ declare const fullApi: ApiFromModules<{
  * const myFunctionReference = api.myModule.myFunction;
  * ```
  */
-export declare const api: FilterApi<
-  typeof fullApi,
-  FunctionReference<any, "public">
->;
+export declare const api: FilterApi<typeof fullApi, FunctionReference<any, "public">>;
 
 /**
  * A utility for referencing Convex functions in your app's internal API.
@@ -197,9 +190,6 @@ export declare const api: FilterApi<
  * const myFunctionReference = internal.myModule.myFunction;
  * ```
  */
-export declare const internal: FilterApi<
-  typeof fullApi,
-  FunctionReference<any, "internal">
->;
+export declare const internal: FilterApi<typeof fullApi, FunctionReference<any, "internal">>;
 
 export declare const components: {};

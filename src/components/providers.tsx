@@ -5,15 +5,11 @@ import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { SessionThemeProvider } from "@/components/SessionThemeProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { CanaryClientObserver } from "@/components/CanaryClientObserver";
 import { UserCreationProvider } from "@/components/UserCreationProvider";
 import { MigrationProvider } from "@/components/providers/MigrationProvider";
 import { ToastProvider } from "@/hooks/use-toast";
 import { getEnvErrorMessage, getPublicBootstrapEnv, isProduction } from "@/lib/env";
-import { initSentryClient } from "@/observability/sentry.client";
-
-// Initialize Sentry at module scope (before React components render)
-// This ensures Sentry is ready before any component can call captureClientException
-initSentryClient();
 
 const convexClients = new Map<string, ConvexReactClient>();
 
@@ -111,6 +107,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ErrorBoundary>
+      <CanaryClientObserver />
       <ToastProvider>
         <MigrationProvider>
           <ClerkProvider publishableKey={clerkKey} dynamic>

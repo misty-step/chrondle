@@ -3,15 +3,15 @@ import { sanitizeErrorForLogging } from "./errorSanitization";
 type FailureReason = "validation" | "auth" | "not_found" | "server" | "unknown";
 
 /**
- * Emulated Sentry capture for Convex environment.
- * Logs structured error data that can be ingested by logging platforms or Sentry integrations.
+ * Canary-compatible capture for the Convex environment.
+ * Logs structured error data that can be ingested by Canary or log processors.
  */
 function captureServerException(
   error: unknown,
   context?: { tags?: Record<string, string>; extras?: Record<string, unknown> },
 ) {
   console.error(
-    "[Sentry Capture]",
+    "[Canary Capture]",
     JSON.stringify({
       error: sanitizeErrorForLogging(error),
       tags: context?.tags,
@@ -23,7 +23,7 @@ function captureServerException(
 
 /**
  * Wraps a Convex mutation or action handler with observability:
- * - Error capturing (Sentry-compatible logs)
+ * - Error capturing (Canary-compatible logs)
  * - Failure classification
  * - Metrics logging
  */

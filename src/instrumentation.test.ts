@@ -1,22 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockCaptureCanaryException, mockCaptureServerException, mockInitSentryServer } = vi.hoisted(
-  () => ({
-    mockCaptureCanaryException: vi.fn(),
-    mockCaptureServerException: vi.fn(),
-    mockInitSentryServer: vi.fn(),
-  }),
-);
+const { mockCaptureServerException } = vi.hoisted(() => ({
+  mockCaptureServerException: vi.fn(),
+}));
 
 const originalEnv = { ...process.env };
 
-vi.mock("./observability/canary", () => ({
-  captureCanaryException: mockCaptureCanaryException,
-}));
-
-vi.mock("./observability/sentry.server", () => ({
+vi.mock("./observability/reporter", () => ({
   captureServerException: mockCaptureServerException,
-  initSentryServer: mockInitSentryServer,
 }));
 
 describe("instrumentation", () => {
@@ -25,31 +16,16 @@ describe("instrumentation", () => {
     process.env = { ...originalEnv };
   });
 
-  it("skips Sentry initialization when the DSN is missing", async () => {
+  it("does not require SDK initialization", async () => {
     process.env.NEXT_RUNTIME = "nodejs";
-    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
 
     const { register } = await import("./instrumentation");
 
-    await register();
-
-    expect(mockInitSentryServer).not.toHaveBeenCalled();
+    await expect(register()).resolves.toBeUndefined();
+    expect(mockCaptureServerException).not.toHaveBeenCalled();
   });
 
-  it("initializes Sentry on the Node.js runtime when the DSN is configured", async () => {
-    process.env.NEXT_RUNTIME = "nodejs";
-    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://test@sentry.io/123";
-
-    const { register } = await import("./instrumentation");
-
-    await register();
-
-    expect(mockInitSentryServer).toHaveBeenCalledTimes(1);
-  });
-
-  it("awaits server exception capture before resolving when Sentry is configured", async () => {
-    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://test@sentry.io/123";
-
+  it("awaits Canary server exception capture before resolving", async () => {
     let resolveCapture: (() => void) | undefined;
     const error = new Error("request failed");
 
@@ -102,39 +78,5 @@ describe("instrumentation", () => {
     await pending;
 
     expect(settled).toBe(true);
-  });
-
-  it("falls back to Canary request capture when Sentry is not configured", async () => {
-    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
-
-    const error = new Error("request failed");
-    const { onRequestError } = await import("./instrumentation");
-
-    await onRequestError(
-      error,
-      {
-        path: "/play",
-        method: "GET",
-        headers: {},
-      },
-      {
-        routePath: "/play",
-        routeType: "page",
-      },
-    );
-
-    expect(mockCaptureServerException).not.toHaveBeenCalled();
-    expect(mockCaptureCanaryException).toHaveBeenCalledWith(error, {
-      level: "error",
-      tags: {
-        source: "nextjs.onRequestError",
-        route_type: "page",
-      },
-      extras: {
-        path: "/play",
-        method: "GET",
-        routePath: "/play",
-      },
-    });
   });
 });

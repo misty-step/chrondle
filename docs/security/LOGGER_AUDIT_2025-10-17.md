@@ -107,7 +107,7 @@ console.error(`[...] Failed to generate:`, sanitizeErrorForLogging(error));
 **Risk**: Phase 1 fix only sanitized console.error calls but **still rethrew original error objects**. When Convex actions fail:
 
 - Platform logs the unhandled error (with unsanitized message/stack)
-- Error may be sent to monitoring services (Sentry, etc.)
+- Error may be sent to monitoring services.
 - Client may receive error details in development mode
 - All of these expose the API key despite sanitized logging
 

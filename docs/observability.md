@@ -1,29 +1,35 @@
 # Observability & Error Tracking
 
-Chrondle uses a unified observability strategy to track errors and performance across the Next.js client and Convex backend.
+Chrondle uses Canary for error reporting and health visibility across the Next.js client, Next.js server hooks, and Convex backend.
 
 ## Architecture
 
-- **Sentry**: Primary error tracking for both client (React/Next.js) and server (Convex functions).
+- **Canary**: Primary error tracking and uptime/health monitoring for client, server, and Convex alert events.
 - **Convex Metrics**: Custom metrics for tracking business-critical events (e.g., `order.submit.failure`).
 - **Slack Alerts**: Critical failure notifications (optional) via webhook.
 
 ### Key Modules
 
-- `src/observability/sentry.client.ts`: Client-side Sentry initialization and helpers.
-- `src/observability/mutationErrorAdapter.ts`: Normalizes Convex mutation errors for the UI and Sentry.
+- `src/components/CanaryClientObserver.tsx`: Captures browser global errors and exposes `window.ChrondleCanary` for smoke tests.
+- `src/observability/reporter.ts`: Stable app-facing error reporting facade.
+- `src/observability/canary.ts`: Canary HTTP ingest implementation.
+- `src/observability/mutationErrorAdapter.ts`: Normalizes Convex mutation errors for the UI and Canary.
 - `convex/lib/observability.ts`: Backend wrapper for Convex functions to capture errors and metrics.
+- `convex/lib/observability/canaryNotifier.ts`: Sends Convex alert notifications to Canary.
+- `src/app/(app)/api/health/route.ts`: Public `/api/health` route for uptime checks.
 
 ## Configuration
 
 Environment variables required for observability:
 
-| Variable                         | Description                                           | Required   |
-| :------------------------------- | :---------------------------------------------------- | :--------- |
-| `NEXT_PUBLIC_SENTRY_DSN`         | Sentry Data Source Name.                              | Yes (Prod) |
-| `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | Deployment environment (`production`, `development`). | Yes        |
-| `NEXT_PUBLIC_SENTRY_RELEASE`     | Release identifier (commit SHA).                      | CI/Prod    |
-| `ORDER_FAILURE_SLACK_WEBHOOK`    | Webhook URL for critical order failure alerts.        | Optional   |
+| Variable                         | Description                                                                                                                   | Required   |
+| :------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :--------- |
+| `NEXT_PUBLIC_CANARY_API_KEY`     | Raw Canary `ingest-only` key embedded for browser error capture. Use `sk_live_...`, not `KEY-*`. Never use an admin/read key. | Yes (Prod) |
+| `NEXT_PUBLIC_CANARY_ENDPOINT`    | Canary base URL. Defaults to `https://canary-obs.fly.dev`.                                                                    | Optional   |
+| `NEXT_PUBLIC_CANARY_ENVIRONMENT` | Deployment environment (`production`, `development`).                                                                         | Yes        |
+| `CANARY_API_KEY`                 | Raw server and Convex Canary `ingest-only` key. Use `sk_live_...`, not `KEY-*`. Never use an admin/read key.                  | Yes (Prod) |
+| `CANARY_ENDPOINT`                | Server and Convex Canary base URL. Defaults to `https://canary-obs.fly.dev`.                                                  | Optional   |
+| `ORDER_FAILURE_SLACK_WEBHOOK`    | Webhook URL for critical order failure alerts.                                                                                | Optional   |
 
 ## Game Analytics Verification
 
@@ -85,6 +91,8 @@ export const myMutation = mutation({
 
 The deployment workflow (`.github/workflows/deploy.yml`) automatically:
 
-1. Injects the commit SHA as the Sentry release version.
-2. Uploads source maps to Sentry for both Next.js and Convex bundles.
-3. Associates errors with specific commits.
+1. Requires browser and server Canary ingest keys before production deployment.
+2. Builds the app with Canary endpoint, key, and environment values.
+3. Updates Convex runtime Canary configuration before deploying backend functions.
+4. Verifies the deployment with `bun run deploy:verify`.
+5. Exposes `/api/health` for Canary uptime checks.

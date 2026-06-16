@@ -3,7 +3,7 @@
  * Used by both Classic and Order game modes to ensure consistent behavior.
  */
 
-import { captureClientException } from "@/observability/sentry.client";
+import { captureClientException } from "@/observability/reporter";
 import type { MutationError } from "@/observability/mutationErrorAdapter";
 
 export type SubmissionAuthErrorCode = "AUTH_PENDING" | "AUTH_INCOMPLETE" | "MISSING_PUZZLE";
@@ -11,7 +11,7 @@ export type SubmissionAuthErrorCode = "AUTH_PENDING" | "AUTH_INCOMPLETE" | "MISS
 export interface SubmissionAuthError {
   code: SubmissionAuthErrorCode;
   message: string;
-  shouldAlert: boolean; // Whether to send to Sentry
+  shouldAlert: boolean; // Whether to send to Canary
   retryable: boolean;
 }
 
@@ -69,7 +69,7 @@ export function checkSubmissionAuth(
       retryable: true,
     };
 
-    // Log to Sentry with context
+    // Log to Canary with context
     if (context) {
       captureClientException(
         new Error(
@@ -145,7 +145,7 @@ export function logSubmissionAttempt(
   outcome?: "success" | "failure",
 ) {
   // In production, this would go to structured logging
-  // For now, use console.info which is captured by Sentry breadcrumbs
+  // For now, use console.info for production observability breadcrumbs.
   // eslint-disable-next-line no-console
   console.info("[Submission]", {
     gameMode,

@@ -6,14 +6,14 @@ import {
   type AuthState,
   type SubmissionAuthError,
 } from "../gameSubmission";
-import * as SentryClient from "@/observability/sentry.client";
+import * as CanaryClient from "@/observability/reporter";
 
-// Mock Sentry
-vi.mock("@/observability/sentry.client", () => ({
+// Mock Canary
+vi.mock("@/observability/reporter", () => ({
   captureClientException: vi.fn(),
 }));
 
-const captureClientExceptionMock = vi.mocked(SentryClient.captureClientException);
+const captureClientExceptionMock = vi.mocked(CanaryClient.captureClientException);
 
 describe("checkSubmissionAuth", () => {
   const mockPuzzleId = "puzzle-123";
@@ -94,7 +94,7 @@ describe("checkSubmissionAuth", () => {
         retryable: true,
       });
 
-      // Verify Sentry capture
+      // Verify Canary capture
       expect(captureClientExceptionMock).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
@@ -141,7 +141,7 @@ describe("checkSubmissionAuth", () => {
       });
     });
 
-    it("does not alert Sentry for missing puzzle (user-driven error)", () => {
+    it("does not alert Canary for missing puzzle (user-driven error)", () => {
       const auth: AuthState = {
         isAuthenticated: true,
         userId: "user-456",

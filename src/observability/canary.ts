@@ -34,8 +34,8 @@ export async function captureCanaryException(
       body: JSON.stringify({
         service: SERVICE,
         environment:
-          process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ||
-          process.env.SENTRY_ENVIRONMENT ||
+          process.env.NEXT_PUBLIC_CANARY_ENVIRONMENT ||
+          process.env.CANARY_ENVIRONMENT ||
           process.env.NODE_ENV ||
           "production",
         error_class: normalized.errorClass,
@@ -66,11 +66,15 @@ export async function captureCanaryException(
 }
 
 function getEndpoint(): string {
-  return process.env.NEXT_PUBLIC_CANARY_ENDPOINT?.trim() || DEFAULT_ENDPOINT;
+  return (
+    process.env.CANARY_ENDPOINT?.trim() ||
+    process.env.NEXT_PUBLIC_CANARY_ENDPOINT?.trim() ||
+    DEFAULT_ENDPOINT
+  );
 }
 
 function getApiKey(): string {
-  return process.env.NEXT_PUBLIC_CANARY_API_KEY?.trim() || "";
+  return process.env.CANARY_API_KEY?.trim() || process.env.NEXT_PUBLIC_CANARY_API_KEY?.trim() || "";
 }
 
 function normalizeError(error: unknown): {

@@ -35,7 +35,15 @@ export const envSchemas = {
 
   // Optional: Observability
   OPENROUTER_API_KEY: z.string().startsWith("sk-or-").optional(),
-  NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
+  NEXT_PUBLIC_CANARY_ENDPOINT: z.string().url().optional(),
+  NEXT_PUBLIC_CANARY_API_KEY: z
+    .string()
+    .regex(/^sk_live_[A-Za-z0-9_-]{24}$/, "Must be a raw Canary ingest key")
+    .optional(),
+  CANARY_API_KEY: z
+    .string()
+    .regex(/^sk_live_[A-Za-z0-9_-]{24}$/, "Must be a raw Canary ingest key")
+    .optional(),
 } as const;
 
 // =============================================================================
@@ -54,6 +62,8 @@ export const REQUIRED_VARS = {
     "STRIPE_PRICE_MONTHLY",
     "STRIPE_PRICE_ANNUAL",
     "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+    "NEXT_PUBLIC_CANARY_API_KEY",
+    "CANARY_API_KEY",
   ] as const,
 
   // Preview inherits production requirements
@@ -64,6 +74,8 @@ export const REQUIRED_VARS = {
     "STRIPE_PRICE_MONTHLY",
     "STRIPE_PRICE_ANNUAL",
     "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+    "NEXT_PUBLIC_CANARY_API_KEY",
+    "CANARY_API_KEY",
   ] as const,
 
   // CI needs deploy key

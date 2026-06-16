@@ -204,17 +204,21 @@ export class Ci {
       stripeSecretKey,
       stripeWebhookSecret,
       stripeSyncSecret,
+      nextPublicCanaryApiKey,
+      canaryApiKey,
     }: {
       nextPublicConvexUrl: string;
       nextPublicClerkPublishableKey: string;
       nextPublicStripePublishableKey?: string;
       stripePriceMonthly?: string;
       stripePriceAnnual?: string;
+      nextPublicCanaryApiKey?: string;
       clerkSecretKey?: Secret;
       convexDeployKey?: Secret;
       stripeSecretKey?: Secret;
       stripeWebhookSecret?: Secret;
       stripeSyncSecret?: Secret;
+      canaryApiKey?: Secret;
     },
   ): Container {
     let container = this.appContainer(source)
@@ -228,6 +232,11 @@ export class Ci {
     );
     container = this.withOptionalEnvVariable(container, "STRIPE_PRICE_MONTHLY", stripePriceMonthly);
     container = this.withOptionalEnvVariable(container, "STRIPE_PRICE_ANNUAL", stripePriceAnnual);
+    container = this.withOptionalEnvVariable(
+      container,
+      "NEXT_PUBLIC_CANARY_API_KEY",
+      nextPublicCanaryApiKey,
+    );
     container = this.withOptionalSecretVariable(container, "CLERK_SECRET_KEY", clerkSecretKey);
     container = this.withOptionalSecretVariable(container, "CONVEX_DEPLOY_KEY", convexDeployKey);
     container = this.withOptionalSecretVariable(container, "STRIPE_SECRET_KEY", stripeSecretKey);
@@ -237,6 +246,7 @@ export class Ci {
       stripeWebhookSecret,
     );
     container = this.withOptionalSecretVariable(container, "STRIPE_SYNC_SECRET", stripeSyncSecret);
+    container = this.withOptionalSecretVariable(container, "CANARY_API_KEY", canaryApiKey);
 
     return container.withExec(["bun", "run", "verify:env", "--", environment]);
   }
@@ -585,6 +595,8 @@ exit 0
     nextPublicStripePublishableKey?: string,
     stripePriceMonthly?: string,
     stripePriceAnnual?: string,
+    nextPublicCanaryApiKey?: string,
+    canaryApiKey?: Secret,
   ): Promise<string> {
     await this.verifyEnvConfigContainer(source, environment, {
       nextPublicConvexUrl,
@@ -597,6 +609,8 @@ exit 0
       stripeSecretKey,
       stripeWebhookSecret,
       stripeSyncSecret,
+      nextPublicCanaryApiKey,
+      canaryApiKey,
     }).sync();
 
     return `${environment} environment config validated`;

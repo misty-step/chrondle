@@ -2,7 +2,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { logger } from "@/lib/logger";
-import { captureClientException } from "@/observability/sentry.client";
+import { captureClientException } from "@/observability/reporter";
 // Storage import removed - no localStorage to clear
 
 interface Props {

@@ -33,12 +33,12 @@ describe("withObservability", () => {
     await expect(wrapped(mockCtx, {})).rejects.toThrow("Something broke");
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "[Sentry Capture]",
+      "[Canary Capture]",
       expect.stringContaining("Something broke"),
     );
     // Check reason classification in JSON log
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "[Sentry Capture]",
+      "[Canary Capture]",
       expect.stringContaining('"reason":"unknown"'),
     );
   });
@@ -51,7 +51,7 @@ describe("withObservability", () => {
     await expect(wrapped(mockCtx, {})).rejects.toThrow();
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "[Sentry Capture]",
+      "[Canary Capture]",
       expect.stringContaining('"reason":"validation"'),
     );
   });

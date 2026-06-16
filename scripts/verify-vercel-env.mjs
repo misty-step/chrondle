@@ -28,11 +28,7 @@ import { execSync } from "child_process";
 
 const REQUIRED_VARS = {
   // All environments need these
-  all: [
-    "NEXT_PUBLIC_CONVEX_URL",
-    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
-    "CLERK_SECRET_KEY",
-  ],
+  all: ["NEXT_PUBLIC_CONVEX_URL", "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "CLERK_SECRET_KEY"],
 
   // Production and Preview need Stripe
   production: [
@@ -42,6 +38,8 @@ const REQUIRED_VARS = {
     "STRIPE_PRICE_MONTHLY",
     "STRIPE_PRICE_ANNUAL",
     "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+    "NEXT_PUBLIC_CANARY_API_KEY",
+    "CANARY_API_KEY",
   ],
 
   preview: [
@@ -51,6 +49,8 @@ const REQUIRED_VARS = {
     "STRIPE_PRICE_MONTHLY",
     "STRIPE_PRICE_ANNUAL",
     "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+    "NEXT_PUBLIC_CANARY_API_KEY",
+    "CANARY_API_KEY",
   ],
 
   // Development can work without Stripe (uses .env.local)
@@ -79,9 +79,14 @@ function getVercelEnvVars(environment) {
     for (const line of lines) {
       const trimmed = line.trim();
       // Skip headers and empty lines
-      if (!trimmed || trimmed.startsWith("Vercel") || trimmed.startsWith(">") ||
-          trimmed.startsWith("Common") || trimmed.startsWith("-") ||
-          trimmed.includes("name") && trimmed.includes("value")) {
+      if (
+        !trimmed ||
+        trimmed.startsWith("Vercel") ||
+        trimmed.startsWith(">") ||
+        trimmed.startsWith("Common") ||
+        trimmed.startsWith("-") ||
+        (trimmed.includes("name") && trimmed.includes("value"))
+      ) {
         continue;
       }
 
@@ -91,8 +96,10 @@ function getVercelEnvVars(environment) {
         // Check if this var is for the requested environment
         const envLower = environment.toLowerCase();
         const lineLower = line.toLowerCase();
-        if (lineLower.includes(envLower) ||
-            (envLower === "development" && lineLower.includes("dev"))) {
+        if (
+          lineLower.includes(envLower) ||
+          (envLower === "development" && lineLower.includes("dev"))
+        ) {
           envVars.push(match[1]);
         }
       }
@@ -160,8 +167,7 @@ async function main() {
     process.exit(0); // Don't fail CI if Vercel isn't configured
   }
 
-  const environments =
-    targetEnv === "all" ? ["development", "preview", "production"] : [targetEnv];
+  const environments = targetEnv === "all" ? ["development", "preview", "production"] : [targetEnv];
 
   let hasErrors = false;
   const results = {};

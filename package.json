@@ -89,7 +89,6 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.5",
     "@radix-ui/react-visually-hidden": "^1.2.4",
-    "@sentry/nextjs": "^10.47.0",
     "@types/canvas-confetti": "^1.9.0",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.1",
@@ -183,7 +182,6 @@
   "trustedDependencies": [
     "@clerk/shared",
     "@playwright/browser-chromium",
-    "@sentry/cli",
     "@swc/core",
     "core-js",
     "esbuild",

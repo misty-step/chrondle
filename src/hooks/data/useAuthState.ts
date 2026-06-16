@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useUserCreation } from "@/components/UserCreationProvider";
 import { logger } from "@/lib/logger";
-import { captureClientException } from "@/observability/sentry.client";
+import { captureClientException } from "@/observability/reporter";
 
 /**
  * Return type for the useAuthState hook

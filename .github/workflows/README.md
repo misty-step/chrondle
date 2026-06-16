@@ -13,28 +13,22 @@
 
 ### Core Secrets (Required - Deploy will fail without these)
 
-| Secret                              | Description           | How to Get                                                |
-| ----------------------------------- | --------------------- | --------------------------------------------------------- |
-| `NEXT_PUBLIC_CONVEX_URL`            | Convex project URL    | Convex Dashboard                                          |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk auth public key | [Clerk Dashboard](https://dashboard.clerk.com) → API Keys |
-| `CONVEX_DEPLOY_KEY`                 | Convex deployment key | Convex Dashboard → Settings → Deploy Keys                 |
-
-### Sentry Secrets (Optional - Sentry release skipped if missing)
-
-| Secret                   | Description              | How to Get                                                   |
-| ------------------------ | ------------------------ | ------------------------------------------------------------ |
-| `NEXT_PUBLIC_SENTRY_DSN` | Sentry data source name  | [Sentry](https://sentry.io) → Project Settings → Client Keys |
-| `SENTRY_AUTH_TOKEN`      | Sentry auth token        | Sentry → Settings → Auth Tokens                              |
-| `SENTRY_ORG`             | Sentry organization slug | Sentry URL: `sentry.io/organizations/{org-slug}/`            |
-| `SENTRY_PROJECT`         | Sentry project slug      | Sentry → Project Settings                                    |
+| Secret                              | Description           | How to Get                                                                        |
+| ----------------------------------- | --------------------- | --------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_CONVEX_URL`            | Convex project URL    | Convex Dashboard                                                                  |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk auth public key | [Clerk Dashboard](https://dashboard.clerk.com) → API Keys                         |
+| `CONVEX_DEPLOY_KEY`                 | Convex deployment key | Convex Dashboard → Settings → Deploy Keys                                         |
+| `NEXT_PUBLIC_CANARY_API_KEY`        | Browser Canary key    | Raw Canary `ingest-only` key for browser capture; never admin/read                |
+| `CANARY_API_KEY`                    | Server Canary key     | Raw Canary `ingest-only` key for Next server and Convex capture; never admin/read |
 
 ### Other Secrets (Used by specific workflows)
 
-| Secret                    | Used By        | Description                           |
-| ------------------------- | -------------- | ------------------------------------- |
-| `CLERK_SECRET_KEY`        | E2E tests      | Clerk secret key for server-side auth |
-| `CLAUDE_CODE_OAUTH_TOKEN` | Code review    | Claude Code integration               |
-| `GIST_TOKEN`              | Coverage badge | GitHub token for gist updates         |
+| Secret                        | Used By        | Description                           |
+| ----------------------------- | -------------- | ------------------------------------- |
+| `CLERK_SECRET_KEY`            | E2E tests      | Clerk secret key for server-side auth |
+| `CLAUDE_CODE_OAUTH_TOKEN`     | Code review    | Claude Code integration               |
+| `GIST_TOKEN`                  | Coverage badge | GitHub token for gist updates         |
+| `NEXT_PUBLIC_CANARY_ENDPOINT` | Deploy         | Optional Canary base URL override     |
 
 ## Setting Up Secrets
 
@@ -49,7 +43,15 @@ Quick setup with GitHub CLI:
 gh secret set NEXT_PUBLIC_CONVEX_URL --body "https://your-project.convex.cloud"
 gh secret set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY --body "pk_live_..."
 gh secret set CONVEX_DEPLOY_KEY --body "prod:project-name|..."
+gh secret set NEXT_PUBLIC_CANARY_API_KEY --body "sk_live_..."
+gh secret set CANARY_API_KEY --body "sk_live_..."
 ```
+
+Both Canary keys are write-only ingest keys scoped to `chrondle`; neither may
+use an admin or read scope. Use the one-time raw `sk_live_...` value returned by
+Canary, not the `KEY-*` database id. `NEXT_PUBLIC_CANARY_API_KEY` is embedded in
+browser JavaScript, while `CANARY_API_KEY` is used by server and Convex runtime
+paths.
 
 ## Validation & Safety
 
@@ -64,7 +66,6 @@ For Clerk specifically, `ci.yml` builds and runs Playwright against a fixed publ
 The deploy workflow validates all required secrets at the start, providing clear error messages:
 
 - **Required secrets**: Fail immediately with instructions
-- **Optional secrets (Sentry)**: Warn but continue, skip Sentry release
 
 ## Workflow Details
 
@@ -77,9 +78,8 @@ Steps:
 3. Setup Bun 1.3.9
 4. Install dependencies
 5. Build Next.js application
-6. Create Sentry release (if configured)
-7. Deploy to Convex production
-8. Verify deployment
+6. Deploy to Convex production
+7. Verify deployment
 
 ### CI (`ci.yml`)
 
@@ -126,10 +126,6 @@ Check that `CONVEX_DEPLOY_KEY` is set and has the correct format:
 ```
 prod:project-name|base64-encoded-key
 ```
-
-### Sentry Release Skipped
-
-This is expected if Sentry secrets aren't configured. The deploy will still succeed; only Sentry release/sourcemap upload is skipped.
 
 ## Manual Deployment
 

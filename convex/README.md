@@ -185,14 +185,14 @@ convex/lib/observability/
 ├── metricsCollector.ts ~140 lines   Metric ingestion pipeline
 ├── alertEngine.ts      ~280 lines   Threshold monitoring and alerting
 ├── emailNotifier.ts    ~220 lines   Email notification delivery
-└── sentryNotifier.ts   ~120 lines   Sentry error reporting integration
+└── canaryNotifier.ts   ~100 lines   Canary alert integration
 ```
 
 **Responsibilities**:
 
 - Real-time metrics for event generation pipeline
 - Configurable alert thresholds (cost, failure rate, latency)
-- Multi-channel notifications (email, Sentry)
+- Multi-channel notifications (email, Canary)
 - Dashboard data for monitoring LLM costs and quality
 
 ### Event Generation Pipeline (LLM-Powered)
@@ -574,7 +574,7 @@ npx convex run events:getEventCount
 - Real-time metrics for event generation pipeline
 - LLM cost tracking and alerting
 - Failure rate monitoring with thresholds
-- Email and Sentry notifications for alerts
+- Email and Canary notifications for alerts
 - Generation log storage for debugging
 
 ## Contributing

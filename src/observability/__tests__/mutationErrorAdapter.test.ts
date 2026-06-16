@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { classifyMutationError, safeMutation } from "../mutationErrorAdapter";
-import * as sentryClient from "../sentry.client";
+import * as reporter from "../reporter";
 import { ConvexError } from "convex/values";
 
-vi.mock("../sentry.client", () => ({
+vi.mock("../reporter", () => ({
   captureClientException: vi.fn(),
 }));
 
@@ -59,7 +59,7 @@ describe("mutationErrorAdapter", () => {
 
       expect(result).toBe("success");
       expect(error).toBeNull();
-      expect(sentryClient.captureClientException).not.toHaveBeenCalled();
+      expect(reporter.captureClientException).not.toHaveBeenCalled();
     });
 
     it("returns error tuple on failure and captures exception", async () => {
@@ -73,7 +73,7 @@ describe("mutationErrorAdapter", () => {
       expect(error).not.toBeNull();
       expect(error?.code).toBe("UNKNOWN");
 
-      expect(sentryClient.captureClientException).toHaveBeenCalledWith(
+      expect(reporter.captureClientException).toHaveBeenCalledWith(
         err,
         expect.objectContaining({
           tags: { mutation_code: "UNKNOWN", retryable: true },
@@ -88,7 +88,7 @@ describe("mutationErrorAdapter", () => {
 
       await safeMutation(mutation);
 
-      expect(sentryClient.captureClientException).toHaveBeenCalledWith(
+      expect(reporter.captureClientException).toHaveBeenCalledWith(
         err,
         expect.objectContaining({
           level: "info",

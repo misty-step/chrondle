@@ -26,7 +26,6 @@ jobs:
         id: validate-secrets
         run: |
           errors=0
-          warnings=0
 
           check_required() {
             if [ -z "$1" ]; then
@@ -37,33 +36,12 @@ jobs:
             fi
           }
 
-          check_optional() {
-            if [ -z "$1" ]; then
-              echo "::warning::Optional secret not configured: $2"
-              warnings=$((warnings + 1))
-            else
-              echo "✓ $2"
-            fi
-          }
-
           echo "=== Required Secrets ==="
           check_required "$CLERK_KEY" "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
           check_required "$CONVEX_URL" "NEXT_PUBLIC_CONVEX_URL"
           check_required "$CONVEX_KEY" "CONVEX_DEPLOY_KEY"
-
-          echo ""
-          echo "=== Optional Secrets (Sentry) ==="
-          check_optional "$SENTRY_DSN" "NEXT_PUBLIC_SENTRY_DSN"
-          check_optional "$SENTRY_TOKEN" "SENTRY_AUTH_TOKEN"
-          check_optional "$SENTRY_ORG_VAL" "SENTRY_ORG"
-          check_optional "$SENTRY_PROJ" "SENTRY_PROJECT"
-
-          # Set output for Sentry configuration status
-          if [ -n "$SENTRY_TOKEN" ] && [ -n "$SENTRY_ORG_VAL" ] && [ -n "$SENTRY_PROJ" ]; then
-            echo "sentry_configured=true" >> $GITHUB_OUTPUT
-          else
-            echo "sentry_configured=false" >> $GITHUB_OUTPUT
-          fi
+          check_required "$PUBLIC_CANARY_API_KEY" "NEXT_PUBLIC_CANARY_API_KEY (browser Canary ingest-only key; never admin/read)"
+          check_required "$SERVER_CANARY_API_KEY" "CANARY_API_KEY (server and Convex Canary ingest-only key; never admin/read)"
 
           if [ $errors -gt 0 ]; then
             echo ""
@@ -71,19 +49,12 @@ jobs:
             echo "GitHub repo → Settings → Secrets and variables → Actions"
             exit 1
           fi
-
-          if [ $warnings -gt 0 ]; then
-            echo ""
-            echo "Note: $warnings optional secret(s) not configured. Sentry features will be skipped."
-          fi
         env:
           CLERK_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
           CONVEX_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-          SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-          SENTRY_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG_VAL: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJ: ${{ secrets.SENTRY_PROJECT }}
+          PUBLIC_CANARY_API_KEY: ${{ secrets.NEXT_PUBLIC_CANARY_API_KEY }}
+          SERVER_CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
 
       # Step 3: Setup Bun
       - name: Setup Bun
@@ -113,6 +84,8 @@ jobs:
           STRIPE_PRICE_MONTHLY: ${{ secrets.STRIPE_PRICE_MONTHLY }}
           STRIPE_PRICE_ANNUAL: ${{ secrets.STRIPE_PRICE_ANNUAL }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_CANARY_API_KEY: ${{ secrets.NEXT_PUBLIC_CANARY_API_KEY }}
+          CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
 
       - name: Validate Stripe prices exist
         run: node scripts/verify-stripe-config.mjs --live
@@ -129,25 +102,26 @@ jobs:
         env:
           NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-          NEXT_PUBLIC_SENTRY_ENVIRONMENT: production
-          NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
+          NEXT_PUBLIC_CANARY_ENDPOINT: ${{ secrets.NEXT_PUBLIC_CANARY_ENDPOINT }}
+          NEXT_PUBLIC_CANARY_API_KEY: ${{ secrets.NEXT_PUBLIC_CANARY_API_KEY }}
+          NEXT_PUBLIC_CANARY_ENVIRONMENT: production
+          CANARY_ENDPOINT: ${{ secrets.NEXT_PUBLIC_CANARY_ENDPOINT }}
+          CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
+          CANARY_ENVIRONMENT: production
 
-      # Step 5: Create Sentry release (skipped if Sentry not configured)
-      - name: Create Sentry release
-        if: steps.validate-secrets.outputs.sentry_configured == 'true'
-        uses: getsentry/action-release@v3.5.0
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-        with:
-          environment: production
-          sourcemaps: './.next'
-          version: ${{ github.sha }}
-
-      # Step 6: Deploy to Convex (production)
+      # Step 5: Deploy to Convex (production)
       # Note: CONVEX_DEPLOY_KEY starting with "prod:" triggers production deploy
+      - name: Configure Convex Canary runtime
+        run: |
+          endpoint="${CANARY_ENDPOINT:-https://canary-obs.fly.dev}"
+          npx convex env set CANARY_API_KEY "$CANARY_API_KEY"
+          npx convex env set CANARY_ENDPOINT "$endpoint"
+          npx convex env set CANARY_ENVIRONMENT production
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
+          CANARY_ENDPOINT: ${{ secrets.NEXT_PUBLIC_CANARY_ENDPOINT }}
+
       - name: Deploy to Convex
         run: npx convex deploy
         env:

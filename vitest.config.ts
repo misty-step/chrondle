@@ -51,7 +51,6 @@ const coverageExclude = [
   // Root config files
   ".lintstagedrc.js",
   ".size-limit.mjs",
-  "sentry.*.mjs",
   "tailwind.config.mjs",
   "postcss.config.mjs",
   "lefthook.yml",

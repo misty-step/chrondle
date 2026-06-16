@@ -1,5 +1,5 @@
 import { ConvexError } from "convex/values";
-import { captureClientException } from "./sentry.client";
+import { captureClientException } from "./reporter";
 
 export type MutationErrorCode = "VALIDATION" | "AUTH" | "NETWORK" | "SERVER" | "UNKNOWN";
 
@@ -102,9 +102,9 @@ export function classifyMutationError(error: unknown): MutationError {
 }
 
 /**
- * Safe mutation wrapper that handles error classification and Sentry reporting
+ * Safe mutation wrapper that handles error classification and Canary reporting
  * @param mutationFn The async mutation function to execute
- * @param context Context for Sentry (e.g., puzzleId, userId)
+ * @param context Context for Canary (e.g., puzzleId, userId)
  * @returns Tuple of [result, null] or [null, MutationError]
  */
 export async function safeMutation<T>(
@@ -118,9 +118,9 @@ export async function safeMutation<T>(
     const error = classifyMutationError(err);
 
     // Only capture unexpected errors or critical failures
-    // Validation errors are usually user-driven and don't need Sentry noise
+    // Validation errors are usually user-driven and don't need Canary noise
     // unless we want to track UX issues.
-    // DESIGN.md says: "Client shows toast... message logged to Sentry"
+    // DESIGN.md says: "Client shows toast... message logged to observability"
     // So we capture all, maybe with different levels.
 
     const level = error.code === "VALIDATION" ? "info" : "error";

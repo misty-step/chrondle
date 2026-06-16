@@ -39,7 +39,7 @@ describe("STANDARD_ALERT_RULES", () => {
     it("should exist and have correct configuration", () => {
       expect(rule).toBeDefined();
       expect(rule?.severity).toBe("critical");
-      expect(rule?.channels).toContain("sentry");
+      expect(rule?.channels).toContain("canary");
       expect(rule?.channels).toContain("email");
       expect(rule?.cooldown).toBe(24 * 60 * 60 * 1000); // 24 hours
     });
@@ -90,7 +90,7 @@ describe("STANDARD_ALERT_RULES", () => {
     it("should exist and have correct configuration", () => {
       expect(rule).toBeDefined();
       expect(rule?.severity).toBe("warning");
-      expect(rule?.channels).toContain("sentry");
+      expect(rule?.channels).toContain("canary");
       expect(rule?.cooldown).toBe(6 * 60 * 60 * 1000); // 6 hours
     });
 
@@ -140,7 +140,7 @@ describe("STANDARD_ALERT_RULES", () => {
     it("should exist and have correct configuration", () => {
       expect(rule).toBeDefined();
       expect(rule?.severity).toBe("warning");
-      expect(rule?.channels).toContain("sentry");
+      expect(rule?.channels).toContain("canary");
       expect(rule?.cooldown).toBe(12 * 60 * 60 * 1000); // 12 hours
     });
 
@@ -190,7 +190,7 @@ describe("STANDARD_ALERT_RULES", () => {
     it("should exist and have correct configuration", () => {
       expect(rule).toBeDefined();
       expect(rule?.severity).toBe("critical");
-      expect(rule?.channels).toContain("sentry");
+      expect(rule?.channels).toContain("canary");
       expect(rule?.channels).toContain("email");
       expect(rule?.cooldown).toBe(1 * 60 * 60 * 1000); // 1 hour
     });
@@ -314,7 +314,7 @@ describe("AlertEngine cooldown pruning", () => {
 
   const mockNotifier = vi.fn(async () => {});
   const notifiers = new Map<AlertChannel, Notifier>([
-    ["sentry", mockNotifier as unknown as Notifier],
+    ["canary", mockNotifier as unknown as Notifier],
     ["email", mockNotifier as unknown as Notifier],
   ]);
 
@@ -363,7 +363,7 @@ describe("AlertEngine cooldown pruning", () => {
 });
 
 describe("AlertEngine integration smoke", () => {
-  const sentryNotifier = vi.fn().mockResolvedValue(undefined);
+  const canaryNotifier = vi.fn().mockResolvedValue(undefined);
   const emailNotifier = vi.fn().mockResolvedValue(undefined);
 
   const baseMetrics = (): Metrics => ({
@@ -398,7 +398,7 @@ describe("AlertEngine integration smoke", () => {
     return new AlertEngine(
       STANDARD_ALERT_RULES,
       new Map([
-        ["sentry", sentryNotifier as unknown as Notifier],
+        ["canary", canaryNotifier as unknown as Notifier],
         ["email", emailNotifier as unknown as Notifier],
       ]),
     );
@@ -407,7 +407,7 @@ describe("AlertEngine integration smoke", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-12-01T00:00:00Z"));
-    sentryNotifier.mockClear();
+    canaryNotifier.mockClear();
     emailNotifier.mockClear();
   });
 
@@ -425,7 +425,7 @@ describe("AlertEngine integration smoke", () => {
     const fired = await engine.checkAlerts(metrics);
 
     expect(fired).toContain("Pool Depletion Imminent");
-    expect(sentryNotifier).toHaveBeenCalledTimes(1);
+    expect(canaryNotifier).toHaveBeenCalledTimes(1);
     expect(emailNotifier).toHaveBeenCalledTimes(1);
   });
 
@@ -439,7 +439,7 @@ describe("AlertEngine integration smoke", () => {
 
     const first = await engine.checkAlerts(metrics);
     expect(first).toContain("Cost Spike Detected");
-    expect(sentryNotifier).toHaveBeenCalledTimes(1);
+    expect(canaryNotifier).toHaveBeenCalledTimes(1);
 
     const second = await engine.checkAlerts(metrics);
     expect(second).not.toContain("Cost Spike Detected");
@@ -448,7 +448,7 @@ describe("AlertEngine integration smoke", () => {
 
     const third = await engine.checkAlerts(metrics);
     expect(third).toContain("Cost Spike Detected");
-    expect(sentryNotifier).toHaveBeenCalledTimes(2);
+    expect(canaryNotifier).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -482,15 +482,15 @@ describe("AlertEngine", () => {
     ...overrides,
   });
 
-  let sentryNotifier: Notifier;
+  let canaryNotifier: Notifier;
   let emailNotifier: Notifier;
   let notifiers: Map<AlertChannel, Notifier>;
 
   beforeEach(() => {
-    sentryNotifier = vi.fn().mockResolvedValue(undefined);
+    canaryNotifier = vi.fn().mockResolvedValue(undefined);
     emailNotifier = vi.fn().mockResolvedValue(undefined);
     notifiers = new Map<AlertChannel, Notifier>([
-      ["sentry", sentryNotifier],
+      ["canary", canaryNotifier],
       ["email", emailNotifier],
     ]);
   });
@@ -510,7 +510,7 @@ describe("AlertEngine", () => {
       const firedAlerts = await engine.checkAlerts(metrics);
 
       expect(firedAlerts).toContain("Pool Depletion Imminent");
-      expect(sentryNotifier).toHaveBeenCalledTimes(1);
+      expect(canaryNotifier).toHaveBeenCalledTimes(1);
       expect(emailNotifier).toHaveBeenCalledTimes(1);
     });
 
@@ -528,7 +528,7 @@ describe("AlertEngine", () => {
       const firedAlerts = await engine.checkAlerts(metrics);
 
       expect(firedAlerts).toHaveLength(0);
-      expect(sentryNotifier).not.toHaveBeenCalled();
+      expect(canaryNotifier).not.toHaveBeenCalled();
       expect(emailNotifier).not.toHaveBeenCalled();
     });
 
@@ -546,12 +546,12 @@ describe("AlertEngine", () => {
       // First check - should fire
       const firstFired = await engine.checkAlerts(metrics);
       expect(firstFired).toContain("Pool Depletion Imminent");
-      expect(sentryNotifier).toHaveBeenCalledTimes(1);
+      expect(canaryNotifier).toHaveBeenCalledTimes(1);
 
       // Second check immediately after - should not fire (cooldown)
       const secondFired = await engine.checkAlerts(metrics);
       expect(secondFired).toHaveLength(0);
-      expect(sentryNotifier).toHaveBeenCalledTimes(1); // Still 1, not 2
+      expect(canaryNotifier).toHaveBeenCalledTimes(1); // Still 1, not 2
     });
 
     it("should fire multiple alerts when multiple conditions are met", async () => {
@@ -577,7 +577,7 @@ describe("AlertEngine", () => {
       expect(firedAlerts).toContain("Pool Depletion Imminent");
       expect(firedAlerts).toContain("Quality Degradation");
       expect(firedAlerts).toContain("Generation Failure Spike");
-      expect(sentryNotifier).toHaveBeenCalledTimes(3);
+      expect(canaryNotifier).toHaveBeenCalledTimes(3);
       expect(emailNotifier).toHaveBeenCalledTimes(2); // Only critical alerts
     });
 
@@ -585,7 +585,7 @@ describe("AlertEngine", () => {
       const engine = new AlertEngine(STANDARD_ALERT_RULES, notifiers);
       const metrics = createMockMetrics({
         cost: {
-          costToday: 2.0, // Triggers "Cost Spike Detected" (sentry only)
+          costToday: 2.0, // Triggers "Cost Spike Detected" (canary only)
           cost7DayAvg: 0.5,
           cost30Day: 15.0,
           costPerEvent: 0.03,
@@ -595,8 +595,8 @@ describe("AlertEngine", () => {
       const firedAlerts = await engine.checkAlerts(metrics);
 
       expect(firedAlerts).toContain("Cost Spike Detected");
-      expect(sentryNotifier).toHaveBeenCalledTimes(1);
-      expect(emailNotifier).not.toHaveBeenCalled(); // Cost spike only goes to sentry
+      expect(canaryNotifier).toHaveBeenCalledTimes(1);
+      expect(emailNotifier).not.toHaveBeenCalled(); // Cost spike only goes to canary
     });
 
     it("should include correct metrics in notification", async () => {
@@ -612,7 +612,7 @@ describe("AlertEngine", () => {
 
       await engine.checkAlerts(metrics);
 
-      expect(sentryNotifier).toHaveBeenCalledWith(
+      expect(canaryNotifier).toHaveBeenCalledWith(
         expect.objectContaining({
           metrics: expect.objectContaining({
             poolHealth: expect.objectContaining({
@@ -628,12 +628,12 @@ describe("AlertEngine", () => {
     });
 
     it("should handle missing notifiers gracefully", async () => {
-      const partialNotifiers = new Map<AlertChannel, Notifier>([["sentry", sentryNotifier]]);
+      const partialNotifiers = new Map<AlertChannel, Notifier>([["canary", canaryNotifier]]);
       const engine = new AlertEngine(STANDARD_ALERT_RULES, partialNotifiers);
       const metrics = createMockMetrics({
         poolHealth: {
           unusedEvents: 150,
-          daysUntilDepletion: 25, // Triggers alert with both sentry and email
+          daysUntilDepletion: 25, // Triggers alert with both canary and email
           coverageByEra: { ancient: 10, medieval: 30, modern: 110 },
           yearsReady: 75,
         },
@@ -643,7 +643,7 @@ describe("AlertEngine", () => {
       const firedAlerts = await engine.checkAlerts(metrics);
 
       expect(firedAlerts).toContain("Pool Depletion Imminent");
-      expect(sentryNotifier).toHaveBeenCalledTimes(1);
+      expect(canaryNotifier).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -661,18 +661,18 @@ describe("AlertEngine", () => {
 
       // First check - should fire
       await engine.checkAlerts(metrics);
-      expect(sentryNotifier).toHaveBeenCalledTimes(1);
+      expect(canaryNotifier).toHaveBeenCalledTimes(1);
 
       // Second check - should not fire (cooldown)
       await engine.checkAlerts(metrics);
-      expect(sentryNotifier).toHaveBeenCalledTimes(1);
+      expect(canaryNotifier).toHaveBeenCalledTimes(1);
 
       // Reset cooldown
       engine.resetCooldown("Pool Depletion Imminent");
 
       // Third check - should fire again
       await engine.checkAlerts(metrics);
-      expect(sentryNotifier).toHaveBeenCalledTimes(2);
+      expect(canaryNotifier).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -696,18 +696,18 @@ describe("AlertEngine", () => {
 
       // First check - all three should fire
       await engine.checkAlerts(metrics);
-      expect(sentryNotifier).toHaveBeenCalledTimes(3);
+      expect(canaryNotifier).toHaveBeenCalledTimes(3);
 
       // Second check - none should fire (cooldown)
       await engine.checkAlerts(metrics);
-      expect(sentryNotifier).toHaveBeenCalledTimes(3);
+      expect(canaryNotifier).toHaveBeenCalledTimes(3);
 
       // Reset all cooldowns
       engine.resetAllCooldowns();
 
       // Third check - all three should fire again
       await engine.checkAlerts(metrics);
-      expect(sentryNotifier).toHaveBeenCalledTimes(6);
+      expect(canaryNotifier).toHaveBeenCalledTimes(6);
     });
   });
 
@@ -725,17 +725,17 @@ describe("AlertEngine", () => {
 
       await engine.checkAlerts(metrics);
 
-      expect(sentryNotifier).toHaveBeenCalledWith(
+      expect(canaryNotifier).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("Pool Depletion Imminent"),
         }),
       );
-      expect(sentryNotifier).toHaveBeenCalledWith(
+      expect(canaryNotifier).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("Days until depletion: 25"),
         }),
       );
-      expect(sentryNotifier).toHaveBeenCalledWith(
+      expect(canaryNotifier).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("Unused events: 150"),
         }),
@@ -755,12 +755,12 @@ describe("AlertEngine", () => {
 
       await engine.checkAlerts(metrics);
 
-      expect(sentryNotifier).toHaveBeenCalledWith(
+      expect(canaryNotifier).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("Cost Spike Detected"),
         }),
       );
-      expect(sentryNotifier).toHaveBeenCalledWith(
+      expect(canaryNotifier).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("Today's cost: $2.00"),
         }),
@@ -780,12 +780,12 @@ describe("AlertEngine", () => {
 
       await engine.checkAlerts(metrics);
 
-      expect(sentryNotifier).toHaveBeenCalledWith(
+      expect(canaryNotifier).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("Quality Degradation"),
         }),
       );
-      expect(sentryNotifier).toHaveBeenCalledWith(
+      expect(canaryNotifier).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("Avg quality score: 65.0%"),
         }),
@@ -808,17 +808,17 @@ describe("AlertEngine", () => {
 
       await engine.checkAlerts(metrics);
 
-      expect(sentryNotifier).toHaveBeenCalledWith(
+      expect(canaryNotifier).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("Generation Failure Spike"),
         }),
       );
-      expect(sentryNotifier).toHaveBeenCalledWith(
+      expect(canaryNotifier).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("Failure rate: 60.0%"),
         }),
       );
-      expect(sentryNotifier).toHaveBeenCalledWith(
+      expect(canaryNotifier).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("Year too obscure"),
         }),

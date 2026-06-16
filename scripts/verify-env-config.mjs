@@ -64,14 +64,18 @@ const PATTERNS = {
     pattern: /^(prod|dev):/,
     description: "Must start with prod: or dev:",
   },
+  NEXT_PUBLIC_CANARY_API_KEY: {
+    pattern: /^sk_live_[A-Za-z0-9_-]{24}$/,
+    description: "Must be the raw Canary ingest key (sk_live_ plus 24 URL-safe characters)",
+  },
+  CANARY_API_KEY: {
+    pattern: /^sk_live_[A-Za-z0-9_-]{24}$/,
+    description: "Must be the raw Canary ingest key (sk_live_ plus 24 URL-safe characters)",
+  },
 };
 
 const REQUIRED_VARS = {
-  all: [
-    "NEXT_PUBLIC_CONVEX_URL",
-    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
-    "CLERK_SECRET_KEY",
-  ],
+  all: ["NEXT_PUBLIC_CONVEX_URL", "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "CLERK_SECRET_KEY"],
   production: [
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
@@ -79,6 +83,8 @@ const REQUIRED_VARS = {
     "STRIPE_PRICE_MONTHLY",
     "STRIPE_PRICE_ANNUAL",
     "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+    "NEXT_PUBLIC_CANARY_API_KEY",
+    "CANARY_API_KEY",
   ],
   preview: [
     "STRIPE_SECRET_KEY",
@@ -87,6 +93,8 @@ const REQUIRED_VARS = {
     "STRIPE_PRICE_MONTHLY",
     "STRIPE_PRICE_ANNUAL",
     "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+    "NEXT_PUBLIC_CANARY_API_KEY",
+    "CANARY_API_KEY",
   ],
   ci: ["CONVEX_DEPLOY_KEY"],
 };

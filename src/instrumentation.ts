@@ -8,11 +8,7 @@
  */
 
 export async function register() {
-  // Only initialize on Node.js runtime (not Edge)
-  if (process.env.NEXT_RUNTIME === "nodejs" && isSentryConfigured()) {
-    const { initSentryServer } = await import("./observability/sentry.server");
-    initSentryServer();
-  }
+  // Canary uses direct request-time capture and does not require SDK bootstrapping.
 }
 
 export async function onRequestError(
@@ -40,17 +36,7 @@ export async function onRequestError(
     },
   };
 
-  if (!isSentryConfigured()) {
-    const { captureCanaryException } = await import("./observability/canary");
-    await captureCanaryException(error, contextPayload);
-    return;
-  }
-
-  const { captureServerException } = await import("./observability/sentry.server");
+  const { captureServerException } = await import("./observability/reporter");
 
   await captureServerException(error, contextPayload);
-}
-
-function isSentryConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN?.trim());
 }

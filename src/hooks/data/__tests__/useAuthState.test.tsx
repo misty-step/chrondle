@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { useAuthState } from "../useAuthState";
 import * as clerk from "@clerk/nextjs";
 import * as userCreationProvider from "@/components/UserCreationProvider";
-import * as sentryClient from "@/observability/sentry.client";
+import * as reporter from "@/observability/reporter";
 
 // Mock Clerk
 vi.mock("@clerk/nextjs", () => ({
@@ -15,8 +15,8 @@ vi.mock("@/components/UserCreationProvider", () => ({
   useUserCreation: vi.fn(),
 }));
 
-// Mock Sentry client
-vi.mock("@/observability/sentry.client", () => ({
+// Mock Canary client
+vi.mock("@/observability/reporter", () => ({
   captureClientException: vi.fn(),
 }));
 
@@ -146,7 +146,7 @@ describe("useAuthState", () => {
       expect(result.current.userId).toBeNull();
     });
 
-    it("should capture to Sentry when transitioning from loading to missing Convex user", () => {
+    it("should capture to Canary when transitioning from loading to missing Convex user", () => {
       // Start with loading state (prevStateRef.current will have isLoading: true)
       vi.mocked(clerk.useUser).mockReturnValue({
         isLoaded: false,
@@ -160,10 +160,10 @@ describe("useAuthState", () => {
       } as any);
 
       const { rerender } = renderHook(() => useAuthState());
-      expect(sentryClient.captureClientException).not.toHaveBeenCalled();
+      expect(reporter.captureClientException).not.toHaveBeenCalled();
 
       // Transition to Clerk authenticated but missing Convex user
-      // Since prevStateRef.current has isLoading: true, this will capture to Sentry
+      // Since prevStateRef.current has isLoading: true, this will capture to Canary
       vi.mocked(clerk.useUser).mockReturnValue({
         isLoaded: true,
         isSignedIn: true,
@@ -180,7 +180,7 @@ describe("useAuthState", () => {
       rerender();
 
       // Should capture because previous state had isLoading: true
-      expect(sentryClient.captureClientException).toHaveBeenCalledWith(
+      expect(reporter.captureClientException).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
           tags: expect.objectContaining({
