@@ -11,6 +11,7 @@
  */
 
 import type { Doc } from "../../_generated/dataModel";
+import { sanitizeErrorForLogging } from "../errorSanitization";
 import type {
   CostTrackingMetrics,
   GenerationLatencyMetrics,
@@ -242,7 +243,7 @@ function calculateQualityMetrics(logs: readonly Doc<"generation_logs">[]): Quali
   const failureReasons = new Map<string, number>();
   for (const log of logs) {
     if (log.status === "failed" && log.error_message) {
-      const reason = log.error_message.slice(0, 100); // Truncate long messages
+      const reason = sanitizeErrorForLogging(log.error_message).slice(0, 100);
       failureReasons.set(reason, (failureReasons.get(reason) ?? 0) + 1);
     }
   }

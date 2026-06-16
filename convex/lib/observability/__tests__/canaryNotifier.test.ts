@@ -135,6 +135,29 @@ describe("sendToCanary", () => {
     );
   });
 
+  it("sanitizes alert message and metric failure reasons before sending", async () => {
+    const notification = createMockNotification("Quality Failure Spike", "warning");
+    const canaryWriteKey = ["sk", "live", "123456789012345678901234"].join("_");
+    notification.message = `provider failed with Bearer ${canaryWriteKey}`;
+    notification.metrics.quality.topFailureReasons = [
+      {
+        reason: "raw provider text sk-or-v1-abcdefghijklmnopqrstuvwxyz123456",
+        count: 1,
+      },
+    ];
+
+    await sendToCanary(notification);
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(String(init.body));
+    expect(body.message).toContain("Bearer ***REDACTED***");
+    expect(body.context.extras.metrics.quality.topFailureReasons[0].reason).toContain(
+      "sk-or-v1-***REDACTED***",
+    );
+    expect(JSON.stringify(body)).not.toContain("abcdefghijklmnopqrstuvwxyz123456");
+    expect(JSON.stringify(body)).not.toContain(canaryWriteKey);
+  });
+
   it("handles missing API key gracefully", async () => {
     vi.stubEnv("CANARY_API_KEY", "");
     vi.stubEnv("NEXT_PUBLIC_CANARY_API_KEY", "");

@@ -13,7 +13,7 @@ vi.mock("@/lib/convexServer", () => ({
 describe("/api/health", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("CANARY_API_KEY", "KEY-test");
+    vi.stubEnv("CANARY_API_KEY", "sk_live_server-canary-key-000000");
     mockQuery.mockResolvedValue("ok");
     mockGetConvexClient.mockReturnValue({ query: mockQuery });
   });
@@ -49,6 +49,25 @@ describe("/api/health", () => {
       error: "Missing Canary write key",
       checks: {
         canary: "missing",
+        convex: "ok",
+      },
+    });
+  });
+
+  it("fails when the Canary write key is malformed", async () => {
+    vi.stubEnv("CANARY_API_KEY", "KEY-test");
+    vi.stubEnv("NEXT_PUBLIC_CANARY_API_KEY", "");
+    const { GET } = await import("./route");
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      status: "error",
+      error: "Invalid Canary write key",
+      checks: {
+        canary: "invalid",
         convex: "ok",
       },
     });

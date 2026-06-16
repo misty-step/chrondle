@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useUserCreation } from "@/components/UserCreationProvider";
 import { logger } from "@/lib/logger";
+import { hashIdentifier } from "@/observability/hash";
 import { captureClientException } from "@/observability/reporter";
 
 /**
@@ -126,18 +127,17 @@ export function useAuthState(): UseAuthStateReturn {
     }
 
     if (authPhase === "awaiting-convex-user" && prevState?.isLoading && prevPhase !== authPhase) {
+      const clerkIdHash = user?.id ? hashIdentifier(user.id) : "unknown";
       captureClientException(
         new Error("Auth edge case: Clerk authenticated but Convex user not found"),
         {
           tags: {
             error_type: "auth_user_not_found",
-            clerk_id: user?.id ?? "unknown",
+            clerk_id_hash: clerkIdHash,
           },
           extras: {
-            clerkId: user?.id,
-            email: user?.primaryEmailAddress?.emailAddress,
+            clerkIdHash,
             emailVerified: user?.primaryEmailAddress?.verification?.status,
-            createdAt: user?.createdAt,
             userCreationLoading,
             hasCurrentUser: !!currentUser,
           },

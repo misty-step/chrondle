@@ -1,6 +1,7 @@
 "use node";
 
 import type { AlertNotification } from "./alertEngine";
+import { sanitizeErrorForLogging } from "../errorSanitization";
 
 const DEFAULT_CANARY_ENDPOINT = "https://canary-obs.fly.dev";
 const SERVICE = "chrondle";
@@ -40,7 +41,7 @@ export async function sendToCanary(notification: AlertNotification): Promise<voi
         service: SERVICE,
         environment: process.env.CANARY_ENVIRONMENT || process.env.NODE_ENV || "production",
         error_class: "ChrondleAlert",
-        message: notification.message,
+        message: sanitizeErrorForLogging(notification.message),
         severity: SEVERITY_TO_CANARY[notification.rule.severity] || "info",
         context: {
           tags: {
@@ -50,9 +51,9 @@ export async function sendToCanary(notification: AlertNotification): Promise<voi
             metric_type: getMetricType(notification.rule.name),
           },
           extras: {
-            metrics: notification.metrics,
+            metrics: sanitizeCanaryValue(notification.metrics),
             alert_timestamp: new Date(notification.timestamp).toISOString(),
-            alert_description: notification.rule.description,
+            alert_description: sanitizeErrorForLogging(notification.rule.description),
             alert_channels: notification.rule.channels,
           },
         },
@@ -66,6 +67,36 @@ export async function sendToCanary(notification: AlertNotification): Promise<voi
   } catch (error) {
     console.error("[Canary] Failed to send alert:", error);
   }
+}
+
+function sanitizeCanaryValue(value: unknown, seen = new WeakSet<object>()): unknown {
+  if (typeof value === "string") {
+    return sanitizeErrorForLogging(value);
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  if (seen.has(value)) {
+    return "[Circular]";
+  }
+
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    const sanitized = value.map((entry) => sanitizeCanaryValue(entry, seen));
+    seen.delete(value);
+    return sanitized;
+  }
+
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    sanitized[key] = sanitizeCanaryValue(entry, seen);
+  }
+
+  seen.delete(value);
+  return sanitized;
 }
 
 function getEndpoint(): string {

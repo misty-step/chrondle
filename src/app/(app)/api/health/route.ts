@@ -4,7 +4,7 @@ import { api, getConvexClient } from "@/lib/convexServer";
 export const dynamic = "force-dynamic";
 
 type HealthChecks = {
-  canary: "configured" | "missing";
+  canary: "configured" | "missing" | "invalid";
   convex: "ok" | "missing" | "unhealthy";
 };
 
@@ -12,16 +12,18 @@ type HealthResult =
   | { ok: true; checks: HealthChecks }
   | { ok: false; status: 500 | 503; error: string; checks: HealthChecks };
 
-function hasCanaryWriteKey(): boolean {
-  return Boolean(
-    process.env.CANARY_API_KEY?.trim() || process.env.NEXT_PUBLIC_CANARY_API_KEY?.trim(),
-  );
+const RAW_CANARY_KEY_PATTERN = /^sk_live_[A-Za-z0-9_-]{24}$/;
+
+function canaryConfigurationStatus(): HealthChecks["canary"] {
+  const key = process.env.CANARY_API_KEY?.trim() || process.env.NEXT_PUBLIC_CANARY_API_KEY?.trim();
+  if (!key) return "missing";
+  return RAW_CANARY_KEY_PATTERN.test(key) ? "configured" : "invalid";
 }
 
 async function performHealthCheck(): Promise<HealthResult> {
   const convexClient = getConvexClient();
   const baseChecks: HealthChecks = {
-    canary: hasCanaryWriteKey() ? "configured" : "missing",
+    canary: canaryConfigurationStatus(),
     convex: "ok",
   };
 
@@ -30,6 +32,15 @@ async function performHealthCheck(): Promise<HealthResult> {
       ok: false,
       status: 500,
       error: "Missing Canary write key",
+      checks: { ...baseChecks, convex: convexClient ? "ok" : "missing" },
+    };
+  }
+
+  if (baseChecks.canary === "invalid") {
+    return {
+      ok: false,
+      status: 500,
+      error: "Invalid Canary write key",
       checks: { ...baseChecks, convex: convexClient ? "ok" : "missing" },
     };
   }

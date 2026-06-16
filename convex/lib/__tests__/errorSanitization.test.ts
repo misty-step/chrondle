@@ -43,6 +43,21 @@ describe("sanitizeErrorForLogging", () => {
       expect(result).toContain("***REDACTED***");
     });
 
+    it("redacts common bearer and platform key shapes", () => {
+      const secretMaterial = "123456789012345678901234";
+      const canaryWriteKey = ["sk", "live", secretMaterial].join("_");
+      const publishableKey = ["pk", "live", secretMaterial].join("_");
+      const webhookSecret = ["whsec", secretMaterial.slice(0, 20)].join("_");
+      const result = sanitizeErrorForLogging(
+        `Bearer ${canaryWriteKey} ${webhookSecret} ${publishableKey}`,
+      );
+
+      expect(result).toContain("Bearer ***REDACTED***");
+      expect(result).toContain("whsec_***REDACTED***");
+      expect(result).toContain("pk_live_***REDACTED***");
+      expect(result).not.toContain(secretMaterial);
+    });
+
     it("preserves error message without API keys", () => {
       const normalError = new Error("Network timeout after 30s");
 

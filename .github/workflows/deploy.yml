@@ -87,6 +87,24 @@ jobs:
           NEXT_PUBLIC_CANARY_API_KEY: ${{ secrets.NEXT_PUBLIC_CANARY_API_KEY }}
           CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
 
+      - name: Validate browser Canary key scope
+        run: node scripts/verify-canary-key-scope.mjs
+        env:
+          CANARY_ENDPOINT: ${{ secrets.NEXT_PUBLIC_CANARY_ENDPOINT }}
+          CANARY_API_KEY: ${{ secrets.NEXT_PUBLIC_CANARY_API_KEY }}
+          CANARY_SCOPE_LABEL: NEXT_PUBLIC_CANARY_API_KEY
+          CANARY_SERVICE: chrondle
+          CANARY_ENVIRONMENT: production
+
+      - name: Validate server Canary key scope
+        run: node scripts/verify-canary-key-scope.mjs
+        env:
+          CANARY_ENDPOINT: ${{ secrets.NEXT_PUBLIC_CANARY_ENDPOINT }}
+          CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
+          CANARY_SCOPE_LABEL: CANARY_API_KEY
+          CANARY_SERVICE: chrondle
+          CANARY_ENVIRONMENT: production
+
       - name: Validate Stripe prices exist
         run: node scripts/verify-stripe-config.mjs --live
         env:

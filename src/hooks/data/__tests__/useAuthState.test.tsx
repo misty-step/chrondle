@@ -185,9 +185,23 @@ describe("useAuthState", () => {
         expect.objectContaining({
           tags: expect.objectContaining({
             error_type: "auth_user_not_found",
+            clerk_id_hash: expect.stringMatching(/^[0-9a-f]{8}$/),
           }),
         }),
       );
+      const [, context] = vi.mocked(reporter.captureClientException).mock.calls[0];
+      expect(context?.tags).not.toHaveProperty("clerk_id");
+      expect(context?.extras).toEqual(
+        expect.objectContaining({
+          clerkIdHash: expect.stringMatching(/^[0-9a-f]{8}$/),
+          emailVerified: "verified",
+          userCreationLoading: false,
+          hasCurrentUser: false,
+        }),
+      );
+      expect(context?.extras).not.toHaveProperty("clerkId");
+      expect(context?.extras).not.toHaveProperty("email");
+      expect(context?.extras).not.toHaveProperty("createdAt");
     });
   });
 

@@ -213,6 +213,54 @@ describe("getMetrics", () => {
     expect(metrics.quality.failureRate).toBe(0);
     expect(metrics.quality.topFailureReasons).toHaveLength(0);
   });
+
+  it("sanitizes failure reasons before returning quality metrics", async () => {
+    const now = Date.now();
+    const canaryWriteKey = ["sk", "live", "123456789012345678901234"].join("_");
+    const mockLogs = [
+      {
+        _id: "log1" as Doc<"generation_logs">["_id"],
+        _creationTime: now,
+        year: 1066,
+        era: "CE",
+        status: "failed",
+        attempt_count: 1,
+        events_generated: 0,
+        token_usage: { input: 300, output: 0, total: 300 },
+        cost_usd: 0.01,
+        error_message: `provider failed with Bearer ${canaryWriteKey}`,
+        timestamp: now,
+      },
+    ] as Doc<"generation_logs">[];
+
+    const mockCtx: {
+      db: {
+        query: (table: string) => {
+          collect: () => Promise<Doc<"events">[]>;
+          withIndex: (
+            name: string,
+            filter: (q: { gte: (field: string, value: number) => unknown }) => unknown,
+          ) => {
+            collect: () => Promise<Doc<"generation_logs">[]>;
+          };
+        };
+      };
+    } = {
+      db: {
+        query: () => ({
+          collect: async () => [],
+          withIndex: () => ({
+            collect: async () => mockLogs,
+          }),
+        }),
+      },
+    };
+
+    const metrics = await getMetrics(mockCtx, "24h");
+
+    expect(metrics.quality.topFailureReasons[0].reason).toContain("Bearer ***REDACTED***");
+    expect(metrics.quality.topFailureReasons[0].reason).not.toContain("sk_live_123456");
+  });
 });
 
 describe("calculatePercentile", () => {
