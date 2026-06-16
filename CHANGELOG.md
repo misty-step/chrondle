@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.4.1](https://github.com/misty-step/chrondle/compare/v1.4.0...v1.4.1) (2026-06-16)
+
+### Bug Fixes
+
+- **observability:** harden Canary ingest-only proof ([5cb682b](https://github.com/misty-step/chrondle/commit/5cb682b767237d45caaa8f9f571cea3c9ba7913a))
+
 # [1.4.0](https://github.com/misty-step/chrondle/compare/v1.3.0...v1.4.0) (2026-06-16)
 
 ### Features
