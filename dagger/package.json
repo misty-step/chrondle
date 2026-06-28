@@ -1,7 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "@dagger.io/dagger": "0.20.3",
+    "@dagger.io/dagger": "0.21.6",
     "typescript": "5.9.3"
   }
 }

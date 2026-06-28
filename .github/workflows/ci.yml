@@ -31,7 +31,7 @@ jobs:
         if: matrix.check != 'test'
         uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          version: "0.20.3"
+          version: "0.21.6"
           verb: call
           module: .
           args: quality --check=${{ matrix.check }}
@@ -40,7 +40,7 @@ jobs:
         if: matrix.check == 'test'
         uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          version: "0.20.3"
+          version: "0.21.6"
           verb: call
           module: .
           args: test-coverage-artifacts --output=coverage
@@ -122,7 +122,7 @@ jobs:
       - name: Run Dagger validation gate
         uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          version: "0.20.3"
+          version: "0.21.6"
           verb: call
           module: .
           args: validation
@@ -138,7 +138,7 @@ jobs:
       - name: Run Dagger docs link check
         uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          version: "0.20.3"
+          version: "0.21.6"
           verb: call
           module: .
           args: docs-link-check
@@ -175,7 +175,7 @@ jobs:
       - name: Run Dagger build gate and export build artifacts
         uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          version: "0.20.3"
+          version: "0.21.6"
           verb: call
           module: .
           args: build-artifacts --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ env.CI_CLERK_PUBLISHABLE_KEY }} --output=.next
@@ -207,7 +207,7 @@ jobs:
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
         with:
-          version: "0.20.3"
+          version: "0.21.6"
           verb: call
           module: .
           args: e-2-e-artifacts --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ env.CI_CLERK_PUBLISHABLE_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --output=.dagger-e2e
@@ -268,7 +268,7 @@ jobs:
       - name: Run Dagger CI environment validation
         uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          version: "0.20.3"
+          version: "0.21.6"
           verb: call
           module: .
           args: verify-env-config --environment=ci --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ env.CI_CLERK_PUBLISHABLE_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --convex-deploy-key=env:CONVEX_DEPLOY_KEY
@@ -279,7 +279,7 @@ jobs:
       - name: Run Dagger production environment validation
         uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          version: "0.20.3"
+          version: "0.21.6"
           verb: call
           module: .
           args: verify-env-config --environment=production --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} --next-public-stripe-publishable-key=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} --stripe-price-monthly=${{ secrets.STRIPE_PRICE_MONTHLY }} --stripe-price-annual=${{ secrets.STRIPE_PRICE_ANNUAL }} --next-public-canary-api-key=${{ secrets.NEXT_PUBLIC_CANARY_API_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --stripe-secret-key=env:STRIPE_SECRET_KEY --stripe-webhook-secret=env:STRIPE_WEBHOOK_SECRET --stripe-sync-secret=env:STRIPE_SYNC_SECRET --canary-api-key=env:CANARY_API_KEY
@@ -293,7 +293,7 @@ jobs:
       - name: Run Dagger Stripe live validation
         uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
         with:
-          version: "0.20.3"
+          version: "0.21.6"
           verb: call
           module: .
           args: verify-stripe-config --next-public-stripe-publishable-key=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} --stripe-price-monthly=${{ secrets.STRIPE_PRICE_MONTHLY }} --stripe-price-annual=${{ secrets.STRIPE_PRICE_ANNUAL }} --require-live=true --stripe-secret-key=env:STRIPE_SECRET_KEY --stripe-webhook-secret=env:STRIPE_WEBHOOK_SECRET
