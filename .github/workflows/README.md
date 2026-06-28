@@ -55,6 +55,18 @@ paths.
 
 ## Validation & Safety
 
+### Required PR Gate Map
+
+Branch protection should require the single `merge-gate` check from `ci.yml`.
+That check fans in all required PR lanes: Dagger quality checks
+(`lint`, `type-check`, test coverage), validation, docs link checking, build,
+e2e, and PR environment validation. If a lane is split or renamed, update
+`merge-gate.needs` in the same change.
+
+Advisory and automation workflows are intentionally outside the required map:
+`size-limit.yml`, Claude review workflows, PR-size labeling, release, and deploy
+can inform or ship work, but they do not replace `merge-gate`.
+
 ### Pre-Merge Secret Verification
 
 The CI workflow includes a Dagger-driven `verify-environment` job that runs on PRs targeting main/master. It validates CI and production env requirements, including Stripe configuration, before merge.
