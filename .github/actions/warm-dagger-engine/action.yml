@@ -1,0 +1,40 @@
+name: Warm Dagger engine image
+description: Pull the pinned Dagger engine image with retries before Dagger starts.
+
+inputs:
+  version:
+    description: Dagger CLI/engine version, with or without a leading v.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Pull engine image
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        version="${{ inputs.version }}"
+        if [[ "$version" != v* ]]; then
+          version="v${version}"
+        fi
+
+        image="registry.dagger.io/engine:${version}"
+        if docker image inspect "$image" >/dev/null 2>&1; then
+          echo "Dagger engine image already present: $image"
+          exit 0
+        fi
+
+        for attempt in 1 2 3; do
+          echo "Pulling $image (attempt $attempt/3)"
+          if timeout 120s docker pull "$image"; then
+            exit 0
+          fi
+
+          if [[ "$attempt" -lt 3 ]]; then
+            sleep $((attempt * 10))
+          fi
+        done
+
+        echo "::error::Failed to pull $image after 3 attempts"
+        exit 1

@@ -96,6 +96,7 @@ Steps:
 ### CI (`ci.yml`)
 
 Primary quality/build/e2e gates are executed through the repo's Dagger module (`dagger/src/index.ts`) and invoked from GitHub Actions via `dagger/dagger-for-github`.
+Hosted jobs first warm the pinned Dagger engine image through `.github/actions/warm-dagger-engine` so transient registry timeouts do not fail before the repo-owned Dagger gate starts.
 
 Jobs:
 
