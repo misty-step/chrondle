@@ -41,6 +41,19 @@ As your **Game Master**, I am the arbiter of the "Proclamation." I provide the h
 - `bun test`, `bun lint`, `bun type-check` — To verify the integrity of the scroll.
 - `bun quality` — The high-level audit of our dependencies and cache.
 
+## CI Gate Map
+
+- Required branch-protection check: `merge-gate` in `.github/workflows/ci.yml`.
+- Required PR lanes feeding it: Dagger `quality` for lint/type-check/test
+  coverage, `validation`, `docs-link-check`, `build`, `e2e`, and
+  `verify-environment`.
+- Local deterministic reproduction stays Dagger-owned through
+  `scripts/dagger-local.sh`; use the `bun run ci:dagger:*` scripts for focused
+  lanes and `dagger call check` for the full non-deploy gate when CI env values
+  are available.
+- Advisory/bot/deploy lanes: `size-limit.yml`, Claude review workflows,
+  PR-size labeling, release, and deploy are not substitutes for `merge-gate`.
+
 ## Coding Style & Naming Conventions
 
 - Prettier (`bun run format`) enforces 2-space indent, double quotes, and Tailwind sorting.

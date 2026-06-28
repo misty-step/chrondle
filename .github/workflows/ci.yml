@@ -10,6 +10,7 @@ env:
   # CI builds run on localhost and must not embed the production Clerk custom domain.
   # Production secrets are still validated separately in the deploy-oriented checks below.
   CI_CLERK_PUBLISHABLE_KEY: pk_test_aGVhbHRoeS1kb2UtMjMuY2xlcmsuYWNjb3VudHMuZGV2JA
+  DAGGER_VERSION: "0.21.6"
 
 jobs:
   quality-checks:
@@ -27,20 +28,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Warm Dagger engine image
+        uses: ./.github/actions/warm-dagger-engine
+        with:
+          version: ${{ env.DAGGER_VERSION }}
+
       - name: Run Dagger quality gate
         if: matrix.check != 'test'
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
-          version: "0.21.6"
+          version: ${{ env.DAGGER_VERSION }}
           verb: call
           module: .
           args: quality --check=${{ matrix.check }}
 
       - name: Run Dagger test coverage gate
         if: matrix.check == 'test'
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
-          version: "0.21.6"
+          version: ${{ env.DAGGER_VERSION }}
           verb: call
           module: .
           args: test-coverage-artifacts --output=coverage
@@ -55,17 +61,19 @@ jobs:
       - name: Generate coverage summary
         if: matrix.check == 'test' && always()
         run: |
-          echo "## 📊 Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -f coverage/coverage-summary.json ]; then
-            echo '```json' >> $GITHUB_STEP_SUMMARY
-            cat coverage/coverage-summary.json | jq '.total' >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "✅ Coverage report generated successfully" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ Coverage report not found" >> $GITHUB_STEP_SUMMARY
-          fi
+          {
+            echo "## 📊 Test Coverage Summary"
+            echo ""
+            if [ -f coverage/coverage-summary.json ]; then
+              echo '```json'
+              jq '.total' coverage/coverage-summary.json
+              echo '```'
+              echo ""
+              echo "✅ Coverage report generated successfully"
+            else
+              echo "⚠️ Coverage report not found"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Coverage Report
         if: matrix.check == 'test' && github.event_name == 'pull_request'
@@ -94,8 +102,8 @@ jobs:
             fi
 
             # Capitalize metric for label
-            LABEL=$(echo "$metric" | sed 's/.*/\u&/')
-            echo "{\"schemaVersion\":1,\"label\":\"$LABEL\",\"message\":\"${VALUE}%\",\"color\":\"$COLOR\"}" > /tmp/coverage-${metric}.json
+            LABEL="${metric^}"
+            echo "{\"schemaVersion\":1,\"label\":\"$LABEL\",\"message\":\"${VALUE}%\",\"color\":\"$COLOR\"}" > "/tmp/coverage-${metric}.json"
           done
 
           # Update all badge files atomically via API (avoids 409 conflicts)
@@ -119,10 +127,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Run Dagger validation gate
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+      - name: Warm Dagger engine image
+        uses: ./.github/actions/warm-dagger-engine
         with:
-          version: "0.21.6"
+          version: ${{ env.DAGGER_VERSION }}
+
+      - name: Run Dagger validation gate
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with:
+          version: ${{ env.DAGGER_VERSION }}
           verb: call
           module: .
           args: validation
@@ -135,10 +148,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Run Dagger docs link check
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+      - name: Warm Dagger engine image
+        uses: ./.github/actions/warm-dagger-engine
         with:
-          version: "0.21.6"
+          version: ${{ env.DAGGER_VERSION }}
+
+      - name: Run Dagger docs link check
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with:
+          version: ${{ env.DAGGER_VERSION }}
           verb: call
           module: .
           args: docs-link-check
@@ -172,10 +190,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Run Dagger build gate and export build artifacts
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+      - name: Warm Dagger engine image
+        uses: ./.github/actions/warm-dagger-engine
         with:
-          version: "0.21.6"
+          version: ${{ env.DAGGER_VERSION }}
+
+      - name: Run Dagger build gate and export build artifacts
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with:
+          version: ${{ env.DAGGER_VERSION }}
           verb: call
           module: .
           args: build-artifacts --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ env.CI_CLERK_PUBLISHABLE_KEY }} --output=.next
@@ -196,6 +219,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Warm Dagger engine image
+        uses: ./.github/actions/warm-dagger-engine
+        with:
+          version: ${{ env.DAGGER_VERSION }}
+
       - name: Download build artifacts
         uses: actions/download-artifact@v8
         with:
@@ -203,11 +231,11 @@ jobs:
           path: .next/
 
       - name: Run Dagger e2e gate and export report artifacts
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
         with:
-          version: "0.21.6"
+          version: ${{ env.DAGGER_VERSION }}
           verb: call
           module: .
           args: e-2-e-artifacts --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ env.CI_CLERK_PUBLISHABLE_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --output=.dagger-e2e
@@ -265,10 +293,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Run Dagger CI environment validation
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+      - name: Warm Dagger engine image
+        uses: ./.github/actions/warm-dagger-engine
         with:
-          version: "0.21.6"
+          version: ${{ env.DAGGER_VERSION }}
+
+      - name: Run Dagger CI environment validation
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with:
+          version: ${{ env.DAGGER_VERSION }}
           verb: call
           module: .
           args: verify-env-config --environment=ci --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ env.CI_CLERK_PUBLISHABLE_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --convex-deploy-key=env:CONVEX_DEPLOY_KEY
@@ -277,9 +310,9 @@ jobs:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
       - name: Run Dagger production environment validation
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
-          version: "0.21.6"
+          version: ${{ env.DAGGER_VERSION }}
           verb: call
           module: .
           args: verify-env-config --environment=production --next-public-convex-url=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --next-public-clerk-publishable-key=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} --next-public-stripe-publishable-key=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} --stripe-price-monthly=${{ secrets.STRIPE_PRICE_MONTHLY }} --stripe-price-annual=${{ secrets.STRIPE_PRICE_ANNUAL }} --next-public-canary-api-key=${{ secrets.NEXT_PUBLIC_CANARY_API_KEY }} --clerk-secret-key=env:CLERK_SECRET_KEY --stripe-secret-key=env:STRIPE_SECRET_KEY --stripe-webhook-secret=env:STRIPE_WEBHOOK_SECRET --stripe-sync-secret=env:STRIPE_SYNC_SECRET --canary-api-key=env:CANARY_API_KEY
@@ -291,9 +324,9 @@ jobs:
           CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
 
       - name: Run Dagger Stripe live validation
-        uses: dagger/dagger-for-github@456fc3af63a2ba6f9789af9c55045b459115541b # v8.3.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
-          version: "0.21.6"
+          version: ${{ env.DAGGER_VERSION }}
           verb: call
           module: .
           args: verify-stripe-config --next-public-stripe-publishable-key=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} --stripe-price-monthly=${{ secrets.STRIPE_PRICE_MONTHLY }} --stripe-price-annual=${{ secrets.STRIPE_PRICE_ANNUAL }} --require-live=true --stripe-secret-key=env:STRIPE_SECRET_KEY --stripe-webhook-secret=env:STRIPE_WEBHOOK_SECRET
