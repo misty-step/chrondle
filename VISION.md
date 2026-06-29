@@ -1,7 +1,8 @@
 # Chrondle Vision
 
-Status: canonical root vision for Chrondle. This is a lightweight product
-north star; the project can stay low-priority without losing its direction.
+Status: canonical preserved vision for Chrondle. Chrondle is backburnered for
+now; this file keeps the intended shape intact so a future agent can restart
+without re-litigating the product.
 
 ## What this project is
 
@@ -27,9 +28,13 @@ The north star is a fair daily ritual: clues teach and challenge, the UI never l
 - silent daily-batch failures
 - modes or recovery flows that confuse the core game
 
-## Current direction
+## Preserved Direction
 
-- Strengthen daily habit loop, classic range entry, archive data path, recovery, and motion accessibility from backlog.d.
+- Do not start new product surface until Misty Step's higher-priority revenue,
+  agent infrastructure, and eval work have room for it.
+- When the project returns, start by strengthening the daily habit loop, classic
+  range entry, archive data path, recovery, and motion accessibility from
+  `backlog.d`.
 - Keep Convex, auth, deploy, and quality checks wired to real scripts.
 - Treat Clio voice as flavor, not permission to weaken engineering gates.
 
@@ -61,7 +66,8 @@ Side-effect constraints:
 
 No dirty working-tree entries were present when this draft was generated.
 
-## Open question
+## Decision
 
-Chrondle was previously backburnered. Keep this vision if the daily history game
-is active again; otherwise treat it as a preserved direction for a later return.
+Chrondle is not an active Misty Step bet right now. The vision is still useful:
+it preserves the fair-history-game promise and prevents a future restart from
+turning into generic trivia or AI-generated puzzle churn.
