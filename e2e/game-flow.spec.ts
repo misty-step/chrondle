@@ -231,8 +231,8 @@ test.describe("Range Validation @happy-path", () => {
     // "Exceeds Limit" should not be visible (100-year range is valid)
     await expect(page.getByText("Exceeds Limit")).not.toBeVisible();
 
-    // "Valid" indicator should appear
-    await expect(page.getByText("✓ Valid")).toBeVisible();
+    // Score readout should appear for a valid modified range
+    await expect(page.getByText(/Worth\s+\d+\s+pts if right/i)).toBeVisible();
 
     // Submit button should be enabled
     const submitButton = page.getByRole("button", { name: /lock in|submit range/i });
