@@ -6,7 +6,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { List, X, Archive, Moon, Sun } from "@phosphor-icons/react";
 import { useTheme } from "@/components/SessionThemeProvider";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { Show, SignInButton, UserButton } from "@clerk/nextjs";
 
 import { cn } from "@/lib/utils";
 import { NavbarButton } from "@/components/ui/NavbarButton";
@@ -101,7 +101,7 @@ export function MobileNavMenu({ archiveHref }: MobileNavMenuProps) {
             <div className="bg-border my-2 h-px" />
 
             {/* Auth */}
-            <SignedOut>
+            <Show when="signed-out">
               <SignInButton mode="modal">
                 <button
                   type="button"
@@ -110,12 +110,11 @@ export function MobileNavMenu({ archiveHref }: MobileNavMenuProps) {
                   Sign in
                 </button>
               </SignInButton>
-            </SignedOut>
+            </Show>
 
-            <SignedIn>
+            <Show when="signed-in">
               <div className="flex items-center gap-3 px-3 py-2">
                 <UserButton
-                  afterSignOutUrl="/"
                   appearance={{
                     elements: {
                       avatarBox: "h-8 w-8",
@@ -124,7 +123,7 @@ export function MobileNavMenu({ archiveHref }: MobileNavMenuProps) {
                 />
                 <span className="text-muted-foreground text-sm">Your profile</span>
               </div>
-            </SignedIn>
+            </Show>
           </nav>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

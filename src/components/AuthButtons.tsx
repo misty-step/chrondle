@@ -29,7 +29,6 @@ export function AuthButtons({ className }: AuthButtonsProps) {
     return (
       <div className={`flex h-10 w-10 items-center justify-center ${className ?? ""}`}>
         <UserButton
-          afterSignOutUrl="/"
           appearance={{
             elements: {
               avatarBox: "w-8 h-8",
