@@ -2,12 +2,13 @@
 
 ## Workflows Overview
 
-| Workflow                 | Trigger                  | Purpose                                 |
-| ------------------------ | ------------------------ | --------------------------------------- |
-| `ci.yml`                 | PR & push to main/master | Quality checks, tests, build validation |
-| `deploy.yml`             | Push to main/master      | Production deployment                   |
-| `size-limit.yml`         | PR                       | Bundle size checks                      |
-| `claude-code-review.yml` | PR                       | Automated code review                   |
+| Workflow                   | Trigger                      | Purpose                                                                              |
+| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------ |
+| `ci.yml`                   | PR & push to main/master     | Quality checks, tests, build validation                                              |
+| `deploy.yml`               | Push to main/master          | Production deployment                                                                |
+| `size-limit.yml`           | PR                           | Bundle size checks                                                                   |
+| `claude-code-review.yml`   | PR                           | Automated code review                                                                |
+| `webhook-health-check.yml` | Schedule (every 6h) & manual | Fails if the production Stripe webhook route redirects (see INCIDENT-2026-01-17T.md) |
 
 ## Required GitHub Secrets
 
@@ -80,6 +81,16 @@ Steps:
 5. Build Next.js application
 6. Deploy to Convex production
 7. Verify deployment
+8. Verify the Stripe webhook route doesn't redirect (`verify:webhook`)
+
+### Webhook Health Check (`webhook-health-check.yml`)
+
+Runs `verify:webhook` (`scripts/verify-webhook-redirect.mjs`) against the
+production Stripe webhook route every 6 hours and on manual dispatch. Stripe
+does not follow redirects when delivering webhooks, so a 3xx here means
+webhook events are being silently dropped (see `INCIDENT-2026-01-17T.md`).
+Scheduled separately from deploys because the root cause — a domain-level
+redirect — can drift without a code push.
 
 ### CI (`ci.yml`)
 
