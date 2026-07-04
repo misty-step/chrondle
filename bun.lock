@@ -4,7 +4,7 @@
     "": {
       "name": "chrondle",
       "dependencies": {
-        "@clerk/nextjs": "^7.0.6",
+        "@clerk/nextjs": "^7.5.12",
         "@dnd-kit/core": "^6.3.1",
         "@dnd-kit/modifiers": "^6.0.1",
         "@dnd-kit/sortable": "^10.0.0",
@@ -385,7 +385,7 @@
 
     "@clerk/clerk-react": ["@clerk/clerk-react@5.61.8", "", { "dependencies": { "@clerk/shared": "^3.47.7", "tslib": "2.8.1" }, "peerDependencies": { "react": "^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0", "react-dom": "^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0" } }, "sha512-n+k3q3xeyDkIPGTVA1J4Pd0+6MbS9Ia04qNlecOztTHwFfcirO5hy4TpOXrpGnO+GzYBuUMp7pYc3//ybMdEfg=="],
 
-    "@clerk/nextjs": ["@clerk/nextjs@7.0.6", "", { "dependencies": { "@clerk/backend": "^3.2.2", "@clerk/react": "^6.1.2", "@clerk/shared": "^4.3.2", "server-only": "0.0.1", "tslib": "2.8.1" }, "peerDependencies": { "next": "^15.2.8 || ^15.3.8 || ^15.4.10 || ^15.5.9 || ^15.6.0-0 || ^16.0.10 || ^16.1.0-0", "react": "^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0", "react-dom": "^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0" } }, "sha512-5lZ19SZrlWas4a3oOhcRcRUKwBoWPU9E6FjIZ8Y8g6FRg0Ux6lr/xA0iQ4PJhPR8SvE3DWM7RyAGL1rTzt/4lQ=="],
+    "@clerk/nextjs": ["@clerk/nextjs@7.5.12", "", { "dependencies": { "@clerk/backend": "^3.10.0", "@clerk/react": "^6.11.3", "@clerk/shared": "^4.23.0", "server-only": "0.0.1", "tslib": "2.8.1" }, "peerDependencies": { "next": "^15.2.8 || ^15.3.8 || ^15.4.10 || ^15.5.9 || ^15.6.0-0 || ^16.0.10 || ^16.1.0-0", "react": "^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0", "react-dom": "^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0" } }, "sha512-zJLGVBBzwT5DTsfDJYjTwbw59GTzuDWg6fPVqWIau1x2qlJ3y7FBicuOEZTxWvmSuF8zCP7Za1M5SGTcb7Ms8w=="],
 
     "@clerk/react": ["@clerk/react@6.11.3", "", { "dependencies": { "@clerk/shared": "^4.23.0", "tslib": "2.8.1" }, "peerDependencies": { "react": "^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0", "react-dom": "^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0" } }, "sha512-MLtclctwVoB4ECMJvl5ZH48rxLPduVsybZS2YnnljHH1rvxRV67cOAmInafgYgt2/LH63SVwRPIrTabbSx6lFQ=="],
 
