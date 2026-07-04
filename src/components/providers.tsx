@@ -110,7 +110,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <CanaryClientObserver />
       <ToastProvider>
         <MigrationProvider>
-          <ClerkProvider publishableKey={clerkKey} dynamic>
+          <ClerkProvider publishableKey={clerkKey} dynamic afterSignOutUrl="/">
             <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
               <UserCreationProvider>
                 <SessionThemeProvider>{children}</SessionThemeProvider>
