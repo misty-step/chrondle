@@ -2,12 +2,13 @@
 
 ## Workflows Overview
 
-| Workflow                 | Trigger                  | Purpose                                 |
-| ------------------------ | ------------------------ | --------------------------------------- |
-| `ci.yml`                 | PR & push to main/master | Quality checks, tests, build validation |
-| `deploy.yml`             | Push to main/master      | Production deployment                   |
-| `size-limit.yml`         | PR                       | Bundle size checks                      |
-| `claude-code-review.yml` | PR                       | Automated code review                   |
+| Workflow                   | Trigger                      | Purpose                                                                              |
+| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------ |
+| `ci.yml`                   | PR & push to main/master     | Quality checks, tests, build validation                                              |
+| `deploy.yml`               | Push to main/master          | Production deployment                                                                |
+| `size-limit.yml`           | PR                           | Bundle size checks                                                                   |
+| `claude-code-review.yml`   | PR                           | Automated code review                                                                |
+| `webhook-health-check.yml` | Schedule (every 6h) & manual | Fails if the production Stripe webhook route redirects (see INCIDENT-2026-01-17T.md) |
 
 ## Required GitHub Secrets
 

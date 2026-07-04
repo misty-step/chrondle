@@ -1,0 +1,25 @@
+name: Webhook Health Check
+
+# Automates the redirect check from INCIDENT-2026-01-17T.md: Stripe does not
+# follow redirects, so a webhook URL that starts 3xx-ing silently drops every
+# event. This runs independently of deploys because the incident's root
+# cause (a domain-level redirect) can change without a code push.
+
+on:
+  schedule:
+    - cron: "17 */6 * * *" # every 6 hours
+  workflow_dispatch: {}
+
+jobs:
+  check-webhook-redirect:
+    name: Check Stripe webhook route for redirects
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Verify production webhook route does not redirect
+        run: bun run verify:webhook
