@@ -231,12 +231,13 @@ export class GameErrorBoundary extends Component<Props, State> {
                     Try Again
                   </button>
 
-                  {/* Navigate to home */}
-                  <Link href="/" className="block">
-                    <button className="bg-secondary text-body-secondary-foreground hover:bg-secondary/90 flex w-full items-center justify-center gap-2 rounded px-4 py-2 transition-colors">
-                      <House className="h-4 w-4" />
-                      Go to Today&apos;s Puzzle
-                    </button>
+                  {/* Navigate to home — link styled as button (no nested button inside link) */}
+                  <Link
+                    href="/"
+                    className="bg-secondary text-body-secondary-foreground hover:bg-secondary/90 flex w-full items-center justify-center gap-2 rounded px-4 py-2 transition-colors"
+                  >
+                    <House className="h-4 w-4" />
+                    Go to Today&apos;s Puzzle
                   </Link>
 
                   {/* Hard reload - last resort */}

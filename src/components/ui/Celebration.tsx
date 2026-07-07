@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { seededRandom } from "@/lib/utils";
+import { useReducedMotion } from "@/lib/animationConstants";
 
 interface CelebrationProps {
   trigger?: boolean;
@@ -14,6 +15,7 @@ const SEED_MULTIPLIER = 97; // Prime number for better distribution
 
 export const Celebration: React.FC<CelebrationProps> = ({ trigger = false, duration = 3000 }) => {
   const [isActive, setIsActive] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
 
   // Listen for celebration events
   useEffect(() => {
@@ -55,6 +57,9 @@ export const Celebration: React.FC<CelebrationProps> = ({ trigger = false, durat
   }, []);
 
   if (!isActive) return null;
+
+  // Respect reduced-motion preference: disable animated confetti particles.
+  if (shouldReduceMotion) return null;
 
   return (
     <div className="celebration-container" aria-hidden="true">
