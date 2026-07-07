@@ -19,6 +19,22 @@ vi.mock("@/components/kit/EraToggle", () => ({
   ),
 }));
 
+// jsdom lays every element out at 0×0 - stub a fixed, non-zero track rect so
+// the timeline bar's pointer-position math is deterministic.
+function mockTrackRect() {
+  vi.spyOn(HTMLDivElement.prototype, "getBoundingClientRect").mockReturnValue({
+    left: 0,
+    right: 1000,
+    width: 1000,
+    top: 0,
+    bottom: 40,
+    height: 40,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  });
+}
+
 describe("RangeInput", () => {
   const renderRangeInput = (overrides: Partial<Parameters<typeof RangeInput>[0]> = {}) =>
     render(
@@ -40,16 +56,23 @@ describe("RangeInput", () => {
   });
 
   describe("Default State", () => {
-    it("defaults to zero range (0 AD - 0 AD)", () => {
+    it("starts with empty exact-year fields, not a fake year", () => {
       renderRangeInput();
 
-      // Should display default years in inputs
+      // No range exists yet - regression guard for the old "0 AD - 0 AD"
+      // default, a year that does not exist historically.
       const startInput = screen.getByLabelText(/from year/i);
       const endInput = screen.getByLabelText(/to year/i);
 
-      // Default is 0 AD for both start and end
-      expect(startInput).toHaveValue("0");
-      expect(endInput).toHaveValue("0");
+      expect(startInput).toHaveValue("");
+      expect(endInput).toHaveValue("");
+      expect(screen.getByText(/not set yet/i)).toBeInTheDocument();
+    });
+
+    it("teaches the one-shot mechanic before the first lock-in", () => {
+      renderRangeInput({ isOneGuessMode: true });
+
+      expect(screen.getByText(/one guess.*drag/i)).toBeInTheDocument();
     });
 
     it("disables submit button until range is modified", () => {
@@ -85,13 +108,53 @@ describe("RangeInput", () => {
       // Now should show error
       expect(screen.getByText(/exceeds limit/i)).toBeInTheDocument();
     });
+
+    it("uses the entered end year as both bounds when end year is entered first", () => {
+      renderRangeInput();
+
+      const startInput = screen.getByLabelText(/from year/i);
+      const endInput = screen.getByLabelText(/to year/i);
+
+      fireEvent.change(endInput, { target: { value: "1950" } });
+      fireEvent.blur(endInput);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      expect(startInput).toHaveValue("1950");
+      expect(endInput).toHaveValue("1950");
+      expect(screen.queryByText("0 AD", { exact: true })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /submit range/i })).toBeEnabled();
+    });
+
+    it("does not expand a first BC start edit against the unset sentinel", () => {
+      renderRangeInput();
+
+      const startInput = screen.getByLabelText(/from year/i);
+      const endInput = screen.getByLabelText(/to year/i);
+
+      fireEvent.change(startInput, { target: { value: "500" } });
+      fireEvent.click(screen.getAllByTestId("toggle-bc-AD")[0]);
+      fireEvent.blur(startInput);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      expect(startInput).toHaveValue("500");
+      expect(endInput).toHaveValue("500");
+      expect(screen.queryByText("0 AD", { exact: true })).not.toBeInTheDocument();
+      expect(screen.queryByText(/exceeds limit/i)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /submit range/i })).toBeEnabled();
+    });
   });
 
   describe("BC/AD Era Toggles", () => {
     it("renders era toggles for both start and end years", () => {
       renderRangeInput();
 
-      // Initially both should be AD (default is 0 AD for both)
+      // Initially both era choices default to AD, even though the year fields are empty.
       const adToggles = screen.getAllByTestId("era-toggle-AD");
       expect(adToggles).toHaveLength(2);
     });
@@ -231,8 +294,6 @@ describe("RangeInput", () => {
       fireEvent.blur(startInput);
 
       fireEvent.change(endInput, { target: { value: "100" } });
-      // Toggle end to BC to get BC-BC range
-      fireEvent.click(screen.getByTestId("toggle-bc-AD"));
       fireEvent.blur(endInput);
 
       act(() => {
@@ -269,7 +330,7 @@ describe("RangeInput", () => {
 
       const endInput = screen.getByLabelText(/to year/i);
 
-      // Enter a year in the future (e.g., 3000 AD when max is 2025 AD)
+      // Enter a year beyond the configured maximum.
       fireEvent.change(endInput, { target: { value: "3000" } });
       fireEvent.blur(endInput);
 
@@ -388,7 +449,7 @@ describe("RangeInput", () => {
       renderRangeInput();
 
       // Width 50, 0 hints: quadratic curve pays 96 (the old linear UI math
-      // would have claimed 80 — regression guard).
+      // would have claimed 80 - regression guard).
       setRange("1900", "1949");
 
       expect(screen.getByText(/pts if right/i)).toBeInTheDocument();
@@ -502,6 +563,77 @@ describe("RangeInput", () => {
       });
 
       expect(handleCommit).toHaveBeenCalledWith(expect.objectContaining({ hintsUsed: 2 }));
+    });
+  });
+
+  describe("Timeline Bar (primary one-gesture path)", () => {
+    beforeEach(() => {
+      mockTrackRect();
+    });
+
+    it("drawing a range on the bar syncs the exact-year fallback fields and enables submit", () => {
+      const handleCommit = vi.fn();
+      renderRangeInput({ onCommit: handleCommit });
+
+      const track = screen.getByTestId("timeline-range-track");
+      const commitButton = screen.getByRole("button", { name: /submit range/i });
+      expect(commitButton).toBeDisabled();
+
+      // GAME_CONFIG span is MIN_YEAR..MAX_YEAR; drag from the midpoint out
+      // to a later point to draw a real (non-trivial) range.
+      fireEvent.pointerDown(track, { clientX: 500, pointerId: 1 });
+      fireEvent.pointerMove(track, { clientX: 520, pointerId: 1 });
+      fireEvent.pointerUp(track, { clientX: 520, pointerId: 1 });
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      // The fallback numeric fields should reflect exactly what was drawn -
+      // both paths share the same underlying range state.
+      const startInput = screen.getByLabelText(/from year/i) as HTMLInputElement;
+      const endInput = screen.getByLabelText(/to year/i) as HTMLInputElement;
+      expect(startInput.value).not.toBe("");
+      expect(endInput.value).not.toBe("");
+      expect(commitButton).toBeEnabled();
+
+      act(() => {
+        fireEvent.click(commitButton);
+      });
+      act(() => {
+        vi.runOnlyPendingTimers();
+      });
+
+      expect(handleCommit).toHaveBeenCalled();
+    });
+
+    it("typing exact years syncs the bar's live value (bidirectional)", () => {
+      renderRangeInput();
+
+      const startInput = screen.getByLabelText(/from year/i);
+      const endInput = screen.getByLabelText(/to year/i);
+
+      fireEvent.change(startInput, { target: { value: "1900" } });
+      fireEvent.blur(startInput);
+      fireEvent.change(endInput, { target: { value: "1950" } });
+      fireEvent.blur(endInput);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      const startHandle = screen.getByTestId("timeline-handle-start");
+      const endHandle = screen.getByTestId("timeline-handle-end");
+      expect(startHandle).toHaveAttribute("aria-valuetext", "1900 AD");
+      expect(endHandle).toHaveAttribute("aria-valuetext", "1950 AD");
+    });
+
+    it("renders no handles and a neutral placeholder before any range is drawn", () => {
+      renderRangeInput();
+
+      expect(screen.queryByTestId("timeline-handle-start")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("timeline-handle-end")).not.toBeInTheDocument();
+      expect(screen.getByText(/not set yet/i)).toBeInTheDocument();
     });
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { GameInstructions } from "@/components/GameInstructions";
 import { KeepPlaying } from "@/components/KeepPlaying";
 import { RangeInput } from "@/components/game/RangeInput";
@@ -143,6 +143,19 @@ export function GameLayout(props: GameLayoutProps) {
     });
   };
 
+  // After the one-shot guess is locked in, move focus to the results
+  // summary - the next useful continuation point once RangeInput itself
+  // unmounts. tabIndex=-1 makes the wrapper programmatically focusable
+  // without adding it to the tab order.
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const wasGameComplete = useRef(isGameComplete);
+  useEffect(() => {
+    if (isGameComplete && !wasGameComplete.current) {
+      resultsRef.current?.focus();
+    }
+    wasGameComplete.current = isGameComplete;
+  }, [isGameComplete]);
+
   return (
     <div className="bg-background flex flex-1 flex-col">
       {/* Optional header content */}
@@ -275,15 +288,22 @@ export function GameLayout(props: GameLayoutProps) {
           {/* Game Complete Summary */}
           {isGameComplete && (
             <>
-              <GameComplete
-                ranges={gameState.ranges}
-                totalScore={totalScore}
-                hasWon={hasWon}
-                puzzleNumber={puzzleNumber}
-                targetYear={targetYear}
-                totalHints={gameState.puzzle?.events.length}
-                events={gameState.puzzle?.events}
-              />
+              <div
+                ref={resultsRef}
+                tabIndex={-1}
+                data-testid="results-focus-anchor"
+                className="outline-none"
+              >
+                <GameComplete
+                  ranges={gameState.ranges}
+                  totalScore={totalScore}
+                  hasWon={hasWon}
+                  puzzleNumber={puzzleNumber}
+                  targetYear={targetYear}
+                  totalHints={gameState.puzzle?.events.length}
+                  events={gameState.puzzle?.events}
+                />
+              </div>
               <KeepPlaying currentMode="classic" />
             </>
           )}
