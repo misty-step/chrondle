@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chrondle Order-Mode Reorder Interaction Lab</title>
+<style>
+  :root{
+    --bg:#faf7f2; --card:#ffffff; --ink:#1c1917; --muted:#78716c; --line:#e7e0d8;
+    --accent:#0e7490; --good:#15803d; --bad:#b91c1c; --win:#166534; --warn:#b45309;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#171412; --card:#211d1a; --ink:#f5f0ea; --muted:#a89f95; --line:#3a332c;
+      --accent:#22d3ee; --good:#4ade80; --bad:#f87171; --win:#86efac; --warn:#f59e0b; }
+  }
+  *{box-sizing:border-box} body{margin:0;font:15px/1.55 ui-sans-serif,system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);padding:0 0 6rem}
+  header.lab{padding:2.5rem 1.25rem 1rem;max-width:74rem;margin:0 auto}
+  h1{font-size:1.7rem;margin:0 0 .4rem} .sub{color:var(--muted);max-width:56rem}
+  nav.toc{display:flex;flex-wrap:wrap;gap:.4rem;max-width:74rem;margin:1rem auto;padding:0 1.25rem;position:sticky;top:0;background:var(--bg);padding-top:.6rem;padding-bottom:.6rem;border-bottom:1px solid var(--line);z-index:5}
+  nav.toc a{font-size:.78rem;padding:.25rem .55rem;border:1px solid var(--line);border-radius:999px;text-decoration:none;color:var(--ink);background:var(--card)}
+  nav.toc a.win{border-color:var(--win);color:var(--win);font-weight:700}
+  section.opt{max-width:74rem;margin:2rem auto;padding:0 1.25rem}
+  .optcard{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .opthead{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .opthead h2{font-size:1.05rem;margin:0} .tag{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .winner-badge{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--win);border:1.5px solid var(--win);border-radius:999px;padding:.15rem .6rem;font-weight:700}
+  .body{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:0}
+  @media(max-width:820px){.body{grid-template-columns:1fr}}
+  .mock{padding:1.25rem;border-right:1px solid var(--line);background:repeating-linear-gradient(45deg,transparent,transparent 12px,rgba(120,113,108,.04) 12px,rgba(120,113,108,.04) 13px)}
+  @media(max-width:820px){.mock{border-right:none;border-bottom:1px solid var(--line)}}
+  .notes{padding:1.1rem 1.25rem;font-size:.88rem}
+  .notes h3{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:.9rem 0 .25rem}
+  .notes h3:first-child{margin-top:0}
+  .notes ul{margin:.2rem 0 .4rem 1.1rem;padding:0} .notes li{margin:.15rem 0}
+  /* phone frame */
+  .ph{width:300px;max-width:100%;margin:0 auto;background:var(--bg);border:2px solid var(--line);border-radius:18px;padding:.8rem .7rem;font-size:.68rem;box-shadow:0 6px 20px rgba(0,0,0,.07)}
+  .ph .brand{font-family:ui-serif,Georgia,serif;font-weight:800;text-align:center;font-size:1.05rem;letter-spacing:.02em;margin-bottom:.5rem}
+  .ph .dim{color:var(--muted)}
+  .evcard{border:1.5px solid var(--line);border-radius:7px;margin:.4rem 0;overflow:hidden;background:var(--card)}
+  .evcard .handle{display:flex;align-items:center;justify-content:center;padding:.5rem 0;background:color-mix(in srgb,var(--ink) 5%,transparent);border-bottom:1px solid var(--line)}
+  .evcard .handle.big{padding:.85rem 0}
+  .evcard .row{display:flex;gap:.5rem;align-items:flex-start;padding:.55rem .6rem}
+  .evcard .badge{flex:none;width:22px;height:22px;border-radius:5px;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700}
+  .evcard .txt{flex:1;min-width:0}
+  .evcard .txt p{margin:0;font-size:.72rem;line-height:1.4}
+  .evcard .txt .more{color:var(--muted);font-size:.62rem}
+  .evcard .ctrls{flex:none;display:flex;flex-direction:column;gap:.2rem}
+  .btn44{width:26px;height:26px;border:1.5px solid var(--line);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.7rem;background:var(--card)}
+  .btn44.dis{opacity:.3}
+  .dots{display:flex;gap:.2rem}
+  .dots i{width:4px;height:4px;border-radius:99px;background:var(--muted);display:inline-block}
+  .grip{display:flex;flex-direction:column;gap:2px}
+  .grip .r{display:flex;gap:2px}
+  .grip i{width:4px;height:4px;border-radius:99px;background:var(--muted);display:inline-block}
+  .region{outline:1.5px dashed transparent;border-radius:6px}
+  .region.a{outline-color:color-mix(in srgb, var(--accent) 55%, transparent)}
+  .region.b{outline-color:color-mix(in srgb, var(--warn) 55%, transparent)}
+  .region.c{outline-color:color-mix(in srgb, var(--good) 55%, transparent)}
+  .legend{display:flex;gap:.7rem;flex-wrap:wrap;font-size:.6rem;color:var(--muted);margin-top:.5rem;justify-content:center}
+  .legend span{display:inline-flex;align-items:center;gap:.25rem}
+  .legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .sel{outline:2px solid var(--accent);background:color-mix(in srgb, var(--accent) 8%, transparent)}
+  .live{font-family:ui-monospace,monospace;font-size:.6rem;background:color-mix(in srgb,var(--ink) 6%,transparent);border-radius:4px;padding:.3rem .4rem;margin-top:.4rem;color:var(--muted)}
+  .chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:.05rem .45rem;font-size:.6rem}
+  .verdict{max-width:74rem;margin:3rem auto;padding:1.25rem;border:2px solid var(--win);border-radius:10px;background:var(--card)}
+  .verdict h2{margin-top:0}
+  table.cmp{border-collapse:collapse;width:100%;font-size:.78rem} .cmp th,.cmp td{border:1px solid var(--line);padding:.35rem .5rem;text-align:left;vertical-align:top}
+  .cmp td.y{color:var(--good);font-weight:700} .cmp td.n{color:var(--bad)} .cmp td.p{color:var(--warn)}
+</style>
+</head>
+<body>
+<header class="lab">
+  <h1>Order-mode reorder interaction lab</h1>
+  <p class="sub">Card <b>chrondle-ux-order-interaction</b>. Live evidence (2026-07-06, /order #239): the drag handle is a row of four decorative dots (~30px tall, below the 44px floor), it has no accessible name, and there is no visible keyboard path — <code>OrderEventList.tsx</code> wires a dnd-kit <code>KeyboardSensor</code> but nothing on screen tells a keyboard or screen-reader user it exists. The event-text area is simultaneously a "tap to read more" target and, in several of these options, adjacent to the drag surface. 8 structurally distinct interaction patterns (R1&ndash;R8). Constraint: reordering must work by touch-drag, by a discrete/step control, and by keyboard, per the card's stated outcome; drag-initiation and text-expand must be non-overlapping targets &ge;44px.</p>
+</header>
+
+<nav class="toc">
+  <a href="#r1">R1 handle-only</a><a href="#r2" class="win">R2 handle+steppers ★</a><a href="#r3">R3 select-then-place</a>
+  <a href="#r4">R4 tap-swap</a><a href="#r5">R5 full-height rail</a><a href="#r6">R6 position-select edit mode</a>
+  <a href="#r7">R7 long-press menu</a><a href="#r8">R8 coach-mark only</a><a href="#verdict" class="win">Verdict</a>
+</nav>
+
+<!-- R1 -->
+<section class="opt" id="r1"><div class="optcard">
+  <div class="opthead"><h2>R1 &mdash; Enlarged handle, no new controls</h2><span class="tag">interaction</span></div>
+  <div class="body">
+    <div class="mock"><div class="ph">
+      <div class="brand">Order</div>
+      <div class="evcard">
+        <div class="handle big region a"><div class="dots"><i></i><i></i><i></i><i></i></div></div>
+        <div class="row"><div class="badge">1</div><div class="txt region b"><p>The Congress of Vienna convenes to redraw the map of Europe&hellip;</p><span class="more">Tap to read more</span></div></div>
+      </div>
+      <div class="evcard">
+        <div class="handle big region a"><div class="dots"><i></i><i></i><i></i><i></i></div></div>
+        <div class="row"><div class="badge">2</div><div class="txt region b"><p>The first practical telegraph line opens between Washington and Baltimore.</p></div></div>
+      </div>
+      <div class="legend"><span><i style="background:color-mix(in srgb,var(--accent) 50%,transparent)"></i>drag zone</span><span><i style="background:color-mix(in srgb,var(--warn) 50%,transparent)"></i>expand zone</span></div>
+    </div></div>
+    <div class="notes">
+      <h3>Structure</h3><ul><li>Same 4-dot handle, just taller (44px) and given <code>aria-label</code> + a custom <code>screenReaderInstructions.draggable</code> string. No visible on-card affordance beyond the icon itself.</li></ul>
+      <h3>For</h3><ul><li>Smallest diff; keeps dnd-kit's keyboard sensor as the sole mechanism.</li></ul>
+      <h3>Against</h3><ul><li>The keyboard path is still "tab to a div, remember to press space, then arrow keys" &mdash; discoverable only by reading hidden instructions text. Card explicitly asks for a <i>discrete</i> control (tap-to-select or up/down), which this option skips entirely.</li></ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- R2 -->
+<section class="opt" id="r2"><div class="optcard">
+  <div class="opthead"><h2>R2 &mdash; Handle (drag) + always-visible Move Up/Down steppers <span class="winner-badge">Winner</span></h2><span class="tag">interaction</span></div>
+  <div class="body">
+    <div class="mock"><div class="ph">
+      <div class="brand">Order</div>
+      <div class="evcard">
+        <div class="handle big region a"><div class="grip"><div class="r"><i></i><i></i></div><div class="r"><i></i><i></i></div><div class="r"><i></i><i></i></div></div></div>
+        <div class="row">
+          <div class="badge">1</div>
+          <div class="txt region b"><p>The Congress of Vienna convenes to redraw the map of Europe&hellip;</p><span class="more">Tap to read more</span></div>
+          <div class="ctrls region c"><div class="btn44 dis">▲</div><div class="btn44">▼</div></div>
+        </div>
+      </div>
+      <div class="evcard">
+        <div class="handle big region a"><div class="grip"><div class="r"><i></i><i></i></div><div class="r"><i></i><i></i></div><div class="r"><i></i><i></i></div></div></div>
+        <div class="row">
+          <div class="badge">2</div>
+          <div class="txt region b"><p>The first practical telegraph line opens between Washington and Baltimore.</p></div>
+          <div class="ctrls region c"><div class="btn44">▲</div><div class="btn44">▼</div></div>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:color-mix(in srgb,var(--accent) 50%,transparent)"></i>drag (pointer/touch)</span><span><i style="background:color-mix(in srgb,var(--warn) 50%,transparent)"></i>tap-to-expand</span><span><i style="background:color-mix(in srgb,var(--good) 50%,transparent)"></i>move up/down (tap or keyboard)</span></div>
+      <div class="live">aria-live: "The first telegraph line opens&hellip; moved to position 1 of 6."</div>
+    </div></div>
+    <div class="notes">
+      <h3>Structure</h3><ul>
+        <li><code>DotsSixVertical</code> grip icon, 44&times;44px, <code>aria-label="Reorder [event], position N of M"</code>; drag still works for pointer/touch via the existing dnd-kit sensors.</li>
+        <li>Two 44&times;44px <code>&lt;button&gt;</code>s (Move up / Move down), disabled at the list boundaries, wired to the same <code>onOrderingChange</code> path drag already uses.</li>
+        <li>Keyboard: buttons are plain focusable buttons &mdash; Tab + Enter/Space, no gesture to learn.</li>
+        <li>Custom <code>accessibility.announcements</code> on <code>DndContext</code> covers drag pickup/move/drop/cancel; a second <code>aria-live="polite"</code> region covers stepper-triggered moves.</li>
+      </ul>
+      <h3>For</h3><ul><li>Directly matches the card body's own worked example ("tap-to-select then move, or up/down"). Three non-overlapping targets (handle, text, steppers), each independently &ge;44px. Native buttons are trivially testable and reliably announced by every screen reader without relying on custom drag semantics. Touch-drag is preserved for players who already use it &mdash; zero regression.</li></ul>
+      <h3>Against</h3><ul><li>Adds a third column to the card, narrowing the text column slightly on small screens (mitigated: badge/controls are fixed-width, text still gets the majority of the row).</li></ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- R3 -->
+<section class="opt" id="r3"><div class="optcard">
+  <div class="opthead"><h2>R3 &mdash; Select-then-place (two-tap placement)</h2><span class="tag">interaction</span></div>
+  <div class="body">
+    <div class="mock"><div class="ph">
+      <div class="brand">Order</div>
+      <div class="evcard sel">
+        <div class="row"><div class="badge">1</div><div class="txt"><p>The Congress of Vienna convenes&hellip;</p><span class="more" style="color:var(--accent)">Selected &mdash; tap a card below to move it here</span></div></div>
+      </div>
+      <div class="evcard"><div class="row"><div class="badge">2</div><div class="txt"><p>The first telegraph line opens&hellip;</p></div></div></div>
+      <div class="evcard"><div class="row"><div class="badge">3</div><div class="txt"><p>&hellip;event three&hellip;</p></div></div></div>
+    </div></div>
+    <div class="notes">
+      <h3>Structure</h3><ul><li>Tap/Enter a card to select it (visibly highlighted, announced). Tap/Enter a second card to place the first one immediately before it. No drag at all.</li></ul>
+      <h3>For</h3><ul><li>Fully keyboard/touch/SR-native (two button presses); no drag gesture required anywhere.</li></ul>
+      <h3>Against</h3><ul><li>Replaces drag entirely &mdash; regresses the many players who already reorder fine by dragging. Two-tap grammar for a 3-6 item list is a bigger interaction change than the card's "outcome, not redesign" framing calls for, and needs its own placement-target affordance (which card do you tap to mean "move to end"?).</li></ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- R4 -->
+<section class="opt" id="r4"><div class="optcard">
+  <div class="opthead"><h2>R4 &mdash; Tap-swap</h2><span class="tag">interaction</span></div>
+  <div class="body">
+    <div class="mock"><div class="ph">
+      <div class="brand">Order</div>
+      <div class="evcard sel"><div class="row"><div class="badge">1</div><div class="txt"><p>Congress of Vienna&hellip;</p></div></div></div>
+      <div class="evcard"><div class="row"><div class="badge">2</div><div class="txt"><p>First telegraph line&hellip;</p></div></div></div>
+      <div class="live">Tap a second card to swap positions with the selected card.</div>
+    </div></div>
+    <div class="notes">
+      <h3>Structure</h3><ul><li>Tap card A, tap card B: their positions swap (no shift of everything in between).</li></ul>
+      <h3>For</h3><ul><li>Simple mental model, no drag needed.</li></ul>
+      <h3>Against</h3><ul><li>Swap semantics can't express "move to the very end" in one step for a mis-ordered middle item &mdash; needs multiple swaps, which is worse for a "guess the chronological order" puzzle where a whole block is often off by several spots. Weakest completion-efficiency of all options.</li></ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- R5 -->
+<section class="opt" id="r5"><div class="optcard">
+  <div class="opthead"><h2>R5 &mdash; Full-height drag rail</h2><span class="tag">interaction</span></div>
+  <div class="body">
+    <div class="mock"><div class="ph">
+      <div class="brand">Order</div>
+      <div class="evcard" style="display:flex">
+        <div class="handle region a" style="flex-direction:column;width:34px;border-right:1px solid var(--line);border-bottom:none;align-self:stretch"><div class="grip"><div class="r"><i></i><i></i></div><div class="r"><i></i><i></i></div><div class="r"><i></i><i></i></div></div></div>
+        <div class="row" style="flex:1"><div class="badge">1</div><div class="txt region b"><p>Congress of Vienna convenes&hellip;</p><span class="more">Tap to read more</span></div></div>
+      </div>
+    </div></div>
+    <div class="notes">
+      <h3>Structure</h3><ul><li>Grip column runs the full height of the card (left edge) instead of a thin top strip &mdash; much larger, harder-to-miss drag-initiation surface.</li></ul>
+      <h3>For</h3><ul><li>Best pure touch-drag ergonomics of any option; nearly impossible to miss on a phone.</li></ul>
+      <h3>Against</h3><ul><li>Solves only the touch-target size problem, not the keyboard-discoverability or discrete-control bars the card asks for &mdash; still needs R2's steppers layered on top to pass all four acceptance criteria, so it's a partial answer, not a complete pattern on its own.</li></ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- R6 -->
+<section class="opt" id="r6"><div class="optcard">
+  <div class="opthead"><h2>R6 &mdash; "Reorder mode" with native position-select</h2><span class="tag">interaction</span></div>
+  <div class="body">
+    <div class="mock"><div class="ph">
+      <div class="brand">Order <span class="chip">Reorder mode</span></div>
+      <div class="evcard"><div class="row"><div class="txt"><p>Congress of Vienna&hellip;</p></div><div class="ctrls"><span class="chip">Pos: 1 ▾</span></div></div></div>
+      <div class="evcard"><div class="row"><div class="txt"><p>First telegraph line&hellip;</p></div><div class="ctrls"><span class="chip">Pos: 2 ▾</span></div></div></div>
+    </div></div>
+    <div class="notes">
+      <h3>Structure</h3><ul><li>A toolbar toggle switches the list into an explicit edit mode; each row gets a native <code>&lt;select&gt;</code> assigning its position 1&ndash;N. Toggling off returns to a read-only, drag-free view.</li></ul>
+      <h3>For</h3><ul><li>Native <code>&lt;select&gt;</code> is maximally accessible by construction (every platform's picker UI is already a11y-audited).</li></ul>
+      <h3>Against</h3><ul><li>Introduces a whole second mode/toolbar for what is normally a 3-6 item list &mdash; heavier surface area than the card's "bars, not a design" framing wants, and reassigning positions via a dropdown while N other rows silently shift is a confusing model for a guess-the-order puzzle (you're not looking at a settings form).</li></ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- R7 -->
+<section class="opt" id="r7"><div class="optcard">
+  <div class="opthead"><h2>R7 &mdash; Long-press "Move to&hellip;" menu</h2><span class="tag">interaction</span></div>
+  <div class="body">
+    <div class="mock"><div class="ph">
+      <div class="brand">Order</div>
+      <div class="evcard"><div class="row"><div class="badge">1</div><div class="txt"><p>Congress of Vienna&hellip;</p></div><div class="ctrls"><div class="btn44">⋮</div></div></div></div>
+      <div class="evcard" style="position:relative">
+        <div class="row"><div class="badge">2</div><div class="txt"><p>First telegraph line&hellip;</p></div></div>
+        <div style="position:absolute;inset:auto 8px 8px auto;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:.3rem;font-size:.62rem;box-shadow:0 6px 16px rgba(0,0,0,.15)">Move to top<br>Move up<br>Move down<br>Move to bottom</div>
+      </div>
+    </div></div>
+    <div class="notes">
+      <h3>Structure</h3><ul><li>A "&#8942;" menu button opens a small action sheet with explicit move actions, native <code>role="menu"</code>/<code>menuitem</code> semantics.</li></ul>
+      <h3>For</h3><ul><li>Cheap to make fully keyboard/SR operable (native menu pattern); adds "move to top/bottom" shortcuts R2 lacks.</li></ul>
+      <h3>Against</h3><ul><li>Every move costs two interactions (open menu, choose item) instead of R2's one tap; for a puzzle where players nudge cards repeatedly while testing guesses, that's meaningfully slower and the menu occludes a neighboring card on small screens.</li></ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- R8 -->
+<section class="opt" id="r8"><div class="optcard">
+  <div class="opthead"><h2>R8 &mdash; Coach-mark only (status quo + hint banner)</h2><span class="tag">interaction</span></div>
+  <div class="body">
+    <div class="mock"><div class="ph">
+      <div class="brand">Order</div>
+      <div class="live" style="margin-bottom:.4rem">Tip: focus a card's handle, press Space to pick it up, arrow keys to move, Space to drop.</div>
+      <div class="evcard"><div class="handle region a"><div class="dots"><i></i><i></i><i></i><i></i></div></div><div class="row"><div class="badge">1</div><div class="txt region b"><p>Congress of Vienna&hellip;</p></div></div></div>
+    </div></div>
+    <div class="notes">
+      <h3>Structure</h3><ul><li>Keep today's drag-only interaction; add a first-run dismissible banner describing the dnd-kit keyboard-grab gesture.</li></ul>
+      <h3>For</h3><ul><li>No new persistent chrome once dismissed.</li></ul>
+      <h3>Against</h3><ul><li>Fails the "discrete control" bar outright (there isn't one), and once the banner is dismissed the mechanism is unlabeled again &mdash; a returning keyboard user has no persistent, discoverable way to reorder. Weakest fit to the acceptance criteria of any option.</li></ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- ========================= VERDICT ========================= -->
+
+<section class="verdict" id="verdict">
+  <h2>Verdict (delegated mode &mdash; operator may re-verdict)</h2>
+  <p><b>R2 &mdash; drag handle (enlarged, labeled) + always-visible Move Up/Down steppers.</b> It is the only option built from three simultaneously-satisfied, independently &ge;44px targets: the redesigned grip handle (pointer/touch drag, unchanged mechanism, zero regression for existing players), the event-text button (tap-to-expand, untouched), and a new stepper column (the card's own named example of a "discrete control"). Steppers are plain <code>&lt;button&gt;</code> elements, so the keyboard and screen-reader bars are met by construction &mdash; no custom gesture to teach or discover &mdash; while drag stays available via the same dnd-kit sensors already wired in <code>OrderEventList.tsx</code>, now paired with content-aware <code>accessibility.announcements</code> for pickup/move/drop/cancel.</p>
+  <p>R1 and R8 fail the discrete-control bar outright (R1 only relabels the same undiscoverable keyboard gesture; R8 explains it once and then hides it again). R5 fixes touch ergonomics but not keyboard/SR discoverability, so it would still need R2's steppers layered on &mdash; it's a subset, not an alternative. R3/R4/R6 all replace drag with a different primary grammar, which is a bigger interaction rewrite than "bars, not a design" calls for, and each trades away either drag continuity (R3/R4/R6) or per-move speed (R4, R7). R7 is the closest runner-up &mdash; keeping it in mind if steppers ever feel cramped on very narrow viewports &mdash; but costs an extra tap per move versus R2's direct buttons.</p>
+  <table class="cmp">
+    <tr><th></th><th>touch-drag preserved</th><th>discrete control present</th><th>keyboard-native (no gesture to learn)</th><th>3 non-overlapping &ge;44px targets</th><th>single-tap move</th></tr>
+    <tr><td><b>R2 ★</b></td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+    <tr><td>R1</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td><td class="p">2 targets</td><td class="p">n/a</td></tr>
+    <tr><td>R3</td><td class="n">✗</td><td class="y">✓</td><td class="y">✓</td><td class="p">2 targets</td><td class="n">2 taps</td></tr>
+    <tr><td>R4</td><td class="n">✗</td><td class="y">✓</td><td class="y">✓</td><td class="p">2 targets</td><td class="n">multi-swap</td></tr>
+    <tr><td>R5</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td><td class="y">✓</td><td class="p">n/a</td></tr>
+    <tr><td>R6</td><td class="n">✗</td><td class="y">✓</td><td class="y">✓</td><td class="p">mode toggle</td><td class="p">dropdown</td></tr>
+    <tr><td>R7</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">2 taps</td></tr>
+    <tr><td>R8</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td><td class="p">2 targets</td><td class="p">n/a</td></tr>
+  </table>
+  <p class="sub" style="margin-bottom:0">Implementation: <code>DraggableEventCard.tsx</code> &mdash; <code>DotsSixVertical</code> grip (44&times;44, labeled), text stays its own tap target, new stepper column (<code>CaretUp</code>/<code>CaretDown</code>, 44&times;44, disabled at the boundaries). <code>OrderEventList.tsx</code> &mdash; <code>moveItem(id, direction)</code> reusing the existing <code>onOrderingChange</code> path drag already calls; custom <code>accessibility.announcements</code>/<code>screenReaderInstructions</code> on <code>DndContext</code> for drag pickup/move/drop/cancel; a second <code>aria-live="polite"</code> region for stepper-triggered moves. New Playwright spec drives the whole flow keyboard-only (Tab + Enter across steppers) and checks a mobile viewport's three hit-target sizes and non-interference between drag and expand.</p>
+</section>
+</body>
+</html>
