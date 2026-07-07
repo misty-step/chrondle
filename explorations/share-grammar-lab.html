@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chrondle Classic Share-Grammar Lab</title>
+    <style>
+      :root {
+        --bg: #faf7f2;
+        --ink: #1c1a17;
+        --muted: #6b6459;
+        --card: #ffffff;
+        --line: #e5ded2;
+        --accent: #b45309;
+        --win: #14775c;
+        --loss: #a33a2a;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16130f;
+          --ink: #ece5d8;
+          --muted: #9a9284;
+          --card: #201c16;
+          --line: #353026;
+          --accent: #e0913a;
+          --win: #4cc19a;
+          --loss: #e07a63;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          16px/1.55 Georgia,
+          "Iowan Old Style",
+          serif;
+        padding: 2.5rem 1.25rem 5rem;
+      }
+      main {
+        max-width: 60rem;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.9rem;
+        margin: 0 0 0.25rem;
+        letter-spacing: -0.01em;
+      }
+      h2 {
+        font-size: 1.25rem;
+        margin: 2.5rem 0 0.5rem;
+      }
+      .sub {
+        color: var(--muted);
+        margin: 0 0 2rem;
+      }
+      .contract {
+        border-left: 3px solid var(--accent);
+        padding: 0.1rem 1rem;
+        margin: 1.5rem 0 2.5rem;
+        background: var(--card);
+        border-radius: 0 8px 8px 0;
+      }
+      .contract ul {
+        margin: 0.6rem 0;
+        padding-left: 1.1rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(27rem, 1fr));
+        gap: 1.25rem;
+      }
+      @media (max-width: 640px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .opt {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 1.1rem 1.25rem;
+      }
+      .opt h3 {
+        margin: 0 0 0.15rem;
+        font-size: 1.05rem;
+      }
+      .opt .tag {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      pre {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0.8rem 0.9rem;
+        font:
+          14px/1.5 ui-monospace,
+          "SF Mono",
+          Menlo,
+          monospace;
+        overflow-x: auto;
+        white-space: pre;
+        margin: 0.6rem 0;
+      }
+      pre.win {
+        border-left: 3px solid var(--win);
+      }
+      pre.loss {
+        border-left: 3px solid var(--loss);
+      }
+      .pc {
+        font-size: 0.88rem;
+        color: var(--muted);
+        margin: 0.4rem 0 0;
+      }
+      .pc b {
+        color: var(--ink);
+      }
+      .verdict {
+        background: var(--card);
+        border: 2px solid var(--accent);
+        border-radius: 12px;
+        padding: 1.4rem 1.6rem;
+        margin-top: 3rem;
+      }
+      .verdict h2 {
+        margin-top: 0;
+      }
+      .winner-badge {
+        display: inline-block;
+        background: var(--accent);
+        color: var(--bg);
+        font:
+          700 0.72rem/1 ui-monospace,
+          monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 0.3rem 0.55rem;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Classic Share-Grammar Lab</h1>
+      <p class="sub">
+        Card <code>chrondle-ux-share-unification</code> · 2026-07-07 · 8 structurally distinct
+        grammars for the Classic daily share text. Delegated-verdict mode: winner chosen and
+        implemented; operator may re-verdict.
+      </p>
+
+      <div class="contract">
+        <b>Contract every option must satisfy</b>
+        <ul>
+          <li>
+            <b>Express the range mechanic:</b> final range <em>width</em> and
+            <em>contained vs. missed</em> — not merely hints used.
+          </li>
+          <li>
+            <b>Spoiler-safe:</b> no target year, no era (BC/AD), no range endpoints, no hint
+            content. Widths and miss distances are relative and non-derivable.
+          </li>
+          <li>
+            <b>Format family:</b> <code>Chrondle #N</code> header · body ·
+            <code>https://chrondle.app</code> footer (shared with Order and Duel).
+          </li>
+        </ul>
+        Fixtures: <b>W</b> = win, 21-year range, 3 hints, 92/100 · <b>L</b> = miss, 30-year range, 4
+        hints, 34y early.
+      </div>
+
+      <div class="grid">
+        <section class="opt">
+          <h3>A · Hints Bar (status quo, control)</h3>
+          <div class="tag">structure: hint-count bar + text stats</div>
+          <pre class="win">
+Chrondle #96
+
+🟩🟩🟩⬜⬜⬜
+🗓️ 21 years
+🔥 92/100</pre
+          >
+          <pre class="loss">
+Chrondle #96
+
+🟩🟩🟩🟩⬜⬜
+🗓️ 30 years
+🫠 34y early</pre
+          >
+          <p class="pc">
+            <b>Pro:</b> shipped, familiar. <b>Con:</b> the grid — the viral element — encodes hints
+            used, not the range mechanic; contained/missed is invisible in the visual; fails the
+            card's core criterion.
+          </p>
+        </section>
+
+        <section class="opt">
+          <h3>B · Timeline Band + Target Marker</h3>
+          <div class="tag">
+            structure: 10-cell strip; band length ∝ log(width); 🎯 in-band = contained, out-of-band
+            toward miss side = missed
+          </div>
+          <pre class="win">
+Chrondle #96
+
+⬜⬜🟩🟩🎯🟩🟩⬜⬜⬜
+📏 21 years · 🔍 3 hints
+🔥 92/100</pre
+          >
+          <pre class="loss">
+Chrondle #96
+
+⬜🟨🟨🟨🟨🟨⬜🎯⬜⬜
+📏 30 years · 🔍 4 hints
+🫠 34y early</pre
+          >
+          <p class="pc">
+            <b>Pro:</b> one glance shows both halves of the mechanic — band length = width, marker
+            in/out = contained/missed, marker side = miss direction; unanchored scale leaks nothing;
+            pure-emoji Wordle-grid virality. <b>Con:</b> log mapping is a hidden convention; needs
+            snapshot discipline.
+          </p>
+        </section>
+
+        <section class="opt">
+          <h3>C · Precision Meter</h3>
+          <div class="tag">structure: 5-segment narrowness gauge + verdict word</div>
+          <pre class="win">
+Chrondle #96
+
+📏 ▰▰▰▰▱ 21 years
+✅ Contained · 🔍 3 hints
+🔥 92/100</pre
+          >
+          <pre class="loss">
+Chrondle #96
+
+📏 ▰▰▰▱▱ 30 years
+❌ Missed · 34y early · 🔍 4 hints
+🫠</pre
+          >
+          <p class="pc">
+            <b>Pro:</b> compact; narrowness legible as a gauge. <b>Con:</b> contained/missed is a
+            word, not part of the visual; ▰▱ glyphs render inconsistently on Android/Windows
+            clients.
+          </p>
+        </section>
+
+        <section class="opt">
+          <h3>D · Dual-Row Instrument Panel</h3>
+          <div class="tag">structure: one row per mechanic — hints row + range row</div>
+          <pre class="win">
+Chrondle #96
+
+🔍 🟨🟨🟨⬜⬜⬜
+🎯 🟩🟩🟩🟩⬜⬜⬜⬜
+🔥 92/100</pre
+          >
+          <pre class="loss">
+Chrondle #96
+
+🔍 🟨🟨🟨🟨⬜⬜
+🎯 🟥🟥🟥🟥🟥⬜⬜⬜
+🫠 34y early</pre
+          >
+          <p class="pc">
+            <b>Pro:</b> both mechanics graphed; color encodes contained (green) vs missed (red).
+            <b>Con:</b> two scales with different cell counts read as noise; leading emoji misaligns
+            rows in proportional fonts; width number lost.
+          </p>
+        </section>
+
+        <section class="opt">
+          <h3>E · One-Line Badge</h3>
+          <div class="tag">structure: single stat line, no grid</div>
+          <pre class="win">
+Chrondle #96
+
+🎯 21y · 🔍 3 · 92/100</pre
+          >
+          <pre class="loss">
+Chrondle #96
+
+❌ 30y · 🔍 4 · 34y early</pre
+          >
+          <p class="pc">
+            <b>Pro:</b> tersest possible; unambiguous. <b>Con:</b> no grid means no glanceable share
+            identity in a feed — abandons the format element that makes daily-game shares spread.
+          </p>
+        </section>
+
+        <section class="opt">
+          <h3>F · Bracket Ruler (text-art)</h3>
+          <div class="tag">structure: ASCII ruler; brackets = the range, 🎯 = the year</div>
+          <pre class="win">
+Chrondle #96
+
+──[══🎯══]── 21 years
+🔍 3 hints · 🔥 92/100</pre
+          >
+          <pre class="loss">
+Chrondle #96
+
+──[═════]──🎯─ 30 years
+🔍 4 hints · 🫠 34y early</pre
+          >
+          <p class="pc">
+            <b>Pro:</b> the most literal picture of the mechanic. <b>Con:</b> box-drawing chars
+            ligate/collapse in proportional fonts (iMessage, X); alignment breaks exactly where
+            shares live.
+          </p>
+        </section>
+
+        <section class="opt">
+          <h3>G · Bullseye Tier Glyph</h3>
+          <div class="tag">structure: one big glyph from a width-tier ladder</div>
+          <pre class="win">
+Chrondle #96
+
+🎯🎯🎯
+21 years · contained · 🔍 3
+🔥 92/100</pre
+          >
+          <pre class="loss">
+Chrondle #96
+
+🌫️
+30 years · missed 34y early · 🔍 4</pre
+          >
+          <p class="pc">
+            <b>Pro:</b> emotional, instantly readable rank. <b>Con:</b> a tier ladder compresses
+            width to ~5 buckets — the actual number does the work in text; glyph repetition looks
+            like a rating, not a mechanic.
+          </p>
+        </section>
+
+        <section class="opt">
+          <h3>H · Narrowing Staircase</h3>
+          <div class="tag">structure: one row per hint, band shrinking to the final range</div>
+          <pre class="win">
+Chrondle #96
+
+🟦🟦🟦🟦🟦🟦🟦🟦
+⬜🟦🟦🟦🟦🟦🟦⬜
+⬜⬜🟦🟦🟦🟦⬜⬜
+⬜⬜🟩🎯🟩⬜⬜⬜
+🔥 92/100</pre
+          >
+          <pre class="loss">
+Chrondle #96
+
+🟦🟦🟦🟦🟦🟦🟦🟦
+⬜🟦🟦🟦🟦🟦⬜⬜
+⬜⬜🟦🟦🟦🟦⬜⬜
+⬜🟨🟨🟨⬜⬜⬜⬜
+⬜⬜⬜⬜⬜🎯⬜⬜
+🫠 34y early</pre
+          >
+          <p class="pc">
+            <b>Pro:</b> tells the narrowing <em>story</em>; tall grid = strong feed presence.
+            <b>Con:</b> the game records only the final range — intermediate rows would be
+            fabricated interpolation, a truthfulness red line; height varies wildly with hints used.
+          </p>
+        </section>
+      </div>
+
+      <div class="verdict">
+        <span class="winner-badge">Winner · Option B</span>
+        <h2>Timeline Band + Target Marker</h2>
+        <p>
+          <b>Rationale.</b> B is the only option where the viral visual element itself carries the
+          whole mechanic honestly: band length is the width you committed to, the 🎯 marker inside
+          or outside the band is containment, and the marker's side is the miss direction — all from
+          data the game actually records (unlike H's fabricated intermediate rows). It survives
+          proportional fonts (pure emoji, unlike F/D's alignment-dependent art), keeps a scannable
+          grid identity in a feed (unlike E), and stays spoiler-safe because the strip has no
+          anchored scale — a viewer learns width and verdict, never the year or era. Hints and score
+          remain as secondary stat lines, so nothing the current share communicates is lost.
+        </p>
+        <p>
+          <b>Locked spec.</b> 10-cell strip; band length
+          <code>clamp(round(1 + 7·ln(width)/ln(250)), 1, 8)</code>; contained → green band centered
+          with 🎯 at its center cell; missed → amber band flushed away from the miss side, 🎯 placed
+          1 cell beyond the band edge (2 cells when the miss distance exceeds 25 years). Stat line
+          <code>📏 W years · 🔍 H hints</code> (each part singular-aware, hint part omitted at 0);
+          score line keeps the existing emoji ladder, or <code>🫠 Dy early/late</code> on a miss.
+        </p>
+      </div>
+    </main>
+  </body>
+</html>

@@ -1,6 +1,10 @@
 /**
- * Share text for Duel runs (NYT Games style, matches Classic's generator).
+ * Duel mode share grammar: run length (the streak mechanic) with tier, the
+ * gap that ended the run (relative years only — never the pair's dates),
+ * and a personal-best flourish.
  */
+
+import { SHARE_URL, composeShareText, count } from "./format";
 
 export interface DuelShareInput {
   /** Final streak for the run */
@@ -16,17 +20,19 @@ export interface DuelShareInput {
 export function generateDuelShareText(input: DuelShareInput): string {
   const { streak, bestStreak, tierLabel, finalGap } = input;
 
-  const lines: string[] = ["Chrondle Duel"];
-  lines.push(`⚔️ ${streak} in a row · ${tierLabel}`);
+  const body: string[] = [`⚔️ ${streak} in a row · ${tierLabel}`];
 
   if (typeof finalGap === "number" && finalGap > 0) {
-    const yearLabel = finalGap === 1 ? "year" : "years";
-    lines.push(`Felled by a gap of ${finalGap} ${yearLabel}`);
+    body.push(`Felled by a gap of ${count(finalGap, "year")}`);
   }
 
   if (streak > 0 && streak >= bestStreak) {
-    lines.push("🏆 New personal best");
+    body.push("🏆 New personal best");
   }
 
-  return `${lines.join("\n")}\n\nhttps://chrondle.app/duel`;
+  return composeShareText({
+    mode: "Duel",
+    body,
+    url: `${SHARE_URL}/duel`,
+  });
 }

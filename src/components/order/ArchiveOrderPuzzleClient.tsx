@@ -12,7 +12,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Footer } from "@/components/Footer";
-import { generateArchivalShareText } from "@/lib/order/shareCard";
+import { generateOrderShareText } from "@/lib/sharing";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 
 interface ArchiveOrderPuzzleClientProps {
@@ -68,7 +68,7 @@ export function ArchiveOrderPuzzleClient({
 
   if (gameState.status === "completed") {
     const handleShare = async () => {
-      const text = generateArchivalShareText({
+      const text = generateOrderShareText({
         puzzleNumber: gameState.puzzle.puzzleNumber,
         score: gameState.score,
         attempts: gameState.attempts,

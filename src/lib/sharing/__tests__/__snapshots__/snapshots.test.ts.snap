@@ -1,0 +1,115 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`classic share snapshots > loss · missed early beyond 25 years 1`] = `
+"Chrondle #96
+
+⬜🟨🟨🟨🟨🟨⬜🎯⬜⬜
+📏 30 years · 🔍 4 hints
+🫠 34y early
+
+https://chrondle.app"
+`;
+
+exports[`classic share snapshots > loss · near miss late 1`] = `
+"Chrondle #42
+
+⬜⬜⬜🎯🟨🟨🟨🟨⬜⬜
+📏 11 years · 🔍 2 hints
+🫠 2y late
+
+https://chrondle.app"
+`;
+
+exports[`classic share snapshots > loss · without miss info 1`] = `
+"Chrondle #96
+
+⬜⬜🟨🟨🟨🟨🟨⬜⬜⬜
+📏 30 years · 🔍 6 hints
+🫠 8/100
+
+https://chrondle.app"
+`;
+
+exports[`classic share snapshots > win · narrow range, no hints 1`] = `
+"Chrondle #347
+
+⬜⬜⬜⬜🟩🎯⬜⬜⬜⬜
+📏 3 years
+🔥 97/100
+
+https://chrondle.app"
+`;
+
+exports[`classic share snapshots > win · wide range with hints 1`] = `
+"Chrondle #96
+
+⬜⬜🟩🟩🎯🟩🟩⬜⬜⬜
+📏 21 years · 🔍 3 hints
+🔥 92/100
+
+https://chrondle.app"
+`;
+
+exports[`duel share snapshots > archive exhausted (no miss) 1`] = `
+"Chrondle Duel
+
+⚔️ 40 in a row · Legend
+🏆 New personal best
+
+https://chrondle.app/duel"
+`;
+
+exports[`duel share snapshots > new personal best 1`] = `
+"Chrondle Duel
+
+⚔️ 21 in a row · Legend
+Felled by a gap of 2 years
+🏆 New personal best
+
+https://chrondle.app/duel"
+`;
+
+exports[`duel share snapshots > run ended by a miss 1`] = `
+"Chrondle Duel
+
+⚔️ 12 in a row · Historian
+Felled by a gap of 6 years
+
+https://chrondle.app/duel"
+`;
+
+exports[`duel share snapshots > zero-streak run 1`] = `
+"Chrondle Duel
+
+⚔️ 0 in a row · Novice
+Felled by a gap of 300 years
+
+https://chrondle.app/duel"
+`;
+
+exports[`order share snapshots > solved after multiple attempts 1`] = `
+"Chrondle Order #247
+
+⬜🟩⬜🟩⬜🟩
+🟩🟩⬜🟩🟩🟩
+🟩🟩🟩🟩🟩🟩
+
+https://chrondle.app"
+`;
+
+exports[`order share snapshots > solved first try 1`] = `
+"Chrondle Order #247
+
+🟩🟩🟩🟩🟩🟩
+
+https://chrondle.app"
+`;
+
+exports[`order share snapshots > unsolved 1`] = `
+"Chrondle Order #247
+
+⬜⬜⬜⬜⬜⬜
+🟩⬜🟩⬜🟩⬜
+
+https://chrondle.app"
+`;

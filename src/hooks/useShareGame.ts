@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { generateShareText } from "@/lib/sharing/generator";
+import { generateClassicShareText } from "@/lib/sharing";
 import { useWebShare } from "@/hooks/useWebShare";
 import type { RangeGuess } from "@/types/range";
 
@@ -26,7 +26,7 @@ export function useShareGame(
   const { share, canShare, shareMethod, isSharing } = useWebShare();
   const [shareStatus, setShareStatus] = useState<ShareStatus>("idle");
 
-  const shareText = generateShareText(ranges, totalScore, hasWon, puzzleNumber, {
+  const shareText = generateClassicShareText(ranges, totalScore, hasWon, puzzleNumber, {
     targetYear,
     missDistance,
     missDirection,

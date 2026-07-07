@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { generateDuelShareText } from "../share";
+import { generateDuelShareText } from "../duel";
 
 describe("generateDuelShareText", () => {
-  it("formats a standard run", () => {
+  it("formats a standard run in the shared family shape", () => {
     const text = generateDuelShareText({
       streak: 12,
       bestStreak: 20,
@@ -11,7 +11,7 @@ describe("generateDuelShareText", () => {
     });
 
     expect(text).toBe(
-      "Chrondle Duel\n⚔️ 12 in a row · Historian\nFelled by a gap of 6 years\n\nhttps://chrondle.app/duel",
+      "Chrondle Duel\n\n⚔️ 12 in a row · Historian\nFelled by a gap of 6 years\n\nhttps://chrondle.app/duel",
     );
   });
 

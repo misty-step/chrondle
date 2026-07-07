@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useShareGame } from "../useShareGame";
 import * as useWebShareModule from "../useWebShare";
-import * as sharingGenerator from "@/lib/sharing/generator";
+import * as sharingGenerator from "@/lib/sharing/classic";
 import type { RangeGuess } from "@/types/range";
 
 // Mock useWebShare
@@ -11,8 +11,8 @@ vi.mock("../useWebShare", () => ({
 }));
 
 // Mock sharing generator
-vi.mock("@/lib/sharing/generator", () => ({
-  generateShareText: vi.fn(),
+vi.mock("@/lib/sharing/classic", () => ({
+  generateClassicShareText: vi.fn(),
 }));
 
 // Mock logger
@@ -46,7 +46,7 @@ describe("useShareGame", () => {
       shareStrategy: "clipboard",
     });
 
-    vi.mocked(sharingGenerator.generateShareText).mockReturnValue(
+    vi.mocked(sharingGenerator.generateClassicShareText).mockReturnValue(
       "Chrondle #42\nRange: 🗓️ 21 years\nHints: ⬛⬛⬜⬜⬜⬜\nScore: 😎 75/100\n\nchrondle.app",
     );
 
@@ -273,27 +273,39 @@ describe("useShareGame", () => {
     });
   });
 
-  describe("generateShareText integration", () => {
+  describe("generateClassicShareText integration", () => {
     it("should pass ranges, score, hasWon, puzzleNumber to generator", () => {
       renderHook(() => useShareGame(defaultRanges, 75, true, 42));
 
-      expect(sharingGenerator.generateShareText).toHaveBeenCalledWith(defaultRanges, 75, true, 42, {
-        targetYear: undefined,
-      });
+      expect(sharingGenerator.generateClassicShareText).toHaveBeenCalledWith(
+        defaultRanges,
+        75,
+        true,
+        42,
+        {
+          targetYear: undefined,
+        },
+      );
     });
 
     it("should pass targetYear option to generator", () => {
       renderHook(() => useShareGame(defaultRanges, 75, true, 42, { targetYear: 1969 }));
 
-      expect(sharingGenerator.generateShareText).toHaveBeenCalledWith(defaultRanges, 75, true, 42, {
-        targetYear: 1969,
-      });
+      expect(sharingGenerator.generateClassicShareText).toHaveBeenCalledWith(
+        defaultRanges,
+        75,
+        true,
+        42,
+        {
+          targetYear: 1969,
+        },
+      );
     });
 
     it("should handle missing puzzleNumber", () => {
       renderHook(() => useShareGame(defaultRanges, 75, true, undefined));
 
-      expect(sharingGenerator.generateShareText).toHaveBeenCalledWith(
+      expect(sharingGenerator.generateClassicShareText).toHaveBeenCalledWith(
         defaultRanges,
         75,
         true,
