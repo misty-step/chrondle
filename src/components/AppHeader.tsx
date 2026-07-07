@@ -44,9 +44,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <div className="flex min-h-[40px] items-center justify-between">
             {/* Logo/Brand - with integrated mode switcher */}
             <div className="flex h-10 items-baseline gap-2">
-              {/* `/?all` keeps the gallery reachable for players whose
-                  mode-preference cookie redirects bare `/` to their mode. */}
-              <Link href="/?all" className="flex items-baseline">
+              {/* Keeps the gallery reachable for players whose mode-preference
+                  cookie redirects bare `/` to their mode. The param MUST carry
+                  a value (`all=1`, not bare `?all`): Vercel edge query
+                  normalization drops valueless params, so bare `?all` reaches
+                  the server as `undefined` and the home redirect fires anyway,
+                  turning the wordmark into a dead-end in production. */}
+              <Link href="/?all=1" className="flex items-baseline">
                 <h1 className="font-display text-body-primary m-0 flex cursor-pointer items-baseline text-2xl transition-opacity hover:opacity-80 md:text-3xl">
                   <span className="flex h-10 w-10 items-center justify-center sm:hidden">C</span>
                   <span className="hidden sm:inline">CHRONDLE</span>
