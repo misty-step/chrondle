@@ -79,13 +79,41 @@ export function GamesGallery() {
           "text-card-foreground",
         )}
       >
-        {/* Header: Wordmark + Tagline */}
+        {/* Header: Wordmark + Tagline + first-timer pitch */}
         <header className="flex flex-col gap-2 text-center">
           <h1 className="font-display text-5xl md:text-6xl">Chrondle</h1>
           <p className="text-muted-foreground font-body text-sm text-pretty md:text-base">
             Daily history puzzles
           </p>
+          <p className="font-body text-sm text-pretty md:text-base">
+            Guess the year of real historical events. New puzzles every day.
+          </p>
         </header>
+
+        {/* How it works — compact 3-step strip (structural copy; the
+            marketing pitch itself is owned by the [market] lane) */}
+        <ol
+          aria-label="How to play"
+          className="border-border/60 bg-surface-primary/50 flex flex-col gap-1.5 rounded border px-4 py-3"
+        >
+          {[
+            "Read a clue — a real event from history.",
+            "Guess when it happened — narrower is worth more.",
+            "Come back tomorrow — keep your streak alive.",
+          ].map((step, index) => (
+            <li key={step} className="flex items-baseline gap-2.5">
+              <span
+                aria-hidden="true"
+                className="border-primary/50 text-primary flex size-4 shrink-0 translate-y-0.5 items-center justify-center rounded-full border text-[10px] font-bold"
+              >
+                {index + 1}
+              </span>
+              <span className="font-body text-muted-foreground text-left text-xs leading-snug md:text-sm">
+                {step}
+              </span>
+            </li>
+          ))}
+        </ol>
 
         {/* Mode Cards */}
         <div className="flex flex-col gap-3">

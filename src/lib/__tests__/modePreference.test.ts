@@ -3,7 +3,12 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { setModePreferenceCookie, MODE_COOKIE, type ModeKey } from "../modePreference";
+import {
+  setModePreferenceCookie,
+  resolveHomeRedirect,
+  MODE_COOKIE,
+  type ModeKey,
+} from "../modePreference";
 
 describe("modePreference", () => {
   describe("setModePreferenceCookie", () => {
@@ -68,6 +73,36 @@ describe("modePreference", () => {
   describe("MODE_COOKIE constant", () => {
     it("exports the correct cookie name", () => {
       expect(MODE_COOKIE).toBe("chrondle_mode");
+    });
+  });
+
+  describe("resolveHomeRedirect", () => {
+    it("returns the preferred mode route for a returning visitor", () => {
+      expect(resolveHomeRedirect("classic", false)).toBe("/classic");
+      expect(resolveHomeRedirect("order", false)).toBe("/order");
+      expect(resolveHomeRedirect("duel", false)).toBe("/duel");
+    });
+
+    it("returns null for a first-time visitor (no cookie)", () => {
+      expect(resolveHomeRedirect(undefined, false)).toBeNull();
+    });
+
+    it("returns null for an invalid or tampered cookie value", () => {
+      expect(resolveHomeRedirect("archive", false)).toBeNull();
+      expect(resolveHomeRedirect("", false)).toBeNull();
+      expect(resolveHomeRedirect("classic; evil", false)).toBeNull();
+    });
+
+    it("never redirects when the gallery is explicitly requested", () => {
+      expect(resolveHomeRedirect("classic", true)).toBeNull();
+      expect(resolveHomeRedirect(undefined, true)).toBeNull();
+    });
+
+    it("stays consistent with the canonical mode routes in MODES", async () => {
+      const { MODES, MODE_ORDER } = await import("../modes");
+      for (const key of MODE_ORDER) {
+        expect(resolveHomeRedirect(key, false)).toBe(MODES[key].route);
+      }
     });
   });
 
