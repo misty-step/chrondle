@@ -31,10 +31,6 @@ vi.mock("@/lib/reminder", () => ({
   downloadDailyReminder: vi.fn(),
 }));
 
-vi.mock("@phosphor-icons/react", () => ({
-  BellRinging: (props: React.SVGProps<SVGSVGElement>) => <svg {...props} />,
-}));
-
 function mockStreak(currentStreak: number) {
   vi.mocked(useStreak).mockReturnValue({
     streakData: {

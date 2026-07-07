@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { BellRinging } from "@phosphor-icons/react";
 
 import { useStreak } from "@/hooks/useStreak";
 import { analytics, AnalyticsEvent } from "@/lib/analytics";
@@ -108,7 +107,20 @@ export function ReturnTomorrowCard({
             "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
           )}
         >
-          <BellRinging className="size-4" aria-hidden="true" />
+          {/* Inline bell: keeps the icon out of the JS bundle (size-limit) */}
+          <svg
+            className="size-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+          </svg>
           Get a daily reminder
         </button>
       </div>
