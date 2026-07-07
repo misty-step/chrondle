@@ -5,55 +5,46 @@
 [![Functions](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-functions.json)](https://github.com/misty-step/chrondle/actions)
 [![Statements](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-statements.json)](https://github.com/misty-step/chrondle/actions)
 
-**Chrondle** is an engaging web-based puzzle game where your knowledge of history is put to the test! Guess the year of a historical event based on a series of revealing clues. Each day brings a new challenge, spanning millennia of human history.
+Chrondle is a free daily history puzzle: read the clues, drag a range onto the
+timeline, and see if it contains the real year a historical event happened.
+Play today's puzzle at **[chrondle.app](https://chrondle.app)**.
 
-## Features
-
-- **Daily Puzzles:** A fresh historical event to guess every day, dynamically generated from our database of 1,821 historical events.
-- **Progressive Hints:** Uncover more clues with each incorrect guess.
-- **Intuitive Interface:** Clean and responsive design built with Next.js and Tailwind CSS.
-- **Historical Range:** Puzzles cover a vast timeline, from ancient civilizations to recent events.
-- **Dynamic Puzzle Generation:** Puzzles are created on-demand each day from our events database using a deterministic algorithm - ensuring the same puzzle globally for all players.
-- **Daily Notifications:** Optional reminders to play each day's puzzle, with customizable notification times.
-- **Local-Day Puzzles:** "Today" is your local calendar day — the daily puzzle rolls over at YOUR midnight, and every surface (homepage, game pages, archive, countdown, streaks) agrees on which puzzle is today's.
-
-## Daily Notifications
-
-Chrondle offers optional daily reminders to help you maintain your streak:
-
-### Features
-
-- **Customizable Time:** Set your preferred notification time (default: 9:00 AM)
-- **Browser Notifications:** Native browser push notifications on desktop and mobile
-- **Service Worker Support:** Notifications work even when the app isn't open
-- **Smart Permission Flow:** Two-step process that explains benefits before requesting permission
-- **Visual Feedback:** Bell icon shows notification status at a glance
-
-### Setting Up Notifications
-
-1. Click the **bell icon** in the top navigation bar
-2. Toggle notifications on and select your preferred time
-3. Click "Enable Notifications" to see the benefits
-4. Grant permission when prompted by your browser
-5. You'll receive a daily reminder at your chosen time!
-
-### Notification States
-
-- **🔔 Bell icon (filled):** Notifications enabled and active
-- **🔔 Bell icon (outline):** Notifications available but not enabled
-- **🔕 Bell with slash:** Notifications blocked by browser settings
-
-### Troubleshooting
-
-- **Not receiving notifications?** Check your browser's notification settings
-- **Mobile issues?** Ensure the site is added to your home screen for best results
-- **Changed your mind?** You can disable notifications anytime from the bell menu
+![Chrondle gameplay: dragging a year range to contain a historical event](docs/launch/product-hunt/assets/gameplay-preview.gif)
 
 ## How to Play
 
-You can play Chrondle directly at [chrondle.app](https://chrondle.app).
+1. **Dial in a Range:** Drag or type a historical range (e.g., 1910–1930) that you believe contains the event.
+2. **Check Containment:** Submit the range to learn whether the true year sits inside; containment is required to win.
+3. **Reveal up to Six Hints:** Each miss unlocks another clue (era buckets through precise deltas). Every hint slightly lowers the max score.
+4. **Chase 100 Points:** Narrower ranges earn more of the 100-point cap. Win by containing the year before you run out of attempts — or learn from the revealed answer and hint trail.
+
+## Features
+
+- **Classic Mode:** the core daily range-guess puzzle described above, free for everyone.
+- **Duel Mode:** two historical events, tap the one that happened first, and see how long your streak lasts. Free for everyone.
+- **Order Mode:** arrange a set of events from earliest to latest, with limited misses. Free for everyone.
+- **Archive:** browse and replay past puzzles. Recent puzzles are free; deeper archive access is part of the paid subscription (see below).
+- **Progressive Hints:** each incorrect guess reveals another clue.
+- **Local-Day Puzzles:** "today" is your local calendar day — the daily puzzle rolls over at YOUR midnight, and every surface (homepage, game pages, archive, countdown, streaks) agrees on which puzzle is today's.
+- **Daily Notifications:** optional reminders to play each day's puzzle, with a customizable time. See [Notifications](docs/guides/notifications.md) for setup and troubleshooting.
+- **Accounts:** play anonymously with local-storage progress, or sign in (email magic link or Google) for cross-device sync and permanent history.
+
+### Free / Paid Boundary
+
+Classic, Duel, and Order are free to play, full stop. A $0.99/mo (or $9.99/yr)
+subscription via Stripe unlocks the full puzzle archive and funds daily event
+generation and maintenance — see [chrondle.app/pricing](https://chrondle.app/pricing).
 
 ## Development
+
+This project is built with:
+
+- **Next.js 16:** React framework for production.
+- **React 19:** for building interactive user interfaces.
+- **Convex:** real-time backend and database.
+- **Tailwind CSS:** for rapid UI development and styling.
+- **TypeScript:** for type safety and improved developer experience.
+- **Vitest:** for unit and integration testing.
 
 ### Dependency Management
 
@@ -71,10 +62,12 @@ If `public/logo.svg` changes, regenerate all favicon assets with:
 bun run assets:favicons
 ```
 
-1.  **Dial in a Range:** Drag or type a historical range (e.g., 1910–1930) that you believe captures the event.
-2.  **Check Containment:** Submit the range to learn whether the true year sits inside; containment is required to win.
-3.  **Reveal up to Six Hints:** Each miss unlocks another clue (era buckets through precise deltas). Every hint slightly lowers the max score.
-4.  **Chase 100 Points:** Narrower ranges earn more of the 100-point cap. Win by containing the year before you run out of attempts—or learn from the revealed answer and hint trail.
+### Daily Day Semantics
+
+Chrondle's canonical "today" is the **player's local calendar day**, not a
+server-clock day — see [DST Handling](docs/development/DST_HANDLING_RESEARCH.md)
+for the full rationale and the timezone edge cases it resolves. The
+single day-resolution module is [`src/lib/time/dailyDate.ts`](src/lib/time/dailyDate.ts).
 
 ## User Accounts & Anonymous Play
 
@@ -82,81 +75,33 @@ Chrondle supports both anonymous and authenticated gameplay:
 
 ### Anonymous Play
 
-- **No account required:** Start playing immediately without signing up
-- **Local progress saving:** Your game progress is automatically saved to your browser's local storage
-- **24-hour persistence:** Anonymous sessions remain active for 24 hours
-- **Cross-session continuity:** Close your browser and return later - your puzzle progress is preserved
+- **No account required:** start playing immediately without signing up
+- **Local progress saving:** your game progress is automatically saved to your browser's local storage
+- **24-hour persistence:** anonymous sessions remain active for 24 hours
+- **Cross-session continuity:** close your browser and return later — your puzzle progress is preserved
 
 ### Authenticated Play
 
-- **Sign in with email:** Use magic links for passwordless authentication
-- **Google sign-in:** Quick authentication with your Google account
-- **Cross-device sync:** Your progress syncs across all your devices
-- **Permanent history:** All your past games are saved permanently
-- **Automatic migration:** When you create an account, your anonymous progress automatically transfers
+- **Sign in with email:** use magic links for passwordless authentication
+- **Google sign-in:** quick authentication with your Google account
+- **Cross-device sync:** your progress syncs across all your devices
+- **Permanent history:** all your past games are saved permanently
+- **Automatic migration:** when you create an account, your anonymous progress automatically transfers
 
 ### Mobile Authentication
 
-- **Optimized for mobile:** Authentication uses redirect flow on mobile devices for better compatibility
-- **Email app friendly:** Magic link authentication works seamlessly when switching between browser and email apps
-
-## Technical Architecture
-
-### Daily Day Semantics (canonical)
-
-Chrondle's canonical "today" is the **player's local calendar day**.
-
-- **Why:** the daily ritual should roll over at the player's own midnight. A
-  server-clock day (UTC or any fixed timezone) would flip the puzzle mid-evening
-  for most of the world and make surfaces disagree about which puzzle is
-  "today's" — exactly the bug this rule replaced (the homepage once advertised
-  tomorrow's UTC puzzle while game pages played today's local one).
-- **How:** the single day-resolution module is
-  [`src/lib/time/dailyDate.ts`](src/lib/time/dailyDate.ts)
-  (`getLocalDateString` and `getMillisUntilLocalMidnight`). Clients resolve
-  their local date and query puzzles **by explicit date**
-  (`puzzles.getPuzzleByDate` / `orderPuzzles.getOrderPuzzleByDate`). The
-  homepage gallery, game pages, and archive all consume the same local-date
-  hooks (`useTodaysPuzzle`, `useTodaysOrderPuzzle`); the countdown targets
-  local midnight.
-- **Server rules:** Convex code never resolves a UI "today" from its own
-  clock. The quarantined UTC-day queries (`getDailyPuzzle`,
-  `getDailyOrderPuzzle`) exist only for stale client bundles and are
-  lint-banned in `src/` (`no-restricted-syntax`). Streak boundaries derive
-  from the **puzzle's date** (consecutive puzzle dates = consecutive days); a
-  puzzle counts as daily when its date is within one day of the server's UTC
-  date — the timezone envelope (UTC-12..UTC+14). See
-  `convex/lib/puzzleType.ts` and `convex/lib/streakHelpers.ts`.
-- **Generation:** cron pre-generates puzzles around the UTC day so a puzzle
-  row exists for every local "today" on Earth; if a client's local date has no
-  puzzle yet, the client triggers on-demand generation (`ensurePuzzleForDate`).
-
-### Notification System Architecture
-
-- **Service Worker:** Background script handles push notifications
-- **Permission Management:** Graceful handling of permission states
-- **Persistence:** User preferences saved to both localStorage and Convex
-- **Cross-Device Sync:** Authenticated users' settings sync across devices
-
-## Development
-
-This project is built with:
-
-- **Next.js 15:** React framework for production.
-- **React 19:** For building interactive user interfaces.
-- **Tailwind CSS:** For rapid UI development and styling.
-- **TypeScript:** For type safety and improved developer experience.
-- **Vitest:** For unit and integration testing.
+- **Optimized for mobile:** authentication uses a redirect flow on mobile devices for better compatibility
+- **Email app friendly:** magic link authentication works seamlessly when switching between browser and email apps
 
 ## Requirements
 
-- **Node.js 20+**: This project requires Node.js version 20 or higher. Use the `.nvmrc` file with nvm:
+- **Node.js 20+**: this project requires Node.js version 20 or higher. Use the `.nvmrc` file with nvm:
   ```bash
   nvm use
   ```
-- **Bun**: This project uses Bun exclusively as the package manager. pnpm, npm, and yarn are not supported.
-- **Colima**: Local Dagger-backed CI uses Colima on macOS. Start it with `colima start --profile default`.
-- **ESM Modules**: The codebase uses ES modules throughout. All configuration files use `.mjs` extensions or TypeScript.
+- **Bun**: this project uses Bun exclusively as the package manager. pnpm, npm, and yarn are not supported.
+- **Colima**: local Dagger-backed CI uses Colima on macOS. Start it with `colima start --profile default`.
+- **ESM Modules**: the codebase uses ES modules throughout. All configuration files use `.mjs` extensions or TypeScript.
 
 ## Getting Started
 
@@ -165,7 +110,7 @@ This project is built with:
 1.  Clone the repository:
 
     ```bash
-    git clone https://github.com/phaedrus/chrondle.git
+    git clone https://github.com/misty-step/chrondle.git
     cd chrondle
     ```
 
@@ -237,7 +182,7 @@ Chrondle requires several environment variables for production deployment. Copy 
 #### Optional Variables
 
 - `OPENROUTER_API_KEY` - For AI-powered historical context features
-- Stripe keys - For future premium features
+- Stripe keys - For subscription/archive-access features
 
 ### Deploying to Vercel
 
@@ -331,16 +276,12 @@ bun run verify:convex
 - Verify `bun run build` succeeds locally
 - Review build logs for specific errors
 
-**Notification issues:**
-
-- Verify service worker is registered (check Application tab in DevTools)
-- Ensure HTTPS is enabled (required for service workers)
-- Check browser notification permissions
+**Notification issues:** see [docs/guides/notifications.md](docs/guides/notifications.md).
 
 **Daily puzzle timing:**
 
 - Confirm cron job is running (check Convex dashboard logs)
-- Remember "today" is the PLAYER'S local calendar day (see Daily Day Semantics
+- Remember "today" is the PLAYER'S local calendar day (see [Daily Day Semantics](#daily-day-semantics)
   above) — a puzzle number that differs between two machines usually means the
   machines are on different local dates, not a bug
 
