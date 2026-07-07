@@ -10,7 +10,18 @@ const [mainConfig, tsConfig, ignoresConfig] = nextConfig;
 
 const eslintConfig = [
   {
-    ignores: ["**/*.css", "convex/_generated/**", "coverage/**", "dagger/sdk/**"],
+    // check-lab*.mjs: ad-hoc probe scripts left at repo root by an
+    // unrelated agent session (not chrondle product code). Gitignored
+    // rather than deleted since ownership is ambiguous; also excluded
+    // here so their console/debug usage doesn't fail the lint gate.
+    // See chrondle-eng-repo-litter.
+    ignores: [
+      "**/*.css",
+      "convex/_generated/**",
+      "coverage/**",
+      "dagger/sdk/**",
+      "check-lab*.mjs",
+    ],
   },
   // Main Next.js config
   mainConfig,

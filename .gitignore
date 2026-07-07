@@ -135,3 +135,9 @@ test-results/
 .design-catalogue/
 
 .flywheel/
+
+# Ad-hoc probe scripts left at repo root by agent sessions (not chrondle
+# product code; commonly Playwright scripts poking an unrelated local
+# harness). Ignored rather than deleted since ownership is ambiguous and
+# they may belong to a concurrent session. See chrondle-eng-repo-litter.
+/check-lab*.mjs
