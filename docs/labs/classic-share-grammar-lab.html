@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chrondle Classic — share grammar decision lab</title>
+<style>
+  :root {
+    --bg:#f4f4f5; --card:#ffffff; --text:#1a1a1b; --muted:#6b6f72; --border:#d8dadd;
+    --win:#1f8a5f; --loss:#c0392b; --accent:#2b6cb0;
+  }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); padding:2rem 1rem 6rem; }
+  .lab-header { max-width:960px; margin:0 auto 1.5rem; }
+  .lab-header .kicker { font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:700; }
+  .lab-header h1 { font-size:1.5rem; margin-top:.3rem; }
+  .lab-header p { color:var(--muted); font-size:.9rem; margin-top:.5rem; max-width:70ch; line-height:1.5; }
+  .lab-header .rule { font-size:.85rem; margin-top:.7rem; padding:.7rem .9rem; background:#fff8e6; border:1px solid #f0d78c; border-radius:6px; color:#6b5518; }
+
+  nav.pager { max-width:960px; margin:0 auto 2rem; display:flex; flex-wrap:wrap; gap:.4rem; }
+  nav.pager button { padding:.5rem .8rem; border:1px solid var(--border); background:#fff; border-radius:5px; cursor:pointer; font-size:.8rem; font-weight:600; color:var(--text); }
+  nav.pager button.active { background:var(--text); color:#fff; border-color:var(--text); }
+  nav.pager button .n { opacity:.55; margin-right:.35rem; font-weight:400; }
+
+  .option { display:none; max-width:960px; margin:0 auto; }
+  .option.active { display:block; }
+  .option > .meta { margin-bottom:1.2rem; padding:1.1rem 1.3rem; background:#fff; border:1px solid var(--border); border-radius:8px; }
+  .option > .meta h2 { font-size:1.15rem; display:flex; align-items:center; gap:.5rem; }
+  .option > .meta h2 .idx { font-size:.75rem; background:var(--text); color:#fff; border-radius:999px; padding:.15rem .55rem; font-weight:700; }
+  .option > .meta p { font-size:.87rem; color:var(--muted); margin-top:.5rem; line-height:1.55; }
+  .option > .meta .tag { display:inline-block; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:.2rem .5rem; border-radius:4px; margin-top:.6rem; margin-right:.4rem; }
+  .tag.expresses { background:#e6f4ec; color:var(--win); }
+  .tag.risk { background:#fdecec; color:var(--loss); }
+
+  .previews { display:grid; grid-template-columns:1fr 1fr; gap:1.1rem; }
+  @media (max-width: 720px) { .previews { grid-template-columns:1fr; } }
+
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .card .cardhead { padding:.6rem .9rem; font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; display:flex; justify-content:space-between; align-items:center; }
+  .card.win .cardhead { background:#e6f4ec; color:var(--win); }
+  .card.loss .cardhead { background:#fdecec; color:var(--loss); }
+  .card .sheet { padding:1rem 1.1rem 1.2rem; }
+  .card pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .92rem; line-height:1.65; white-space:pre-wrap; word-break:break-word;
+    background:#fbfbfb; border:1px solid var(--border); border-radius:6px; padding:.85rem .95rem;
+  }
+  .card .context { font-size:.72rem; color:var(--muted); margin-top:.6rem; }
+
+  footer.notes { max-width:960px; margin:2rem auto 0; font-size:.8rem; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="lab-header">
+  <div class="kicker">chrondle-ux-share-unification &middot; design lab</div>
+  <h1>Classic's share grammar: expressing the range mechanic</h1>
+  <p>
+    Today's Classic share text leads with a hints-used bar (🟩⬜) and buries the
+    range mechanic — the thing a Classic player is actually doing every
+    turn — in a plain-text stats line. This lab holds 8 structurally distinct
+    grammars for the share body, each built to foreground <strong>range width</strong>
+    and <strong>contained vs. missed</strong> instead of hint count. Every option
+    is shown against the same two scenarios so they're comparable apples-to-apples.
+  </p>
+  <div class="rule">
+    Spoiler-safety floor (non-negotiable across every option): no option below
+    ever prints an absolute calendar year — only relative widths, distances,
+    and directions. That's the same anti-leakage property the current
+    implementation already holds; none of these options regress it.
+  </div>
+</div>
+
+<nav class="pager" id="pager"></nav>
+
+<div id="options"></div>
+
+<footer class="notes">
+  Scenarios held constant across all 8 options — <strong>Win:</strong> guesses
+  narrowed 250y → 60y → 15y, contained the target, scored 85/100.
+  <strong>Loss:</strong> guesses narrowed 250y → 90y → 40y, missed by 5 years
+  (too early), scored 0/100. Puzzle #347 in both. Header/footer family
+  (<code>Chrondle #347</code> … <code>https://chrondle.app</code>) is fixed by
+  the shared module and out of scope for this lab — only the body grammar
+  varies.
+</footer>
+
+<script>
+const WIN_META = "Win &middot; #347 &middot; 85/100";
+const LOSS_META = "Loss &middot; #347 &middot; 0/100";
+
+const options = [
+  {
+    name: "Precision Tier Badge",
+    rationale: "Converts final width into a named precision tier (Bullseye → Drifter), read like a rank. Familiar 'you got X rank' grammar from other daily games, but doesn't show the narrowing journey — only the endpoint.",
+    tags: ["expresses width via named tier, not raw number"],
+    win: "🔭 Sharpshooter · 15yr window\n✅ Contained\n⭐ 85/100",
+    loss: "🗺️ Cartographer · 40yr window\n❌ 5y early\n🫠 0/100",
+  },
+  {
+    name: "Ruler Bar",
+    rationale: "A segmented bar where fill density encodes precision (more filled = narrower final range), echoing Wordle's grid without reusing the hints-bar's exact visual (which this ticket explicitly retires).",
+    tags: ["most visually familiar to Wordle-style shares"],
+    win: "🟦🟦🟦🟦🟦⬜⬜⬜ 15y\n✅ Contained\n⭐ 85/100",
+    loss: "🟦🟦🟦⬜⬜⬜⬜⬜ 40y\n❌ 5y early\n🫠 0/100",
+  },
+  {
+    name: "Narrowing Funnel",
+    rationale: "Shows the actual sequence of widths across every guess, arrows tightening left to right — the literal shape of 'narrow the range' turn over turn, not just the final number. Most mechanically honest option; degrades gracefully to a single number on a first-guess win.",
+    tags: ["expresses the full narrowing history, not just the endpoint"],
+    win: "🔻 250 → 60 → 15y\n✅ Contained\n⭐ 85/100",
+    loss: "🔻 250 → 90 → 40y\n❌ 5y early\n🫠 0/100",
+  },
+  {
+    name: "Bracket Notation",
+    rationale: "Terse, technical, single-symbol-per-concept. Reads fast on a feed but is the least game-like of the eight — closer to a log line than a share brag.",
+    tags: ["shortest option, least visual identity"],
+    win: "⟦15y⟧ ✅ contained\n⭐ 85/100",
+    loss: "⟦40y⟧ ❌ 5y early\n🫠 0/100",
+  },
+  {
+    name: "Target Ring",
+    rationale: "Leans on targeting/archery imagery (🎯 vs 🌀) to carry the contained/missed distinction, with width folded into the sentence rather than led with.",
+    tags: ["outcome-first framing"],
+    win: "🎯 15-year ring · locked on\n⭐ 85/100",
+    loss: "🌀 40-year ring · off course (5y early)\n🫠 0/100",
+  },
+  {
+    name: "Sentence Grammar",
+    rationale: "Plain-language prose instead of an emoji grid. Most legible to a non-player scrolling a feed, but the least skimmable and the only option with no glanceable visual grammar at all.",
+    tags: ["most legible prose, least skimmable"],
+    win: "Landed the range in 15 years.\n⭐ 85/100",
+    loss: "Missed by 5 years — too early. (40y range)\n🫠 0/100",
+  },
+  {
+    name: "Compass Direction",
+    rationale: "A directional arrow (🎯 direct hit vs ⬅️/➡️ miss) makes the earlier/later axis the headline, with width as a supporting clause. Strongest fit for players who fixate on 'how close' over 'how wide'.",
+    tags: ["foregrounds miss direction over width"],
+    win: "🧭 15y window → 🎯 direct hit\n⭐ 85/100",
+    loss: "🧭 40y window → ⬅️ 5y too early\n🫠 0/100",
+  },
+  {
+    name: "Medal Line",
+    rationale: "A medal emoji keyed to width tier (🥇/🥈/🥉/🎖️) gives an at-a-glance 'how good' signal even on a loss, paired with the explicit contained/missed line for precision.",
+    tags: ["gamifies width without hiding the miss"],
+    win: "🥈 15yr window · ✅ contained\n⭐ 85/100",
+    loss: "🥉 40yr window · ❌ 5y early\n🫠 0/100",
+  },
+];
+
+const pager = document.getElementById("pager");
+const container = document.getElementById("options");
+
+options.forEach((opt, i) => {
+  const btn = document.createElement("button");
+  btn.innerHTML = `<span class="n">${i + 1}</span>${opt.name}`;
+  btn.dataset.index = i;
+  btn.className = i === 0 ? "active" : "";
+  btn.onclick = () => show(i);
+  pager.appendChild(btn);
+
+  const panel = document.createElement("div");
+  panel.className = "option" + (i === 0 ? " active" : "");
+  panel.dataset.index = i;
+
+  const winHeader = `Chrondle #347\n\n${opt.win}\n\nhttps://chrondle.app`;
+  const lossHeader = `Chrondle #347\n\n${opt.loss}\n\nhttps://chrondle.app`;
+
+  panel.innerHTML = `
+    <div class="meta">
+      <h2><span class="idx">${i + 1} / ${options.length}</span> ${opt.name}</h2>
+      <p>${opt.rationale}</p>
+      ${opt.tags.map((t) => `<span class="tag expresses">${t}</span>`).join("")}
+    </div>
+    <div class="previews">
+      <div class="card win">
+        <div class="cardhead"><span>Win</span><span>#347 &middot; 85/100</span></div>
+        <div class="sheet"><pre>${winHeader}</pre><div class="context">Guesses narrowed 250 → 60 → 15 years, contained the target.</div></div>
+      </div>
+      <div class="card loss">
+        <div class="cardhead"><span>Loss</span><span>#347 &middot; 0/100</span></div>
+        <div class="sheet"><pre>${lossHeader}</pre><div class="context">Guesses narrowed 250 → 90 → 40 years, missed by 5 (early).</div></div>
+      </div>
+    </div>
+  `;
+  container.appendChild(panel);
+});
+
+function show(i) {
+  document.querySelectorAll("nav.pager button").forEach((b) => b.classList.toggle("active", Number(b.dataset.index) === i));
+  document.querySelectorAll(".option").forEach((p) => p.classList.toggle("active", Number(p.dataset.index) === i));
+}
+</script>
+
+</body>
+</html>

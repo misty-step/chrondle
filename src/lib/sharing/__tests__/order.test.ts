@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { generateArchivalShareText, type ArchivalSharePayload } from "../shareCard";
+import { generateOrderShareText, type OrderShareInput } from "../order";
 import type { OrderAttempt } from "@/types/orderGameState";
 
-// Helper to create mock attempts with feedback
 function createAttempt(feedback: Array<"correct" | "incorrect">): OrderAttempt {
   const pairsCorrect = feedback.filter((f) => f === "correct").length;
   return {
@@ -14,38 +13,48 @@ function createAttempt(feedback: Array<"correct" | "incorrect">): OrderAttempt {
   };
 }
 
-describe("generateArchivalShareText", () => {
-  describe("header format", () => {
-    it("shows puzzle number: Chrondle: Order #247", () => {
-      const payload: ArchivalSharePayload = {
+describe("generateOrderShareText", () => {
+  describe("header (shared format family)", () => {
+    it("shows the Order mode label and puzzle number: Chrondle Order #247", () => {
+      const payload: OrderShareInput = {
         puzzleNumber: 247,
         score: { attempts: 1 },
         attempts: [
           createAttempt(["correct", "correct", "correct", "correct", "correct", "correct"]),
         ],
       };
-      const result = generateArchivalShareText(payload);
+      const result = generateOrderShareText(payload);
 
-      expect(result).toContain("Chrondle: Order #247");
+      expect(result).toContain("Chrondle Order #247");
+    });
+
+    it("leaves a blank line between header and body", () => {
+      const payload: OrderShareInput = {
+        puzzleNumber: 247,
+        score: { attempts: 1 },
+        attempts: [createAttempt(["correct"])],
+      };
+      const result = generateOrderShareText(payload);
+      expect(result.startsWith("Chrondle Order #247\n\n")).toBe(true);
     });
   });
 
-  describe("emoji grid per attempt", () => {
+  describe("attempt-progression grid", () => {
     it("shows 🟩 for correct positions", () => {
-      const payload: ArchivalSharePayload = {
+      const payload: OrderShareInput = {
         puzzleNumber: 247,
         score: { attempts: 1 },
         attempts: [
           createAttempt(["correct", "correct", "correct", "correct", "correct", "correct"]),
         ],
       };
-      const result = generateArchivalShareText(payload);
+      const result = generateOrderShareText(payload);
 
       expect(result).toContain("🟩🟩🟩🟩🟩🟩");
     });
 
     it("shows ⬜ for incorrect positions", () => {
-      const payload: ArchivalSharePayload = {
+      const payload: OrderShareInput = {
         puzzleNumber: 247,
         score: { attempts: 1 },
         attempts: [
@@ -59,46 +68,26 @@ describe("generateArchivalShareText", () => {
           ]),
         ],
       };
-      const result = generateArchivalShareText(payload);
+      const result = generateOrderShareText(payload);
 
       expect(result).toContain("⬜⬜⬜⬜⬜⬜");
     });
 
     it("shows mixed emojis for partial correctness", () => {
-      const payload: ArchivalSharePayload = {
+      const payload: OrderShareInput = {
         puzzleNumber: 247,
         score: { attempts: 1 },
         attempts: [
           createAttempt(["correct", "incorrect", "correct", "incorrect", "correct", "incorrect"]),
         ],
       };
-      const result = generateArchivalShareText(payload);
+      const result = generateOrderShareText(payload);
 
       expect(result).toContain("🟩⬜🟩⬜🟩⬜");
     });
-  });
 
-  describe("multiple attempts", () => {
-    it("shows each attempt on separate lines", () => {
-      const payload: ArchivalSharePayload = {
-        puzzleNumber: 247,
-        score: { attempts: 3 },
-        attempts: [
-          createAttempt(["incorrect", "incorrect", "correct", "correct", "incorrect", "incorrect"]),
-          createAttempt(["correct", "incorrect", "correct", "correct", "incorrect", "correct"]),
-          createAttempt(["correct", "correct", "correct", "correct", "correct", "correct"]),
-        ],
-      };
-      const result = generateArchivalShareText(payload);
-
-      // Each attempt row should be present
-      expect(result).toContain("⬜⬜🟩🟩⬜⬜");
-      expect(result).toContain("🟩⬜🟩🟩⬜🟩");
-      expect(result).toContain("🟩🟩🟩🟩🟩🟩");
-    });
-
-    it("attempts appear in chronological order (first to last)", () => {
-      const payload: ArchivalSharePayload = {
+    it("shows each attempt on separate lines, in chronological order", () => {
+      const payload: OrderShareInput = {
         puzzleNumber: 247,
         score: { attempts: 2 },
         attempts: [
@@ -113,55 +102,52 @@ describe("generateArchivalShareText", () => {
           createAttempt(["correct", "correct", "correct", "correct", "correct", "correct"]),
         ],
       };
-      const result = generateArchivalShareText(payload);
+      const result = generateOrderShareText(payload);
 
       const allIncorrectIndex = result.indexOf("⬜⬜⬜⬜⬜⬜");
       const allCorrectIndex = result.indexOf("🟩🟩🟩🟩🟩🟩");
+      expect(allIncorrectIndex).toBeGreaterThanOrEqual(0);
       expect(allIncorrectIndex).toBeLessThan(allCorrectIndex);
     });
   });
 
   describe("URL footer", () => {
     it("uses default URL when not provided", () => {
-      const payload: ArchivalSharePayload = {
+      const payload: OrderShareInput = {
         puzzleNumber: 247,
         score: { attempts: 1 },
-        attempts: [
-          createAttempt(["correct", "correct", "correct", "correct", "correct", "correct"]),
-        ],
+        attempts: [createAttempt(["correct"])],
       };
-      const result = generateArchivalShareText(payload);
+      const result = generateOrderShareText(payload);
 
       expect(result).toContain("https://chrondle.app");
     });
 
     it("uses custom URL when provided", () => {
-      const payload: ArchivalSharePayload = {
+      const payload: OrderShareInput = {
         puzzleNumber: 247,
         score: { attempts: 1 },
-        attempts: [
-          createAttempt(["correct", "correct", "correct", "correct", "correct", "correct"]),
-        ],
+        attempts: [createAttempt(["correct"])],
         url: "https://custom.chrondle.app/order/247",
       };
-      const result = generateArchivalShareText(payload);
+      const result = generateOrderShareText(payload);
 
       expect(result).toContain("https://custom.chrondle.app/order/247");
     });
   });
 
-  describe("full share text examples", () => {
-    it("generates correct text for perfect first-try solve", () => {
-      const payload: ArchivalSharePayload = {
+  describe("full share text examples per outcome class", () => {
+    it("generates correct text for a perfect first-try solve", () => {
+      const payload: OrderShareInput = {
         puzzleNumber: 247,
         score: { attempts: 1 },
         attempts: [
           createAttempt(["correct", "correct", "correct", "correct", "correct", "correct"]),
         ],
       };
-      const result = generateArchivalShareText(payload);
+      const result = generateOrderShareText(payload);
 
-      const expected = `Chrondle: Order #247
+      const expected = `Chrondle Order #247
 
 🟩🟩🟩🟩🟩🟩
 
@@ -170,8 +156,8 @@ https://chrondle.app`;
       expect(result).toBe(expected);
     });
 
-    it("generates correct text for multi-attempt solve", () => {
-      const payload: ArchivalSharePayload = {
+    it("generates correct text for a multi-attempt solve", () => {
+      const payload: OrderShareInput = {
         puzzleNumber: 247,
         score: { attempts: 3 },
         attempts: [
@@ -180,9 +166,9 @@ https://chrondle.app`;
           createAttempt(["correct", "correct", "correct", "correct", "correct", "correct"]),
         ],
       };
-      const result = generateArchivalShareText(payload);
+      const result = generateOrderShareText(payload);
 
-      const expected = `Chrondle: Order #247
+      const expected = `Chrondle Order #247
 
 ⬜🟩⬜🟩⬜⬜
 ⬜🟩🟩🟩⬜🟩
@@ -195,8 +181,7 @@ https://chrondle.app`;
   });
 
   describe("character limits", () => {
-    it("keeps share text reasonable for Twitter/social media", () => {
-      // Worst case: 10 attempts with max events
+    it("keeps share text reasonable for social media", () => {
       const maxAttempts = Array(10)
         .fill(null)
         .map(() =>
@@ -210,14 +195,13 @@ https://chrondle.app`;
           ]),
         );
 
-      const payload: ArchivalSharePayload = {
+      const payload: OrderShareInput = {
         puzzleNumber: 247,
         score: { attempts: 10 },
         attempts: maxAttempts,
       };
-      const result = generateArchivalShareText(payload);
+      const result = generateOrderShareText(payload);
 
-      // Should be reasonable for social media (under 500 chars for 10 attempts)
       expect(result.length).toBeLessThan(500);
     });
   });

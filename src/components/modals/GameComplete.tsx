@@ -185,7 +185,6 @@ export function GameComplete({
     hasWon,
     puzzleNumber,
     {
-      targetYear,
       missDistance,
       missDirection,
     },

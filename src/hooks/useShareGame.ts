@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { generateShareText } from "@/lib/sharing/generator";
+import { generateClassicShareText } from "@/lib/sharing";
 import { useWebShare } from "@/hooks/useWebShare";
 import type { RangeGuess } from "@/types/range";
 
@@ -10,7 +10,6 @@ export type ShareStatus = "idle" | "success" | "error";
 interface UseShareGameOptions {
   onSuccess?: () => void;
   onError?: () => void;
-  targetYear?: number;
   missDistance?: number | null;
   missDirection?: "earlier" | "later" | null;
 }
@@ -22,12 +21,11 @@ export function useShareGame(
   puzzleNumber?: number,
   options?: UseShareGameOptions,
 ) {
-  const { onSuccess, onError, targetYear, missDistance, missDirection } = options || {};
+  const { onSuccess, onError, missDistance, missDirection } = options || {};
   const { share, canShare, shareMethod, isSharing } = useWebShare();
   const [shareStatus, setShareStatus] = useState<ShareStatus>("idle");
 
-  const shareText = generateShareText(ranges, totalScore, hasWon, puzzleNumber, {
-    targetYear,
+  const shareText = generateClassicShareText(ranges, totalScore, hasWon, puzzleNumber, {
     missDistance,
     missDirection,
   });
