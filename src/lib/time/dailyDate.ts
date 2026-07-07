@@ -1,12 +1,19 @@
 /**
- * Daily Date Module
+ * Daily Date Module — THE canonical day-resolution module
+ *
+ * Chrondle's canonical "today" is the PLAYER'S LOCAL CALENDAR DAY. Every
+ * user-facing daily surface derives its day from this module: the homepage
+ * gallery and game pages (via useTodaysPuzzle / useTodaysOrderPuzzle), the
+ * archive today-boundary, the next-puzzle countdown (local midnight), and the
+ * optimistic streak day marker. Server-side streak boundaries derive from the
+ * puzzle's date, which is itself resolved from this module by the client.
+ *
+ * Do NOT resolve a UI "today" any other way — in particular, never from a
+ * server clock. The UTC-day Convex queries (getDailyPuzzle /
+ * getDailyOrderPuzzle) are quarantined and lint-banned in src/. See the
+ * "Daily Day Semantics" section of README.md for the full rationale.
  *
  * Deep Module: Hides timezone complexity behind simple date string interface.
- *
- * Used by:
- * - usePuzzleData (daily branch)
- * - useOrderPuzzleData (daily branch)
- * - Any future daily features (notifications, local streak policy)
  *
  * Key Decisions:
  * - Derives from Date local fields (getFullYear/getMonth/getDate)

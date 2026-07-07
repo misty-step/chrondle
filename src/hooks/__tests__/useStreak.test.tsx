@@ -73,11 +73,11 @@ describe("useStreak", () => {
 
       const { result } = renderHook(() => useStreak());
 
-      // Mock today's date to ensure deterministic testing
+      // Mock today's LOCAL date (canonical day semantics) for determinism
       const mockToday = "2025-01-16";
-      vi.spyOn(Date.prototype, "getUTCFullYear").mockReturnValue(2025);
-      vi.spyOn(Date.prototype, "getUTCMonth").mockReturnValue(0); // January (0-indexed)
-      vi.spyOn(Date.prototype, "getUTCDate").mockReturnValue(16);
+      vi.spyOn(Date.prototype, "getFullYear").mockReturnValue(2025);
+      vi.spyOn(Date.prototype, "getMonth").mockReturnValue(0); // January (0-indexed)
+      vi.spyOn(Date.prototype, "getDate").mockReturnValue(16);
 
       // Update streak after winning
       act(() => {
@@ -119,10 +119,10 @@ describe("useStreak", () => {
 
       const { result } = renderHook(() => useStreak());
 
-      // Mock today's date
-      vi.spyOn(Date.prototype, "getUTCFullYear").mockReturnValue(2025);
-      vi.spyOn(Date.prototype, "getUTCMonth").mockReturnValue(0);
-      vi.spyOn(Date.prototype, "getUTCDate").mockReturnValue(16);
+      // Mock today's LOCAL date (canonical day semantics)
+      vi.spyOn(Date.prototype, "getFullYear").mockReturnValue(2025);
+      vi.spyOn(Date.prototype, "getMonth").mockReturnValue(0);
+      vi.spyOn(Date.prototype, "getDate").mockReturnValue(16);
 
       // Update streak after losing
       act(() => {

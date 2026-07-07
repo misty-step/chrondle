@@ -15,7 +15,7 @@
 - **Historical Range:** Puzzles cover a vast timeline, from ancient civilizations to recent events.
 - **Dynamic Puzzle Generation:** Puzzles are created on-demand each day from our events database using a deterministic algorithm - ensuring the same puzzle globally for all players.
 - **Daily Notifications:** Optional reminders to play each day's puzzle, with customizable notification times.
-- **Smart Timezone Handling:** Daily puzzle resets at midnight Central Time, automatically adjusting for daylight saving time transitions.
+- **Local-Day Puzzles:** "Today" is your local calendar day — the daily puzzle rolls over at YOUR midnight, and every surface (homepage, game pages, archive, countdown, streaks) agrees on which puzzle is today's.
 
 ## Daily Notifications
 
@@ -102,34 +102,34 @@ Chrondle supports both anonymous and authenticated gameplay:
 
 ## Technical Architecture
 
-### Daily Puzzle Scheduling
+### Daily Day Semantics (canonical)
 
-Chrondle implements sophisticated scheduling to ensure puzzles reset at midnight Central Time:
+Chrondle's canonical "today" is the **player's local calendar day**.
 
-#### DST-Aware Cron System
-
-- **Automatic DST Handling:** The system detects whether Central Time is in CST (UTC-6) or CDT (UTC-5)
-- **Daily Recalculation:** UTC offset is computed daily to handle DST transitions seamlessly
-- **Spring Forward/Fall Back:** Correctly handles the twice-yearly time changes without manual intervention
-- **Global Consistency:** All players worldwide receive the same puzzle at Central Time midnight
-
-#### Implementation Details
-
-```typescript
-// Dynamic UTC hour calculation for Central Time midnight
-function getUTCHourForCentralMidnight(): number {
-  const now = new Date();
-  const chicagoTime = new Date(now.toLocaleString("en-US", {
-    timeZone: "America/Chicago"
-  }));
-  const isDST = /* DST detection logic */;
-  return isDST ? 5 : 6; // UTC 5 AM (CDT) or 6 AM (CST)
-}
-```
-
-- **Convex Cron Jobs:** Backend scheduled tasks run at the calculated UTC hour
-- **Timezone Library:** Uses standard IANA timezone database (America/Chicago)
-- **Edge Case Handling:** Properly manages the ambiguous hour during "fall back"
+- **Why:** the daily ritual should roll over at the player's own midnight. A
+  server-clock day (UTC or any fixed timezone) would flip the puzzle mid-evening
+  for most of the world and make surfaces disagree about which puzzle is
+  "today's" — exactly the bug this rule replaced (the homepage once advertised
+  tomorrow's UTC puzzle while game pages played today's local one).
+- **How:** the single day-resolution module is
+  [`src/lib/time/dailyDate.ts`](src/lib/time/dailyDate.ts)
+  (`getLocalDateString` and `getMillisUntilLocalMidnight`). Clients resolve
+  their local date and query puzzles **by explicit date**
+  (`puzzles.getPuzzleByDate` / `orderPuzzles.getOrderPuzzleByDate`). The
+  homepage gallery, game pages, and archive all consume the same local-date
+  hooks (`useTodaysPuzzle`, `useTodaysOrderPuzzle`); the countdown targets
+  local midnight.
+- **Server rules:** Convex code never resolves a UI "today" from its own
+  clock. The quarantined UTC-day queries (`getDailyPuzzle`,
+  `getDailyOrderPuzzle`) exist only for stale client bundles and are
+  lint-banned in `src/` (`no-restricted-syntax`). Streak boundaries derive
+  from the **puzzle's date** (consecutive puzzle dates = consecutive days); a
+  puzzle counts as daily when its date is within one day of the server's UTC
+  date — the timezone envelope (UTC-12..UTC+14). See
+  `convex/lib/puzzleType.ts` and `convex/lib/streakHelpers.ts`.
+- **Generation:** cron pre-generates puzzles around the UTC day so a puzzle
+  row exists for every local "today" on Earth; if a client's local date has no
+  puzzle yet, the client triggers on-demand generation (`ensurePuzzleForDate`).
 
 ### Notification System Architecture
 
@@ -340,7 +340,8 @@ bun run verify:convex
 **Daily puzzle timing:**
 
 - Confirm cron job is running (check Convex dashboard logs)
-- Verify DST calculations are correct for current date
-- Check that server timezone handling matches Central Time
+- Remember "today" is the PLAYER'S local calendar day (see Daily Day Semantics
+  above) — a puzzle number that differs between two machines usually means the
+  machines are on different local dates, not a bug
 
 For more detailed setup instructions, see the [Convex Next.js Quickstart](https://docs.convex.dev/quickstart/nextjs) and [Clerk Next.js Documentation](https://clerk.com/docs/quickstarts/nextjs).

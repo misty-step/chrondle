@@ -2,9 +2,9 @@
 
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
 
-import { anyPublicApi } from "@/lib/convexAnyApi";
+import { useTodaysPuzzle } from "@/hooks/useTodaysPuzzle";
+import { useTodaysOrderPuzzle } from "@/hooks/useTodaysOrderPuzzle";
 import { setModePreferenceCookie, type ModeKey } from "@/lib/modePreference";
 import { MODES } from "@/lib/modes";
 import { cn } from "@/lib/utils";
@@ -46,8 +46,13 @@ const MODE_CARDS: ModeCardConfig[] = [
 
 export function GamesGallery() {
   const router = useRouter();
-  const classicPuzzle = useQuery(anyPublicApi.puzzles.getDailyPuzzle);
-  const orderPuzzle = useQuery(anyPublicApi.orderPuzzles.getDailyOrderPuzzle);
+  // ONE "today" everywhere: the gallery consumes the SAME local-date daily
+  // hooks as the game pages (canonical day semantics live in
+  // src/lib/time/dailyDate.ts), so the mode-card numbers always name the
+  // puzzle the player will actually play — including across the window after
+  // 00:00 UTC but before local midnight.
+  const { puzzle: classicPuzzle } = useTodaysPuzzle();
+  const { puzzle: orderPuzzle } = useTodaysOrderPuzzle();
 
   const handleSelect = useCallback(
     (mode: ModeKey, route: string) => {

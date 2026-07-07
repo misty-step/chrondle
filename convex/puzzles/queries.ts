@@ -8,8 +8,8 @@ import { query } from "../_generated/server";
  * Deep Module Value: Hides database query complexity behind clean API
  *
  * Exports:
- * - getDailyPuzzle: Get today's puzzle (UTC)
- * - getPuzzleByDate: Get puzzle for specific date (local date support)
+ * - getDailyPuzzle: QUARANTINED (UTC-day; stale-client compat only — see below)
+ * - getPuzzleByDate: Get puzzle for specific date (canonical: client's local date)
  * - getPuzzleById: Get puzzle by Convex ID
  * - getPuzzleByNumber: Get puzzle by sequential number
  * - getArchivePuzzles: Get paginated archive puzzles
@@ -39,12 +39,20 @@ export const getPuzzleByDate = query({
 });
 
 /**
- * Get today's puzzle using UTC date
+ * QUARANTINED — DO NOT CONSUME FROM UI CODE.
  *
- * Wrapper around getPuzzleByDate for backward compatibility.
- * For new code, prefer getPuzzleByDate with client's local date.
+ * Resolves "today" on the SERVER'S UTC clock, which disagrees with Chrondle's
+ * canonical day (the player's local calendar day — see
+ * src/lib/time/dailyDate.ts) for part of every day. This is the query that
+ * made the homepage advertise tomorrow's puzzle while game pages played
+ * today's. All app consumers were removed (chrondle-ux-daily-identity) and an
+ * ESLint no-restricted-syntax rule blocks reintroduction in src/.
  *
- * @returns Today's puzzle or null if not yet generated
+ * Kept ONLY so stale client bundles deployed before the fix don't hard-error;
+ * safe to delete after a release window.
+ *
+ * @deprecated Use getPuzzleByDate with the client's local date.
+ * @returns Puzzle for the server's UTC date or null
  */
 export const getDailyPuzzle = query({
   handler: async (ctx) => {

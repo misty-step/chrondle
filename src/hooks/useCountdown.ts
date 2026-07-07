@@ -1,16 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery } from "convex/react";
 import {
   calculateCountdownTime,
   shouldTriggerCompletion,
   didCountdownRestart,
 } from "@/lib/time/countdownCalculation";
 import { getMillisUntilLocalMidnight } from "@/lib/time/dailyDate";
-import { anyPublicApi } from "@/lib/convexAnyApi";
 import { logger } from "@/lib/logger";
-import { useClientSnapshot } from "@/hooks/useClientSnapshot";
 
 export interface UseCountdownReturn {
   timeString: string;
@@ -19,116 +16,49 @@ export interface UseCountdownReturn {
   error: string | null;
 }
 
-/**
- * Countdown strategy determines the target time source
- *
- * - "localMidnight": Uses client's local midnight (primary for daily puzzles)
- * - "serverMidnight": Uses Convex getCronSchedule (legacy behavior)
- */
-export type CountdownStrategy = "localMidnight" | "serverMidnight";
-
 export interface UseCountdownOptions {
   /**
-   * Countdown strategy - determines target time source
-   * Default: "localMidnight" (new behavior for daily unlock)
-   */
-  strategy?: CountdownStrategy;
-
-  /**
    * Target timestamp (Unix milliseconds) to countdown to.
-   * If provided, overrides both strategy and query.
-   * Still supported for archive/testing scenarios.
+   * If provided, overrides the local-midnight default.
+   * Supported for archive/testing scenarios.
    */
   targetTimestamp?: number;
-
-  /**
-   * Whether to use fallback local midnight calculation
-   * when server strategy fails. Defaults to true.
-   * Only relevant for "serverMidnight" strategy.
-   */
-  enableFallback?: boolean;
 }
 
+/**
+ * Countdown to the next daily puzzle.
+ *
+ * Day semantics: the next puzzle unlocks at the PLAYER'S local midnight —
+ * Chrondle's canonical "today" is the player's local calendar day (see
+ * src/lib/time/dailyDate.ts), and this hook derives its target from that
+ * module's getMillisUntilLocalMidnight. There is deliberately no server-clock
+ * strategy: a server-derived rollover would disagree with the puzzle the
+ * player is shown.
+ */
 export function useCountdown(options: UseCountdownOptions = {}): UseCountdownReturn {
-  const { strategy = "localMidnight", targetTimestamp, enableFallback = true } = options;
+  const { targetTimestamp } = options;
 
   const [timeString, setTimeString] = useState("00:00:00");
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Only fetch cron schedule if using serverMidnight strategy and no explicit target
-  const shouldQueryServer = strategy === "serverMidnight" && !targetTimestamp;
-  const cronSchedule = useQuery(
-    anyPublicApi.puzzles.getCronSchedule,
-    shouldQueryServer ? {} : "skip",
-  ) as { nextScheduledTime: number } | null | undefined;
-  const localMidnightTarget = useClientSnapshot(
-    () => Date.now() + getMillisUntilLocalMidnight(),
-    () => 0,
-  );
-
-  // Calculate effective target timestamp based on strategy
-  let effectiveTarget: number | undefined;
-  let isLoading = false;
-
-  if (targetTimestamp) {
-    // Explicit target takes precedence
-    effectiveTarget = targetTimestamp;
-  } else if (strategy === "localMidnight") {
-    // Local midnight strategy: compute from client time (never loading)
-    effectiveTarget = localMidnightTarget;
-  } else {
-    // Server midnight strategy: use cron schedule
-    effectiveTarget = cronSchedule?.nextScheduledTime;
-    isLoading = cronSchedule === undefined;
-  }
-
-  // Reset completion state when target changes
   useEffect(() => {
-    if (effectiveTarget && isComplete) {
-      const timeout = setTimeout(() => {
-        setIsComplete(false);
-        logger.warn("[useCountdown] New target detected, resetting completion state");
-      }, 0);
-
-      return () => clearTimeout(timeout);
-    }
-  }, [effectiveTarget, isComplete]);
-
-  useEffect(() => {
-    if (isLoading) {
-      const timeout = setTimeout(() => {
-        setTimeString("00:00:00");
-      }, 0);
-
-      return () => clearTimeout(timeout);
-    }
-
     const updateCountdown = () => {
       try {
-        // For local midnight strategy, recalculate target each tick
+        // For the local-midnight default, recalculate the target each tick
         // (ensures we stay accurate across midnight boundaries)
-        const currentTarget =
-          strategy === "localMidnight" && !targetTimestamp
-            ? Date.now() + getMillisUntilLocalMidnight()
-            : effectiveTarget;
+        const currentTarget = targetTimestamp ?? Date.now() + getMillisUntilLocalMidnight();
 
         const result = calculateCountdownTime(
           {
             targetTimestamp: currentTarget,
-            enableFallback: strategy === "serverMidnight" ? enableFallback : false,
+            enableFallback: false,
           },
           Date.now(),
         );
 
         setTimeString(result.timeString);
-
-        // Only surface errors for server strategy (local can't fail)
-        if (strategy === "serverMidnight") {
-          setError(result.error);
-        } else {
-          setError(null);
-        }
+        setError(null);
 
         // Handle completion transition
         if (shouldTriggerCompletion(result, isComplete)) {
@@ -151,12 +81,13 @@ export function useCountdown(options: UseCountdownOptions = {}): UseCountdownRet
     const interval = setInterval(updateCountdown, 1000);
 
     return () => clearInterval(interval);
-  }, [effectiveTarget, isLoading, enableFallback, isComplete, strategy, targetTimestamp]);
+  }, [isComplete, targetTimestamp]);
 
   return {
     timeString,
     isComplete,
-    isLoading,
+    // Local midnight is computed client-side; there is nothing to load.
+    isLoading: false,
     error,
   };
 }

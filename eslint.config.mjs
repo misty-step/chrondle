@@ -23,12 +23,12 @@ const eslintConfig = [
       "@typescript-eslint/no-unused-vars": [
         "error",
         {
-          "argsIgnorePattern": "^_",
-          "varsIgnorePattern": "^_",
-          "destructuredArrayIgnorePattern": "^_"
-        }
-      ]
-    }
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+        },
+      ],
+    },
   },
   // Next.js ignores
   ignoresConfig,
@@ -74,9 +74,10 @@ const eslintConfig = [
       "no-restricted-syntax": [
         "error",
         {
-          "selector": "Literal[value=/\\b(text|bg|border)-(ink|parchment)-\\d+\\b/]",
-          "message": "Do not use primitive tokens (text-ink-*, bg-parchment-*, etc). Use semantic tokens (text-primary, bg-surface-elevated, etc) from globals.css instead. See DESIGN_SYSTEM.md for token reference."
-        }
+          selector: "Literal[value=/\\b(text|bg|border)-(ink|parchment)-\\d+\\b/]",
+          message:
+            "Do not use primitive tokens (text-ink-*, bg-parchment-*, etc). Use semantic tokens (text-primary, bg-surface-elevated, etc) from globals.css instead. See DESIGN_SYSTEM.md for token reference.",
+        },
       ],
       // New React Compiler rules in Next.js 16 - demote to warnings for incremental adoption
       "react-hooks/refs": "warn",
@@ -91,22 +92,51 @@ const eslintConfig = [
       "react-hooks/globals": "warn",
       "react-hooks/error-boundaries": "warn",
       "react-hooks/config": "warn",
-      "react-hooks/gating": "warn"
-    }
+      "react-hooks/gating": "warn",
+    },
+  },
+  {
+    // App code must never resolve "today" on the server's UTC clock.
+    // Canonical day semantics: the player's local calendar day
+    // (src/lib/time/dailyDate.ts). The quarantined UTC-day Convex queries are
+    // kept only for stale client bundles (see convex/puzzles/queries.ts).
+    // NOTE: this block overrides "no-restricted-syntax" for src/**, so the
+    // global primitive-token selector is repeated here.
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Literal[value=/\\b(text|bg|border)-(ink|parchment)-\\d+\\b/]",
+          message:
+            "Do not use primitive tokens (text-ink-*, bg-parchment-*, etc). Use semantic tokens (text-primary, bg-surface-elevated, etc) from globals.css instead. See DESIGN_SYSTEM.md for token reference.",
+        },
+        {
+          selector: "MemberExpression[property.name='getDailyPuzzle']",
+          message:
+            "getDailyPuzzle resolves 'today' on the server's UTC clock and is quarantined. Use getPuzzleByDate with the client's local date (useTodaysPuzzle / src/lib/time/dailyDate.ts).",
+        },
+        {
+          selector: "MemberExpression[property.name='getDailyOrderPuzzle']",
+          message:
+            "getDailyOrderPuzzle resolves 'today' on the server's UTC clock and is quarantined. Use getOrderPuzzleByDate with the client's local date (useTodaysOrderPuzzle / src/lib/time/dailyDate.ts).",
+        },
+      ],
+    },
   },
   {
     // Allow console usage in logger.ts itself (where logger is implemented)
     files: ["src/lib/logger.ts"],
     rules: {
-      "no-console": "off"
-    }
+      "no-console": "off",
+    },
   },
   {
     // Allow console usage in scripts (JS/MJS/TS files)
     files: ["scripts/**/*.js", "scripts/**/*.mjs", "scripts/**/*.ts"],
     rules: {
-      "no-console": "off"
-    }
+      "no-console": "off",
+    },
   },
   {
     // Convex files (Node.js context, not browser) - exclude test files
@@ -119,12 +149,12 @@ const eslintConfig = [
       "@typescript-eslint/no-unused-vars": [
         "error",
         {
-          "argsIgnorePattern": "^_",
-          "varsIgnorePattern": "^_",
-          "destructuredArrayIgnorePattern": "^_"
-        }
-      ]
-    }
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+        },
+      ],
+    },
   },
   {
     // All test files - relax rules (must come after convex to override)
@@ -134,9 +164,9 @@ const eslintConfig = [
       ...tsConfig.rules,
       "no-console": "off",
       "@typescript-eslint/no-require-imports": "off",
-      "@typescript-eslint/no-unused-vars": "warn"
-    }
-  }
+      "@typescript-eslint/no-unused-vars": "warn",
+    },
+  },
 ];
 
 export default eslintConfig;
