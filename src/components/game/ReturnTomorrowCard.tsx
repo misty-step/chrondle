@@ -15,6 +15,14 @@ interface ReturnTomorrowCardProps {
   timeString: string;
   /** Mode whose completion screen hosts the card (analytics dimension) */
   mode: "classic" | "order";
+  /**
+   * Live streak from the page's own streak instance. useStreak state is
+   * per-instance: the page that just ran updateStreak holds the fresh value,
+   * while a newly mounted instance reads pre-completion storage. Pass this
+   * wherever the hosting page tracks streaks (Classic); omit it where no
+   * streak update happens at completion (Order).
+   */
+  currentStreak?: number;
   className?: string;
 }
 
@@ -29,10 +37,15 @@ interface ReturnTomorrowCardProps {
  *
  * Integrity: renders streak/countdown copy only — never puzzle content.
  */
-export function ReturnTomorrowCard({ timeString, mode, className }: ReturnTomorrowCardProps) {
+export function ReturnTomorrowCard({
+  timeString,
+  mode,
+  currentStreak,
+  className,
+}: ReturnTomorrowCardProps) {
   const prefersReducedMotion = useReducedMotion();
   const { streakData } = useStreak();
-  const streak = streakData.currentStreak;
+  const streak = currentStreak ?? streakData.currentStreak;
 
   // One view event per completion screen, not per re-render.
   const hasTrackedViewRef = useRef(false);

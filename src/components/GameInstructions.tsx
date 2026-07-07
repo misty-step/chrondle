@@ -24,6 +24,7 @@ export const GameInstructions: React.FC<GameInstructionsProps> = ({
   hasWon = false,
   targetYear,
   timeString,
+  currentStreak,
   historicalContext,
   closestGuess,
   isArchive = false,
@@ -96,7 +97,12 @@ export const GameInstructions: React.FC<GameInstructionsProps> = ({
       {/* Daily puzzles get the explicit return hook (streak stake + countdown
           + reminder opt-in) in place of the old passive countdown card */}
       {!isArchive && (
-        <ReturnTomorrowCard timeString={timeString || ""} mode="classic" className="mb-4" />
+        <ReturnTomorrowCard
+          timeString={timeString || ""}
+          mode="classic"
+          currentStreak={currentStreak}
+          className="mb-4"
+        />
       )}
 
       {/* Historical Context Card - Below the next puzzle section */}

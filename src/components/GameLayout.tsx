@@ -63,6 +63,9 @@ export interface GameLayoutProps {
 
   // Archive indicator
   isArchive?: boolean;
+
+  /** Live streak from the page's streak instance (post-completion value) */
+  currentStreak?: number;
 }
 
 interface GameLayoutSessionState {
@@ -86,6 +89,7 @@ export function GameLayout(props: GameLayoutProps) {
     confettiRef,
     countdown,
     isArchive = false,
+    currentStreak,
   } = props;
 
   const sessionKey = `${gameState.puzzle?.year ?? "none"}:${gameState.puzzle?.puzzleNumber ?? "daily"}:${isGameComplete ? "complete" : "active"}`;
@@ -207,6 +211,7 @@ export function GameLayout(props: GameLayoutProps) {
               timeString={countdown?.timeString}
               isArchive={isArchive}
               historicalContext={gameState.puzzle?.historicalContext}
+              currentStreak={currentStreak}
             />
           )}
 

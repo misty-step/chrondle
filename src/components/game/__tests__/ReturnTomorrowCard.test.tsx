@@ -99,6 +99,18 @@ describe("ReturnTomorrowCard", () => {
     expect(downloadDailyReminder).toHaveBeenCalledTimes(1);
   });
 
+  it("prefers the live streak prop over its own (possibly stale) hook instance", () => {
+    mockStreak(0); // stale instance value from pre-completion storage
+    render(<ReturnTomorrowCard timeString="02:00:00" mode="classic" currentStreak={1} />);
+
+    expect(screen.getByText(/1-day streak/)).toBeInTheDocument();
+    expect(screen.getByText(/win tomorrow's puzzle to make it 2/i)).toBeInTheDocument();
+    expect(trackSpy).toHaveBeenCalledWith(AnalyticsEvent.RETURN_HOOK_SHOWN, {
+      mode: "classic",
+      streak: 1,
+    });
+  });
+
   it("never renders puzzle content (era/year integrity)", () => {
     mockStreak(7);
     const { container } = render(<ReturnTomorrowCard timeString="03:00:00" mode="classic" />);

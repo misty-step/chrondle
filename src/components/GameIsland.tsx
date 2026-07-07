@@ -220,6 +220,7 @@ export function GameIsland() {
           countdown={countdown}
           confettiRef={confettiRef}
           onValidationError={setValidationError}
+          currentStreak={streakData.currentStreak}
         />
       )}
     </GameModeLayout>
