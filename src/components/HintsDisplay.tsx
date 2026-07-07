@@ -80,7 +80,7 @@ const PastHint: React.FC<PastHintProps & { isNewest?: boolean }> = React.memo(
 
     // Enhanced background colors with subtle proximity hints
     const backgroundClass = isCorrect
-      ? "bg-green-50 border-green-200/50 dark:bg-green-900/20 dark:border-green-800/50"
+      ? "bg-feedback-success/10 border-feedback-success/30 dark:bg-feedback-success/20 dark:border-feedback-success/40"
       : "bg-muted/10 border-muted/20";
 
     // Coordinated delay for newest past hint to prevent duplication
@@ -128,7 +128,7 @@ const PastHint: React.FC<PastHintProps & { isNewest?: boolean }> = React.memo(
               {proximityEmoji}
             </span>
             {isCorrect && (
-              <div className="flex items-center justify-center text-green-600 dark:text-green-400">
+              <div className="text-feedback-success flex items-center justify-center">
                 <Check className="h-4 w-4" />
               </div>
             )}

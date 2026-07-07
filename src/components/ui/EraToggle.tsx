@@ -28,12 +28,12 @@ const toggleContainerVariants = cva(
 );
 
 const toggleButtonVariants = cva(
-  "inline-flex items-center justify-center px-3 h-full transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4a9b7f]/40 disabled:pointer-events-none disabled:opacity-50 flex-1 sm:flex-initial relative z-10",
+  "inline-flex items-center justify-center px-3 h-full transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-feedback-success/40 disabled:pointer-events-none disabled:opacity-50 flex-1 sm:flex-initial relative z-10",
   {
     variants: {
       variant: {
-        active: "bg-[#4a9b7f] text-white",
-        inactive: "bg-surface-elevated text-[#1a1a1b] dark:text-white/90",
+        active: "bg-feedback-success text-white",
+        inactive: "bg-surface-elevated text-foreground dark:text-white/90",
       },
       size: {
         sm: "min-w-[2.5rem] text-xs",

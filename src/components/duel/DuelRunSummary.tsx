@@ -107,7 +107,7 @@ export function DuelRunSummary({
           className={cn(
             "h-14 w-full rounded text-lg font-bold tracking-wide text-white",
             "border-2 border-[var(--mode-duel-accent)] bg-[var(--mode-duel-accent)]",
-            "hover:opacity-90 dark:text-[#1a1a1b]",
+            "dark:text-background hover:opacity-90",
           )}
         >
           <ArrowCounterClockwise className="size-5" aria-hidden="true" />

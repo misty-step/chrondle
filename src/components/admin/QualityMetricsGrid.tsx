@@ -48,10 +48,10 @@ export function QualityMetricsGrid() {
         <div
           className={`text-2xl font-semibold ${
             qualityMetrics.failureRate > 0.5
-              ? "text-red-600 dark:text-red-400"
+              ? "text-feedback-error"
               : qualityMetrics.failureRate > 0.2
                 ? "text-yellow-600 dark:text-yellow-400"
-                : "text-green-600 dark:text-green-400"
+                : "text-feedback-success"
           }`}
         >
           {failurePercentage}%
@@ -85,7 +85,7 @@ export function QualityMetricsGrid() {
               <div key={index} className="flex-1">
                 <div className="bg-surface-secondary h-12 rounded-t">
                   <div
-                    className="rounded-t bg-green-500"
+                    className="bg-feedback-success rounded-t"
                     style={{
                       height: `${score * 100}%`,
                     }}

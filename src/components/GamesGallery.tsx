@@ -72,7 +72,7 @@ export function GamesGallery() {
   };
 
   return (
-    <div className="bg-surface-primary flex min-h-dvh w-full items-center justify-center bg-[radial-gradient(circle,_#e5e5e5_1px,_transparent_1px)] bg-[size:20px_20px] p-4 md:p-8 dark:bg-[radial-gradient(circle,_rgba(255,255,255,0.08)_1px,_transparent_1px)]">
+    <div className="bg-surface-primary flex min-h-dvh w-full items-center justify-center bg-[radial-gradient(circle,_var(--dot-grid)_1px,_transparent_1px)] bg-[size:20px_20px] p-4 md:p-8">
       <main
         className={cn(
           "dark:border-border dark:bg-card border-border bg-surface-elevated flex w-full max-w-xl flex-col gap-5 rounded border p-5 md:gap-6 md:p-8",

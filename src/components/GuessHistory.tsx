@@ -23,15 +23,15 @@ const GuessRow: React.FC<GuessRowProps> = React.memo(({ guess, targetYear, hint,
 
   if (isCorrect) {
     return (
-      <div className="flex items-center justify-between rounded border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
+      <div className="border-feedback-success/30 bg-feedback-success/10 dark:border-feedback-success/40 dark:bg-feedback-success/20 flex items-center justify-between rounded border p-4">
         <div className="flex items-center gap-3">
           <span className="text-muted-foreground text-sm font-medium">#{index + 1}</span>
-          <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+          <Badge variant="default" className="bg-feedback-success hover:bg-feedback-success-hover">
             CORRECT
           </Badge>
           <span className="font-accent text-lg font-bold tracking-wide">{formatYear(guess)}</span>
         </div>
-        <span className="font-semibold text-green-700 dark:text-green-300">You won!</span>
+        <span className="text-feedback-success font-semibold">You won!</span>
       </div>
     );
   }

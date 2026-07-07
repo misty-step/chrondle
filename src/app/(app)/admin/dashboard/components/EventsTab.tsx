@@ -336,11 +336,11 @@ export default function EventsTab() {
                               {isSaving ? (
                                 <CircleNotch className="h-4 w-4 animate-spin" />
                               ) : (
-                                <Check className="h-4 w-4 text-green-500" />
+                                <Check className="text-feedback-success h-4 w-4" />
                               )}
                             </Button>
                             <Button variant="ghost" size="icon" onClick={cancelEditing}>
-                              <X className="h-4 w-4 text-red-500" />
+                              <X className="text-feedback-error h-4 w-4" />
                             </Button>
                           </div>
                         ) : (
@@ -393,7 +393,7 @@ export default function EventsTab() {
                               "h-4 w-4",
                               event.classicPuzzleId || event.orderPuzzleId
                                 ? "text-text-tertiary"
-                                : "text-red-500",
+                                : "text-feedback-error",
                             )}
                           />
                         </Button>

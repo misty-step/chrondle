@@ -79,9 +79,9 @@ export const CurrentHintCard: React.FC<CurrentHintCardProps> = React.memo(
         }}
         className="w-full"
       >
-        <div className="border-border bg-surface-elevated rounded border border-l-4 border-l-[#4a9b7f] px-4 py-3">
+        <div className="border-border bg-surface-elevated border-l-feedback-success rounded border border-l-4 px-4 py-3">
           <div className="mb-2 flex items-center gap-2">
-            <span className="rounded bg-[#4a9b7f] px-2 py-0.5 text-xs font-bold tracking-wide text-white uppercase">
+            <span className="bg-feedback-success rounded px-2 py-0.5 text-xs font-bold tracking-wide text-white uppercase">
               Current Clue
             </span>
             <span

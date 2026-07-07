@@ -219,7 +219,7 @@ export function GameLayout(props: GameLayoutProps) {
           {!isGameComplete && gameState.puzzle && (
             <div className="space-y-5">
               {/* The Puzzle Event - Hero Display */}
-              <div className="paper-edge group dark:border-border dark:bg-card relative overflow-hidden rounded border border-[#d3d6da] bg-white p-8 sm:p-10">
+              <div className="paper-edge group border-border bg-card relative overflow-hidden rounded border p-8 sm:p-10">
                 {/* Removed decorative corner accents - unnecessary visual noise */}
 
                 <div className="text-body-primary mb-4 flex items-center gap-2 font-sans text-xs font-bold tracking-wider uppercase">

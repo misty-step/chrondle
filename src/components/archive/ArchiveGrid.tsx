@@ -85,7 +85,7 @@ export function ArchiveGrid({
                     )}
                   </div>
                   {puzzle.isCompleted ? (
-                    <span className="flex size-5 items-center justify-center rounded-full bg-green-600 text-white">
+                    <span className="bg-feedback-success flex size-5 items-center justify-center rounded-full text-white">
                       <Check className="size-3" />
                     </span>
                   ) : null}

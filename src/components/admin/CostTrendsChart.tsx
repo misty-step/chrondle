@@ -78,7 +78,7 @@ export function CostTrendsChart() {
               <div className="flex-1">
                 <div className="bg-surface-secondary h-6 rounded">
                   <div
-                    className="h-6 rounded bg-blue-500"
+                    className="bg-feedback-info h-6 rounded"
                     style={{
                       width: `${Math.min(100, (day.totalCost / costMetrics.cost7DayAvg) * 50)}%`,
                     }}
