@@ -1,8 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
-import { formatYear } from "@/lib/displayFormatting";
+import { useCallback, useRef, useState } from "react";
 
 type DragTarget = "start" | "end" | "new" | null;
 
@@ -23,6 +21,10 @@ export interface TimelineRangeBarProps {
 
 const FINE_STEP = 1;
 const COARSE_STEP = 10;
+
+function formatTimelineYear(year: number): string {
+  return year < 0 ? `${Math.abs(year)} BC` : `${year} AD`;
+}
 
 /**
  * A single-gesture range picker: press-drag-release directly on the timeline
@@ -151,7 +153,7 @@ export function TimelineRangeBar({
   const showZeroTick = minYear < 0 && maxYear > 0;
 
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={className ? `space-y-1.5 ${className}` : "space-y-1.5"}>
       <div
         ref={trackRef}
         onPointerDown={handleTrackPointerDown}
@@ -159,10 +161,9 @@ export function TimelineRangeBar({
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
         data-testid="timeline-range-track"
-        className={cn(
-          "bg-muted/60 relative h-11 touch-none rounded-full transition-colors select-none",
-          disabled ? "cursor-not-allowed opacity-50" : "hover:bg-muted/80 cursor-crosshair",
-        )}
+        className={`bg-muted/60 relative h-11 touch-none rounded-full transition-colors select-none ${
+          disabled ? "cursor-not-allowed opacity-50" : "hover:bg-muted/80 cursor-crosshair"
+        }`}
       >
         {showZeroTick && (
           <div
@@ -192,7 +193,7 @@ export function TimelineRangeBar({
               aria-valuemin={minYear}
               aria-valuemax={value[1]}
               aria-valuenow={value[0]}
-              aria-valuetext={formatYear(value[0])}
+              aria-valuetext={formatTimelineYear(value[0])}
               aria-disabled={disabled}
               onPointerDown={handleEdgePointerDown("start")}
               onKeyDown={handleEdgeKeyDown("start")}
@@ -207,7 +208,7 @@ export function TimelineRangeBar({
               aria-valuemin={value[0]}
               aria-valuemax={maxYear}
               aria-valuenow={value[1]}
-              aria-valuetext={formatYear(value[1])}
+              aria-valuetext={formatTimelineYear(value[1])}
               aria-disabled={disabled}
               onPointerDown={handleEdgePointerDown("end")}
               onKeyDown={handleEdgeKeyDown("end")}
@@ -220,8 +221,8 @@ export function TimelineRangeBar({
       </div>
 
       <div className="text-muted-foreground flex justify-between text-[0.65rem] tracking-wide uppercase">
-        <span>{formatYear(minYear)}</span>
-        <span>{formatYear(maxYear)}</span>
+        <span>{formatTimelineYear(minYear)}</span>
+        <span>{formatTimelineYear(maxYear)}</span>
       </div>
     </div>
   );
