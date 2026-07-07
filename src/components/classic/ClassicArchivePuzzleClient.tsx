@@ -7,7 +7,7 @@ import { useRangeGame } from "@/hooks/useRangeGame";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { GameLayout } from "@/components/GameLayout";
-import { LiveAnnouncer } from "@/components/ui/LiveAnnouncer";
+import { LiveAnnouncer } from "@/components/kit/LiveAnnouncer";
 import { useVictoryConfetti } from "@/hooks/useVictoryConfetti";
 import { useScreenReaderAnnouncements } from "@/hooks/useScreenReaderAnnouncements";
 import { formatYear } from "@/lib/displayFormatting";

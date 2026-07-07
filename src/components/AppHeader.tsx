@@ -2,14 +2,14 @@
 
 import React from "react";
 import Link from "next/link";
-import { Fire, Archive } from "@phosphor-icons/react";
+import { Fire, Archive } from "@/components/kit/icons";
 
 import { AuthButtons } from "@/components/AuthButtons";
 import { AdminButton } from "@/components/AdminButton";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { ModeDropdown } from "@/components/ModeDropdown";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { NavbarButton } from "@/components/ui/NavbarButton";
+import { ThemeToggle } from "@/components/kit/ThemeToggle";
+import { NavbarButton } from "@/components/kit/NavbarButton";
 import { getStreakColorClasses } from "@/lib/ui/streak-styling";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/displayFormatting";

@@ -28,8 +28,8 @@ export function SubmitButton({
       disabled={disabled}
       size={size}
       className={cn(
-        "h-11 rounded bg-[#4a9b7f] font-bold tracking-[0.04em] text-white uppercase",
-        "transition-all duration-150 hover:translate-y-[-1px] hover:bg-[#3d8a6e]",
+        "bg-feedback-success h-11 rounded font-bold tracking-[0.04em] text-white uppercase",
+        "hover:bg-feedback-success-hover transition-all duration-150 hover:translate-y-[-1px]",
 
         // Layout - full width mobile, auto desktop
         "relative z-10 w-full",

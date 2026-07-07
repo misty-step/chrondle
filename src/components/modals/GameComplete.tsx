@@ -8,7 +8,7 @@ import { useShareGame } from "@/hooks/useShareGame";
 import type { HintCount, RangeGuess } from "@/types/range";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/Separator";
+import { Separator } from "@/components/kit/Separator";
 import {
   Target,
   Ruler,
@@ -17,7 +17,7 @@ import {
   CaretDown,
   Check,
   WarningCircle,
-} from "@phosphor-icons/react";
+} from "@/components/kit/icons";
 import { RangeProximity } from "@/components/game/RangeProximity";
 
 interface GameCompleteProps {
@@ -119,7 +119,7 @@ function RangeSummary({ range, index }: { range: RangeGuess; index: number }) {
     <div className="border-border/40 bg-surface-elevated rounded border p-3">
       <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs font-medium tracking-wide uppercase">
         <span>Range {index + 1}</span>
-        <span className={contained ? "text-green-600" : "text-rose-500"}>
+        <span className={contained ? "text-feedback-success" : "text-feedback-error"}>
           {contained ? "Contained" : "Missed"}
         </span>
       </div>

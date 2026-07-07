@@ -1,6 +1,6 @@
 "use client";
 
-import { HintPanel } from "@/components/ui/HintPanel";
+import { HintPanel } from "@/components/kit/HintPanel";
 import type { OrderEvent, OrderHint } from "@/types/orderGameState";
 
 type HintType = OrderHint["type"];
@@ -38,7 +38,7 @@ interface HintDisplayProps {
  *
  * @example
  * // Direct usage (preferred for new code)
- * import { HintPanel } from "@/components/ui/HintPanel";
+ * import { HintPanel } from "@/components/kit/HintPanel";
  * <HintPanel events={events} hints={hints} onRequestHint={requestHint} />
  */
 export function HintDisplay(props: HintDisplayProps) {

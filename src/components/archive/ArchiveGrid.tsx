@@ -11,8 +11,8 @@
  */
 
 import Link from "next/link";
-import { Card } from "@/components/ui/Card";
-import { Check } from "@phosphor-icons/react";
+import { Card } from "@/components/kit/Card";
+import { Check } from "@/components/kit/icons";
 import { getLocalDateString } from "@/lib/time/dailyDate";
 import { formatDate } from "@/lib/displayFormatting";
 import { useClientSnapshot } from "@/hooks/useClientSnapshot";
@@ -85,7 +85,7 @@ export function ArchiveGrid({
                     )}
                   </div>
                   {puzzle.isCompleted ? (
-                    <span className="flex size-5 items-center justify-center rounded-full bg-green-600 text-white">
+                    <span className="bg-feedback-success flex size-5 items-center justify-center rounded-full text-white">
                       <Check className="size-3" />
                     </span>
                   ) : null}

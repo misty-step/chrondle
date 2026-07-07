@@ -38,7 +38,7 @@ vi.mock("@/hooks/useTodaysOrderPuzzle", () => ({
   useTodaysOrderPuzzle: vi.fn(),
 }));
 
-vi.mock("@phosphor-icons/react", () => ({
+vi.mock("@/components/kit/icons", () => ({
   Crosshair: (props: React.SVGProps<SVGSVGElement>) => (
     <svg data-testid="crosshair-icon" {...props} />
   ),

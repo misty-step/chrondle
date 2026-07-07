@@ -73,11 +73,11 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
 
     switch (status) {
       case "success":
-        return cn(baseStyles, "bg-green-500 hover:bg-green-600 text-white");
+        return cn(baseStyles, "bg-feedback-success hover:bg-feedback-success-hover text-white");
       case "error":
-        return cn(baseStyles, "bg-red-500 hover:bg-red-600 text-white");
+        return cn(baseStyles, "bg-feedback-error hover:bg-feedback-error/90 text-white");
       default:
-        return cn(baseStyles, "bg-blue-500 hover:bg-blue-600 text-white");
+        return cn(baseStyles, "bg-feedback-info hover:bg-feedback-info/90 text-white");
     }
   };
 

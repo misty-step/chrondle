@@ -2,9 +2,9 @@
 
 import React, { useCallback, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Lightbulb } from "@phosphor-icons/react";
+import { Lightbulb } from "@/components/kit/icons";
 import { Button } from "@/components/ui/button";
-import { EraToggle } from "@/components/ui/EraToggle";
+import { EraToggle } from "@/components/kit/EraToggle";
 import { SCORING_CONSTANTS, computeScoreBreakdown } from "@/lib/scoring";
 import { GAME_CONFIG } from "@/lib/constants";
 import { convertToInternalYear, convertFromInternalYear, type Era } from "@/lib/eraUtils";
@@ -265,8 +265,8 @@ export function RangeInput({
     <div className={cn("space-y-6", className)}>
       {/* Onboarding message for first-time users */}
       {!hasBeenModified && !disabled && (
-        <div className="rounded border border-[#4a9b7f] bg-[#4a9b7f]/10 px-4 py-3 dark:bg-[#4a9b7f]/20">
-          <p className="flex items-center gap-2 text-sm font-medium text-[#3d8268] dark:text-[#5fb899]">
+        <div className="border-feedback-success bg-feedback-success/10 dark:bg-feedback-success/20 rounded border px-4 py-3">
+          <p className="text-feedback-success flex items-center gap-2 text-sm font-medium">
             <Lightbulb className="h-4 w-4 shrink-0" aria-hidden="true" />
             Adjust the years to narrow your range, then submit your guess
           </p>
@@ -280,7 +280,7 @@ export function RangeInput({
           rangeTooWide
             ? "border-feedback-error/50"
             : hasBeenModified
-              ? "border-[#4a9b7f]"
+              ? "border-feedback-success"
               : "border-outline-default",
         )}
       >
@@ -489,7 +489,7 @@ export function RangeInput({
             size="lg"
             className={cn(
               "h-14 w-full rounded text-lg font-bold tracking-wide transition-shadow duration-200",
-              "border-2 border-[#4a9b7f] bg-[#4a9b7f] text-white hover:bg-[#4a9b7f]",
+              "border-feedback-success bg-feedback-success hover:bg-feedback-success border-2 text-white",
               commitDisabled ? "cursor-not-allowed opacity-50 shadow-none" : "",
             )}
           >

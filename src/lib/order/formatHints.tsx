@@ -1,5 +1,5 @@
 import React, { type ReactNode } from "react";
-import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight } from "@/components/kit/icons/ssr";
 import type { OrderEvent, OrderHint } from "@/types/orderGameState";
 
 /**

@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { analytics } from "@/lib/analytics";
 import type { StateTransition } from "@/lib/analytics";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/kit/Card";
+import { Badge } from "@/components/kit/Badge";
 import { Button } from "@/components/ui/button";
-import { ChartBar, TrendUp, Warning, Users, Pulse } from "@phosphor-icons/react";
+import { ChartBar, TrendUp, Warning, Users, Pulse } from "@/components/kit/icons";
 
 /**
  * Analytics summary type
@@ -131,13 +131,15 @@ export function AnalyticsDashboard() {
             icon={<TrendUp className="h-4 w-4" />}
             label="Completions"
             value={completionCount}
-            color="text-green-500"
+            color="text-feedback-success"
           />
           <MetricCard
             icon={<Warning className="h-4 w-4" />}
             label="Issues"
             value={divergenceCount + errorCount}
-            color={divergenceCount + errorCount > 0 ? "text-red-500" : "text-muted-foreground"}
+            color={
+              divergenceCount + errorCount > 0 ? "text-feedback-error" : "text-muted-foreground"
+            }
           />
         </div>
 
@@ -207,7 +209,7 @@ export function AnalyticsDashboard() {
               </div>
             )}
             {errorCount > 0 && (
-              <div className="flex items-center gap-2 text-xs text-red-600">
+              <div className="text-feedback-error flex items-center gap-2 text-xs">
                 <Warning className="h-3 w-3" />
                 <span>{errorCount} state error(s) detected</span>
               </div>

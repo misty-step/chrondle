@@ -47,8 +47,8 @@ describe("SubmitButton", () => {
       const { container } = render(<SubmitButton onClick={() => {}}>Submit</SubmitButton>);
       const button = container.querySelector("button");
 
-      expect(button?.className).toContain("bg-[#4a9b7f]");
-      expect(button?.className).toContain("hover:bg-[#3d8a6e]");
+      expect(button?.className).toContain("bg-feedback-success");
+      expect(button?.className).toContain("hover:bg-feedback-success-hover");
       expect(button?.className).toContain("text-white");
     });
 
@@ -162,8 +162,8 @@ describe("SubmitButton", () => {
       expect(orderButton?.className).toContain("rounded");
       expect(classicButton?.className).toContain("rounded");
 
-      expect(orderButton?.className).toContain("bg-[#4a9b7f]");
-      expect(classicButton?.className).toContain("bg-[#4a9b7f]");
+      expect(orderButton?.className).toContain("bg-feedback-success");
+      expect(classicButton?.className).toContain("bg-feedback-success");
 
       expect(orderButton?.className).not.toContain("shadow-hard");
       expect(classicButton?.className).not.toContain("shadow-hard");

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { InlineMarkdown } from "@/components/ui/InlineMarkdown";
+import { InlineMarkdown } from "@/components/kit/InlineMarkdown";
 import { cn } from "@/lib/utils";
 
 interface HintTextProps {

@@ -18,8 +18,30 @@
   --muted: #787c7e;
   --border: #d3d6da;
   --success: #4a9b7f;
+  --success-hover: #3d8a6e;
   --warning: #d4a84b;
   --neutral: #787c7e;
+  --error: #b42318;
+  --info: #2563eb;
+
+  /* Directional guess feedback (matches shipped game colors) */
+  --earlier: #ef4444;
+  --later: #3b82f6;
+
+  /* Decorative dot-grid background */
+  --dot-grid: #e5e5e5;
+
+  /* Ripple flash for interactive buttons */
+  --ripple: #ffffff;
+
+  /* Guess-distance heat ramp (perfect -> extremely far) */
+  --distance-perfect: #16a34a;
+  --distance-close: #22c55e;
+  --distance-near: #84cc16;
+  --distance-far: #facc15;
+  --distance-very-far: #fb923c;
+  --distance-way-off: #ef4444;
+  --distance-extreme: #b91c1c;
 
   /* Surfaces */
   --surface-primary: #ffffff;
@@ -45,8 +67,8 @@
   --mode-duel-text: #1a1a1b;
   --mode-duel-accent: #9b2226;
 
-  --font-display: "Outfit", sans-serif;
-  --font-body: "Karla", sans-serif;
+  --font-display: var(--font-outfit), "Outfit", sans-serif;
+  --font-body: var(--font-karla), "Karla", sans-serif;
   --font-mono: ui-monospace, "SF Mono", monospace;
 
   --radius: 4px;
@@ -89,6 +111,9 @@ html.dark {
   --border: #3a3a3c;
   --success: #5fb899;
   --warning: #fbbf24;
+  --error: #f87171;
+  --info: #60a5fa;
+  --dot-grid: rgba(255, 255, 255, 0.08);
 
   /* Mode: Classic - Dark variant */
   --mode-classic-bg: #1a2f25;
@@ -107,12 +132,12 @@ html.dark {
 }
 
 @theme inline {
-  --font-display: "Outfit", sans-serif;
-  --font-heading: "Outfit", sans-serif;
-  --font-body: "Karla", sans-serif;
+  --font-display: var(--font-outfit), "Outfit", sans-serif;
+  --font-heading: var(--font-outfit), "Outfit", sans-serif;
+  --font-body: var(--font-karla), "Karla", sans-serif;
   --font-mono: ui-monospace, "SF Mono", monospace;
-  --font-sans: "Karla", sans-serif;
-  --font-accent: "Outfit", sans-serif;
+  --font-sans: var(--font-karla), "Karla", sans-serif;
+  --font-accent: var(--font-outfit), "Outfit", sans-serif;
 
   --color-surface-primary: var(--surface-primary);
   --color-surface-elevated: var(--surface-elevated);
@@ -145,12 +170,15 @@ html.dark {
   --color-text-tertiary: var(--neutral);
 
   --color-feedback-success: var(--success);
+  --color-feedback-success-hover: var(--success-hover);
   --color-feedback-warning: var(--warning);
-  --color-feedback-error: #b42318;
-  --color-feedback-info: #2563eb;
+  --color-feedback-error: var(--error);
+  --color-feedback-info: var(--info);
   --color-feedback-correct: var(--success);
-  --color-feedback-earlier: var(--warning);
-  --color-feedback-later: #2563eb;
+  --color-feedback-earlier: var(--earlier);
+  --color-feedback-later: var(--later);
+
+  --color-dot-grid: var(--dot-grid);
 
   /* Mode-specific colors */
   --color-classic-bg: var(--mode-classic-bg);
@@ -334,7 +362,8 @@ html.dark {
   }
 
   html.dark .number-badge {
-    @apply bg-[#4a9b7f] text-white;
+    @apply text-white;
+    background-color: var(--success);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 

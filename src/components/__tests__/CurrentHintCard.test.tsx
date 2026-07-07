@@ -10,11 +10,11 @@ vi.mock("@/components/magicui/text-animate", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/LoadingSpinner", () => ({
+vi.mock("@/components/kit/LoadingSpinner", () => ({
   LoadingSpinner: () => <div data-testid="loading-spinner">Loading...</div>,
 }));
 
-vi.mock("@/components/ui/HintText", () => ({
+vi.mock("@/components/kit/HintText", () => ({
   HintText: ({ children }: { children: string }) => <span>{children}</span>,
 }));
 

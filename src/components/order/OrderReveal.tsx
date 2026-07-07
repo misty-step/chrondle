@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { Check, ShareNetwork } from "@phosphor-icons/react";
+import { Check, ShareNetwork } from "@/components/kit/icons";
 import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
 import { ReturnTomorrowCard } from "@/components/game/ReturnTomorrowCard";
 import { TimelineReveal } from "@/components/order/TimelineReveal";

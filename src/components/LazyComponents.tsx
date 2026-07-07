@@ -13,4 +13,4 @@ export const HistoricalContextCard = lazy(() =>
 export { GameLayout } from "@/components/GameLayout";
 export { AppHeader } from "@/components/AppHeader";
 export { Footer } from "@/components/Footer";
-export { LiveAnnouncer } from "@/components/ui/LiveAnnouncer";
+export { LiveAnnouncer } from "@/components/kit/LiveAnnouncer";

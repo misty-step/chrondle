@@ -10,7 +10,7 @@ interface RippleButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement
 
 export const RippleButton = React.forwardRef<HTMLButtonElement, RippleButtonProps>(
   (
-    { className, children, rippleColor = "#ffffff", duration = "600ms", onClick, ...props },
+    { className, children, rippleColor = "var(--ripple)", duration = "600ms", onClick, ...props },
     ref,
   ) => {
     const [buttonRipples, setButtonRipples] = useState<

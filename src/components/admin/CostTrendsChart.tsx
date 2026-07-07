@@ -3,7 +3,7 @@
 import React from "react";
 import { useQuery } from "convex/react";
 import { anyPublicApi } from "@/lib/convexAnyApi";
-import { Card } from "@/components/ui/Card";
+import { Card } from "@/components/kit/Card";
 
 /**
  * Cost Trends Chart - LLM API spending monitoring
@@ -78,7 +78,7 @@ export function CostTrendsChart() {
               <div className="flex-1">
                 <div className="bg-surface-secondary h-6 rounded">
                   <div
-                    className="h-6 rounded bg-blue-500"
+                    className="bg-feedback-info h-6 rounded"
                     style={{
                       width: `${Math.min(100, (day.totalCost / costMetrics.cost7DayAvg) * 50)}%`,
                     }}

@@ -343,10 +343,10 @@ describe("EraToggle", () => {
       const bcButton = screen.getByRole("radio", { name: /BC/i });
       const adButton = screen.getByRole("radio", { name: /AD/i });
 
-      expect(bcButton.className).toContain("bg-[#4a9b7f]");
+      expect(bcButton.className).toContain("bg-feedback-success");
       expect(bcButton.className).toContain("text-white");
       expect(adButton.className).toContain("bg-surface-elevated");
-      expect(adButton.className).toContain("text-[#1a1a1b]");
+      expect(adButton.className).toContain("text-foreground");
     });
 
     it("switches visual states when value changes", () => {
@@ -355,13 +355,13 @@ describe("EraToggle", () => {
       const bcButton = screen.getByRole("radio", { name: /BC/i });
       const adButton = screen.getByRole("radio", { name: /AD/i });
 
-      expect(bcButton.className).toContain("bg-[#4a9b7f]");
-      expect(adButton.className).not.toContain("bg-[#4a9b7f]");
+      expect(bcButton.className).toContain("bg-feedback-success");
+      expect(adButton.className).not.toContain("bg-feedback-success");
 
       rerender(<EraToggle value="AD" onChange={mockOnChange} />);
 
-      expect(bcButton.className).not.toContain("bg-[#4a9b7f]");
-      expect(adButton.className).toContain("bg-[#4a9b7f]");
+      expect(bcButton.className).not.toContain("bg-feedback-success");
+      expect(adButton.className).toContain("bg-feedback-success");
     });
   });
 

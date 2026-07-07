@@ -3,11 +3,11 @@
 import React, { useMemo } from "react";
 import * as Accordion from "@radix-ui/react-accordion";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { Anchor, Scales, CalendarDots, Lightbulb } from "@phosphor-icons/react";
+import { Anchor, Scales, CalendarDots, Lightbulb } from "@/components/kit/icons";
 
 import { Button } from "@/components/ui/button";
-import { GameCard } from "@/components/ui/GameCard";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { GameCard } from "@/components/kit/GameCard";
+import { LoadingSpinner } from "@/components/kit/LoadingSpinner";
 import { ANIMATION_DURATIONS, useReducedMotion } from "@/lib/animationConstants";
 import { formatYear } from "@/lib/displayFormatting";
 import { formatRelativeHintText } from "@/lib/order/formatHints";

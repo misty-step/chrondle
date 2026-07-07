@@ -2,9 +2,9 @@
 
 import React from "react";
 import { useQuery } from "convex/react";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { CircleNotch, Target, Clock, Users, Calendar } from "@phosphor-icons/react";
+import { Card } from "@/components/kit/Card";
+import { Badge } from "@/components/kit/Badge";
+import { CircleNotch, Target, Clock, Users, Calendar } from "@/components/kit/icons";
 import { anyPublicApi } from "@/lib/convexAnyApi";
 
 /**

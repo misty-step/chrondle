@@ -14,7 +14,7 @@ vi.mock("@/lib/modePreference", async (importOriginal) => {
   return { ...original, setModePreferenceCookie: vi.fn() };
 });
 
-vi.mock("@phosphor-icons/react", () => ({
+vi.mock("@/components/kit/icons", () => ({
   Check: (props: React.SVGProps<SVGSVGElement>) => <svg data-testid="check-icon" {...props} />,
   Crosshair: (props: React.SVGProps<SVGSVGElement>) => <svg {...props} />,
   Shuffle: (props: React.SVGProps<SVGSVGElement>) => <svg {...props} />,

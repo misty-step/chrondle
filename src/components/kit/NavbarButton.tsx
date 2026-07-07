@@ -41,8 +41,8 @@ export const NavbarButton: React.FC<NavbarButtonProps> = ({
   const overlayColors = {
     primary: "bg-primary/10",
     rose: "bg-rose-500/10",
-    blue: "bg-blue-500/10",
-    green: "bg-green-500/10",
+    blue: "bg-feedback-info/10",
+    green: "bg-feedback-success/10",
   };
 
   const buttonClasses = cn(
