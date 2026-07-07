@@ -2,7 +2,7 @@
 
 import React from "react";
 import { formatYear } from "@/lib/displayFormatting";
-import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/components/kit/Badge";
 
 interface GuessHistoryProps {
   guesses: number[];

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
-import { InlineMarkdown } from "@/components/ui/InlineMarkdown";
+import { InlineMarkdown } from "@/components/kit/InlineMarkdown";
 
 interface HistoricalContextCardProps {
   context?: string;

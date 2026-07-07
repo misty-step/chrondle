@@ -3,7 +3,7 @@
 import React from "react";
 import { useQuery } from "convex/react";
 import { anyPublicApi } from "@/lib/convexAnyApi";
-import { Card } from "@/components/ui/Card";
+import { Card } from "@/components/kit/Card";
 
 /**
  * Cost Trends Chart - LLM API spending monitoring

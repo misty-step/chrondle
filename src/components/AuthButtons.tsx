@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser, SignInButton, UserButton } from "@clerk/nextjs";
-import { NavbarButton } from "@/components/ui/NavbarButton";
+import { NavbarButton } from "@/components/kit/NavbarButton";
 import { SignIn } from "@phosphor-icons/react";
 import { AuthSkeleton } from "@/components/skeletons/AuthSkeleton";
 import { isMobileDevice } from "@/lib/platformDetection";

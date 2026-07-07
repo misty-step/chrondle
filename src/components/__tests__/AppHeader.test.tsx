@@ -18,7 +18,7 @@ vi.mock("@/components/ModeDropdown", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/ThemeToggle", () => ({
+vi.mock("@/components/kit/ThemeToggle", () => ({
   ThemeToggle: () => <button data-testid="theme-toggle">theme</button>,
 }));
 
@@ -34,7 +34,7 @@ vi.mock("@/components/MobileNavMenu", () => ({
   MobileNavMenu: () => <div data-testid="mobile-nav-menu">MobileNav</div>,
 }));
 
-vi.mock("@/components/ui/NavbarButton", () => ({
+vi.mock("@/components/kit/NavbarButton", () => ({
   NavbarButton: ({ href, children, ...rest }: { href?: string; children: React.ReactNode }) => (
     <a href={href} data-testid="navbar-button" data-rest={JSON.stringify(rest)}>
       {children}

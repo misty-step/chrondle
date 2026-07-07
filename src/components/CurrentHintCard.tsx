@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { HintText } from "@/components/ui/HintText";
+import { LoadingSpinner } from "@/components/kit/LoadingSpinner";
+import { HintText } from "@/components/kit/HintText";
 import { ANIMATION_DURATIONS } from "@/lib/animationConstants";
 
 interface CurrentHintCardProps {

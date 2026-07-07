@@ -9,7 +9,7 @@ import { useTheme } from "@/components/SessionThemeProvider";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 
 import { cn } from "@/lib/utils";
-import { NavbarButton } from "@/components/ui/NavbarButton";
+import { NavbarButton } from "@/components/kit/NavbarButton";
 
 interface MobileNavMenuProps {
   archiveHref: string;

@@ -8,7 +8,7 @@ import { useShareGame } from "@/hooks/useShareGame";
 import type { HintCount, RangeGuess } from "@/types/range";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/Separator";
+import { Separator } from "@/components/kit/Separator";
 import {
   Target,
   Ruler,

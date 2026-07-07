@@ -3,8 +3,8 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/kit/Card";
+import { Badge } from "@/components/kit/Badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

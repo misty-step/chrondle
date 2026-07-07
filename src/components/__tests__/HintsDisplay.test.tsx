@@ -7,7 +7,7 @@ import { validateHintsDisplayProps } from "@/lib/propValidation";
 const mockValidate = vi.mocked(validateHintsDisplayProps);
 
 // Mock child components to isolate HintsDisplay testing
-vi.mock("@/components/ui/Separator", () => ({
+vi.mock("@/components/kit/Separator", () => ({
   Separator: () => <hr data-testid="separator" />,
 }));
 

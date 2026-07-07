@@ -1,7 +1,7 @@
 "use client";
 
 import { lazy, Suspense } from "react";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { LoadingSpinner } from "@/components/kit/LoadingSpinner";
 
 // Lazy load heavy modal components
 export const AchievementModal = lazy(() =>

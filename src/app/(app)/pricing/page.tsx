@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/kit/Card";
 import { Button } from "@/components/ui/button";
 import { Check, Archive, Sparkle } from "@phosphor-icons/react";
 import { logger } from "@/lib/logger";

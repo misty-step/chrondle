@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import { useQuery } from "convex/react";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/kit/Card";
+import { Badge } from "@/components/kit/Badge";
 import { CircleNotch, Target, Clock } from "@phosphor-icons/react";
 import { anyPublicApi } from "@/lib/convexAnyApi";
 import { cn } from "@/lib/utils";

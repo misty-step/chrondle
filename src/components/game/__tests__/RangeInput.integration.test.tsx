@@ -6,7 +6,7 @@ import { RangeInput } from "../RangeInput";
 import { GAME_CONFIG } from "@/lib/constants";
 
 // Mock EraToggle to simplify testing
-vi.mock("@/components/ui/EraToggle", () => ({
+vi.mock("@/components/kit/EraToggle", () => ({
   EraToggle: ({ value, onChange }: { value: string; onChange: (era: "BC" | "AD") => void }) => (
     <div data-testid={`era-toggle-${value}`}>
       <button data-testid={`toggle-bc-${value}`} onClick={() => onChange("BC")}>

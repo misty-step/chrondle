@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/components/kit/Badge";
 import { CircleNotch, Users, Target, CheckCircle, BookOpen } from "@phosphor-icons/react";
 import { anyPublicApi } from "@/lib/convexAnyApi";
 

@@ -2,11 +2,11 @@
 
 import React, { useEffect, useRef } from "react";
 import { formatYear } from "@/lib/displayFormatting";
-import { Separator } from "@/components/ui/Separator";
+import { Separator } from "@/components/kit/Separator";
 import { Check } from "@phosphor-icons/react";
-import { HintText } from "@/components/ui/HintText";
+import { HintText } from "@/components/kit/HintText";
 import { motion, AnimatePresence, LayoutGroup, useReducedMotion } from "motion/react";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { LoadingSpinner } from "@/components/kit/LoadingSpinner";
 import { ANIMATION_DURATIONS, ANIMATION_EASINGS } from "@/lib/animationConstants";
 import { validateHintsDisplayProps } from "@/lib/propValidation";
 
