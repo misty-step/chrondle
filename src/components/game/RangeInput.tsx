@@ -2,7 +2,7 @@
 
 import React, { useCallback, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Lightbulb } from "@phosphor-icons/react";
+import { Lightbulb } from "@/components/kit/icons";
 import { Button } from "@/components/ui/button";
 import { EraToggle } from "@/components/kit/EraToggle";
 import { SCORING_CONSTANTS, computeScoreBreakdown } from "@/lib/scoring";

@@ -6,12 +6,7 @@ import { headers } from "next/headers";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import {
-  CaretLeft,
-  CaretRight,
-  ClockCounterClockwise,
-  ChartBar,
-} from "@phosphor-icons/react/dist/ssr";
+import { CaretLeft, CaretRight, ClockCounterClockwise, ChartBar } from "@/components/kit/icons/ssr";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
 import { ArchiveGrid } from "@/components/archive/ArchiveGrid";
 import { UserCreationHandler } from "@/components/UserCreationHandler";

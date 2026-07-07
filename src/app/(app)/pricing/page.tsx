@@ -7,7 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/kit/Card";
 import { Button } from "@/components/ui/button";
-import { Check, Archive, Sparkle } from "@phosphor-icons/react";
+import { Check, Archive, Sparkle } from "@/components/kit/icons";
 import { logger } from "@/lib/logger";
 
 type Plan = "monthly" | "annual";

@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Hourglass } from "@phosphor-icons/react/dist/ssr";
+import { Hourglass } from "@/components/kit/icons/ssr";
 import { cn } from "@/lib/utils";
 import { INTENT_TOKENS, STAGE_COPY, type LoadingProps } from "./loadingTokens";
 

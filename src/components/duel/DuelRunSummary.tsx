@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowCounterClockwise, Check, Trophy, WarningCircle } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Check, Trophy, WarningCircle } from "@/components/kit/icons";
 
 import { Button } from "@/components/ui/button";
 import { KeepPlaying } from "@/components/KeepPlaying";

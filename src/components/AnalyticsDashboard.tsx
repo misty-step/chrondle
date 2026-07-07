@@ -6,7 +6,7 @@ import type { StateTransition } from "@/lib/analytics";
 import { Card } from "@/components/kit/Card";
 import { Badge } from "@/components/kit/Badge";
 import { Button } from "@/components/ui/button";
-import { ChartBar, TrendUp, Warning, Users, Pulse } from "@phosphor-icons/react";
+import { ChartBar, TrendUp, Warning, Users, Pulse } from "@/components/kit/icons";
 
 /**
  * Analytics summary type

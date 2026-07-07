@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Fire, Archive } from "@phosphor-icons/react";
+import { Fire, Archive } from "@/components/kit/icons";
 
 import { AuthButtons } from "@/components/AuthButtons";
 import { AdminButton } from "@/components/AdminButton";

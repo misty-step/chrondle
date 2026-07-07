@@ -1,5 +1,5 @@
 import type { ElementType } from "react";
-import { Crosshair, Shuffle, Sword } from "@phosphor-icons/react";
+import { Crosshair, Shuffle, Sword } from "@/components/kit/icons";
 import type { ModeKey } from "@/lib/modePreference";
 
 /**

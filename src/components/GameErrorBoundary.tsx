@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { Warning, ArrowClockwise, House, Bug } from "@phosphor-icons/react";
+import { Warning, ArrowClockwise, House, Bug } from "@/components/kit/icons";
 import Link from "next/link";
 import { logger } from "@/lib/logger";
 

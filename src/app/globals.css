@@ -67,8 +67,8 @@
   --mode-duel-text: #1a1a1b;
   --mode-duel-accent: #9b2226;
 
-  --font-display: "Outfit", sans-serif;
-  --font-body: "Karla", sans-serif;
+  --font-display: var(--font-outfit), "Outfit", sans-serif;
+  --font-body: var(--font-karla), "Karla", sans-serif;
   --font-mono: ui-monospace, "SF Mono", monospace;
 
   --radius: 4px;
@@ -132,12 +132,12 @@ html.dark {
 }
 
 @theme inline {
-  --font-display: "Outfit", sans-serif;
-  --font-heading: "Outfit", sans-serif;
-  --font-body: "Karla", sans-serif;
+  --font-display: var(--font-outfit), "Outfit", sans-serif;
+  --font-heading: var(--font-outfit), "Outfit", sans-serif;
+  --font-body: var(--font-karla), "Karla", sans-serif;
   --font-mono: ui-monospace, "SF Mono", monospace;
-  --font-sans: "Karla", sans-serif;
-  --font-accent: "Outfit", sans-serif;
+  --font-sans: var(--font-karla), "Karla", sans-serif;
+  --font-accent: var(--font-outfit), "Outfit", sans-serif;
 
   --color-surface-primary: var(--surface-primary);
   --color-surface-elevated: var(--surface-elevated);

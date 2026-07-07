@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Sword, Trophy } from "@phosphor-icons/react";
+import { Sword, Trophy } from "@/components/kit/icons";
 
 import { DuelEventCard } from "@/components/duel/DuelEventCard";
 import { DuelRunSummary } from "@/components/duel/DuelRunSummary";

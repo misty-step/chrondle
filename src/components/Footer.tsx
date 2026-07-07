@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Envelope } from "@phosphor-icons/react";
+import { Check, Envelope } from "@/components/kit/icons";
 import { useCopyEmail } from "@/hooks/useCopyEmail";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { cn } from "@/lib/utils";

@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MagnifyingGlass, Trash, Check, X, CircleNotch } from "@phosphor-icons/react";
+import { MagnifyingGlass, Trash, Check, X, CircleNotch } from "@/components/kit/icons";
 import { anyPublicApi } from "@/lib/convexAnyApi";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";

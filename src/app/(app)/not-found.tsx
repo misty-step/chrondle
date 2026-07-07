@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
+import { ArrowLeft } from "@/components/kit/icons/ssr";
 
 export default function NotFound() {
   return (

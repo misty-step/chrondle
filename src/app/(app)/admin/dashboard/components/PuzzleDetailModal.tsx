@@ -10,7 +10,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/kit/Badge";
-import { CircleNotch, Users, Target, CheckCircle, BookOpen } from "@phosphor-icons/react";
+import { CircleNotch, Users, Target, CheckCircle, BookOpen } from "@/components/kit/icons";
 import { anyPublicApi } from "@/lib/convexAnyApi";
 
 type PuzzleMode = "classic" | "order";

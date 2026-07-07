@@ -12,7 +12,7 @@
 
 import Link from "next/link";
 import { Card } from "@/components/kit/Card";
-import { Check } from "@phosphor-icons/react";
+import { Check } from "@/components/kit/icons";
 import { getLocalDateString } from "@/lib/time/dailyDate";
 import { formatDate } from "@/lib/displayFormatting";
 import { useClientSnapshot } from "@/hooks/useClientSnapshot";

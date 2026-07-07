@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { List, X, Archive, Moon, Sun } from "@phosphor-icons/react";
+import { List, X, Archive, Moon, Sun } from "@/components/kit/icons";
 import { useTheme } from "@/components/SessionThemeProvider";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 

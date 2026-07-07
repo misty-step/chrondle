@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import * as Accordion from "@radix-ui/react-accordion";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { Anchor, Scales, CalendarDots, Lightbulb } from "@phosphor-icons/react";
+import { Anchor, Scales, CalendarDots, Lightbulb } from "@/components/kit/icons";
 
 import { Button } from "@/components/ui/button";
 import { GameCard } from "@/components/kit/GameCard";

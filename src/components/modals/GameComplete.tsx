@@ -17,7 +17,7 @@ import {
   CaretDown,
   Check,
   WarningCircle,
-} from "@phosphor-icons/react";
+} from "@/components/kit/icons";
 import { RangeProximity } from "@/components/game/RangeProximity";
 
 interface GameCompleteProps {

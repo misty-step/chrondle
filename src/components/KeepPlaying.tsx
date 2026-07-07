@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Check } from "@phosphor-icons/react";
+import { Check } from "@/components/kit/icons";
 
 import { MODES, MODE_ORDER } from "@/lib/modes";
 import { setModePreferenceCookie, type ModeKey } from "@/lib/modePreference";
