@@ -275,19 +275,3 @@ export class GameErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-
-/**
- * Higher-order component to wrap game components with error boundary
- */
-export function withGameErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
-  puzzleNumber?: number,
-) {
-  return function WrappedComponent(props: P) {
-    return (
-      <GameErrorBoundary puzzleNumber={puzzleNumber}>
-        <Component {...props} />
-      </GameErrorBoundary>
-    );
-  };
-}
