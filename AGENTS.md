@@ -143,10 +143,22 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 - `bun build` then `bun start` — For production preview.
 - `bun test`, `bun lint`, `bun type-check` — To verify the integrity of the scroll.
 - `bun quality` — The high-level audit of our dependencies and cache.
+- **Run the `.claude/skills/chrondle-verify` skill** before claiming a change
+  is done — it runs both gates below in the right order.
+
+There are two gates, not one, and they are not interchangeable:
 
 ```bash
-# Before committing
+# 1. Fast local gate — tight edit/test loop, matches the raw bun scripts
 bun run lint && bun run type-check && bun run test
+
+# 2. CI-equivalent gate — the ACTUAL gate .github/workflows/ci.yml enforces
+#    on every PR, wrapped in Dagger (requires the dagger CLI + Docker/Colima).
+#    Run this before opening/merging a PR; the raw `bun run` commands above
+#    can pass while this fails (e.g. coverage thresholds).
+bun run ci:dagger:lint          # dagger call quality --check=lint
+bun run ci:dagger:type-check    # dagger call quality --check=type-check
+bun run ci:dagger:coverage      # dagger call test-coverage-artifacts --output=coverage
 
 # Convex DB integrity
 bunx convex run puzzles:getTotalPuzzles
@@ -155,6 +167,23 @@ bunx convex run puzzles:getTotalPuzzles
 bunx convex dev  # Terminal 1
 bun run dev      # Terminal 2
 ```
+
+## Deployed Surfaces
+
+Verifying the live app (Vercel + Convex prod) is a separate concern from the
+code gate above. Three discoverable scripts cover it:
+
+- `bun run deployment:check` (`scripts/check-deployment-ready.mjs`) — **before
+  deploying.** Pre-deploy readiness: generated Convex files present, clean git
+  status, `vercel.json` sane, env vars set, TypeScript clean, build scripts
+  present.
+- `bun run deploy:verify` (`scripts/verify-deployment.mjs`) — **after
+  deploying.** Post-deploy health check: Convex connectivity, event-table
+  stats, cron/daily-generation activity, and today's puzzle (existence +
+  integrity — no leaked answers).
+- `bun run validate-puzzles` (`scripts/check-convex-state.mjs`) — **ad hoc.**
+  Read-only snapshot of live Convex state (today's puzzle + archive) for
+  debugging, independent of deploy timing.
 
 ## Coding Style & Naming Conventions
 
