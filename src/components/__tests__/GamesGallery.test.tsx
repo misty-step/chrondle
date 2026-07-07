@@ -1,7 +1,8 @@
 import React from "react";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { useQuery } from "convex/react";
+import { useTodaysPuzzle } from "@/hooks/useTodaysPuzzle";
+import { useTodaysOrderPuzzle } from "@/hooks/useTodaysOrderPuzzle";
 import { GamesGallery } from "../GamesGallery";
 
 // --- Mocks ---
@@ -26,8 +27,15 @@ vi.mock("motion/react", () => ({
   useReducedMotion: () => false,
 }));
 
-vi.mock("convex/react", () => ({
-  useQuery: vi.fn(),
+// The gallery must consume the SAME local-date daily hooks as the game pages
+// (src/hooks/useTodaysPuzzle.ts / useTodaysOrderPuzzle.ts) so the homepage can
+// never advertise a different puzzle than the one a player actually plays.
+vi.mock("@/hooks/useTodaysPuzzle", () => ({
+  useTodaysPuzzle: vi.fn(),
+}));
+
+vi.mock("@/hooks/useTodaysOrderPuzzle", () => ({
+  useTodaysOrderPuzzle: vi.fn(),
 }));
 
 vi.mock("@phosphor-icons/react", () => ({
@@ -38,12 +46,42 @@ vi.mock("@phosphor-icons/react", () => ({
   Sword: (props: React.SVGProps<SVGSVGElement>) => <svg data-testid="sword-icon" {...props} />,
 }));
 
+function mockClassic(puzzleNumber: number | null) {
+  vi.mocked(useTodaysPuzzle).mockReturnValue({
+    puzzle:
+      puzzleNumber === null
+        ? null
+        : ({ puzzleNumber, date: "2026-07-06" } as ReturnType<typeof useTodaysPuzzle>["puzzle"]),
+    isLoading: puzzleNumber === null,
+    error: null,
+    localDate: "2026-07-06",
+    revalidate: vi.fn(),
+  });
+}
+
+function mockOrder(puzzleNumber: number | null) {
+  vi.mocked(useTodaysOrderPuzzle).mockReturnValue({
+    puzzle:
+      puzzleNumber === null
+        ? null
+        : ({ puzzleNumber, date: "2026-07-06" } as ReturnType<
+            typeof useTodaysOrderPuzzle
+          >["puzzle"]),
+    isLoading: puzzleNumber === null,
+    error: null,
+    localDate: "2026-07-06",
+    usedPreload: false,
+    revalidate: vi.fn(),
+  });
+}
+
 describe("GamesGallery", () => {
   beforeEach(() => {
     mockPush.mockClear();
-    const mockUseQuery = vi.mocked(useQuery);
-    mockUseQuery.mockReset();
-    mockUseQuery.mockReturnValue({ puzzleNumber: 247 });
+    vi.mocked(useTodaysPuzzle).mockReset();
+    vi.mocked(useTodaysOrderPuzzle).mockReset();
+    mockClassic(328);
+    mockOrder(239);
   });
 
   afterEach(() => {
@@ -76,7 +114,6 @@ describe("GamesGallery", () => {
       expect(screen.getByText("Start a Run")).toBeInTheDocument();
 
       expect(screen.getAllByText("New")).toHaveLength(2);
-      expect(screen.getAllByText("Puzzle #247")).toHaveLength(2);
       expect(screen.getByText("Endless")).toBeInTheDocument();
     });
 
@@ -86,6 +123,30 @@ describe("GamesGallery", () => {
       expect(screen.getByTestId("crosshair-icon")).toBeInTheDocument();
       expect(screen.getByTestId("shuffle-icon")).toBeInTheDocument();
       expect(screen.getByTestId("sword-icon")).toBeInTheDocument();
+    });
+  });
+
+  describe("Daily identity (one 'today' everywhere)", () => {
+    it("shows the local-date daily puzzle numbers from the same hooks the game pages use", () => {
+      mockClassic(328);
+      mockOrder(239);
+
+      render(<GamesGallery />);
+
+      expect(screen.getByText("Puzzle #328")).toBeInTheDocument();
+      expect(screen.getByText("Puzzle #239")).toBeInTheDocument();
+      expect(vi.mocked(useTodaysPuzzle)).toHaveBeenCalled();
+      expect(vi.mocked(useTodaysOrderPuzzle)).toHaveBeenCalled();
+    });
+
+    it("shows a loading skeleton while a daily puzzle resolves", () => {
+      mockClassic(null);
+      mockOrder(239);
+
+      render(<GamesGallery />);
+
+      expect(screen.queryByText("Puzzle #328")).not.toBeInTheDocument();
+      expect(screen.getByText("Puzzle #239")).toBeInTheDocument();
     });
   });
 
@@ -112,14 +173,6 @@ describe("GamesGallery", () => {
       fireEvent.click(screen.getByRole("button", { name: /duel/i }));
 
       expect(mockPush).toHaveBeenCalledWith("/duel");
-    });
-  });
-
-  describe("Data fetching", () => {
-    it("only requests puzzle numbers for deployed daily modes", () => {
-      render(<GamesGallery />);
-
-      expect(vi.mocked(useQuery)).toHaveBeenCalledTimes(2);
     });
   });
 

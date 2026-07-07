@@ -64,7 +64,7 @@ export function OrderReveal({
   const [isShared, setIsShared] = useState(false);
 
   // Only show countdown for daily puzzles (not archive)
-  const { timeString } = useCountdown({ strategy: "localMidnight" });
+  const { timeString } = useCountdown();
 
   const archivalDisplay = useMemo(() => getArchivalDisplay(score.attempts), [score.attempts]);
 

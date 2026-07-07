@@ -77,6 +77,20 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 - Deterministic hash selects year daily → events for that year = hints
 - Same date = same puzzle globally
 
+**Daily Day Semantics (canonical — do not re-litigate per surface):**
+
+- "Today" is the **player's local calendar day**. The single day-resolution
+  module is `src/lib/time/dailyDate.ts`; UI resolves puzzles by explicit date
+  (`getPuzzleByDate` / `getOrderPuzzleByDate`) via `useTodaysPuzzle` /
+  `useTodaysOrderPuzzle`. The countdown targets local midnight.
+- Never resolve a UI "today" from a server clock. `getDailyPuzzle` /
+  `getDailyOrderPuzzle` (UTC-day) are quarantined for stale clients only and
+  lint-banned in `src/`.
+- Streak boundaries derive from the **puzzle's date**; a puzzle is "daily"
+  when its date is within one day of server-UTC (timezone envelope). See
+  `convex/lib/puzzleType.ts`, `convex/lib/streakHelpers.ts`, and the
+  "Daily Day Semantics" section of README.md for the full rationale.
+
 **Convex Deployments:**
 
 - **DEV:** `handsome-raccoon-955` (for development)
