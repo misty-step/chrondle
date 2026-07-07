@@ -7,7 +7,7 @@ import { ArrowCounterClockwise, Check, Trophy, WarningCircle } from "@/component
 import { Button } from "@/components/ui/button";
 import { KeepPlaying } from "@/components/KeepPlaying";
 import { useWebShare } from "@/hooks/useWebShare";
-import { generateDuelShareText } from "@/lib/duel/share";
+import { generateDuelShareText } from "@/lib/sharing";
 import { useReducedMotion } from "@/lib/animationConstants";
 import { cn } from "@/lib/utils";
 import type { DuelRoundView } from "@/lib/duel/runReducer";
