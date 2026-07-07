@@ -78,6 +78,12 @@ vi.mock("@/lib/propValidation", () => ({
   validateGameLayoutProps: vi.fn(),
 }));
 
+// KeepPlaying pulls live today-state (Convex/Clerk providers); GameLayout's
+// contract is only that it mounts on completion.
+vi.mock("@/components/KeepPlaying", () => ({
+  KeepPlaying: () => <div data-testid="keep-playing">Keep Playing</div>,
+}));
+
 describe("GameLayout", () => {
   const mockOnRangeCommit = vi.fn();
 

@@ -3,6 +3,7 @@
 import React from "react";
 import { formatYear } from "@/lib/displayFormatting";
 import { HistoricalContextCard } from "@/components/HistoricalContextCard";
+import { ReturnTomorrowCard } from "@/components/game/ReturnTomorrowCard";
 import type { ClosestGuessData } from "@/types/game";
 
 interface GameInstructionsProps {
@@ -92,18 +93,10 @@ export const GameInstructions: React.FC<GameInstructionsProps> = ({
         </div>
       )}
 
-      {/* Conditional Layout: Show countdown for daily puzzles, compact share for archive */}
+      {/* Daily puzzles get the explicit return hook (streak stake + countdown
+          + reminder opt-in) in place of the old passive countdown card */}
       {!isArchive && (
-        <div className="from-primary/5 to-primary/10 border-primary/20 rounded-card mb-4 flex w-full items-center gap-4 border bg-gradient-to-br p-6">
-          <div className="flex flex-1 flex-col items-start">
-            <div className="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase">
-              Next puzzle in
-            </div>
-            <div className="text-body-primary font-mono text-2xl font-bold sm:text-3xl">
-              {timeString || "00:00:00"}
-            </div>
-          </div>
-        </div>
+        <ReturnTomorrowCard timeString={timeString || ""} mode="classic" className="mb-4" />
       )}
 
       {/* Historical Context Card - Below the next puzzle section */}
