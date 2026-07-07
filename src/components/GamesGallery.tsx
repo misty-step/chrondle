@@ -7,6 +7,7 @@ import { useTodaysPuzzle } from "@/hooks/useTodaysPuzzle";
 import { useTodaysOrderPuzzle } from "@/hooks/useTodaysOrderPuzzle";
 import { setModePreferenceCookie, type ModeKey } from "@/lib/modePreference";
 import { MODES } from "@/lib/modes";
+import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 // --- Gallery copy (identity — label/route/icon/theme — lives in src/lib/modes) ---
@@ -83,11 +84,9 @@ export function GamesGallery() {
         <header className="flex flex-col gap-2 text-center">
           <h1 className="font-display text-5xl md:text-6xl">Chrondle</h1>
           <p className="text-muted-foreground font-body text-sm text-pretty md:text-base">
-            Daily history puzzles
+            Daily history puzzle
           </p>
-          <p className="font-body text-sm text-pretty md:text-base">
-            Guess the year of real historical events. New puzzles every day.
-          </p>
+          <p className="font-body text-sm text-pretty md:text-base">{siteConfig.description}</p>
         </header>
 
         {/* How it works — compact 3-step strip (structural copy; the

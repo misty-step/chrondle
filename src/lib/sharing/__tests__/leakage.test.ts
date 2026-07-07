@@ -19,6 +19,7 @@ import { describe, it, expect, vi } from "vitest";
 import { generateClassicShareText } from "../classic";
 import { generateOrderShareText } from "../order";
 import { generateDuelShareText } from "../duel";
+import { SHARE_PITCH } from "../format";
 import type { RangeGuess } from "@/types/range";
 import type { OrderAttempt } from "@/types/orderGameState";
 
@@ -45,7 +46,8 @@ function assertNoCalendarYearShapedNumber(text: string) {
   // this check — only the body (the mechanic-expressing content) matters.
   const [, ...rest] = text.split("\n\n");
   const body = rest.slice(0, -1).join("\n\n");
-  expect(body).not.toMatch(/\b(1[5-9]|20)\d{2}\b/);
+  const bodyWithoutPitch = body.replace(SHARE_PITCH, "");
+  expect(bodyWithoutPitch).not.toMatch(/\b(1[5-9]|20)\d{2}\b/);
 }
 
 const range = (start: number, end: number, hintsUsed = 0): RangeGuess => ({

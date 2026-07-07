@@ -1,13 +1,16 @@
 import type { Metadata, Viewport } from "next";
 
+export const SITE_PITCH =
+  "A daily history puzzle: read the clues, guess the year. One real event per day, free at chrondle.app.";
+
 /**
  * Single source of truth for site-wide identity and metadata.
  * Layouts import from here instead of redefining metadata inline.
  */
 export const siteConfig = {
   name: "Chrondle",
-  title: "Chrondle - The Daily History Game",
-  description: "Guess the year of the historical event in this daily puzzle game.",
+  title: "Chrondle - Daily History Puzzle",
+  description: SITE_PITCH,
   url: "https://chrondle.app",
 } as const;
 
@@ -39,6 +42,8 @@ export const siteMetadata: Metadata = {
     title: siteConfig.name,
   },
   openGraph: {
+    title: siteConfig.title,
+    description: siteConfig.description,
     url: siteConfig.url,
     siteName: siteConfig.name,
     type: "website",
@@ -46,5 +51,7 @@ export const siteMetadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    title: siteConfig.title,
+    description: siteConfig.description,
   },
 };

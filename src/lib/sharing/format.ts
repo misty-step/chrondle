@@ -1,3 +1,5 @@
+import { siteConfig } from "@/lib/site";
+
 /**
  * Shared share-text format family.
  *
@@ -9,7 +11,8 @@
  * unifies around.
  */
 
-export const CHRONDLE_URL = "https://chrondle.app";
+export const CHRONDLE_URL = siteConfig.url;
+export const SHARE_PITCH = siteConfig.description;
 
 /**
  * Builds the shared header: "Chrondle", optionally suffixed with a mode
@@ -34,5 +37,9 @@ export function buildShareText(
   bodyLines: string[],
   url: string = CHRONDLE_URL,
 ): string {
-  return [header, "", ...bodyLines, "", url].join("\n");
+  if (bodyLines.length === 0) {
+    return [header, "", SHARE_PITCH, url].join("\n");
+  }
+
+  return [header, "", ...bodyLines, "", SHARE_PITCH, url].join("\n");
 }
