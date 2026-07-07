@@ -66,6 +66,10 @@ export enum AnalyticsEvent {
   // Performance events
   SLOW_DERIVATION = "slow_derivation",
   SLOW_QUERY = "slow_query",
+
+  // Habit-loop return hook (completion screen)
+  RETURN_HOOK_SHOWN = "return_hook_shown",
+  REMINDER_OPTIN = "reminder_optin",
 }
 
 /**

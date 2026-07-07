@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Check, ShareNetwork } from "@phosphor-icons/react";
 import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
-import { NextPuzzleCountdownCard } from "@/components/game/NextPuzzleCountdownCard";
+import { ReturnTomorrowCard } from "@/components/game/ReturnTomorrowCard";
 import { TimelineReveal } from "@/components/order/TimelineReveal";
 import { useCountdown } from "@/hooks/useCountdown";
 import type { AttemptScore, OrderEvent } from "@/types/orderGameState";
@@ -172,7 +172,7 @@ export function OrderReveal({
       </motion.div>
 
       {/* Countdown Card - only for daily puzzles */}
-      {!isArchive && <NextPuzzleCountdownCard timeString={timeString} />}
+      {!isArchive && <ReturnTomorrowCard timeString={timeString} mode="order" />}
     </div>
   );
 }

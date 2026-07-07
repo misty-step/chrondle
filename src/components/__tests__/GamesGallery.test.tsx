@@ -117,6 +117,20 @@ describe("GamesGallery", () => {
       expect(screen.getByText("Endless")).toBeInTheDocument();
     });
 
+    it("explains what the game is and how it works for first-timers", () => {
+      render(<GamesGallery />);
+
+      // The pitch: what Chrondle is
+      expect(screen.getByText(/guess the year of real historical events/i)).toBeInTheDocument();
+
+      // The how: a compact 3-step strip
+      const strip = screen.getByRole("list", { name: /how to play/i });
+      expect(strip).toBeInTheDocument();
+      expect(strip).toHaveTextContent(/read a clue/i);
+      expect(strip).toHaveTextContent(/narrower is worth more/i);
+      expect(strip).toHaveTextContent(/keep your streak/i);
+    });
+
     it("renders mode icons", () => {
       render(<GamesGallery />);
 
