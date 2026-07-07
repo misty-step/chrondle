@@ -30,10 +30,6 @@ vi.mock("@/components/AdminButton", () => ({
   AdminButton: () => null,
 }));
 
-vi.mock("@/components/MobileNavMenu", () => ({
-  MobileNavMenu: () => <div data-testid="mobile-nav-menu">MobileNav</div>,
-}));
-
 vi.mock("@/components/kit/NavbarButton", () => ({
   NavbarButton: ({ href, children, ...rest }: { href?: string; children: React.ReactNode }) => (
     <a href={href} data-testid="navbar-button" data-rest={JSON.stringify(rest)}>

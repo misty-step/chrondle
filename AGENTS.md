@@ -176,6 +176,49 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 
 Our deployments (Vercel/Convex) happen in parallel with our checks. Therefore, the seeker must be certain _before_ the push. Local `bun test` and `bun type-check` are the fires through which all code must pass.
 
+## TODO-Debt Convention
+
+A bare `// TODO: fix this later` is unenforceable and unowned. Every TODO left
+in `src/`, `convex/`, or `scripts/` must carry an owner and a tracker link:
+
+```typescript
+// TODO(phrazzld): re-enable strict range validation once chrondle-eng-XXX lands
+// https://github.com/misty-step/chrondle/issues/XXX
+```
+
+- **Owner:** a GitHub handle or agent identity — someone who can be asked
+  "is this still true?"
+- **Tracker link:** a GitHub issue or Powder card URL. If neither exists yet,
+  file one before writing the TODO — a debt with no ticket is a debt no one
+  will ever pay down.
+- Free-form `// TODO` with no owner/link is a lint-review flag: reviewers
+  should ask the author to attach one before merge (not a CI gate — TODOs are
+  legitimate in WIP branches; the convention applies at merge time).
+- Prefer fixing the thing over leaving a TODO. A TODO is for debt that is
+  genuinely out of scope for the current change, not a way to skip writing
+  the fix.
+
+## Security-Hotfix Scope-Isolation Checklist
+
+Security hotfixes ship fast and under pressure — that combination is exactly
+when scope creep hides an unreviewed change inside an urgent one. Before
+opening a security-hotfix PR:
+
+1. **Isolate the diff.** The PR touches only the vulnerable path. Refactors,
+   renames, and unrelated cleanup go in a separate, normally-reviewed PR —
+   even if you noticed them while you were in there.
+2. **State the vulnerability and the fix in the PR body**, not just the
+   commit message: what was exploitable, who could exploit it, what the fix
+   changes, and what it does not change.
+3. **Add or update the regression test first** (red before green) so the
+   hotfix is provably closed, not just patched by inspection.
+4. **Call out blast radius.** Note every surface that consumes the changed
+   code path (API routes, Convex functions, client hooks) so reviewers can
+   check each one, not just the one that triggered the fix.
+5. **Skip the design-lab / broad-refactor process for the hotfix itself.**
+   Follow-up hardening or cleanup is a normal follow-up card, not part of the
+   emergency PR.
+
 ## Live Patterns
 
 **Search before building:**
