@@ -99,7 +99,7 @@ test.describe("Entry @habit-loop", () => {
     await page.goto("/");
 
     // Can state what the game is: pitch + how-to strip in the first viewport
-    await expect(page.getByText(/guess the year of real historical events/i)).toBeVisible();
+    await expect(page.getByText(/read the clues, guess the year/i)).toBeVisible();
     const howTo = page.getByRole("list", { name: /how to play/i });
     await expect(howTo).toBeVisible();
     await expect(howTo).toContainText(/keep your streak/i);

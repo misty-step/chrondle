@@ -1,1 +1,12 @@
-{"name":"Chrondle","short_name":"Chrondle","icons":[{"src":"/android-chrome-192x192.png","sizes":"192x192","type":"image/png"},{"src":"/android-chrome-512x512.png","sizes":"512x512","type":"image/png"}],"theme_color":"#ea5a1b","background_color":"#ffffff","display":"standalone"}
+{
+  "name": "Chrondle",
+  "short_name": "Chrondle",
+  "description": "A daily history puzzle: read the clues, guess the year. One real event per day, free at chrondle.app.",
+  "icons": [
+    { "src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "theme_color": "#ea5a1b",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}

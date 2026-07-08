@@ -3,6 +3,7 @@ import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useTodaysPuzzle } from "@/hooks/useTodaysPuzzle";
 import { useTodaysOrderPuzzle } from "@/hooks/useTodaysOrderPuzzle";
+import { siteConfig } from "@/lib/site";
 import { GamesGallery } from "../GamesGallery";
 
 // --- Mocks ---
@@ -93,7 +94,7 @@ describe("GamesGallery", () => {
       render(<GamesGallery />);
 
       expect(screen.getByRole("heading", { level: 1, name: "Chrondle" })).toBeInTheDocument();
-      expect(screen.getByText("Daily history puzzles")).toBeInTheDocument();
+      expect(screen.getByText("Daily history puzzle")).toBeInTheDocument();
     });
 
     it("renders all mode cards with copy, CTAs, and puzzle metadata", () => {
@@ -121,7 +122,7 @@ describe("GamesGallery", () => {
       render(<GamesGallery />);
 
       // The pitch: what Chrondle is
-      expect(screen.getByText(/guess the year of real historical events/i)).toBeInTheDocument();
+      expect(screen.getByText(siteConfig.description)).toBeInTheDocument();
 
       // The how: a compact 3-step strip
       const strip = screen.getByRole("list", { name: /how to play/i });

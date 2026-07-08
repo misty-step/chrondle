@@ -90,6 +90,6 @@ export function generateClassicShareText(
     return buildShareText(header, [funnelLine, outcomeLine, scoreLine], CHRONDLE_URL);
   } catch (error) {
     logger.error("Failed to generate Classic share text:", error);
-    return `Chrondle: Game complete\n${CHRONDLE_URL}`;
+    return buildShareText("Chrondle: Game complete", [], CHRONDLE_URL);
   }
 }

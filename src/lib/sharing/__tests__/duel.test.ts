@@ -24,7 +24,7 @@ describe("generateDuelShareText", () => {
       });
 
       expect(text).toBe(
-        "Chrondle Duel\n\n⚔️ 12 in a row · Historian\nFelled by a gap of 6 years\n\nhttps://chrondle.app/duel",
+        "Chrondle Duel\n\n⚔️ 12 in a row · Historian\nFelled by a gap of 6 years\n\nA daily history puzzle: read the clues, guess the year. One real event per day, free at chrondle.app.\nhttps://chrondle.app/duel",
       );
     });
 

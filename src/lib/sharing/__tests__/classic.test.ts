@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { generateClassicShareText } from "../classic";
+import { CHRONDLE_URL, SHARE_PITCH } from "../format";
 import { RangeGuess } from "@/types/range";
 
 // Mock logger to prevent console noise
@@ -135,9 +136,18 @@ describe("generateClassicShareText", () => {
 ✅ Contained
 🎯 100/100
 
+A daily history puzzle: read the clues, guess the year. One real event per day, free at chrondle.app.
 https://chrondle.app`;
 
       expect(result).toBe(expected);
+    });
+
+    it("includes the pitch and URL as plain text for social previews", () => {
+      const result = generateClassicShareText([createRange(1950, 1950)], 100, true, 347);
+
+      expect(result).toContain(SHARE_PITCH);
+      expect(result).toContain(CHRONDLE_URL);
+      expect(result.endsWith(`${SHARE_PITCH}\n${CHRONDLE_URL}`)).toBe(true);
     });
 
     it("generates correct text for a multi-guess win", () => {
@@ -154,6 +164,7 @@ https://chrondle.app`;
 ✅ Contained
 😎 70/100
 
+A daily history puzzle: read the clues, guess the year. One real event per day, free at chrondle.app.
 https://chrondle.app`;
 
       expect(result).toBe(expected);
@@ -172,6 +183,7 @@ https://chrondle.app`;
 ❌ 7y early
 🫠 0/100
 
+A daily history puzzle: read the clues, guess the year. One real event per day, free at chrondle.app.
 https://chrondle.app`;
 
       expect(result).toBe(expected);
@@ -190,6 +202,7 @@ https://chrondle.app`;
 ❌ 2y late
 🫠 0/100
 
+A daily history puzzle: read the clues, guess the year. One real event per day, free at chrondle.app.
 https://chrondle.app`;
 
       expect(result).toBe(expected);

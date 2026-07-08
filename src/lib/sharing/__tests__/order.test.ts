@@ -151,6 +151,7 @@ describe("generateOrderShareText", () => {
 
 🟩🟩🟩🟩🟩🟩
 
+A daily history puzzle: read the clues, guess the year. One real event per day, free at chrondle.app.
 https://chrondle.app`;
 
       expect(result).toBe(expected);
@@ -174,6 +175,7 @@ https://chrondle.app`;
 ⬜🟩🟩🟩⬜🟩
 🟩🟩🟩🟩🟩🟩
 
+A daily history puzzle: read the clues, guess the year. One real event per day, free at chrondle.app.
 https://chrondle.app`;
 
       expect(result).toBe(expected);
