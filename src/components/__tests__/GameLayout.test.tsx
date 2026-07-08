@@ -110,12 +110,14 @@ describe("GameLayout", () => {
   });
 
   describe("required props", () => {
-    it("renders primary sections", () => {
+    it("renders primary sections", async () => {
       const props = createDefaultProps();
       render(<GameLayout {...props} />);
 
       expect(screen.getByTestId("game-instructions")).toBeTruthy();
-      expect(screen.getByTestId("range-input")).toBeTruthy();
+      // RangeInput loads through a next/dynamic boundary (shared chunk), so it
+      // resolves asynchronously in the test environment.
+      expect(await screen.findByTestId("range-input")).toBeTruthy();
       expect(screen.getByTestId("hint-indicator")).toBeTruthy();
     });
 
