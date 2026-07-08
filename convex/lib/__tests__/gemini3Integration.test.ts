@@ -12,7 +12,6 @@ vi.mock("../qualityValidator", () => ({
       scores: { semantic_leakage: 0.05 },
       suggestions: [],
     }),
-    learnFromRejected: vi.fn(),
   })),
 }));
 

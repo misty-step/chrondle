@@ -143,16 +143,4 @@ describe("QualityValidatorImpl", () => {
     expect(result.scores.metadata_quality).toBeLessThan(0.5);
     expect(result.suggestions).toContain("Add/normalize metadata fields");
   });
-
-  it("ignores empty text in learnFromRejected", () => {
-    const detector = new SemanticLeakageDetector();
-    const validator = new QualityValidatorImpl(detector);
-
-    // Should not throw or add phrases
-    validator.learnFromRejected("", [1800, 1800]);
-    validator.learnFromRejected("   ", [1800, 1800]);
-
-    // Empty text should still score 0
-    expect(detector.score("").score).toBe(0);
-  });
 });
