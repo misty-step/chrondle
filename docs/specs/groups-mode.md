@@ -1,5 +1,10 @@
 # Context Packet: Chrondle Groups
 
+> Tombstone (July 2026): Groups mode was deliberately removed in PR #244
+> (`aa5fa9f feat: add Duel mode, remove Groups mode, scoring clarity`). This
+> packet is retained as historical design context only; it is not live product
+> direction.
+
 Working title: `Groups`
 
 ## Goal

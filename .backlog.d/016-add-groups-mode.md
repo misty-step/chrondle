@@ -4,6 +4,10 @@ Priority: medium
 Status: done
 Estimate: L
 
+Tombstone: Groups mode was deliberately removed in PR #244
+(`aa5fa9f feat: add Duel mode, remove Groups mode, scoring clarity`). This
+card is retained as historical context only; it is not live scope.
+
 ## Goal
 
 Add a third daily mode with a 4x4 grid of historical events where players discover four hidden exact years by grouping four events at a time under a four-mistake budget.
@@ -26,7 +30,7 @@ Add a third daily mode with a 4x4 grid of historical events where players discov
 
 ## Notes
 
-- Current preferred spec: [groups-mode.md](/Users/phaedrus/Development/chrondle/docs/specs/groups-mode.md)
+- Retired spec: [groups-mode.md](/Users/phaedrus/Development/chrondle/docs/specs/groups-mode.md)
 - Existing adjacent idea: [matchmaker-game.md](/Users/phaedrus/Development/chrondle/docs/specs/matchmaker-game.md) is retained as an archived alternative, not the current third-mode direction.
 - Evidence: the shared event pool already supports independent per-mode usage in [schema.ts](/Users/phaedrus/Development/chrondle/convex/schema.ts); existing daily-generation patterns in [generation.ts](/Users/phaedrus/Development/chrondle/convex/puzzles/generation.ts) and [mutations.ts](/Users/phaedrus/Development/chrondle/convex/orderPuzzles/mutations.ts) are directly reusable; a live pool check on April 8, 2026 showed 12,233 total events, 10,156 unused across both current modes, and 1,429 years currently ready in the shared pool.
 - Main risk: fairness, not corpus size. Board construction must reject event sets with multiple plausible partitions or overly confusable adjacent years.
