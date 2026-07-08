@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chrondle Classic Range-Entry Lab</title>
+    <style>
+      :root {
+        --bg: #faf7f2;
+        --card: #ffffff;
+        --ink: #1c1917;
+        --muted: #78716c;
+        --line: #e7e0d8;
+        --accent: #0e7490;
+        --accent-mark: #0e7490;
+        --good: #15803d;
+        --bad: #b91c1c;
+        --win: #166534;
+        --warn: #b45309;
+        --cta-bg: #166534;
+        --cta-fg: #ffffff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #171412;
+          --card: #211d1a;
+          --ink: #f5f0ea;
+          --muted: #a89f95;
+          --line: #3a332c;
+          --accent: #22d3ee;
+          --accent-mark: #155e75;
+          --good: #4ade80;
+          --bad: #f87171;
+          --win: #86efac;
+          --warn: #f59e0b;
+          --cta-bg: #15803d;
+          --cta-fg: #ffffff;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Avenir Next", Avenir, "Trebuchet MS", sans-serif;
+        font-size: 15px;
+        line-height: 1.55;
+        background: var(--bg);
+        color: var(--ink);
+        padding: 0 0 6rem;
+      }
+      header.lab {
+        padding: 2.5rem 1.25rem 1rem;
+        max-width: 74rem;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.7rem;
+        margin: 0 0 0.4rem;
+      }
+      .sub {
+        color: var(--muted);
+        max-width: 56rem;
+      }
+      .rule {
+        max-width: 56rem;
+        margin-top: 1rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--line);
+        border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+        border-radius: 6px;
+        font-size: 0.85rem;
+        background: var(--card);
+      }
+      nav.toc {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        max-width: 74rem;
+        margin: 1rem auto;
+        padding: 0 1.25rem;
+        position: sticky;
+        top: 0;
+        background: var(--bg);
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
+        border-bottom: 1px solid var(--line);
+        z-index: 5;
+      }
+      nav.toc a {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.55rem;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        text-decoration: none;
+        color: var(--ink);
+        background: var(--card);
+      }
+      nav.toc a.win {
+        border-color: var(--win);
+        color: var(--win);
+        font-weight: 700;
+      }
+      section.opt {
+        max-width: 74rem;
+        margin: 2rem auto;
+        padding: 0 1.25rem;
+      }
+      .optcard {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: visible;
+      }
+      .opthead {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--line);
+        flex-wrap: wrap;
+      }
+      .opthead h2 {
+        font-size: 1.05rem;
+        margin: 0;
+      }
+      .tag {
+        font-size: 0.8rem;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .winner-badge {
+        font-size: 0.8rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--win);
+        border: 1.5px solid var(--win);
+        border-radius: 999px;
+        padding: 0.15rem 0.6rem;
+        font-weight: 700;
+      }
+      .body {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+        gap: 0;
+      }
+      @media (max-width: 820px) {
+        .body {
+          grid-template-columns: 1fr;
+        }
+      }
+      .mock {
+        padding: 1.25rem;
+        border-right: 1px solid var(--line);
+        background: repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 12px,
+          rgba(120, 113, 108, 0.04) 12px,
+          rgba(120, 113, 108, 0.04) 13px
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      @media (max-width: 820px) {
+        .mock {
+          border-right: none;
+          border-bottom: 1px solid var(--line);
+        }
+      }
+      .notes {
+        padding: 1.1rem 1.25rem;
+        font-size: 0.88rem;
+      }
+      .notes h3 {
+        font-size: 0.8rem;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin: 0.9rem 0 0.25rem;
+      }
+      .notes h3:first-child {
+        margin-top: 0;
+      }
+      .notes ul {
+        margin: 0.2rem 0 0.4rem 1.1rem;
+        padding: 0;
+      }
+      .notes li {
+        margin: 0.15rem 0;
+      }
+      /* phone frame */
+      .ph {
+        width: 300px;
+        max-width: 100%;
+        background: var(--bg);
+        border: 2px solid var(--line);
+        border-radius: 18px;
+        padding: 0.9rem 0.8rem;
+        font-size: 0.8rem;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+      }
+      .ph .brand {
+        font-family: ui-serif, Georgia, serif;
+        font-weight: 800;
+        text-align: center;
+        font-size: 1rem;
+        letter-spacing: 0.02em;
+        margin-bottom: 0.6rem;
+      }
+      .ph .dim {
+        color: var(--muted);
+      }
+      .card {
+        border: 1.5px solid var(--line);
+        border-radius: 8px;
+        padding: 0.7rem;
+        background: var(--card);
+      }
+      .teach {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.8rem;
+        color: var(--accent);
+        font-weight: 600;
+        margin-bottom: 0.55rem;
+      }
+      /* timeline bar */
+      .bar {
+        position: relative;
+        height: 34px;
+        background: color-mix(in srgb, var(--ink) 6%, transparent);
+        border-radius: 999px;
+        margin: 0.5rem 0;
+      }
+      .bar .fill {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        background: color-mix(in srgb, var(--accent-mark) 35%, transparent);
+        border-radius: 999px;
+      }
+      .bar .tick0 {
+        position: absolute;
+        top: -3px;
+        bottom: -3px;
+        width: 1.5px;
+        background: var(--line);
+      }
+      .bar .handle {
+        position: absolute;
+        top: 50%;
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: var(--card);
+        border: 2.5px solid var(--accent);
+        transform: translate(-50%, -50%);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      }
+      .axis {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-top: 0.15rem;
+      }
+      .readout {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+        margin-top: 0.55rem;
+      }
+      .readout .worth {
+        color: var(--good);
+        font-weight: 700;
+      }
+      .cta {
+        margin-top: 0.6rem;
+        height: 30px;
+        border-radius: 6px;
+        background: var(--cta-bg);
+        color: var(--cta-fg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+      }
+      .fallback {
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+        border-top: 1px dashed var(--line);
+        padding-top: 0.4rem;
+        display: flex;
+        justify-content: space-between;
+      }
+      /* dial */
+      .dial {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 3px solid var(--line);
+        position: relative;
+        margin: 0.5rem auto;
+        padding: 0.75rem;
+        background: conic-gradient(
+          color-mix(in srgb, var(--accent-mark) 30%, transparent) 0deg 70deg,
+          transparent 70deg 360deg
+        );
+      }
+      .dial .nub {
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent-mark);
+        transform: translateX(-50%);
+      }
+      .dial .center {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+      }
+      .dial .center b {
+        font-size: 0.85rem;
+      }
+      .dial .center span {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      /* wheel */
+      .wheel {
+        height: 80px;
+        overflow: hidden;
+        position: relative;
+        border: 1.5px solid var(--line);
+        border-radius: 8px;
+        background: var(--card);
+      }
+      .wheel .row {
+        text-align: center;
+        padding: 0.15rem 0;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+      .wheel .row.sel {
+        color: var(--ink);
+        font-weight: 800;
+        font-size: 0.85rem;
+      }
+      .wheel::before,
+      .wheel::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 26px;
+        pointer-events: none;
+      }
+      .wheel::before {
+        top: 0;
+        background: linear-gradient(var(--card), transparent);
+      }
+      .wheel::after {
+        bottom: 0;
+        background: linear-gradient(transparent, var(--card));
+      }
+      /* chips */
+      .chips {
+        display: flex;
+        gap: 0.3rem;
+        flex-wrap: wrap;
+        margin-top: 0.4rem;
+      }
+      .chip {
+        border: 1.5px solid var(--line);
+        border-radius: 999px;
+        padding: 0.2rem 0.55rem;
+        font-size: 0.8rem;
+        background: var(--card);
+      }
+      .chip.sel {
+        border-color: var(--accent);
+        color: var(--accent);
+        font-weight: 700;
+        background: color-mix(in srgb, var(--accent-mark) 10%, transparent);
+      }
+      /* mural */
+      .mural {
+        height: 34px;
+        border-radius: 8px;
+        background: linear-gradient(
+          90deg,
+          #8a7355,
+          #a68a5b 20%,
+          #7c9885 45%,
+          #5b8a9e 68%,
+          #4a6d9e 100%
+        );
+        position: relative;
+        overflow: hidden;
+        margin: 0.5rem 0;
+      }
+      .mural .icon {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.8rem;
+        opacity: 0.85;
+      }
+      .mural .sel {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.35);
+        border-left: 2px solid #fff;
+        border-right: 2px solid #fff;
+      }
+      /* radar */
+      .radar {
+        position: relative;
+        height: 70px;
+        border: 1.5px solid var(--line);
+        border-radius: 8px;
+        background: var(--card);
+        overflow: hidden;
+      }
+      .radar .pt {
+        position: absolute;
+        top: 50%;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent-mark);
+        transform: translate(-50%, -50%);
+      }
+      .radar .ring {
+        position: absolute;
+        top: 50%;
+        border: 2px dashed color-mix(in srgb, var(--accent-mark) 55%, transparent);
+        border-radius: 999px;
+        transform: translate(-50%, -50%);
+      }
+      table.cmp {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+        margin-top: 1rem;
+      }
+      table.cmp th,
+      table.cmp td {
+        border: 1px solid var(--line);
+        padding: 0.4rem 0.55rem;
+        text-align: center;
+      }
+      table.cmp th {
+        background: color-mix(in srgb, var(--ink) 4%, transparent);
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
+      }
+      table.cmp td:first-child,
+      table.cmp th:first-child {
+        text-align: left;
+      }
+      .y {
+        color: var(--good);
+        font-weight: 700;
+      }
+      .n {
+        color: var(--bad);
+        font-weight: 700;
+      }
+      .p {
+        color: var(--warn);
+      }
+      section.verdict {
+        max-width: 74rem;
+        margin: 3rem auto 0;
+        padding: 1.5rem 1.25rem;
+        border-top: 3px solid var(--win);
+      }
+      section.verdict h2 {
+        font-size: 1.2rem;
+      }
+      code {
+        background: color-mix(in srgb, var(--ink) 6%, transparent);
+        padding: 0.05rem 0.3rem;
+        border-radius: 4px;
+        font-size: 0.85em;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="lab">
+      <h1>Classic Guess Entry - One-Gesture Range Control</h1>
+      <p class="sub">
+        Today's entry is two numeric text boxes plus two BC/AD segmented toggles - four controls for
+        one decision, defaulting to the historically nonexistent
+        <code>0 AD &rarr; 0 AD</code>, with width/points feedback that only updates on blur. This
+        lab holds 8 structurally distinct one-gesture mechanics for the common case (&ldquo;set a
+        range around a hunch year&rdquo;), each shown against the same scenario: a player who has a
+        hunch the answer is around the 1960s.
+      </p>
+      <div class="rule">
+        Fixed bars every option must clear: era stays 100% player-driven (no BC/AD inference from a
+        typed or dragged value - puzzle-integrity red line); width/points update live during
+        manipulation, not on blur/release; exact-year text entry survives as a fallback, not a full
+        replacement; nothing may cause the guess panel to change height mid-entry.
+      </div>
+    </header>
+
+    <nav class="toc">
+      <a href="#r1" class="win">R1 Winner</a>
+      <a href="#r2">R2</a><a href="#r3">R3</a><a href="#r4">R4</a><a href="#r5">R5</a>
+      <a href="#r6">R6</a><a href="#r7">R7</a><a href="#r8">R8</a><a href="#verdict">Verdict</a>
+    </nav>
+
+    <!-- R1 -->
+    <section class="opt" id="r1">
+      <div class="optcard">
+        <div class="opthead">
+          <h2>R1 - Drag-to-draw timeline bar <span class="winner-badge">Winner</span></h2>
+          <span class="tag">direct manipulation</span>
+        </div>
+        <div class="body">
+          <div class="mock">
+            <div class="ph">
+              <div class="brand">Classic</div>
+              <div class="card">
+                <div class="teach">Hint: One guess - drag the timeline to set your range</div>
+                <div class="bar">
+                  <div class="tick0" style="left: 37%"></div>
+                  <div class="fill" style="left: 52%; width: 14%"></div>
+                  <div class="handle" style="left: 52%"></div>
+                  <div class="handle" style="left: 66%"></div>
+                </div>
+                <div class="axis"><span>3000 BC</span><span>2026 AD</span></div>
+                <div class="readout">
+                  <span class="dim">64 of 250 years</span><span class="worth">✓ Worth 68 pts</span>
+                </div>
+                <div class="cta">Lock in final guess</div>
+                <div class="fallback">
+                  <span>Prefer exact years?</span><span>1958 → 2022 AD ▾</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="notes">
+            <h3>Structure</h3>
+            <ul>
+              <li>
+                Single pointer gesture directly on a bar spanning the puzzle's full
+                <code>MIN_YEAR..MAX_YEAR</code>: press sets an anchor, drag diverges the range live
+                from that anchor, release commits the draft. Same visual grammar as the results
+                screen's range bar (<code>RangeProximity</code>), now interactive.
+              </li>
+              <li>
+                Once a range exists, the two edge handles are independently drag- and
+                arrow-key-adjustable (<code>role="slider"</code>) for fine tuning without
+                re-drawing.
+              </li>
+              <li>
+                Exact-year text fields stay directly beneath, always present, visually secondary.
+              </li>
+            </ul>
+            <h3>For</h3>
+            <ul>
+              <li>
+                Literally one continuous gesture from "no range" to "a range around my hunch,"
+                anchored exactly where the player presses - not a fixed default point. Width/points
+                update every pointermove, not on blur. Reuses a visual object players already trust
+                from the results screen. Cheapest to make keyboard-accessible (handles are native
+                <code>slider</code> roles, arrow keys nudge ±1/±10).
+              </li>
+            </ul>
+            <h3>Against</h3>
+            <ul>
+              <li>
+                A ~5,000-year span compressed into one bar gives coarse initial placement (tens of
+                years per pixel) - fine, since the common case doesn't need pixel-perfect placement
+                and the handles/fallback cover precision.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- R2 -->
+    <section class="opt" id="r2">
+      <div class="optcard">
+        <div class="opthead">
+          <h2>R2 - Dual-thumb slider, pre-collapsed</h2>
+          <span class="tag">direct manipulation</span>
+        </div>
+        <div class="body">
+          <div class="mock">
+            <div class="ph">
+              <div class="brand">Classic</div>
+              <div class="card">
+                <div class="teach">Hint: Drag either dot to widen your range</div>
+                <div class="bar">
+                  <div class="tick0" style="left: 37%"></div>
+                  <div class="handle" style="left: 60%"></div>
+                  <div class="handle" style="left: 60%"></div>
+                </div>
+                <div class="axis"><span>3000 BC</span><span>2026 AD</span></div>
+                <div class="readout"><span class="dim">1 of 250 years</span><span></span></div>
+                <div class="cta" style="opacity: 0.4">Lock in final guess</div>
+              </div>
+            </div>
+          </div>
+          <div class="notes">
+            <h3>Structure</h3>
+            <ul>
+              <li>
+                Both thumbs start collapsed at a fixed default position (e.g. current year).
+                Dragging either thumb outward creates a range in one drag.
+              </li>
+            </ul>
+            <h3>For</h3>
+            <ul>
+              <li>
+                Familiar range-slider metaphor; can ride a library primitive (Radix Slider) instead
+                of hand-rolled pointer math.
+              </li>
+            </ul>
+            <h3>Against</h3>
+            <ul>
+              <li>
+                The default collapse point is arbitrary and rarely near the player's hunch year -
+                dragging one thumb from "current year" to "around 1500 AD" produces a 500-year
+                range, not a narrow one around the hunch. Fails "set a range around a hunch year" in
+                one gesture unless the player also repositions the whole pair first (two gestures).
+                Library's default click-nearest-thumb behavior doesn't natively support "draw fresh
+                from where I press," so it would need the same custom pointer logic as R1 anyway,
+                for a worse result.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- R3 -->
+    <section class="opt" id="r3">
+      <div class="optcard">
+        <div class="opthead">
+          <h2>R3 - Center-year number + width chips</h2>
+          <span class="tag">two-control combo</span>
+        </div>
+        <div class="body">
+          <div class="mock">
+            <div class="ph">
+              <div class="brand">Classic</div>
+              <div class="card">
+                <div class="teach">Hint: Set your hunch year, then pick a width</div>
+                <div
+                  style="text-align: center; font-size: 1.6rem; font-weight: 800; margin: 0.4rem 0"
+                >
+                  1969 AD
+                </div>
+                <div class="chips">
+                  <div class="chip">±5</div>
+                  <div class="chip sel">±10</div>
+                  <div class="chip">±25</div>
+                  <div class="chip">±50</div>
+                  <div class="chip">±125</div>
+                </div>
+                <div class="readout" style="margin-top: 0.5rem">
+                  <span class="dim">21 of 250 years</span><span class="worth">✓ Worth 92 pts</span>
+                </div>
+                <div class="cta">Lock in final guess</div>
+              </div>
+            </div>
+          </div>
+          <div class="notes">
+            <h3>Structure</h3>
+            <ul>
+              <li>
+                A big draggable/scrubbable center-year number (vertical drag or +/- steppers) paired
+                with a row of preset width chips (±5/±10/±25/±50/±125) that expand the range
+                symmetrically around it.
+              </li>
+            </ul>
+            <h3>For</h3>
+            <ul>
+              <li>
+                Extremely legible relationship between "how sure am I" (chip) and score; chips are
+                large, unambiguous tap targets, trivially keyboard-navigable.
+              </li>
+            </ul>
+            <h3>Against</h3>
+            <ul>
+              <li>
+                Two separate interactions for the common case (set center, then tap a width chip) -
+                doesn't clear the "one primary interaction" bar as cleanly as R1. Symmetric-only
+                widths also can't express "I'm sure about the early bound but not the late one,"
+                which R1's independent handles can.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- R4 -->
+    <section class="opt" id="r4">
+      <div class="optcard">
+        <div class="opthead">
+          <h2>R4 - Tap-to-anchor + scroll/pinch-to-widen</h2>
+          <span class="tag">gesture combo</span>
+        </div>
+        <div class="body">
+          <div class="mock">
+            <div class="ph">
+              <div class="brand">Classic</div>
+              <div class="card">
+                <div class="teach">Hint: Tap your hunch year, then pinch to widen</div>
+                <div class="radar">
+                  <div class="ring" style="left: 60%; width: 70px; height: 70px"></div>
+                  <div class="pt" style="left: 60%"></div>
+                </div>
+                <div class="readout" style="margin-top: 0.5rem">
+                  <span class="dim">64 of 250 years</span><span class="worth">✓ Worth 68 pts</span>
+                </div>
+                <div class="cta">Lock in final guess</div>
+              </div>
+            </div>
+          </div>
+          <div class="notes">
+            <h3>Structure</h3>
+            <ul>
+              <li>
+                A tap plants a center pin; a trackpad/wheel scroll (desktop) or two-finger pinch
+                (touch) inflates a symmetric width ring around it, mirroring photo-zoom gestures.
+              </li>
+            </ul>
+            <h3>For</h3>
+            <ul>
+              <li>Novel, tactile, and genuinely "one gesture" once the pin is down.</li>
+            </ul>
+            <h3>Against</h3>
+            <ul>
+              <li>
+                Pinch has no direct keyboard or single-pointer-mouse equivalent (mouse users are
+                stuck with scroll-to-widen, which conflicts with page scroll and needs careful event
+                capture); accessibility story is materially worse than a slider with native
+                <code>role="slider"</code> handles. Two-stage gesture (tap, then a second distinct
+                gesture) reads as two interactions in practice even if fast.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- R5 -->
+    <section class="opt" id="r5">
+      <div class="optcard">
+        <div class="opthead">
+          <h2>R5 - Rubber-band radius from a point</h2>
+          <span class="tag">direct manipulation</span>
+        </div>
+        <div class="body">
+          <div class="mock">
+            <div class="ph">
+              <div class="brand">Classic</div>
+              <div class="card">
+                <div class="teach">Hint: Press your hunch year, drag out to widen</div>
+                <div class="radar">
+                  <div class="ring" style="left: 45%; width: 96px; height: 96px"></div>
+                  <div class="pt" style="left: 45%"></div>
+                </div>
+                <div class="readout" style="margin-top: 0.5rem">
+                  <span class="dim">64 of 250 years</span><span class="worth">✓ Worth 68 pts</span>
+                </div>
+                <div class="cta">Lock in final guess</div>
+              </div>
+            </div>
+          </div>
+          <div class="notes">
+            <h3>Structure</h3>
+            <ul>
+              <li>
+                Press-and-hold on a point, drag vertically (away from the timeline) to inflate an
+                expanding "confidence radius" pill around the pressed year; horizontal position of
+                the drag is ignored, only distance from the press point matters.
+              </li>
+            </ul>
+            <h3>For</h3>
+            <ul>
+              <li>
+                One continuous press-drag-release, same as R1, but visually distinct (radar/target
+                metaphor) and always symmetric.
+              </li>
+            </ul>
+            <h3>Against</h3>
+            <ul>
+              <li>
+                Symmetric-only (can't express asymmetric confidence); the radius-to-years mapping
+                needs an arbitrary sensitivity curve that's harder to reason about than "drag along
+                the actual timeline" (R1's drag distance IS the year distance, 1:1 legible); a
+                circular/radial visual is a bigger departure from the results screen's linear bar
+                than the card's own hint calls for.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- R6 -->
+    <section class="opt" id="r6">
+      <div class="optcard">
+        <div class="opthead">
+          <h2>R6 - Rotary dial</h2>
+          <span class="tag">novel control</span>
+        </div>
+        <div class="body">
+          <div class="mock">
+            <div class="ph">
+              <div class="brand">Classic</div>
+              <div class="card">
+                <div class="teach">Hint: Rotate to your hunch year, spread to widen</div>
+                <div class="dial">
+                  <div class="nub"></div>
+                  <div class="center"><b>1969</b><span>AD</span></div>
+                </div>
+                <div class="readout">
+                  <span class="dim">64 of 250 years</span><span class="worth">✓ Worth 68 pts</span>
+                </div>
+                <div class="cta">Lock in final guess</div>
+              </div>
+            </div>
+          </div>
+          <div class="notes">
+            <h3>Structure</h3>
+            <ul>
+              <li>
+                A circular dial where rotation scrubs the center year (non-linear velocity gives
+                fine control near small movements, coarse control on fast spins); a second
+                concentric ring, dragged outward, sets width.
+              </li>
+            </ul>
+            <h3>For</h3>
+            <ul>
+              <li>
+                Solves the precision-vs-span problem elegantly via rotational velocity sensitivity -
+                the same trick date-of-birth pickers use.
+              </li>
+            </ul>
+            <h3>Against</h3>
+            <ul>
+              <li>
+                Highest implementation and testing cost of the eight (custom rotation math, two
+                nested gesture zones, no native ARIA role fits a two-axis dial); least discoverable
+                metaphor for "guess a year"; keyboard equivalence would need to be invented from
+                scratch. Biggest departure from the results-screen bar, working against visual
+                continuity.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- R7 -->
+    <section class="opt" id="r7">
+      <div class="optcard">
+        <div class="opthead">
+          <h2>R7 - Momentum scrub wheel + width chips</h2>
+          <span class="tag">two-control combo</span>
+        </div>
+        <div class="body">
+          <div class="mock">
+            <div class="ph">
+              <div class="brand">Classic</div>
+              <div class="card">
+                <div class="teach">Hint: Flick to your hunch year</div>
+                <div class="wheel">
+                  <div class="row">1966</div>
+                  <div class="row">1967</div>
+                  <div class="row">1968</div>
+                  <div class="row sel">1969</div>
+                  <div class="row">1970</div>
+                  <div class="row">1971</div>
+                  <div class="row">1972</div>
+                </div>
+                <div class="chips" style="margin-top: 0.5rem">
+                  <div class="chip">±5</div>
+                  <div class="chip sel">±10</div>
+                  <div class="chip">±25</div>
+                </div>
+                <div class="cta" style="margin-top: 0.5rem">Lock in final guess</div>
+              </div>
+            </div>
+          </div>
+          <div class="notes">
+            <h3>Structure</h3>
+            <ul>
+              <li>
+                An iOS-style spinning reel of years: flick with momentum/inertia to land near the
+                hunch year (full span addressable, fine control from deceleration), paired with
+                width chips like R3.
+              </li>
+            </ul>
+            <h3>For</h3>
+            <ul>
+              <li>
+                Momentum scrubbing is a proven mobile-native pattern (date/time pickers) and gives
+                good precision across a huge span without a non-linear scale.
+              </li>
+            </ul>
+            <h3>Against</h3>
+            <ul>
+              <li>
+                Desktop/mouse users get a much worse version of this gesture (no native "flick"
+                outside touch); still two stages (scrub, then tap a chip) like R3; a
+                spinning-numbers wheel is the least visually connected to the results screen's range
+                bar.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- R8 -->
+    <section class="opt" id="r8">
+      <div class="optcard">
+        <div class="opthead">
+          <h2>R8 - Illustrated era-mural drag-select</h2>
+          <span class="tag">direct manipulation</span>
+        </div>
+        <div class="body">
+          <div class="mock">
+            <div class="ph">
+              <div class="brand">Classic</div>
+              <div class="card">
+                <div class="teach">Hint: Drag across the eras to set your range</div>
+                <div class="mural">
+                  <span class="icon" style="left: 8%">Ancient</span>
+                  <span class="icon" style="left: 28%">Classical</span>
+                  <span class="icon" style="left: 48%">Medieval</span>
+                  <span class="icon" style="left: 68%">Industrial</span>
+                  <span class="icon" style="left: 86%">Modern</span>
+                  <div class="sel" style="left: 70%; width: 16%"></div>
+                </div>
+                <div class="axis"><span>3000 BC</span><span>2026 AD</span></div>
+                <div class="readout">
+                  <span class="dim">64 of 250 years</span><span class="worth">✓ Worth 68 pts</span>
+                </div>
+                <div class="cta">Lock in final guess</div>
+              </div>
+            </div>
+          </div>
+          <div class="notes">
+            <h3>Structure</h3>
+            <ul>
+              <li>
+                Same press-drag-release gesture as R1, but the flat bar is replaced with an
+                illustrated horizontal "mural" (pyramids → classical → medieval → industrial →
+                modern icons) for spatial/historical intuition instead of raw numbers.
+              </li>
+            </ul>
+            <h3>For</h3>
+            <ul>
+              <li>
+                Richer at-a-glance context for where a drag lands relative to eras a player already
+                thinks in.
+              </li>
+            </ul>
+            <h3>Against</h3>
+            <ul>
+              <li>
+                Icon placement itself is a soft era cue baked into a fixed, answer-independent
+                scale, so it's puzzle-integrity-safe - but it adds real asset/illustration scope
+                (icon set, licensing, dark-mode variants) for a decorative layer over R1's identical
+                interaction model. Same gesture, same math, strictly more to build and maintain for
+                a marginal legibility gain.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= VERDICT ========================= -->
+
+    <section class="verdict" id="verdict">
+      <h2>Verdict</h2>
+      <p>
+        <b
+          >R1 - drag-to-draw timeline bar, with independently draggable/keyboard-adjustable edge
+          handles and the exact-year fields retained underneath.</b
+        >
+        It is the only option that turns "no range" into "a valid range around my hunch" in one
+        continuous, standard, well-understood gesture (press-drag-release, the same grammar as
+        selecting text or a calendar date range) anchored exactly where the player presses - not at
+        an arbitrary fixed point (R2's failure) and not split across two distinct gestures (R3, R4,
+        R7's failure). It reuses the exact visual object the results screen already renders
+        (<code>RangeProximity</code>'s bar), satisfying the card's request for that object to become
+        interactive. Its accessibility story is the cheapest to build correctly: the post-drag
+        handles are native <code>role="slider"</code> elements with ordinary arrow-key semantics, no
+        bespoke gesture (pinch, rotation, momentum-flick) needs an invented keyboard or
+        screen-reader equivalent. Width/points recompute on every <code>pointermove</code>,
+        satisfying the live-feedback bar directly. R8 is the closest runner-up - same interaction,
+        better spatial storytelling - but is strictly more to build (an era icon set, dark-mode
+        variants) for a decorative gain that doesn't change the interaction bars; worth revisiting
+        once the base control has shipped and proven itself.
+      </p>
+      <table class="cmp">
+        <tr>
+          <th></th>
+          <th>one continuous gesture</th>
+          <th>anchored at press point (not fixed default)</th>
+          <th>live feedback while dragging</th>
+          <th>keyboard-native handles</th>
+          <th>reuses results-screen bar</th>
+          <th>build cost</th>
+        </tr>
+        <tr>
+          <td><b>R1 ★</b></td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="y">low</td>
+        </tr>
+        <tr>
+          <td>R2</td>
+          <td class="p">1 drag, wrong anchor</td>
+          <td class="n">✗ fixed point</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="y">low</td>
+        </tr>
+        <tr>
+          <td>R3</td>
+          <td class="n">2 stages</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="n">✗</td>
+          <td class="p">medium</td>
+        </tr>
+        <tr>
+          <td>R4</td>
+          <td class="n">2 stages</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="n">✗ no kb</td>
+          <td class="n">✗</td>
+          <td class="p">medium</td>
+        </tr>
+        <tr>
+          <td>R5</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="p">custom</td>
+          <td class="n">✗</td>
+          <td class="p">medium</td>
+        </tr>
+        <tr>
+          <td>R6</td>
+          <td class="p">2 zones</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="n">✗ invented</td>
+          <td class="n">✗</td>
+          <td class="n">high</td>
+        </tr>
+        <tr>
+          <td>R7</td>
+          <td class="n">2 stages</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="p">touch-biased</td>
+          <td class="n">✗</td>
+          <td class="p">medium</td>
+        </tr>
+        <tr>
+          <td>R8</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="y">✓</td>
+          <td class="p">reskinned</td>
+          <td class="p">medium+assets</td>
+        </tr>
+      </table>
+      <p class="sub" style="margin-bottom: 0">
+        Implementation: new <code>TimelineRangeBar.tsx</code> (pointer-drag + keyboard-adjustable
+        dual handles, no new dependency) composed into <code>RangeInput.tsx</code> as the primary
+        control; the existing numeric FROM/TO + era-toggle fields stay mounted, unchanged
+        internally, directly beneath as the exact-entry fallback (so every existing e2e/unit path
+        that drives them keeps working). The layout-shift bug is fixed by deleting the onboarding
+        banner that mounted/unmounted above the card and folding its "one guess" teaching copy into
+        the panel's existing fixed-height status row instead of a separate block. Default state
+        changes from a fake <code>0 AD → 0 AD</code> to a genuinely empty, un-set range. Post-submit
+        focus moves to the results heading via a <code>tabIndex=-1</code> ref in
+        <code>GameLayout</code>.
+      </p>
+    </section>
+  </body>
+</html>

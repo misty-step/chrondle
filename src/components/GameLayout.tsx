@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { GameInstructions } from "@/components/GameInstructions";
 import { KeepPlaying } from "@/components/KeepPlaying";
-import { RangeInput } from "@/components/game/RangeInput";
 import { HintIndicator } from "@/components/game/HintIndicator";
 import { Confetti, ConfettiRef } from "@/components/magicui/confetti";
 import { GameComplete } from "@/components/modals/GameComplete";
@@ -11,6 +11,15 @@ import { validateGameLayoutProps } from "@/lib/propValidation";
 import { motion } from "motion/react";
 import { cn, seededRandom } from "@/lib/utils";
 import type { RangeGuess } from "@/types/range";
+
+// The classic range input is rendered by three routes (home, /classic,
+// /archive/puzzle/[id]). Pulling it through one dynamic boundary keeps it in a
+// single shared chunk instead of being inlined into each route bundle. SSR is
+// preserved (default), so the input is server-rendered with no loading flash.
+const RangeInput = dynamic(
+  () => import("@/components/game/RangeInput").then((m) => ({ default: m.RangeInput })),
+  { ssr: true },
+);
 
 export interface GameLayoutProps {
   // Core game state
@@ -142,6 +151,19 @@ export function GameLayout(props: GameLayoutProps) {
       dismissedStampTimestamp: stamp?.timestamp ?? null,
     });
   };
+
+  // After the one-shot guess is locked in, move focus to the results
+  // summary - the next useful continuation point once RangeInput itself
+  // unmounts. tabIndex=-1 makes the wrapper programmatically focusable
+  // without adding it to the tab order.
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const wasGameComplete = useRef(isGameComplete);
+  useEffect(() => {
+    if (isGameComplete && !wasGameComplete.current) {
+      resultsRef.current?.focus();
+    }
+    wasGameComplete.current = isGameComplete;
+  }, [isGameComplete]);
 
   return (
     <div className="bg-background flex flex-1 flex-col">
@@ -275,15 +297,22 @@ export function GameLayout(props: GameLayoutProps) {
           {/* Game Complete Summary */}
           {isGameComplete && (
             <>
-              <GameComplete
-                ranges={gameState.ranges}
-                totalScore={totalScore}
-                hasWon={hasWon}
-                puzzleNumber={puzzleNumber}
-                targetYear={targetYear}
-                totalHints={gameState.puzzle?.events.length}
-                events={gameState.puzzle?.events}
-              />
+              <div
+                ref={resultsRef}
+                tabIndex={-1}
+                data-testid="results-focus-anchor"
+                className="outline-none"
+              >
+                <GameComplete
+                  ranges={gameState.ranges}
+                  totalScore={totalScore}
+                  hasWon={hasWon}
+                  puzzleNumber={puzzleNumber}
+                  targetYear={targetYear}
+                  totalHints={gameState.puzzle?.events.length}
+                  events={gameState.puzzle?.events}
+                />
+              </div>
               <KeepPlaying currentMode="classic" />
             </>
           )}

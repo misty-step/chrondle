@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { Lightbulb } from "@/components/kit/icons";
 import { Button } from "@/components/ui/button";
 import { EraToggle } from "@/components/kit/EraToggle";
+import { TimelineRangeBar } from "@/components/game/TimelineRangeBar";
 import { SCORING_CONSTANTS, computeScoreBreakdown } from "@/lib/scoring";
 import { GAME_CONFIG } from "@/lib/constants";
 import { convertToInternalYear, convertFromInternalYear, type Era } from "@/lib/eraUtils";
@@ -26,10 +27,9 @@ interface RangeInputProps {
 }
 
 /**
- * Creates default range spanning the full timeline
- * This forces user to modify before submitting
+ * Creates the internal unset sentinel. It is never displayed as a real year.
  */
-function createFullTimelineRange(_minYear: number, _maxYear: number): [number, number] {
+function createUnsetRange(_minYear: number, _maxYear: number): [number, number] {
   return [0, 0];
 }
 
@@ -61,6 +61,22 @@ function createDraftState(
   range: [number, number],
   hasBeenModified: boolean = false,
 ): RangeDraftState {
+  // Before the player has actually set a range, show empty fields rather
+  // than a fake year. The internal sentinel range is never a real guess;
+  // it exists only so downstream width/score math always has two numbers.
+  if (!hasBeenModified) {
+    return {
+      syncedRangeKey: getRangeKey(range),
+      startInput: "",
+      endInput: "",
+      startEra: "AD",
+      endEra: "AD",
+      startError: null,
+      endError: null,
+      hasBeenModified: false,
+    };
+  }
+
   const start = convertFromInternalYear(range[0]);
   const end = convertFromInternalYear(range[1]);
 
@@ -72,7 +88,7 @@ function createDraftState(
     endEra: end.era,
     startError: null,
     endError: null,
-    hasBeenModified,
+    hasBeenModified: true,
   };
 }
 
@@ -88,7 +104,7 @@ export function RangeInput({
   onChange,
 }: RangeInputProps) {
   const prefersReducedMotion = useReducedMotion();
-  const defaultRange = useMemo(() => createFullTimelineRange(minYear, maxYear), [minYear, maxYear]);
+  const defaultRange = useMemo(() => createUnsetRange(minYear, maxYear), [minYear, maxYear]);
   const boundsKey = useMemo(() => getBoundsKey(minYear, maxYear), [minYear, maxYear]);
   const isControlled = value !== undefined && onChange !== undefined;
   const [internalRangeState, setInternalRangeState] = useState<InternalRangeState>(() => ({
@@ -120,7 +136,9 @@ export function RangeInput({
   const width = range[1] - range[0] + 1;
   const rangeTooWide = width > SCORING_CONSTANTS.W_MAX;
   const commitDisabled = disabled || rangeTooWide || !hasBeenModified;
-  const progressPercent = Math.min((width / SCORING_CONSTANTS.W_MAX) * 100, 100);
+  const progressPercent = hasBeenModified
+    ? Math.min((width / SCORING_CONSTANTS.W_MAX) * 100, 100)
+    : 0;
 
   // Live risk/reward readout: what this range pays if it contains the answer.
   // Reacts to both width changes and hints taken, using the real curve.
@@ -135,17 +153,38 @@ export function RangeInput({
   }, [range, rangeTooWide, clampedHints]);
 
   const resetRange = useCallback(() => {
-    const nextRange = createFullTimelineRange(minYear, maxYear);
+    const nextRange = createUnsetRange(minYear, maxYear);
     updateRange(nextRange);
     setDraftState(createDraftState(nextRange));
   }, [minYear, maxYear, updateRange]);
+
+  // Primary one-gesture path: the timeline bar reports live years while the
+  // player drags, sharing the same range/draft state as the fallback text
+  // fields below so either path keeps the other in sync.
+  const handleBarChange = useCallback(
+    (nextRange: [number, number]) => {
+      updateRange(nextRange);
+      setDraftState(createDraftState(nextRange, true));
+    },
+    [updateRange],
+  );
+
+  const buildRangeFromStart = (internalYear: number): [number, number] => {
+    if (!hasBeenModified) return [internalYear, internalYear];
+    return [internalYear, Math.max(internalYear, range[1])];
+  };
+
+  const buildRangeFromEnd = (internalYear: number): [number, number] => {
+    if (!hasBeenModified) return [internalYear, internalYear];
+    return [Math.min(range[0], internalYear), internalYear];
+  };
 
   const handleStartEraChange = (era: Era) => {
     const parsed = parseInt(startInput, 10);
     if (!Number.isNaN(parsed)) {
       const internalYear = convertToInternalYear(parsed, era);
       if (internalYear >= minYear && internalYear <= maxYear) {
-        const nextRange: [number, number] = [internalYear, Math.max(internalYear, range[1])];
+        const nextRange = buildRangeFromStart(internalYear);
         updateRange(nextRange);
         setDraftState(createDraftState(nextRange, true));
         return;
@@ -163,7 +202,7 @@ export function RangeInput({
     if (!Number.isNaN(parsed)) {
       const internalYear = convertToInternalYear(parsed, era);
       if (internalYear >= minYear && internalYear <= maxYear) {
-        const nextRange: [number, number] = [Math.min(range[0], internalYear), internalYear];
+        const nextRange = buildRangeFromEnd(internalYear);
         updateRange(nextRange);
         setDraftState(createDraftState(nextRange, true));
         return;
@@ -181,7 +220,7 @@ export function RangeInput({
     if (!Number.isNaN(parsed) && parsed > 0) {
       const internalYear = convertToInternalYear(parsed, startEra);
       if (internalYear >= minYear && internalYear <= maxYear) {
-        const nextRange: [number, number] = [internalYear, Math.max(internalYear, range[1])];
+        const nextRange = buildRangeFromStart(internalYear);
         updateRange(nextRange);
         setDraftState(createDraftState(nextRange, true));
       } else {
@@ -191,7 +230,13 @@ export function RangeInput({
         });
       }
     } else if (startInput.trim() === "") {
-      // Empty input - reset silently
+      // Empty input - reset silently. Before a real range exists there is
+      // nothing to fall back to, so stay empty rather than surfacing the
+      // internal sentinel as a fake year.
+      if (!hasBeenModified) {
+        setDraftState({ ...draft, startInput: "", startError: null });
+        return;
+      }
       const current = convertFromInternalYear(range[0]);
       setDraftState({
         ...draft,
@@ -212,7 +257,7 @@ export function RangeInput({
     if (!Number.isNaN(parsed) && parsed > 0) {
       const internalYear = convertToInternalYear(parsed, endEra);
       if (internalYear >= minYear && internalYear <= maxYear) {
-        const nextRange: [number, number] = [Math.min(range[0], internalYear), internalYear];
+        const nextRange = buildRangeFromEnd(internalYear);
         updateRange(nextRange);
         setDraftState(createDraftState(nextRange, true));
       } else {
@@ -222,7 +267,13 @@ export function RangeInput({
         });
       }
     } else if (endInput.trim() === "") {
-      // Empty input - reset silently
+      // Empty input - reset silently. Before a real range exists there is
+      // nothing to fall back to, so stay empty rather than surfacing the
+      // internal sentinel as a fake year.
+      if (!hasBeenModified) {
+        setDraftState({ ...draft, endInput: "", endError: null });
+        return;
+      }
       const current = convertFromInternalYear(range[1]);
       setDraftState({
         ...draft,
@@ -263,16 +314,6 @@ export function RangeInput({
 
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Onboarding message for first-time users */}
-      {!hasBeenModified && !disabled && (
-        <div className="border-feedback-success bg-feedback-success/10 dark:bg-feedback-success/20 rounded border px-4 py-3">
-          <p className="text-feedback-success flex items-center gap-2 text-sm font-medium">
-            <Lightbulb className="h-4 w-4 shrink-0" aria-hidden="true" />
-            Adjust the years to narrow your range, then submit your guess
-          </p>
-        </div>
-      )}
-
       {/* Ledger Entry Card */}
       <div
         className={cn(
@@ -297,14 +338,37 @@ export function RangeInput({
               Range
             </span>
             <span className="text-body-primary font-mono text-sm font-semibold tabular-nums">
-              {formatYearDisplay(range[0])}
-              <span className="text-muted-foreground mx-2">→</span>
-              {formatYearDisplay(range[1])}
+              {hasBeenModified ? (
+                <>
+                  {formatYearDisplay(range[0])}
+                  <span className="text-muted-foreground mx-2">→</span>
+                  {formatYearDisplay(range[1])}
+                </>
+              ) : (
+                <span className="text-muted-foreground font-normal">Not set yet</span>
+              )}
             </span>
           </div>
         </div>
 
-        {/* Input Controls - Ledger Style */}
+        {/* Primary control: drag the timeline to draw a range in one gesture */}
+        <div className="mb-6">
+          <TimelineRangeBar
+            minYear={minYear}
+            maxYear={maxYear}
+            value={range}
+            hasValue={hasBeenModified}
+            onChange={handleBarChange}
+            disabled={disabled}
+          />
+        </div>
+
+        {/* Input Controls - Ledger Style (exact-year fallback) */}
+        <div className="mb-3">
+          <span className="text-muted-foreground text-[10px] font-bold tracking-[0.15em] uppercase">
+            Prefer exact years?
+          </span>
+        </div>
         <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:gap-12">
           {/* Start Year Group */}
           <div className="flex-1">
@@ -320,6 +384,7 @@ export function RangeInput({
                   id="start-year"
                   type="text"
                   inputMode="numeric"
+                  placeholder="Year"
                   value={startInput}
                   onChange={(e) => {
                     setDraftState({
@@ -332,7 +397,7 @@ export function RangeInput({
                   onKeyDown={(e) => handleInputKeyDown(e, applyStartYear)}
                   disabled={disabled}
                   className={cn(
-                    "ledger-entry-line w-full px-2 pt-1 pb-2 text-center font-mono text-3xl font-semibold tabular-nums",
+                    "ledger-entry-line w-full px-2 pt-1 pb-2 text-center font-mono text-xl font-semibold tabular-nums",
                     "text-body-primary placeholder:text-muted-foreground/50",
                     "disabled:cursor-not-allowed disabled:opacity-50",
                     startError && "border-feedback-error text-feedback-error border-b-2",
@@ -380,6 +445,7 @@ export function RangeInput({
                   id="end-year"
                   type="text"
                   inputMode="numeric"
+                  placeholder="Year"
                   value={endInput}
                   onChange={(e) => {
                     setDraftState({
@@ -392,7 +458,7 @@ export function RangeInput({
                   onKeyDown={(e) => handleInputKeyDown(e, applyEndYear)}
                   disabled={disabled}
                   className={cn(
-                    "ledger-entry-line w-full px-2 pt-1 pb-2 text-center font-mono text-3xl font-semibold tabular-nums",
+                    "ledger-entry-line w-full px-2 pt-1 pb-2 text-center font-mono text-xl font-semibold tabular-nums",
                     "text-body-primary placeholder:text-muted-foreground/50",
                     "disabled:cursor-not-allowed disabled:opacity-50",
                     endError && "border-feedback-error text-feedback-error border-b-2",
@@ -436,10 +502,24 @@ export function RangeInput({
             />
           </div>
 
-          {/* Validation Status */}
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground font-mono text-xs tabular-nums">
-              {width.toLocaleString()} of {SCORING_CONSTANTS.W_MAX.toLocaleString()} years
+          {/* Validation Status - a single fixed-height slot that teaches the
+              one-shot mechanic before the range is set, then swaps to the
+              live width readout. Text-only swap (never a mount/unmount of
+              this row) so the guess panel never reflows mid-entry. */}
+          <div className="flex min-h-[1.25rem] items-center justify-between gap-3">
+            <span className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs tabular-nums">
+              {hasBeenModified ? (
+                <>
+                  {width.toLocaleString()} of {SCORING_CONSTANTS.W_MAX.toLocaleString()} years
+                </>
+              ) : (
+                <>
+                  <Lightbulb className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  {isOneGuessMode
+                    ? "One guess: drag to set your range"
+                    : "Drag the timeline to set your range"}
+                </>
+              )}
             </span>
 
             {rangeTooWide ? (

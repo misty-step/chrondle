@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { GameLayout, type GameLayoutProps } from "../GameLayout";
 import { validateGameLayoutProps } from "@/lib/propValidation";
 
@@ -110,12 +110,14 @@ describe("GameLayout", () => {
   });
 
   describe("required props", () => {
-    it("renders primary sections", () => {
+    it("renders primary sections", async () => {
       const props = createDefaultProps();
       render(<GameLayout {...props} />);
 
       expect(screen.getByTestId("game-instructions")).toBeTruthy();
-      expect(screen.getByTestId("range-input")).toBeTruthy();
+      // RangeInput loads through a next/dynamic boundary (shared chunk), so it
+      // resolves asynchronously in the test environment.
+      expect(await screen.findByTestId("range-input")).toBeTruthy();
       expect(screen.getByTestId("hint-indicator")).toBeTruthy();
     });
 
@@ -168,6 +170,29 @@ describe("GameLayout", () => {
 
       fireEvent.click(screen.getByTestId("range-input"));
       expect(mockOnRangeCommit).toHaveBeenCalledWith({ start: 1900, end: 1950, hintsUsed: 0 });
+    });
+
+    it("moves focus to the results summary once the game transitions to complete", async () => {
+      const props = createDefaultProps();
+      const { rerender } = render(<GameLayout {...props} />);
+
+      // Not focused while still active.
+      expect(screen.queryByTestId("results-focus-anchor")).not.toBeInTheDocument();
+
+      rerender(<GameLayout {...props} isGameComplete />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("results-focus-anchor")).toHaveFocus();
+      });
+    });
+
+    it("does not steal focus on initial mount when already complete", () => {
+      const props = createDefaultProps();
+      props.isGameComplete = true;
+
+      render(<GameLayout {...props} />);
+
+      expect(screen.getByTestId("results-focus-anchor")).not.toHaveFocus();
     });
   });
 
