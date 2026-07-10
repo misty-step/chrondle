@@ -3,7 +3,7 @@
 import type { AlertNotification } from "./alertEngine";
 import { sanitizeErrorForLogging } from "../errorSanitization";
 
-const DEFAULT_CANARY_ENDPOINT = "https://canary-obs.fly.dev";
+const DEFAULT_CANARY_ENDPOINT = "https://canary.mistystep.io";
 const SERVICE = "chrondle";
 const REQUEST_TIMEOUT_MS = 2_000;
 

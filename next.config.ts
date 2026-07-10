@@ -8,7 +8,7 @@ const appVersion = packageJson.version;
 const artifactBuildOnly = process.env.DAGGER_ARTIFACT_BUILD === "1";
 const canaryConnectSrc = resolveExternalOrigin(
   process.env.NEXT_PUBLIC_CANARY_ENDPOINT,
-  "https://canary-obs.fly.dev",
+  "https://canary.mistystep.io",
 );
 
 const withBundleAnalyzer = bundleAnalyzer({

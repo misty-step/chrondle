@@ -25,10 +25,10 @@ Environment variables required for observability:
 | Variable                         | Description                                                                                                                   | Required   |
 | :------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :--------- |
 | `NEXT_PUBLIC_CANARY_API_KEY`     | Raw Canary `ingest-only` key embedded for browser error capture. Use `sk_live_...`, not `KEY-*`. Never use an admin/read key. | Yes (Prod) |
-| `NEXT_PUBLIC_CANARY_ENDPOINT`    | Canary base URL. Defaults to `https://canary-obs.fly.dev`.                                                                    | Optional   |
+| `NEXT_PUBLIC_CANARY_ENDPOINT`    | Canary base URL. Defaults to `https://canary.mistystep.io`.                                                                   | Optional   |
 | `NEXT_PUBLIC_CANARY_ENVIRONMENT` | Deployment environment (`production`, `development`).                                                                         | Yes        |
 | `CANARY_API_KEY`                 | Raw server and Convex Canary `ingest-only` key. Use `sk_live_...`, not `KEY-*`. Never use an admin/read key.                  | Yes (Prod) |
-| `CANARY_ENDPOINT`                | Server and Convex Canary base URL. Defaults to `https://canary-obs.fly.dev`.                                                  | Optional   |
+| `CANARY_ENDPOINT`                | Server and Convex Canary base URL. Defaults to `https://canary.mistystep.io`.                                                 | Optional   |
 | `ORDER_FAILURE_SLACK_WEBHOOK`    | Webhook URL for critical order failure alerts.                                                                                | Optional   |
 
 ## Game Analytics Verification

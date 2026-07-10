@@ -17,6 +17,17 @@ const sources = {
     join(process.cwd(), ".github/workflows/deploy.yml"),
     "utf8",
   ),
+  "browser and server reporter": readFileSync(
+    join(process.cwd(), "src/observability/canary.ts"),
+    "utf8",
+  ),
+  "Convex alert reporter": readFileSync(
+    join(process.cwd(), "convex/lib/observability/canaryNotifier.ts"),
+    "utf8",
+  ),
+  "browser connect-src policy": readFileSync(join(process.cwd(), "next.config.ts"), "utf8"),
+  "environment example": readFileSync(join(process.cwd(), ".env.example"), "utf8"),
+  "observability documentation": readFileSync(join(process.cwd(), "docs/observability.md"), "utf8"),
 };
 
 describe("canonical Canary endpoint contract", () => {
