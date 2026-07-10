@@ -43,6 +43,7 @@
     "events": "tsx scripts/manage-events.ts",
     "events:audit": "tsx scripts/audit-events.ts",
     "deploy:verify": "node scripts/verify-deployment.mjs",
+    "doctor:hosting": "node scripts/verify-hosting-parity.mjs",
     "deploy": "convex deploy && bun run deploy:verify",
     "validate-puzzles": "node scripts/check-convex-state.mjs",
     "verify:convex": "node scripts/verify-convex-files.mjs",

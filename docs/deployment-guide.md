@@ -288,12 +288,18 @@ console.log("✅ Environment variables validated successfully");
 
 ### Post-Deployment
 
+- [ ] Hosting parity doctor passes (`bun run doctor:hosting`)
 - [ ] Daily puzzle loads correctly
 - [ ] Authentication working
 - [ ] User progress saves
 - [ ] No console errors in production
 - [ ] Performance metrics acceptable
 - [ ] Monitoring configured
+
+`bun run doctor:hosting` is the provider-independent production probe. It fails
+if the Clerk custom-domain CNAME disappears, Clerk's client edge or sign-in
+route stops loading, the production Convex corpus is unavailable, application
+health degrades, or signed-out Stripe requests reach provider actions.
 
 ## Additional Resources
 
