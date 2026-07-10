@@ -131,7 +131,7 @@ jobs:
       # Note: CONVEX_DEPLOY_KEY starting with "prod:" triggers production deploy
       - name: Configure Convex Canary runtime
         run: |
-          endpoint="${CANARY_ENDPOINT:-https://canary-obs.fly.dev}"
+          endpoint="${CANARY_ENDPOINT:-https://canary.mistystep.io}"
           npx convex env set CANARY_API_KEY "$CANARY_API_KEY"
           npx convex env set CANARY_ENDPOINT "$endpoint"
           npx convex env set CANARY_ENVIRONMENT production

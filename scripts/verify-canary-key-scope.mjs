@@ -10,7 +10,7 @@
 
 const RAW_CANARY_KEY_PATTERN = /^sk_live_[A-Za-z0-9_-]{24}$/;
 
-const endpoint = (process.env.CANARY_ENDPOINT || "https://canary-obs.fly.dev").replace(/\/$/, "");
+const endpoint = (process.env.CANARY_ENDPOINT || "https://canary.mistystep.io").replace(/\/$/, "");
 const apiKey = process.env.CANARY_API_KEY?.trim() || "";
 const label = process.env.CANARY_SCOPE_LABEL || "CANARY_API_KEY";
 const service = process.env.CANARY_SERVICE || "chrondle";
