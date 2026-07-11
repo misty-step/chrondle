@@ -12,6 +12,19 @@ env:
   CI_CLERK_PUBLISHABLE_KEY: pk_test_aGVhbHRoeS1kb2UtMjMuY2xlcmsuYWNjb3VudHMuZGV2JA
 
 jobs:
+  production-route-guard:
+    name: production-route-guard
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # Stripe does not follow redirects. Keep this independent from Convex
+      # deployment paths so every production web change replays the incident guard.
+      - name: Verify Stripe webhook route does not redirect
+        run: node scripts/verify-webhook-redirect.mjs
+
   quality-checks:
     runs-on: ubuntu-latest
     permissions:

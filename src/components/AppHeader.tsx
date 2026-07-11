@@ -46,7 +46,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <div className="flex h-10 items-baseline gap-2">
               {/* Keeps the gallery reachable for players whose mode-preference
                   cookie redirects bare `/` to their mode. The param MUST carry
-                  a value (`all=1`, not bare `?all`): Vercel edge query
+                  a value (`all=1`, not bare `?all`): edge proxy query
                   normalization drops valueless params, so bare `?all` reaches
                   the server as `undefined` and the home redirect fires anyway,
                   turning the wordmark into a dead-end in production. */}

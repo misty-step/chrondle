@@ -68,7 +68,7 @@ async function main() {
           key_label: label,
         },
         extras: {
-          git_sha: process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || "local",
+          git_sha: process.env.GITHUB_SHA || "local",
         },
       },
     }),

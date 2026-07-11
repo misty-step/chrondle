@@ -156,7 +156,7 @@ The repo-local wrapper lives at [`scripts/dagger-local.sh`](./scripts/dagger-loc
 
 Before deploying Chrondle, you'll need accounts for:
 
-- **[Vercel](https://vercel.com)** - For hosting the Next.js application
+- **[DigitalOcean](https://www.digitalocean.com/)** - For hosting the Next.js application
 - **[Convex](https://convex.dev)** - For the backend database and real-time sync
 - **[Clerk](https://clerk.com)** - For authentication (optional but recommended)
 
@@ -184,7 +184,7 @@ Chrondle requires several environment variables for production deployment. Copy 
 - `OPENROUTER_API_KEY` - For AI-powered historical context features
 - Stripe keys - For subscription/archive-access features
 
-### Deploying to Vercel
+### Deploying to DigitalOcean App Platform
 
 1. **Fork or push this repository to GitHub**
 
@@ -196,13 +196,14 @@ Chrondle requires several environment variables for production deployment. Copy 
 
    This will create a production deployment and provide your `NEXT_PUBLIC_CONVEX_URL`.
 
-3. **Import to Vercel:**
-   - Go to [Vercel Dashboard](https://vercel.com/dashboard)
-   - Click "New Project"
-   - Import your GitHub repository
+3. **Create the App Platform service:**
+   - Connect the `misty-step/chrondle` repository and `master` branch
+   - Set the build command to `bun install --frozen-lockfile && bun run build`
+   - Set the run command to `bun run start` and HTTP port to `3000`
+   - Configure `/api/health` as the health-check path
 
-4. **Configure Environment Variables in Vercel:**
-   - Go to Project Settings → Environment Variables
+4. **Configure environment variables:**
+   - Open the web service's environment settings
    - Add all required variables from `.env.example`:
      - `NEXT_PUBLIC_CONVEX_URL`
      - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
@@ -210,19 +211,15 @@ Chrondle requires several environment variables for production deployment. Copy 
      - `CONVEX_DEPLOY_KEY`
      - `CLERK_WEBHOOK_SECRET` (if using Clerk webhooks)
 
-5. **Configure Build Settings:**
-   - Vercel should auto-detect the Next.js settings for this repository
-   - `vercel.json` only declares the framework, so no custom build or install command is required
-
-6. **Deploy:**
-   - Click "Deploy"
-   - Vercel will build and deploy your application
+5. **Deploy:**
+   - App Platform builds from `master`; an operator can also create an exact
+     deployment with `doctl apps create-deployment <app-id>`.
 
 ### Post-Deployment
 
 1. **Configure Clerk Webhook (if using authentication):**
    - In Clerk Dashboard, update the webhook endpoint to your production URL:
-     `https://your-app.vercel.app/api/webhooks/clerk`
+     `https://chrondle.app/api/webhooks/clerk`
 
 2. **Verify Deployment:**
    - Visit your deployed URL
@@ -233,7 +230,7 @@ Chrondle requires several environment variables for production deployment. Copy 
 ### Deployment Checklist
 
 - [ ] Convex project created and deployed
-- [ ] All environment variables added to Vercel
+- [ ] All environment variables added to the App Platform web service
 - [ ] Clerk authentication configured (optional)
 - [ ] Webhook endpoints updated with production URLs
 - [ ] Build succeeds without errors

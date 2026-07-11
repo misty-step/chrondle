@@ -170,12 +170,12 @@ bun run dev      # Terminal 2
 
 ## Deployed Surfaces
 
-Verifying the live app (Vercel + Convex prod) is a separate concern from the
+Verifying the live app (DigitalOcean App Platform + Convex prod) is a separate concern from the
 code gate above. Three discoverable scripts cover it:
 
 - `bun run deployment:check` (`scripts/check-deployment-ready.mjs`) — **before
   deploying.** Pre-deploy readiness: generated Convex files present, clean git
-  status, `vercel.json` sane, env vars set, TypeScript clean, build scripts
+  status, hosting doctor present, env vars set, TypeScript clean, build scripts
   present.
 - `bun run deploy:verify` (`scripts/verify-deployment.mjs`) — **after
   deploying.** Post-deploy health check: Convex connectivity, event-table
@@ -203,7 +203,9 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 
 ### 3. Vigilance in the Cloud
 
-Our deployments (Vercel/Convex) happen in parallel with our checks. Therefore, the seeker must be certain _before_ the push. Local `bun test` and `bun type-check` are the fires through which all code must pass.
+DigitalOcean App Platform deploys the web service from `master`; Convex deploys
+through its path-scoped workflow. Be certain before either push. Local
+`bun test` and `bun type-check` are the fires through which all code must pass.
 
 ## TODO-Debt Convention
 
@@ -313,7 +315,7 @@ curl -s -o /dev/null -w "%{http_code}" -I -X POST "https://www.chrondle.app/api/
 ```bash
 # Resend event and watch logs
 stripe events resend evt_xxx --webhook-endpoint we_xxx
-vercel logs chrondle.app --json | grep webhook
+doctl apps logs 9c935d41-f841-4c96-a927-a598afa5a8a0 --type run --follow
 
 # Verify delivery metric decreased
 stripe events retrieve evt_xxx | jq '.pending_webhooks'

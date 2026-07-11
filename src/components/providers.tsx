@@ -51,12 +51,12 @@ function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
 
               <div className="space-y-4">
                 <div>
-                  <h2 className="mb-2 font-semibold">For Vercel deployments:</h2>
+                  <h2 className="mb-2 font-semibold">For hosted deployments:</h2>
                   <ol className="text-muted-foreground list-inside list-decimal space-y-2 text-sm">
-                    <li>Go to your Vercel dashboard</li>
-                    <li>Navigate to Settings → Environment Variables</li>
-                    <li>Add the missing variables for all environments</li>
-                    <li>Trigger a new deployment</li>
+                    <li>Open the DigitalOcean App Platform settings</li>
+                    <li>Navigate to the application environment variables</li>
+                    <li>Add the missing variables to the web service</li>
+                    <li>Trigger a new deployment so public variables are rebuilt</li>
                   </ol>
                 </div>
 

@@ -128,7 +128,7 @@ test.describe("Entry @habit-loop", () => {
     await context.addCookies([{ name: "chrondle_mode", value: "classic", url: BASE_URL }]);
 
     // Navigate the exact value-bearing form the header wordmark emits (`/?all=1`).
-    // Bare `/?all` is dropped by Vercel edge normalization in production; the
+    // Bare `/?all` may be dropped by proxy query normalization in production; the
     // value-bearing param is what actually keeps the gallery reachable there.
     await page.goto("/?all=1");
     await expect(page.getByRole("heading", { level: 1, name: "Chrondle" })).toBeVisible();

@@ -58,7 +58,7 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
   const PUZZLES_PER_PAGE = 24 as const;
 
   // Runtime environment detection for debugging
-  const environment = process.env.VERCEL_ENV || "local";
+  const environment = process.env.NODE_ENV || "local";
   // Debug: Running in environment
 
   // Initialize Convex client

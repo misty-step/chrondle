@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Comprehensive deployment readiness check for Vercel.
+ * Comprehensive provider-neutral deployment readiness check.
  * Verifies all requirements are met before attempting deployment.
  */
 
@@ -75,35 +75,16 @@ async function checkDeploymentReadiness() {
     log("   ⚠️  Could not verify Git status", colors.yellow);
   }
 
-  // Check 3: vercel.json configuration
-  log("\n⚙️  Checking vercel.json...", colors.blue);
+  // Check 3: production hosting doctor
+  log("\n⚙️  Checking production hosting doctor...", colors.blue);
   checksRun++;
 
-  if (existsSync("vercel.json")) {
-    try {
-      const vercelConfig = JSON.parse(readFileSync("vercel.json", "utf8"));
-
-      // Check for problematic buildCommand
-      if (vercelConfig.buildCommand?.includes("convex codegen")) {
-        issues.push("vercel.json should NOT contain Convex codegen in buildCommand");
-        log("   ❌ Invalid buildCommand detected", colors.red);
-      } else {
-        checksPassed++;
-        log("   ✅ Configuration valid", colors.green);
-      }
-
-      // Check framework setting
-      if (vercelConfig.framework !== "nextjs") {
-        warnings.push('vercel.json framework should be "nextjs"');
-        log('   ⚠️  Framework not set to "nextjs"', colors.yellow);
-      }
-    } catch (error) {
-      issues.push(`Invalid vercel.json: ${error.message}`);
-      log("   ❌ Invalid JSON format", colors.red);
-    }
-  } else {
+  if (existsSync("scripts/verify-hosting-parity.mjs")) {
     checksPassed++;
-    log("   ✅ Using default configuration", colors.green);
+    log("   ✅ Hosting parity doctor is present", colors.green);
+  } else {
+    issues.push("Missing scripts/verify-hosting-parity.mjs");
+    log("   ❌ Hosting parity doctor is missing", colors.red);
   }
 
   // Check 4: Environment variables documentation
@@ -181,7 +162,7 @@ async function checkDeploymentReadiness() {
     log("\n💡 Recommended Fixes:", colors.cyan);
     log("   1. Run `bunx convex codegen` to generate missing files");
     log("   2. Stage and commit: `git add convex/_generated/`");
-    log("   3. Ensure vercel.json is minimal (no buildCommand)");
+    log("   3. Restore the production hosting parity doctor");
     log("   4. Fix any TypeScript errors");
     log("\n📖 See scripts/verify-convex-files.mjs for related verification details");
 
@@ -192,11 +173,11 @@ async function checkDeploymentReadiness() {
 
     log("\n📝 Deployment Checklist:", colors.cyan);
     log("   ✓ All Convex files present and committed");
-    log("   ✓ vercel.json properly configured");
+    log("   ✓ Production hosting doctor present");
     log("   ✓ TypeScript compiles without errors");
     log("   ✓ Build script available");
 
-    log("\n🚀 Ready to deploy to Vercel!", colors.green);
+    log("\n🚀 Ready for the DigitalOcean App Platform deployment!", colors.green);
 
     if (warnings.length > 0) {
       log("\n⚠️  Note: Review warnings above for best practices", colors.yellow);

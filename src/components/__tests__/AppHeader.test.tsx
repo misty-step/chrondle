@@ -58,7 +58,7 @@ describe("AppHeader", () => {
 
   // Regression guard for the live-prod mode-hub dead-end: the wordmark's
   // gallery escape hatch must use a value-bearing `all` param. Bare `/?all` is
-  // stripped by Vercel edge query normalization, so the home redirect reads
+  // stripped by edge proxy query normalization, so the home redirect reads
   // `all` as undefined and bounces a returning visitor straight back to their
   // mode — the mode hub becomes unreachable from `/`. A value survives.
   it("wordmark escapes to the gallery with a value-bearing param (survives edge normalization)", () => {

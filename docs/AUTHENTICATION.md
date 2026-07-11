@@ -75,7 +75,7 @@ The script checks:
 
 #### 2. Production Deployment Testing
 
-- [ ] Deploy to production environment (Vercel/Netlify)
+- [ ] Deploy to the DigitalOcean App Platform production service
 - [ ] Test sign-in on production URL
 - [ ] Verify webhook events in Clerk Dashboard → Webhooks
 - [ ] Check user creation in Convex Dashboard → Data
@@ -155,22 +155,18 @@ npx convex run users:count
 ## Security Best Practices
 
 1. **Never commit real keys to version control**
-
    - Use `.env.local` for development
    - Use environment variables in production
 
 2. **Rotate keys regularly**
-
    - After any potential exposure
    - On a regular schedule (quarterly)
 
 3. **Use production keys in production**
-
    - Never use test keys (pk*test*, sk*test*) in production
    - Separate development and production Clerk applications
 
 4. **Enable security features**
-
    - Rate limiting in Clerk Dashboard
    - Domain allowlist for production
    - Webhook signature verification
@@ -182,24 +178,18 @@ npx convex run users:count
 
 ## Production Deployment Guide
 
-### Vercel Deployment
+### DigitalOcean App Platform Deployment
 
-1. Add environment variables in Vercel Dashboard:
-
+1. Add environment variables to the App Platform web service:
    - All Clerk keys (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, etc.)
    - Convex configuration
    - Google OAuth credentials
 
-2. Configure build command:
-
-   ```json
-   {
-     "buildCommand": "npx convex deploy --cmd 'npm run build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL"
-   }
-   ```
+2. Configure `bun install --frozen-lockfile && bun run build` as the build
+   command and `bun run start` as the run command. Convex deploys separately.
 
 3. Set up domain:
-   - Add custom domain in Vercel
+   - Add the custom domain in App Platform
    - Update Clerk application with production domain
    - Configure webhook URL with production domain
 
@@ -208,11 +198,10 @@ npx convex run users:count
 1. Run verification script against production:
 
    ```bash
-   pnpm verify:auth:prod
+   bun run verify:auth:prod
    ```
 
 2. Test authentication flow:
-
    - Sign up with new email
    - Sign in with existing account
    - Test Google OAuth

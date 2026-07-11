@@ -149,12 +149,7 @@ export function getEnvVar(key: string, fallback: string = ""): string {
  * @returns true if running in CI
  */
 export function isCI(): boolean {
-  return (
-    process.env.CI === "true" ||
-    process.env.GITHUB_ACTIONS === "true" ||
-    process.env.VERCEL === "1" ||
-    false
-  );
+  return process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
 }
 
 /**
