@@ -1,17 +1,23 @@
-name: Deploy to Production
+name: Deploy Convex Production
 
 on:
   push:
     branches:
       - main
       - master # Include both common default branch names
+    paths:
+      - "convex/**"
+      - "src/lib/duel/**"
+      - "src/lib/scoring.ts"
+      - "src/types/range.ts"
+  workflow_dispatch:
 
 env:
   NODE_VERSION: 20
 
 jobs:
   deploy:
-    name: Deploy to Convex and Vercel
+    name: Deploy and verify Convex
     runs-on: ubuntu-latest
 
     steps:
@@ -153,21 +159,10 @@ jobs:
 
       # Step 7: Guard against a repeat of INCIDENT-2026-01-17T.md (Stripe does
       # not follow redirects; a 3xx here silently drops every webhook event).
-      # Vercel's own deploy runs outside this workflow, so this checks the
-      # domain-level routing that's currently live rather than this push's
-      # build specifically.
+      # DigitalOcean App Platform deploys the web service separately. This
+      # checks the domain-level route currently serving production.
       - name: Verify Stripe webhook route does not redirect
         run: bun run verify:webhook
-
-      # Optional: Deploy to Vercel (if using Vercel for hosting)
-      # Uncomment the following if deploying to Vercel
-      # - name: Deploy to Vercel
-      #   uses: vercel/actions/deploy@v1
-      #   with:
-      #     vercel-token: ${{ secrets.VERCEL_TOKEN }}
-      #     vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-      #     vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-      #     production: true
 
   # Optional: Send notification on deployment status
   notify:

@@ -132,7 +132,7 @@ async function OrderArchivePageContent({
     hasConvexUser: !!convexUser,
     completedCount,
     totalCount,
-    environment: process.env.VERCEL_ENV || "local",
+    environment: process.env.NODE_ENV || "local",
     timestamp: new Date().toISOString(),
   };
 

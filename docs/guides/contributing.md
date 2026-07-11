@@ -88,7 +88,7 @@ This project uses **Convex** as its backend database. The generated files in `co
 #### Why are Convex files committed?
 
 - **Auto-generated**: Files in `convex/_generated/` are created from your schema
-- **Deployment-critical**: Vercel builds depend on these files being present
+- **Deployment-critical**: hosted builds depend on these files being present
 - **Type-checking**: Local and CI verification fail without them
 - **Guard rails**: The repo includes checks to prevent accidental deletion or drift
 
@@ -128,7 +128,7 @@ error TS2307: Cannot find module '../_generated/api'
 
 **Solution:** Ensure the Convex codegen step runs before type checking in CI
 
-**Problem:** Vercel deployment fails with Convex import errors
+**Problem:** App Platform deployment fails with Convex import errors
 
 **Solution:** Regenerate the files locally and confirm the build before deploying:
 
@@ -144,7 +144,7 @@ Unlike typical generated files, the files in `convex/_generated/` **MUST be comm
 
 This is a **deliberate architectural decision**, not an oversight:
 
-- **Vercel cannot generate**: The deployment environment lacks access to CONVEX_DEPLOYMENT
+- **Hosted builds cannot generate them**: the build environment intentionally lacks Convex deployment credentials
 - **Production depends on them**: All deployments will fail without these files
 - **Security benefit**: Keeps deployment credentials separate from build environment
 - **Historical context**: Previously deleted in commit 08ee80b, breaking all deployments
@@ -175,7 +175,7 @@ git commit -m "chore: update Convex generated files"
 
 ❌ **DO NOT** delete these files as "cleanup"
 ❌ **DO NOT** add `convex/_generated/` to .gitignore
-❌ **DO NOT** assume Vercel will generate them
+❌ **DO NOT** assume the hosting build will generate them
 
 ### Verification Commands
 
@@ -186,8 +186,8 @@ bun run verify:convex
 # Full deployment readiness check
 bun run deployment:check
 
-# Diagnose Vercel failures
-bun scripts/diagnose-vercel-failure.mjs
+# Prove the production hosting contract
+bun run doctor:hosting
 ```
 
 ### CI Protection

@@ -347,10 +347,7 @@ git commit -m "Remove .env from tracking"
 2. Check API availability:
    ```javascript
    console.log("Share API:", navigator.share ? "Available" : "Not available");
-   console.log(
-     "Clipboard API:",
-     navigator.clipboard ? "Available" : "Not available",
-   );
+   console.log("Clipboard API:", navigator.clipboard ? "Available" : "Not available");
    ```
 
 ### Problem: Puzzle not loading
@@ -370,16 +367,16 @@ git commit -m "Remove .env from tracking"
 
 ## Deployment Issues
 
-### Problem: Vercel build failing
+### Problem: App Platform build failing
 
 **Checklist:**
 
-1. Environment variables set in Vercel dashboard
-2. Build command: `pnpm build`
+1. Environment variables set on the App Platform web service
+2. Build command: `bun install --frozen-lockfile && bun run build`
 3. Output directory: `.next`
 4. Node version matches local:
    ```bash
-   node --version  # Should be 18.x
+   bun --version
    ```
 
 ### Problem: 404 errors in production

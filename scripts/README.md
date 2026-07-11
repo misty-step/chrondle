@@ -24,12 +24,12 @@ Automation utilities for Chrondle development, deployment, and maintenance.
 
 ## Deployment & Verification
 
-| Script                        | Purpose                      | Usage                                     |
-| ----------------------------- | ---------------------------- | ----------------------------------------- |
-| `verify-deployment.mjs`       | Post-deployment verification | `bun run deploy:verify`                   |
-| `check-deployment-ready.mjs`  | Pre-deployment checks        | `bun scripts/check-deployment-ready.mjs`  |
-| `diagnose-vercel-failure.mjs` | Debug Vercel failures        | `bun scripts/diagnose-vercel-failure.mjs` |
-| `verify-auth-production.mjs`  | Verify production auth       | `bun run verify:auth:prod`                |
+| Script                       | Purpose                      | Usage                                    |
+| ---------------------------- | ---------------------------- | ---------------------------------------- |
+| `verify-deployment.mjs`      | Post-deployment verification | `bun run deploy:verify`                  |
+| `check-deployment-ready.mjs` | Pre-deployment checks        | `bun scripts/check-deployment-ready.mjs` |
+| `verify-hosting-parity.mjs`  | Probe live hosting parity    | `bun run doctor:hosting`                 |
+| `verify-auth-production.mjs` | Verify production auth       | `bun run verify:auth:prod`               |
 
 ## Convex Database
 

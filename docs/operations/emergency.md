@@ -189,7 +189,6 @@ git log --oneline -10
 ### Site Loading Too Slowly
 
 1. **Check bundle sizes:**
-
    - Look at latest merge commit comments
    - Check performance-data branch
 
@@ -439,16 +438,15 @@ pnpm install -D @types/react @types/node
 
 ## 🌐 Deployment Issues
 
-### Vercel Deploy Failed
+### App Platform Deploy Failed
 
 1. **Check build logs:**
-
-   - Vercel dashboard → Project → Functions → Logs
+   - DigitalOcean console → App → Runtime Logs, or `doctl apps logs <app-id>`
 
 2. **Common fixes:**
    - Check environment variables are set
    - Ensure build command is correct
-   - Verify Node version matches local
+   - Verify the Bun/Node versions match the app build environment
 
 ### Bundle Size Check Failing
 
@@ -471,7 +469,6 @@ pnpm install -D @types/react @types/node
 ### Share Feature Not Working
 
 1. **Test conditions:**
-
    - HTTPS required for Web Share API
    - Mobile browser required
    - Check navigator.share availability
@@ -487,7 +484,6 @@ pnpm install -D @types/react @types/node
 ### Exposed Secrets
 
 1. **Immediate action:**
-
    - Rotate all affected keys
    - Check git history: `git log -p | grep -i api`
    - Use `git filter-branch` if needed
@@ -531,7 +527,6 @@ git stash pop
 ### When to Escalate
 
 1. **Escalate immediately if:**
-
    - Production is down for >15 minutes
    - User data is at risk
    - Security vulnerability discovered

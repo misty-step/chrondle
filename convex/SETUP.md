@@ -3,8 +3,8 @@
 ## Prerequisites
 
 - Convex account (create at https://dashboard.convex.dev)
-- Vercel CLI configured
-- Access to Vercel project settings
+- DigitalOcean App Platform access
+- Access to the Chrondle web service environment settings
 
 ## Setup Steps
 
@@ -24,23 +24,14 @@ From the Convex dashboard:
 2. Copy the `CONVEX_DEPLOY_KEY`
 3. Note the Convex URL (format: https://your-project.convex.cloud)
 
-### 3. Add to Vercel Environment Variables
+### 3. Add to App Platform Environment Variables
 
-Using Vercel CLI:
+Using the App Platform console or an app-spec update, set these on the web
+service:
 
-```bash
-# Add CONVEX_DEPLOY_KEY for all environments
-vercel env add CONVEX_DEPLOY_KEY
-
-# Add NEXT_PUBLIC_CONVEX_URL for all environments
-vercel env add NEXT_PUBLIC_CONVEX_URL
-```
-
-Or via Vercel Dashboard:
-
-1. Go to project settings
-2. Navigate to Environment Variables
-3. Add both variables for all environments (Development, Preview, Production)
+1. `CONVEX_DEPLOY_KEY` as an encrypted secret
+2. `NEXT_PUBLIC_CONVEX_URL` as a production build/runtime value
+3. Trigger a new web deployment so the public URL is embedded in the build
 
 ### 4. Local Development Setup
 
@@ -70,8 +61,8 @@ This will:
 Run these commands to verify setup:
 
 ```bash
-# Check environment variables
-vercel env ls | grep CONVEX
+# Check local environment variable names without printing their values
+env | awk -F= '/^CONVEX_DEPLOY_KEY=|^NEXT_PUBLIC_CONVEX_URL=/{print $1}'
 
 # Test Convex connection
 npx convex dev --once

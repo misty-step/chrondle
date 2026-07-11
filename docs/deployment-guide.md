@@ -69,7 +69,7 @@ cp .env.example .env.local
 bun run dev
 ```
 
-### 2. Production Deployment (Vercel)
+### 2. Production Deployment (DigitalOcean App Platform)
 
 #### A. Environment Setup
 
@@ -81,20 +81,21 @@ bun run dev
    - Set `NODE_ENV=production`
    - Point to production Convex deployment
 
-#### B. Vercel Configuration
+#### B. App Platform Configuration
 
-1. **Add environment variables in Vercel Dashboard:**
-   - Go to Project Settings → Environment Variables
+1. **Add environment variables to the web service:**
+   - Open the App Platform service's environment settings
    - Add all required variables from `.env.example`
-   - Ensure production branch uses production values
+   - Keep secret values encrypted and production-scoped
 
 2. **Configure build settings:**
-   - Vercel should auto-detect the Next.js settings for this repository
-   - `vercel.json` only declares the framework, so no custom build or install command is required
+   - Build: `bun install --frozen-lockfile && bun run build`
+   - Run: `bun run start`
+   - HTTP port: `3000`; health path: `/api/health`
 
 3. **Deploy:**
    ```bash
-   vercel --prod
+   doctl apps create-deployment <app-id>
    ```
 
 ### 3. Production Deployment (Self-Hosted)
@@ -306,7 +307,7 @@ health degrades, or signed-out Stripe requests reach provider actions.
 - [Convex Documentation](https://docs.convex.dev)
 - [Clerk Documentation](https://clerk.com/docs)
 - [Next.js Deployment](https://nextjs.org/docs/deployment)
-- [Vercel Documentation](https://vercel.com/docs)
+- [DigitalOcean App Platform Documentation](https://docs.digitalocean.com/products/app-platform/)
 
 ## Support
 
