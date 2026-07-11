@@ -13,6 +13,7 @@ const activeRoots = [
   "GEMINI.md",
   "README.md",
   "convex/SETUP.md",
+  "dagger/src",
   "docs",
   "e2e",
   "next.config.ts",

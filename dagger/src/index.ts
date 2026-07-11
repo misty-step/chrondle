@@ -134,6 +134,7 @@ export class Ci {
       .withExec(["sh", "-lc", SECRET_SCAN_SCRIPT])
       .withExec(["sh", "-lc", SECURITY_AUDIT_SCRIPT])
       .withExec(["bun", "run", "verify:convex"])
+      .withExec(["bun", "run", "verify:provider-retirement"])
       .withExec(["bunx", "tsc", "-p", "dagger/tsconfig.json", "--noEmit"]);
 
     if (check === "lint") {
@@ -152,6 +153,7 @@ export class Ci {
       .withExec(["sh", "-lc", SECRET_SCAN_SCRIPT])
       .withExec(["sh", "-lc", SECURITY_AUDIT_SCRIPT])
       .withExec(["bun", "run", "verify:convex"])
+      .withExec(["bun", "run", "verify:provider-retirement"])
       .directory(WORKDIR);
   }
 

@@ -51,7 +51,7 @@
     "verify:auth": "node scripts/verify-auth-production.mjs",
     "verify:auth:prod": "node scripts/verify-auth-production.mjs --production",
     "deployment:check": "node scripts/check-deployment-ready.mjs",
-    "pre-push": "bun run type-check && bun run verify:convex",
+    "pre-push": "bun run type-check && bun run verify:convex && bun run verify:provider-retirement",
     "quality": "node scripts/quality-report.mjs",
     "audit:prod": "bun audit --production --audit-level moderate",
     "dagger:local": "./scripts/dagger-local.sh",

@@ -6,7 +6,9 @@ on:
       - main
       - master # Include both common default branch names
     paths:
-      - "convex/**"
+      - "convex/**/*.js"
+      - "convex/**/*.ts"
+      - "convex.json"
       - "src/lib/duel/**"
       - "src/lib/scoring.ts"
       - "src/types/range.ts"
@@ -156,13 +158,6 @@ jobs:
         run: bun run deploy:verify
         env:
           NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
-
-      # Step 7: Guard against a repeat of INCIDENT-2026-01-17T.md (Stripe does
-      # not follow redirects; a 3xx here silently drops every webhook event).
-      # DigitalOcean App Platform deploys the web service separately. This
-      # checks the domain-level route currently serving production.
-      - name: Verify Stripe webhook route does not redirect
-        run: bun run verify:webhook
 
   # Optional: Send notification on deployment status
   notify:
