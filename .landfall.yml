@@ -1,0 +1,17 @@
+product:
+  name: Chrondle
+  description: Daily history game where players guess the year of historical events.
+audience: end-user
+voice: Clear, lightly playful, and focused on puzzle and gameplay changes.
+changelog:
+  source: auto
+artifacts:
+  markdown: docs/releases/{version}.md
+  plaintext: docs/releases/{version}.txt
+  html: docs/releases/{version}.html
+  json: docs/releases/releases.json
+  rss: docs/releases/feed.xml
+release:
+  profile: full
+model:
+  policy: balanced
