@@ -93,9 +93,9 @@ bun run build:do
 `/opt/public-apps/chrondle/releases/<git-commit>`. Atomically repoint
 `/opt/public-apps/chrondle/current`, then restart `chrondle.service`.
 
-The systemd service runs as the unprivileged `chrondle` user on
-`127.0.0.1:3007`. Caddy is the only public ingress for `chrondle.app` and
-`www.chrondle.app`.
+The systemd service runs as the unprivileged `chrondle` user on port `3007`.
+The host's default-deny firewall blocks direct public access; Caddy is the only
+allowed public ingress for `chrondle.app` and `www.chrondle.app`.
 
 #### C. Verify and Roll Back
 

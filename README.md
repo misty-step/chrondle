@@ -208,9 +208,9 @@ Chrondle requires several environment variables for production deployment. Copy 
 
 4. **Configure the host:** keep production variables from `.env.example` in
    root-owned mode-`0600` `/etc/public-apps/chrondle.env`. The
-   `chrondle.service` systemd unit runs the active release on loopback port
-   `3007`; Caddy is the only public ingress for `chrondle.app` and
-   `www.chrondle.app`.
+   `chrondle.service` systemd unit runs the active release on port `3007`.
+   The host's default-deny firewall blocks direct public access; Caddy is the
+   only allowed public ingress for `chrondle.app` and `www.chrondle.app`.
 
 5. **Activate and verify:** atomically repoint
    `/opt/public-apps/chrondle/current`, restart `chrondle.service`, then run
