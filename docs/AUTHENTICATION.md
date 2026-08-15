@@ -75,7 +75,7 @@ The script checks:
 
 #### 2. Production Deployment Testing
 
-- [ ] Deploy to the DigitalOcean App Platform production service
+- [ ] Deploy the reviewed standalone release to the production host
 - [ ] Test sign-in on production URL
 - [ ] Verify webhook events in Clerk Dashboard → Webhooks
 - [ ] Check user creation in Convex Dashboard → Data
@@ -178,20 +178,14 @@ npx convex run users:count
 
 ## Production Deployment Guide
 
-### DigitalOcean App Platform Deployment
+### Native Web Host Deployment
 
-1. Add environment variables to the App Platform web service:
-   - All Clerk keys (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, etc.)
-   - Convex configuration
-   - Google OAuth credentials
-
-2. Configure `bun install --frozen-lockfile && bun run build` as the build
-   command and `bun run start` as the run command. Convex deploys separately.
-
-3. Set up domain:
-   - Add the custom domain in App Platform
-   - Update Clerk application with production domain
-   - Configure webhook URL with production domain
+1. Add all Clerk keys, Convex configuration, and OAuth credentials to
+   root-owned mode-`0600` `/etc/public-apps/chrondle.env`.
+2. Build and install a standalone release, then restart `chrondle.service`.
+   Convex deploys separately.
+3. Keep the Clerk application and webhook endpoint bound to
+   `https://chrondle.app`.
 
 ### Post-Deployment Verification
 

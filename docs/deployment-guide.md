@@ -69,47 +69,44 @@ cp .env.example .env.local
 bun run dev
 ```
 
-### 2. Production Deployment (DigitalOcean App Platform)
+### 2. Production Web Deployment (Native Host)
 
 #### A. Environment Setup
 
-1. **Use `.env.example` as the production checklist**
+1. Use `.env.example` as the production checklist.
+2. Store production values in root-owned mode-`0600`
+   `/etc/public-apps/chrondle.env`.
+3. Use `pk_live_` and `sk_live_` keys, set `NODE_ENV=production`, and point to
+   the production Convex deployment.
 
-2. **Update with production values:**
-   - Replace placeholder keys with actual production keys
-   - Use `pk_live_` and `sk_live_` for Clerk (not test keys)
-   - Set `NODE_ENV=production`
-   - Point to production Convex deployment
+#### B. Build and Install
 
-#### B. App Platform Configuration
-
-1. **Add environment variables to the web service:**
-   - Open the App Platform service's environment settings
-   - Add all required variables from `.env.example`
-   - Keep secret values encrypted and production-scoped
-
-2. **Configure build settings:**
-   - Build: `bun install --frozen-lockfile && bun run build`
-   - Run: `bun run start`
-   - HTTP port: `3000`; health path: `/api/health`
-
-3. **Deploy:**
-   ```bash
-   doctl apps create-deployment <app-id>
-   ```
-
-### 3. Production Deployment (Self-Hosted)
+From a reviewed `master` commit:
 
 ```bash
-# Build for production
-bun run build
-
-# Deploy Convex functions
-bunx convex deploy --prod
-
-# Start production server
-NODE_ENV=production bun run start
+bun install --frozen-lockfile
+bun run build:do
 ```
+
+`next.config.ts` emits a standalone runtime. Package `.next/standalone`,
+`.next/static`, and `public` as one immutable release under
+`/opt/public-apps/chrondle/releases/<git-commit>`. Atomically repoint
+`/opt/public-apps/chrondle/current`, then restart `chrondle.service`.
+
+The systemd service runs as the unprivileged `chrondle` user on
+`127.0.0.1:3007`. Caddy is the only public ingress for `chrondle.app` and
+`www.chrondle.app`.
+
+#### C. Verify and Roll Back
+
+```bash
+curl -fsS https://chrondle.app/api/health
+bun run deploy:verify
+```
+
+Rollback repoints `/opt/public-apps/chrondle/current` to an already installed
+release, restarts `chrondle.service`, and repeats both checks. Convex deploys
+separately; do not roll it back as part of a web-only release.
 
 ## Environment Configuration Patterns
 
@@ -307,7 +304,6 @@ health degrades, or signed-out Stripe requests reach provider actions.
 - [Convex Documentation](https://docs.convex.dev)
 - [Clerk Documentation](https://clerk.com/docs)
 - [Next.js Deployment](https://nextjs.org/docs/deployment)
-- [DigitalOcean App Platform Documentation](https://docs.digitalocean.com/products/app-platform/)
 
 ## Support
 

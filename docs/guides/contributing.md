@@ -128,12 +128,13 @@ error TS2307: Cannot find module '../_generated/api'
 
 **Solution:** Ensure the Convex codegen step runs before type checking in CI
 
-**Problem:** App Platform deployment fails with Convex import errors
+**Problem:** Native host build fails with Convex import errors
 
-**Solution:** Regenerate the files locally and confirm the build before deploying:
+**Solution:** Regenerate the files locally and confirm the standalone build
+before installing a release:
 
 ```bash
-bunx convex codegen && bun run build
+bunx convex codegen && bun run build:do
 ```
 
 ## ⚠️ Critical: Convex Generated Files

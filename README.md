@@ -184,36 +184,37 @@ Chrondle requires several environment variables for production deployment. Copy 
 - `OPENROUTER_API_KEY` - For AI-powered historical context features
 - Stripe keys - For subscription/archive-access features
 
-### Deploying to DigitalOcean App Platform
+### Deploying the web service
 
-1. **Fork or push this repository to GitHub**
+1. **Merge a reviewed commit to `master`.** A merge does not mutate
+   production.
 
-2. **Set up Convex:**
+2. **Deploy Convex separately when `convex/` changed:**
 
    ```bash
    bunx convex deploy --prod
    ```
 
-   This will create a production deployment and provide your `NEXT_PUBLIC_CONVEX_URL`.
+3. **Build the native host release:**
 
-3. **Create the App Platform service:**
-   - Connect the `misty-step/chrondle` repository and `master` branch
-   - Set the build command to `bun install --frozen-lockfile && bun run build`
-   - Set the run command to `bun run start` and HTTP port to `3000`
-   - Configure `/api/health` as the health-check path
+   ```bash
+   bun install --frozen-lockfile
+   bun run build:do
+   ```
 
-4. **Configure environment variables:**
-   - Open the web service's environment settings
-   - Add all required variables from `.env.example`:
-     - `NEXT_PUBLIC_CONVEX_URL`
-     - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-     - `CLERK_SECRET_KEY`
-     - `CONVEX_DEPLOY_KEY`
-     - `CLERK_WEBHOOK_SECRET` (if using Clerk webhooks)
+   `next.config.ts` emits the standalone Next.js runtime. Install the
+   standalone tree, `.next/static`, and `public` under
+   `/opt/public-apps/chrondle/releases/<git-commit>`.
 
-5. **Deploy:**
-   - App Platform builds from `master`; an operator can also create an exact
-     deployment with `doctl apps create-deployment <app-id>`.
+4. **Configure the host:** keep production variables from `.env.example` in
+   root-owned mode-`0600` `/etc/public-apps/chrondle.env`. The
+   `chrondle.service` systemd unit runs the active release on loopback port
+   `3007`; Caddy is the only public ingress for `chrondle.app` and
+   `www.chrondle.app`.
+
+5. **Activate and verify:** atomically repoint
+   `/opt/public-apps/chrondle/current`, restart `chrondle.service`, then run
+   `bun run deploy:verify` and verify `https://chrondle.app/api/health`.
 
 ### Post-Deployment
 
@@ -230,10 +231,11 @@ Chrondle requires several environment variables for production deployment. Copy 
 ### Deployment Checklist
 
 - [ ] Convex project created and deployed
-- [ ] All environment variables added to the App Platform web service
+- [ ] All environment variables installed in `/etc/public-apps/chrondle.env`
 - [ ] Clerk authentication configured (optional)
-- [ ] Webhook endpoints updated with production URLs
-- [ ] Build succeeds without errors
+- [ ] Webhook endpoints use the production URL
+- [ ] Standalone build succeeds without errors
+- [ ] `chrondle.service` and `/api/health` are healthy
 - [ ] Daily puzzle loads correctly
 - [ ] Archive page displays puzzles
 - [ ] User authentication works (if enabled)

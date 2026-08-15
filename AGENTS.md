@@ -170,8 +170,8 @@ bun run dev      # Terminal 2
 
 ## Deployed Surfaces
 
-Verifying the live app (DigitalOcean App Platform + Convex prod) is a separate concern from the
-code gate above. Three discoverable scripts cover it:
+Verifying the live app (native public host + Convex prod) is a separate concern
+from the code gate above. Three discoverable scripts cover it:
 
 - `bun run deployment:check` (`scripts/check-deployment-ready.mjs`) — **before
   deploying.** Pre-deploy readiness: generated Convex files present, clean git
@@ -203,9 +203,10 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 
 ### 3. Vigilance in the Cloud
 
-DigitalOcean App Platform deploys the web service from `master`; Convex deploys
-through its path-scoped workflow. Be certain before either push. Local
-`bun test` and `bun type-check` are the fires through which all code must pass.
+The isolated public application host runs an explicitly released standalone
+web build from `master`; Convex deploys through its path-scoped workflow. Be
+certain before either release. Local `bun test` and `bun type-check` are the
+fires through which all code must pass.
 
 ## TODO-Debt Convention
 
@@ -315,7 +316,7 @@ curl -s -o /dev/null -w "%{http_code}" -I -X POST "https://www.chrondle.app/api/
 ```bash
 # Resend event and watch logs
 stripe events resend evt_xxx --webhook-endpoint we_xxx
-doctl apps logs 9c935d41-f841-4c96-a927-a598afa5a8a0 --type run --follow
+ssh root@public-apps.tail5f5eb4.ts.net 'journalctl -u chrondle.service -f'
 
 # Verify delivery metric decreased
 stripe events retrieve evt_xxx | jq '.pending_webhooks'

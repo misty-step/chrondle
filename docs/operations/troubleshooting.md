@@ -367,16 +367,17 @@ git commit -m "Remove .env from tracking"
 
 ## Deployment Issues
 
-### Problem: App Platform build failing
+### Problem: Native host build or start failing
 
 **Checklist:**
 
-1. Environment variables set on the App Platform web service
-2. Build command: `bun install --frozen-lockfile && bun run build`
-3. Output directory: `.next`
-4. Node version matches local:
+1. Environment variables are installed in `/etc/public-apps/chrondle.env`
+2. Build command: `bun install --frozen-lockfile && bun run build:do`
+3. Standalone output includes `.next/standalone`, `.next/static`, and `public`
+4. Host service and logs:
    ```bash
-   bun --version
+   ssh root@public-apps.tail5f5eb4.ts.net \
+     'systemctl status chrondle.service --no-pager; journalctl -u chrondle.service -n 100 --no-pager'
    ```
 
 ### Problem: 404 errors in production

@@ -7,7 +7,7 @@
 - **Stack:** Next.js 15, React 19, Tailwind CSS v4, TypeScript.
 - **Backend:** Convex (Real-time database, cron jobs, backend functions).
 - **Authentication:** Clerk (Magic links, Google sign-in).
-- **Deployment:** DigitalOcean App Platform (frontend), Convex (backend).
+- **Deployment:** Native standalone Next.js service on the isolated DigitalOcean public application host (frontend), Convex (backend).
 
 ## Development Workflow
 

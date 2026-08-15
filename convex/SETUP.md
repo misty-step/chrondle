@@ -3,8 +3,8 @@
 ## Prerequisites
 
 - Convex account (create at https://dashboard.convex.dev)
-- DigitalOcean App Platform access
-- Access to the Chrondle web service environment settings
+- Tailscale SSH access to the public application host
+- Access to root-owned `/etc/public-apps/chrondle.env`
 
 ## Setup Steps
 
@@ -24,14 +24,14 @@ From the Convex dashboard:
 2. Copy the `CONVEX_DEPLOY_KEY`
 3. Note the Convex URL (format: https://your-project.convex.cloud)
 
-### 3. Add to App Platform Environment Variables
+### 3. Add to the Web Host Environment
 
-Using the App Platform console or an app-spec update, set these on the web
-service:
+Set these in root-owned mode-`0600` `/etc/public-apps/chrondle.env`:
 
-1. `CONVEX_DEPLOY_KEY` as an encrypted secret
-2. `NEXT_PUBLIC_CONVEX_URL` as a production build/runtime value
-3. Trigger a new web deployment so the public URL is embedded in the build
+1. `CONVEX_DEPLOY_KEY`
+2. `NEXT_PUBLIC_CONVEX_URL`
+3. Build a new standalone web release so the public URL is embedded, install
+   it, and restart `chrondle.service`
 
 ### 4. Local Development Setup
 
