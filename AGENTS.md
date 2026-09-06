@@ -211,7 +211,8 @@ fires through which all code must pass.
 ## TODO-Debt Convention
 
 A bare `// TODO: fix this later` is unenforceable and unowned. Every TODO left
-in `src/`, `convex/`, or `scripts/` must carry an owner and a tracker link:
+in `src/`, `convex/`, or `scripts/` must carry an owner and enough context to
+re-evaluate it:
 
 ```typescript
 // TODO(phrazzld): re-enable strict range validation once chrondle-eng-XXX lands
@@ -220,11 +221,11 @@ in `src/`, `convex/`, or `scripts/` must carry an owner and a tracker link:
 
 - **Owner:** a GitHub handle or agent identity — someone who can be asked
   "is this still true?"
-- **Tracker link:** a GitHub issue or Powder card URL. If neither exists yet,
-  file one before writing the TODO — a debt with no ticket is a debt no one
-  will ever pay down.
-- Free-form `// TODO` with no owner/link is a lint-review flag: reviewers
-  should ask the author to attach one before merge (not a CI gate — TODOs are
+- **Context:** explain the unresolved condition or link existing source,
+  a pull request, or a project note. Work proceeds ad hoc from current
+  operator requests; creating a ticket is not required.
+- Free-form `// TODO` with no owner/context is a lint-review flag: reviewers
+  should ask the author to supply it before merge (not a CI gate — TODOs are
   legitimate in WIP branches; the convention applies at merge time).
 - Prefer fixing the thing over leaving a TODO. A TODO is for debt that is
   genuinely out of scope for the current change, not a way to skip writing
