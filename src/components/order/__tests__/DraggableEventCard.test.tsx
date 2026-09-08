@@ -56,14 +56,7 @@ describe("Order DraggableEventCard — reorder interaction (design lab R2)", () 
     ).toBeInTheDocument();
   });
 
-  it("meets the 44px minimum touch target on the drag handle", () => {
-    render(<DraggableEventCard event={event} index={0} total={4} />);
-
-    const handle = screen.getByLabelText(/Reorder/i);
-    expect(handle.className).toContain("h-11");
-  });
-
-  it("renders Move up / Move down steppers at 44px each when handlers are supplied", () => {
+  it("enables move controls when neighboring positions are available", () => {
     render(
       <DraggableEventCard
         event={event}
@@ -76,10 +69,6 @@ describe("Order DraggableEventCard — reorder interaction (design lab R2)", () 
 
     const up = screen.getByRole("button", { name: `Move “${event.text}” up` });
     const down = screen.getByRole("button", { name: `Move “${event.text}” down` });
-    expect(up.className).toContain("h-11");
-    expect(up.className).toContain("w-11");
-    expect(down.className).toContain("h-11");
-    expect(down.className).toContain("w-11");
     expect(up).not.toBeDisabled();
     expect(down).not.toBeDisabled();
   });

@@ -5,18 +5,16 @@
 [![Functions](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-functions.json)](https://github.com/misty-step/chrondle/actions)
 [![Statements](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-statements.json)](https://github.com/misty-step/chrondle/actions)
 
-Chrondle is a free daily history puzzle: read the clues, drag a range onto the
-timeline, and see if it contains the real year a historical event happened.
+Chrondle is a free daily history puzzle: read the clues, enter a year range,
+and see whether it contains the year a historical event happened.
 Play today's puzzle at **[chrondle.app](https://chrondle.app)**.
-
-![Chrondle gameplay: dragging a year range to contain a historical event](docs/launch/product-hunt/assets/gameplay-preview.gif)
 
 ## How to Play
 
-1. **Dial in a Range:** Drag or type a historical range (e.g., 1910–1930) that you believe contains the event.
-2. **Check Containment:** Submit the range to learn whether the true year sits inside; containment is required to win.
-3. **Reveal up to Six Hints:** Each miss unlocks another clue (era buckets through precise deltas). Every hint slightly lowers the max score.
-4. **Chase 100 Points:** Narrower ranges earn more of the 100-point cap. Win by containing the year before you run out of attempts — or learn from the revealed answer and hint trail.
+1. **Read the Clues:** Start with one historical event. Take additional hints before committing; each hint lowers the maximum score.
+2. **Enter Your Range:** Type two years and choose BC or AD for each. Use the same year for an exact guess. The range can be up to 250 years wide.
+3. **Check Your Potential Score:** Width and possible points update as you type. Narrower ranges earn more points if they contain the answer.
+4. **Lock In Your Range:** You get one submission. See the answer, your score breakdown, and the historical context, then share your result or play another mode.
 
 ## Features
 
@@ -24,7 +22,8 @@ Play today's puzzle at **[chrondle.app](https://chrondle.app)**.
 - **Duel Mode:** two historical events, tap the one that happened first, and see how long your streak lasts. Free for everyone.
 - **Order Mode:** arrange a set of events from earliest to latest, with limited misses. Free for everyone.
 - **Archive:** browse and replay past puzzles. Recent puzzles are free; deeper archive access is part of the paid subscription (see below).
-- **Progressive Hints:** each incorrect guess reveals another clue.
+- **Progressive Hints:** choose how many of the six clues to read before locking in your range.
+- **Optional Sound:** off by default, with a persistent header toggle. Short synthesized cues confirm deliberate actions; completed games do not replay a celebration on reload.
 - **Local-Day Puzzles:** "today" is your local calendar day — the daily puzzle rolls over at YOUR midnight, and every surface (homepage, game pages, archive, countdown, streaks) agrees on which puzzle is today's.
 - **Daily Notifications:** optional reminders to play each day's puzzle, with a customizable time. See [Notifications](docs/guides/notifications.md) for setup and troubleshooting.
 - **Accounts:** play anonymously with local-storage progress, or sign in (email magic link or Google) for cross-device sync and permanent history.

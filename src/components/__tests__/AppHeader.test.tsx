@@ -63,9 +63,8 @@ describe("AppHeader", () => {
   // mode — the mode hub becomes unreachable from `/`. A value survives.
   it("wordmark escapes to the gallery with a value-bearing param (survives edge normalization)", () => {
     render(<AppHeader />);
-    const wordmark = screen.getByRole("heading", { level: 1 }).closest("a");
-    expect(wordmark).not.toBeNull();
-    const href = wordmark?.getAttribute("href") ?? "";
+    const wordmark = screen.getByRole("link", { name: /chrondle/i });
+    const href = wordmark.getAttribute("href") ?? "";
     expect(href).toMatch(/^\/\?all=.+/); // e.g. /?all=1 — never bare /?all
   });
 });

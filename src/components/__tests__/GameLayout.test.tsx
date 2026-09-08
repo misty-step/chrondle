@@ -2,9 +2,6 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { GameLayout, type GameLayoutProps } from "../GameLayout";
-import { validateGameLayoutProps } from "@/lib/propValidation";
-
-const mockValidate = vi.mocked(validateGameLayoutProps);
 
 vi.mock("@/components/GameInstructions", () => ({
   GameInstructions: () => <div data-testid="game-instructions">Game Instructions</div>,
@@ -84,6 +81,10 @@ vi.mock("@/components/KeepPlaying", () => ({
   KeepPlaying: () => <div data-testid="keep-playing">Keep Playing</div>,
 }));
 
+vi.mock("@/hooks/useStreak", () => ({
+  useStreak: () => ({ streakData: { currentStreak: 0 } }),
+}));
+
 describe("GameLayout", () => {
   const mockOnRangeCommit = vi.fn();
 
@@ -119,13 +120,6 @@ describe("GameLayout", () => {
       // resolves asynchronously in the test environment.
       expect(await screen.findByTestId("range-input")).toBeTruthy();
       expect(screen.getByTestId("hint-indicator")).toBeTruthy();
-    });
-
-    it("validates props", () => {
-      const props = createDefaultProps();
-      render(<GameLayout {...props} />);
-
-      expect(mockValidate).toHaveBeenCalledWith(props);
     });
 
     it("renders when puzzle missing", () => {

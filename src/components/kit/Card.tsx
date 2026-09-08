@@ -7,7 +7,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "text-card-foreground border-border bg-card flex flex-col gap-6 rounded border p-6",
+        "text-card-foreground border-border bg-card flex min-w-0 flex-col gap-6 rounded-xl border p-4",
         className,
       )}
       {...props}
@@ -30,7 +30,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-title"
       className={cn(
-        "text-body-primary font-display text-2xl leading-none font-semibold tracking-tight",
+        "text-body-primary font-display text-2xl leading-tight font-semibold tracking-tight",
         className,
       )}
       {...props}
@@ -58,8 +58,6 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-// Keeping these strictly for backward compatibility if used elsewhere,
-// but they should be phased out in favor of clean composition
 function CardAction({ className, ...props }: React.ComponentProps<"div">) {
   return <div className={cn("ml-auto", className)} {...props} />;
 }

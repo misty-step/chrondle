@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,15 +12,7 @@ interface HintIndicatorProps {
   className?: string;
 }
 
-/**
- * Archival hint progress indicator with stamp marks and document unlock button.
- *
- * Shows filled stamps for revealed hints and empty frames for remaining hints.
- * Only displays the "Take Hint" button when more hints are available.
- *
- * Note: The first event is the puzzle itself (not a hint), so we show
- * totalHints - 1 marks (5 marks for 6 total events).
- */
+/** Additional clues taken and the next-clue action. */
 export function HintIndicator({
   hintsRevealed,
   totalHints,
@@ -26,16 +20,14 @@ export function HintIndicator({
   disabled = false,
   className,
 }: HintIndicatorProps) {
-  // First event is always shown and doesn't count as a hint.
-  // Clamp to avoid negative counts if totalHints is misconfigured.
   const numberOfHintMarks = Math.max(0, totalHints - 1);
   const hasMoreHints = hintsRevealed < numberOfHintMarks;
 
   return (
-    <div className={cn("flex items-center justify-end gap-4", className)}>
-      {/* Stamp indicators - 5 marks for 5 additional hints (not counting the puzzle event) */}
+    <div className={cn("flex flex-wrap items-center justify-end gap-4", className)}>
+      {/* Progress marks count only the additional clues. */}
       <div
-        className="flex gap-2"
+        className="flex items-center gap-1.5"
         role="img"
         aria-label={`${hintsRevealed} of ${numberOfHintMarks} hints revealed`}
       >
@@ -43,26 +35,24 @@ export function HintIndicator({
           <div
             key={i}
             className={cn(
-              "h-3.5 w-3.5 rounded-[1px] border-2 transition-all duration-300",
-              i < hintsRevealed
-                ? "border-feedback-success bg-feedback-success shadow-sm"
-                : "border-muted-foreground/40 bg-transparent",
+              "h-2.5 w-2.5 rounded-full",
+              i < hintsRevealed ? "bg-feedback-success" : "border-muted-foreground/50 border",
             )}
             aria-hidden="true"
           />
         ))}
       </div>
 
-      {/* Archival unlock button - only show if more hints available */}
       {hasMoreHints && (
         <Button
           variant="outline"
           size="default"
           onClick={onRevealHint}
           disabled={disabled}
-          className="hover:border-feedback-success hover:text-feedback-success h-10 rounded border-2 px-4 text-sm font-semibold transition-all hover:translate-y-[-2px]"
+          soundCue="chime"
+          className="hover:border-feedback-success hover:text-feedback-success h-11 px-4 text-sm"
         >
-          Take Hint
+          Take hint
         </Button>
       )}
     </div>
