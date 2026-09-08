@@ -2,6 +2,21 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## Unreleased
+
+### Changed
+
+- Refine light and dark surfaces, mobile navigation, clue hierarchy, and result summaries.
+- Replace Classic's drag-to-draw timeline with independent year fields, explicit BC/AD controls, and live width and score feedback.
+- Add opt-in interaction sounds and respect reduced-motion preferences.
+
+### Fixed
+
+- Reject invalid year drafts rather than submitting a previously valid range.
+- Keep keyboard focus with era selection and move it to results after submission.
+- Preserve server-rendered markup when restoring an anonymous streak.
+- Update production dependencies, including patched Next.js, DOMPurify, and Sharp releases.
+
 ## [1.4.1](https://github.com/misty-step/chrondle/compare/v1.4.0...v1.4.1) (2026-06-16)
 
 ### Bug Fixes

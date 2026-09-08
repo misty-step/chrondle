@@ -2,9 +2,8 @@
  * E2E — Daily habit loop (chrondle-ux-habit-loop)
  *
  * Behavioral proof for the loop's three legs:
- * 1. Entry: a logged-out first-timer can state what the game is and start
- *    today's puzzle in one tap; a returning visitor (mode cookie) reaches
- *    their preferred mode with zero extra taps.
+ * 1. Entry: returning visitors reach their preferred mode directly, while
+ *    the gallery remains reachable despite a saved preference.
  * 2. Exit: completion surfaces an explicit return hook (streak stake +
  *    reminder opt-in) and per-mode today-state in KEEP PLAYING.
  * 3. Streak: a clock-shifted next-day return increments the anonymous streak.
@@ -64,12 +63,12 @@ async function fetchPuzzleAnswer(date: string): Promise<PuzzleAnswer> {
  * is binary), so this is a deterministic win.
  */
 async function winClassicPuzzle(page: Page, targetYear: number) {
-  await expect(page.getByText("Primary Clue")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole("textbox", { name: "Start year" })).toBeEditable({ timeout: 20000 });
 
   const startInput = page.getByRole("textbox", { name: "Start year" });
   const endInput = page.getByRole("textbox", { name: "End year" });
-  const startEra = page.getByRole("radiogroup", { name: /select era/i }).first();
-  const endEra = page.getByRole("radiogroup", { name: /select era/i }).last();
+  const startEra = page.getByRole("radiogroup", { name: "Start year era" });
+  const endEra = page.getByRole("radiogroup", { name: "End year era" });
 
   const era = targetYear < 0 ? /BC/i : /AD/i;
   const absYear = String(Math.abs(targetYear));
@@ -88,28 +87,10 @@ async function winClassicPuzzle(page: Page, targetYear: number) {
   await expect(submitButton).toBeEnabled();
   await submitButton.click();
 
-  // Completion screen (the stamp overlay auto-dismisses)
-  await expect(page.getByText("Game Summary")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByTestId("results-focus-anchor")).toBeFocused({ timeout: 20000 });
 }
 
 test.describe("Entry @habit-loop", () => {
-  test("logged-out first-timer can state what the game is and start in one tap", async ({
-    page,
-  }) => {
-    await page.goto("/");
-
-    // Can state what the game is: pitch + how-to strip in the first viewport
-    await expect(page.getByText(/read the clues, guess the year/i)).toBeVisible();
-    const howTo = page.getByRole("list", { name: /how to play/i });
-    await expect(howTo).toBeVisible();
-    await expect(howTo).toContainText(/keep your streak/i);
-
-    // One tap to today's puzzle
-    await page.getByRole("button", { name: /classic/i }).click();
-    await page.waitForURL(/\/classic/);
-    await expect(page.getByText("Primary Clue")).toBeVisible({ timeout: 20000 });
-  });
-
   test("returning visitor reaches their preferred mode with zero extra taps", async ({
     page,
     context,

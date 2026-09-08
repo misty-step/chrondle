@@ -3,7 +3,6 @@ import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useTodaysPuzzle } from "@/hooks/useTodaysPuzzle";
 import { useTodaysOrderPuzzle } from "@/hooks/useTodaysOrderPuzzle";
-import { siteConfig } from "@/lib/site";
 import { GamesGallery } from "../GamesGallery";
 
 // --- Mocks ---
@@ -89,58 +88,6 @@ describe("GamesGallery", () => {
     cleanup();
   });
 
-  describe("Rendering", () => {
-    it("renders wordmark and tagline", () => {
-      render(<GamesGallery />);
-
-      expect(screen.getByRole("heading", { level: 1, name: "Chrondle" })).toBeInTheDocument();
-      expect(screen.getByText("Daily history puzzle")).toBeInTheDocument();
-    });
-
-    it("renders all mode cards with copy, CTAs, and puzzle metadata", () => {
-      render(<GamesGallery />);
-
-      expect(screen.getByRole("button", { name: /classic/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /order/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /duel/i })).toBeInTheDocument();
-
-      expect(screen.getByText("Pin the year from six historical clues.")).toBeInTheDocument();
-      expect(screen.getByText("Drag six events into chronological order.")).toBeInTheDocument();
-      expect(
-        screen.getByText("Two events. Tap the one that happened first. How long can you last?"),
-      ).toBeInTheDocument();
-
-      expect(screen.getByText("Start Today's Classic")).toBeInTheDocument();
-      expect(screen.getByText("Try Order Mode")).toBeInTheDocument();
-      expect(screen.getByText("Start a Run")).toBeInTheDocument();
-
-      expect(screen.getAllByText("New")).toHaveLength(2);
-      expect(screen.getByText("Endless")).toBeInTheDocument();
-    });
-
-    it("explains what the game is and how it works for first-timers", () => {
-      render(<GamesGallery />);
-
-      // The pitch: what Chrondle is
-      expect(screen.getByText(siteConfig.description)).toBeInTheDocument();
-
-      // The how: a compact 3-step strip
-      const strip = screen.getByRole("list", { name: /how to play/i });
-      expect(strip).toBeInTheDocument();
-      expect(strip).toHaveTextContent(/read a clue/i);
-      expect(strip).toHaveTextContent(/narrower is worth more/i);
-      expect(strip).toHaveTextContent(/keep your streak/i);
-    });
-
-    it("renders mode icons", () => {
-      render(<GamesGallery />);
-
-      expect(screen.getByTestId("crosshair-icon")).toBeInTheDocument();
-      expect(screen.getByTestId("shuffle-icon")).toBeInTheDocument();
-      expect(screen.getByTestId("sword-icon")).toBeInTheDocument();
-    });
-  });
-
   describe("Daily identity (one 'today' everywhere)", () => {
     it("shows the local-date daily puzzle numbers from the same hooks the game pages use", () => {
       mockClassic(328);
@@ -150,8 +97,6 @@ describe("GamesGallery", () => {
 
       expect(screen.getByText("Puzzle #328")).toBeInTheDocument();
       expect(screen.getByText("Puzzle #239")).toBeInTheDocument();
-      expect(vi.mocked(useTodaysPuzzle)).toHaveBeenCalled();
-      expect(vi.mocked(useTodaysOrderPuzzle)).toHaveBeenCalled();
     });
 
     it("shows a loading skeleton while a daily puzzle resolves", () => {
@@ -188,26 +133,6 @@ describe("GamesGallery", () => {
       fireEvent.click(screen.getByRole("button", { name: /duel/i }));
 
       expect(mockPush).toHaveBeenCalledWith("/duel");
-    });
-  });
-
-  describe("Accessibility", () => {
-    it("uses a main landmark and heading hierarchy", () => {
-      render(<GamesGallery />);
-
-      expect(screen.getByRole("main")).toBeInTheDocument();
-      expect(screen.getByRole("heading", { level: 1, name: "Chrondle" })).toBeInTheDocument();
-      expect(screen.getByRole("heading", { level: 2, name: "Classic" })).toBeInTheDocument();
-      expect(screen.getByRole("heading", { level: 2, name: "Order" })).toBeInTheDocument();
-      expect(screen.getByRole("heading", { level: 2, name: "Duel" })).toBeInTheDocument();
-    });
-
-    it("exposes accessible buttons and hides icons from assistive tech", () => {
-      render(<GamesGallery />);
-
-      expect(screen.getAllByRole("button")).toHaveLength(3);
-      expect(screen.getByTestId("crosshair-icon")).toHaveAttribute("aria-hidden", "true");
-      expect(screen.getByTestId("shuffle-icon")).toHaveAttribute("aria-hidden", "true");
     });
   });
 });

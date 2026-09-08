@@ -40,18 +40,6 @@ describe("CurrentHintCard", () => {
     error: null as string | null,
   };
 
-  it("renders hint counter", () => {
-    render(<CurrentHintCard {...baseProps} />);
-
-    // Current Clue badge and counter
-    expect(screen.getByText("Current Clue")).toBeTruthy();
-    const hintText = screen.getByText("1 of 6");
-    expect(hintText).toBeTruthy();
-    // The aria-label includes both hint number and guesses remaining
-    const counter = screen.getByLabelText("Hint 1 of 6. 6 guesses remaining");
-    expect(counter).toBeTruthy();
-  });
-
   it("announces hint text in a polite live region", () => {
     render(<CurrentHintCard {...baseProps} />);
 

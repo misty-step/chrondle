@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { render, renderHook, act, waitFor } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { useStreak } from "../useStreak";
 import * as clerk from "@clerk/nextjs";
 import * as convex from "convex/react";
@@ -93,21 +94,29 @@ describe("useStreak", () => {
       );
     });
 
-    it("should preserve streak on page refresh for anonymous users", () => {
-      // Mock localStorage with existing streak
-      vi.mocked(anonymousStreakStorage.get).mockReturnValue({
-        currentStreak: 10,
-        lastCompletedDate: "2025-01-15",
+    it("hydrates a persisted streak without replacing the server-rendered tree", () => {
+      vi.mocked(anonymousStreakStorage.get)
+        .mockReturnValueOnce(null)
+        .mockReturnValue({ currentStreak: 5, lastCompletedDate: "2025-01-15" });
+
+      function StreakReadout() {
+        const { streakData } = useStreak();
+        return <output>{streakData.currentStreak}</output>;
+      }
+
+      const container = document.createElement("div");
+      container.innerHTML = renderToString(<StreakReadout />);
+      const serverReadout = container.firstChild;
+      const onRecoverableError = vi.fn();
+      const view = render(<StreakReadout />, {
+        container,
+        hydrate: true,
+        onRecoverableError,
       });
 
-      // First render
-      const { result: result1 } = renderHook(() => useStreak());
-      expect(result1.current.streakData.currentStreak).toBe(10);
-
-      // Simulate page refresh by re-rendering hook
-      const { result: result2 } = renderHook(() => useStreak());
-      expect(result2.current.streakData.currentStreak).toBe(10);
-      expect(result2.current.streakData.lastPlayedDate).toBe("2025-01-15");
+      expect(view.getByRole("status")).toHaveTextContent("5");
+      expect(container.firstChild).toBe(serverReadout);
+      expect(onRecoverableError).not.toHaveBeenCalled();
     });
 
     it("should reset streak to 0 when losing for anonymous users", () => {

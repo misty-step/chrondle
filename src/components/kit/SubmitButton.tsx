@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,8 +13,7 @@ interface SubmitButtonProps {
 }
 
 /**
- * Primary CTA button.
- * NYT Refined v3 styling, centralized.
+ * Primary action with shared button feedback and mobile ergonomics.
  */
 export function SubmitButton({
   onClick,
@@ -28,13 +29,9 @@ export function SubmitButton({
       disabled={disabled}
       size={size}
       className={cn(
-        "bg-feedback-success h-11 rounded font-bold tracking-[0.04em] text-white uppercase",
-        "hover:bg-feedback-success-hover transition-all duration-150 hover:translate-y-[-1px]",
-
-        // Layout - full width mobile, auto desktop
-        "relative z-10 w-full",
+        "bg-feedback-success text-feedback-success-foreground min-h-12 w-full rounded-lg font-semibold",
+        "hover:bg-feedback-success-hover transition-colors duration-150",
         size === "lg" && "text-base",
-
         className,
       )}
     >

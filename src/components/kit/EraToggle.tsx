@@ -1,19 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { motion } from "motion/react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import type { Era } from "@/lib/eraUtils";
+import { playSound } from "@/lib/sound/soundEngine";
 
 const toggleContainerVariants = cva(
-  "inline-flex rounded border border-border divide-x divide-border overflow-hidden relative",
+  "relative inline-flex rounded-lg border border-border bg-surface-inset p-0.5",
   {
     variants: {
       size: {
-        sm: "h-11",
-        default: "h-11",
-        lg: "h-12",
+        sm: "min-h-12",
+        default: "min-h-12",
+        lg: "min-h-14",
       },
       width: {
         auto: "w-auto",
@@ -28,17 +28,17 @@ const toggleContainerVariants = cva(
 );
 
 const toggleButtonVariants = cva(
-  "inline-flex items-center justify-center px-3 h-full transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-feedback-success/40 disabled:pointer-events-none disabled:opacity-50 flex-1 sm:flex-initial relative z-10",
+  "relative inline-flex min-h-11 min-w-11 flex-1 cursor-pointer select-none items-center justify-center rounded-md px-3 font-semibold transition-colors focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       variant: {
-        active: "bg-feedback-success text-white",
-        inactive: "bg-surface-elevated text-foreground dark:text-white/90",
+        active: "bg-foreground text-background",
+        inactive: "text-muted-foreground hover:text-foreground hover:bg-surface-elevated/60",
       },
       size: {
-        sm: "min-w-[2.5rem] text-xs",
-        default: "min-w-[3rem] text-sm",
-        lg: "min-w-[3.5rem] text-base",
+        sm: "text-sm",
+        default: "text-sm",
+        lg: "text-base",
       },
     },
     defaultVariants: {
@@ -73,34 +73,20 @@ const EraToggle = React.forwardRef<HTMLDivElement, EraToggleProps>(
     },
     ref,
   ) => {
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (disabled) return;
-
-      switch (event.key) {
-        case "ArrowLeft":
-        case "ArrowUp":
-          event.preventDefault();
-          if (value === "AD") {
-            onChange("BC");
-          }
-          break;
-        case "ArrowRight":
-        case "ArrowDown":
-          event.preventDefault();
-          if (value === "BC") {
-            onChange("AD");
-          }
-          break;
-        case " ":
-        case "Enter":
-          event.preventDefault();
-          onChange(value === "BC" ? "AD" : "BC");
-          break;
-      }
+    const bcRef = React.useRef<HTMLButtonElement>(null);
+    const adRef = React.useRef<HTMLButtonElement>(null);
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (disabled || !["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(event.key))
+        return;
+      event.preventDefault();
+      const next = value === "BC" ? "AD" : "BC";
+      handleButtonClick(next);
+      (next === "BC" ? bcRef : adRef).current?.focus();
     };
 
     const handleButtonClick = (era: Era) => {
       if (!disabled && era !== value) {
+        playSound("toggle", { variant: era === "AD" ? "high" : "low" });
         onChange(era);
       }
     };
@@ -111,17 +97,16 @@ const EraToggle = React.forwardRef<HTMLDivElement, EraToggleProps>(
         role="radiogroup"
         aria-label="Select era: BC or AD"
         aria-disabled={disabled}
-        aria-live="polite"
-        tabIndex={disabled ? -1 : 0}
         className={cn(toggleContainerVariants({ size, width }), className)}
-        onKeyDown={handleKeyDown}
         {...props}
       >
-        <motion.button
+        <button
+          ref={bcRef}
+          tabIndex={disabled || value !== "BC" ? -1 : 0}
           type="button"
           role="radio"
           aria-checked={value === "BC"}
-          aria-label={showLabels ? undefined : "BC - Before Common Era"}
+          aria-label={showLabels ? undefined : "BC - Before Christ"}
           className={cn(
             toggleButtonVariants({
               variant: value === "BC" ? "active" : "inactive",
@@ -129,26 +114,18 @@ const EraToggle = React.forwardRef<HTMLDivElement, EraToggleProps>(
             }),
           )}
           onClick={() => handleButtonClick("BC")}
+          onKeyDown={handleKeyDown}
           disabled={disabled}
-          whileTap={!disabled ? { scale: 0.98 } : undefined}
-          whileHover={!disabled && value !== "BC" ? { scale: 1.02 } : undefined}
-          animate={{
-            opacity: value === "BC" ? 1 : 0.8,
-          }}
-          transition={{
-            type: "spring",
-            stiffness: 400,
-            damping: 25,
-            duration: 0.15,
-          }}
         >
           BC
-        </motion.button>
-        <motion.button
+        </button>
+        <button
+          ref={adRef}
+          tabIndex={disabled || value !== "AD" ? -1 : 0}
           type="button"
           role="radio"
           aria-checked={value === "AD"}
-          aria-label={showLabels ? undefined : "AD - Anno Domini (Common Era)"}
+          aria-label={showLabels ? undefined : "AD - Anno Domini"}
           className={cn(
             toggleButtonVariants({
               variant: value === "AD" ? "active" : "inactive",
@@ -156,21 +133,11 @@ const EraToggle = React.forwardRef<HTMLDivElement, EraToggleProps>(
             }),
           )}
           onClick={() => handleButtonClick("AD")}
+          onKeyDown={handleKeyDown}
           disabled={disabled}
-          whileTap={!disabled ? { scale: 0.98 } : undefined}
-          whileHover={!disabled && value !== "AD" ? { scale: 1.02 } : undefined}
-          animate={{
-            opacity: value === "AD" ? 1 : 0.8,
-          }}
-          transition={{
-            type: "spring",
-            stiffness: 400,
-            damping: 25,
-            duration: 0.15,
-          }}
         >
           AD
-        </motion.button>
+        </button>
       </div>
     );
   },
@@ -180,7 +147,6 @@ EraToggle.displayName = "EraToggle";
 
 export { EraToggle };
 
-// Example usage with label for forms:
 export const EraToggleWithLabel: React.FC<{
   value: Era;
   onChange: (era: Era) => void;
@@ -189,29 +155,32 @@ export const EraToggleWithLabel: React.FC<{
   disabled?: boolean;
   size?: "sm" | "default" | "lg";
 }> = ({ value, onChange, label = "Era", description, disabled, size }) => {
-  const id = React.useId();
-  const descriptionId = description ? `${id}-description` : undefined;
+  const reactId = React.useId();
+  const descriptionId = description ? `era-toggle-desc-${reactId}` : undefined;
 
   return (
-    <div className="flex flex-col gap-2">
-      {label && (
-        <label htmlFor={id} className="text-sm font-medium">
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <span
+          id={`era-toggle-label-${reactId}`}
+          className="text-body text-foreground text-sm font-semibold"
+        >
           {label}
-        </label>
-      )}
+        </span>
+        {description && (
+          <span id={descriptionId} className="text-muted-foreground text-xs">
+            {description}
+          </span>
+        )}
+      </div>
       <EraToggle
-        id={id}
         value={value}
         onChange={onChange}
         disabled={disabled}
         size={size}
         aria-describedby={descriptionId}
+        aria-labelledby={`era-toggle-label-${reactId}`}
       />
-      {description && (
-        <p id={descriptionId} className="text-muted-foreground text-xs">
-          {description}
-        </p>
-      )}
     </div>
   );
 };
