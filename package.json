@@ -112,12 +112,6 @@
   },
   "overrides": {
     "eslint-plugin-react-hooks": "7.0.1",
-    "@eslint/eslintrc": {
-      "ajv": "6.12.6"
-    },
-    "schema-utils": {
-      "ajv": "^8.18.0"
-    },
     "serialize-javascript": "7.0.5",
     "brace-expansion": "5.0.5",
     "@isaacs/brace-expansion": "5.0.5",
