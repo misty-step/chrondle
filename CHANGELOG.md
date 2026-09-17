@@ -2,6 +2,31 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.5.0](https://github.com/misty-step/chrondle/compare/v1.4.1...v1.5.0) (2026-09-17)
+
+### Bug Fixes
+
+- **ci:** remove retired kaylee-mistystep credentials from release + badges ([#301](https://github.com/misty-step/chrondle/issues/301)) ([757866b](https://github.com/misty-step/chrondle/commit/757866bcfe70098dd29d9f8f0dd44f660c9a46f1))
+- **ci:** repair Dagger engine image + Bun frozen-lockfile mismatch ([#298](https://github.com/misty-step/chrondle/issues/298)) ([a17b1b3](https://github.com/misty-step/chrondle/commit/a17b1b393d5a29975ac80e443d83802efd35ae75)), closes [#296](https://github.com/misty-step/chrondle/issues/296) [oven-sh/bun#36866](https://github.com/oven-sh/bun/issues/36866)
+- **daily:** one local-day "today" across gallery, game pages, countdown, and streaks ([#269](https://github.com/misty-step/chrondle/issues/269)) ([3abf81d](https://github.com/misty-step/chrondle/commit/3abf81daca239be973357d60dc4a79431f3a7858))
+- keep dependency lock compatible across Bun versions ([e9378ea](https://github.com/misty-step/chrondle/commit/e9378ea98d02cbf75fbf07f81a9b5108fcb2c25f))
+- **nav:** value-bearing gallery escape hatch survives Vercel edge ([#275](https://github.com/misty-step/chrondle/issues/275)) ([94ca934](https://github.com/misty-step/chrondle/commit/94ca9347accef2c5d27b592f4ea1d1127d1b0bfc))
+- **ops:** add Chrondle hosting parity doctor ([#285](https://github.com/misty-step/chrondle/issues/285)) ([2ab49c0](https://github.com/misty-step/chrondle/commit/2ab49c04922389c038d4d16eaa1f65eb56ca74e8))
+- **ops:** canonicalize Canary deploy endpoint ([cff6790](https://github.com/misty-step/chrondle/commit/cff679032c8890c240a42516e4313f4a6d29ec09))
+- **ops:** retire Canary provider defaults ([6441d9d](https://github.com/misty-step/chrondle/commit/6441d9d1767c727f3063840ef18942b2f1140e40))
+- **ops:** use canonical Canary endpoint ([fdf0769](https://github.com/misty-step/chrondle/commit/fdf07695da7ab4eb0061596ef2ab668cea438f65))
+- remove write-only leakage learning ([#284](https://github.com/misty-step/chrondle/issues/284)) ([dd3e3b7](https://github.com/misty-step/chrondle/commit/dd3e3b792584c7a22cae0f3f0f017ccedae1b4c9))
+- sharpen Chrondle share surface (chrondle-911) ([#281](https://github.com/misty-step/chrondle/issues/281)) ([7291bf6](https://github.com/misty-step/chrondle/commit/7291bf67947b179ab9cb54768867450d9f3c2721))
+- **test:** stop convex-edge project inheriting unit-test include pattern ([#267](https://github.com/misty-step/chrondle/issues/267)) ([5081e79](https://github.com/misty-step/chrondle/commit/5081e793ef80190bbd368552bcf6a96356863595))
+- **types:** drop stale [@ts-expect-error](https://github.com/ts-expect-error) on import.meta.glob ([#297](https://github.com/misty-step/chrondle/issues/297)) ([f56ab0a](https://github.com/misty-step/chrondle/commit/f56ab0abd9a4c90fc3e56dc7987e2516777cd2fc))
+
+### Features
+
+- add one-gesture classic range entry ([#280](https://github.com/misty-step/chrondle/issues/280)) ([5ff63e0](https://github.com/misty-step/chrondle/commit/5ff63e09fb5723371db5612b9aedfcddb8bac745))
+- **order:** accessible reorder handle + Move up/down steppers ([#279](https://github.com/misty-step/chrondle/issues/279)) ([a7f2391](https://github.com/misty-step/chrondle/commit/a7f2391e8d053ee0c9825c4e964fb48d86711785))
+- refine game interface and patch release dependencies ([a6b27a1](https://github.com/misty-step/chrondle/commit/a6b27a1f0c3f4d589e1fa4deb67a5f6f20b2aacc))
+- strengthen the daily habit loop — entry, return hook, streak proof ([#270](https://github.com/misty-step/chrondle/issues/270)) ([3145daa](https://github.com/misty-step/chrondle/commit/3145daafab6263aab6043e654b96e08bf92226f5))
+
 ## Unreleased
 
 ### Changed
