@@ -24,12 +24,16 @@
 
 ### Other Secrets (Used by specific workflows)
 
-| Secret                        | Used By        | Description                           |
-| ----------------------------- | -------------- | ------------------------------------- |
-| `CLERK_SECRET_KEY`            | E2E tests      | Clerk secret key for server-side auth |
-| `CLAUDE_CODE_OAUTH_TOKEN`     | Code review    | Claude Code integration               |
-| `GIST_TOKEN`                  | Coverage badge | GitHub token for gist updates         |
-| `NEXT_PUBLIC_CANARY_ENDPOINT` | Deploy         | Optional Canary base URL override     |
+| Secret                        | Used By     | Description                           |
+| ----------------------------- | ----------- | ------------------------------------- |
+| `CLERK_SECRET_KEY`            | E2E tests   | Clerk secret key for server-side auth |
+| `CLAUDE_CODE_OAUTH_TOKEN`     | Code review | Claude Code integration               |
+| `NEXT_PUBLIC_CANARY_ENDPOINT` | Deploy      | Optional Canary base URL override     |
+
+Coverage badges are published by the `coverage-badges` job to the `badges`
+branch with the built-in `GITHUB_TOKEN`; they require no personal token or
+gist. The README renders them from
+`https://raw.githubusercontent.com/misty-step/chrondle/badges/`.
 
 ## Setting Up Secrets
 
@@ -99,6 +103,7 @@ Primary quality/build/e2e gates are executed through the repo's Dagger module (`
 Jobs:
 
 - `quality-checks`: Dagger-driven lint, type-check, and test coverage (parallel matrix)
+- `coverage-badges`: publishes coverage badges to the `badges` branch (master pushes only)
 - `validation`: Dagger-driven puzzle/data validation
 - `docs`: Dagger-driven docs link check
 - `build`: Dagger-driven production build, env exposure verification, bundle-size enforcement, and `.next` artifact export
