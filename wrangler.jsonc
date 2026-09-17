@@ -32,11 +32,12 @@
       },
     },
     // Production: named `chrondle`. The chrondle.mistystep.io custom domain
-    // attaches in a separate, verified DNS pass after the staging proof.
-    // Do not add `routes` here yet.
+    // is attached here; Cloudflare manages the proxied DNS record itself
+    // (the old grey-cloud A record was removed to clear error 100117).
     "production": {
       "name": "chrondle",
       "workers_dev": false,
+      "routes": [{ "pattern": "chrondle.mistystep.io", "custom_domain": true }],
       "vars": {
         "NEXT_PUBLIC_CONVEX_URL": "https://fleet-goldfish-183.convex.cloud",
         "NEXT_PUBLIC_CANARY_ENDPOINT": "https://canary.mistystep.io",
