@@ -1,9 +1,9 @@
 # Chrondle: The Daily History Game
 
-[![Lines](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-lines.json)](https://github.com/misty-step/chrondle/actions)
-[![Branches](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-branches.json)](https://github.com/misty-step/chrondle/actions)
-[![Functions](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-functions.json)](https://github.com/misty-step/chrondle/actions)
-[![Statements](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-statements.json)](https://github.com/misty-step/chrondle/actions)
+[![Lines](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/misty-step/chrondle/badges/coverage-lines.json)](https://github.com/misty-step/chrondle/actions)
+[![Branches](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/misty-step/chrondle/badges/coverage-branches.json)](https://github.com/misty-step/chrondle/actions)
+[![Functions](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/misty-step/chrondle/badges/coverage-functions.json)](https://github.com/misty-step/chrondle/actions)
+[![Statements](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/misty-step/chrondle/badges/coverage-statements.json)](https://github.com/misty-step/chrondle/actions)
 
 Chrondle is a free daily history puzzle: read the clues, enter a year range,
 and see whether it contains the year a historical event happened.
