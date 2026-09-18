@@ -9,6 +9,7 @@ import { calculateStreakUpdate, applyStreakUpdate } from "../../convex/lib/strea
 import { getLocalDateString } from "@/lib/time/dailyDate";
 import { STREAK_CONFIG } from "@/lib/constants";
 import { logger } from "@/lib/logger";
+import { useHydrated } from "@/hooks/useClientSnapshot";
 
 /**
  * Streak data structure (compatible with existing interface)
@@ -45,6 +46,7 @@ interface UseStreakReturn {
  * Hidden Complexity: Auth state branching, migration logic, dual persistence layers
  */
 export function useStreak(): UseStreakReturn {
+  const isHydrated = useHydrated();
   // Clerk authentication state
   const { isSignedIn, user: clerkUser } = useUser();
 
@@ -82,17 +84,18 @@ export function useStreak(): UseStreakReturn {
         achievements: [], // TODO: Implement achievements in Convex
       };
     } else {
-      // Anonymous: use localStorage data
+      // Browser storage has no server snapshot; expose it only after hydration.
+      const currentStreak = isHydrated ? anonymousStreak.currentStreak : 0;
       return {
-        currentStreak: anonymousStreak.currentStreak,
-        longestStreak: anonymousStreak.currentStreak, // No history for anonymous
+        currentStreak,
+        longestStreak: currentStreak, // No history for anonymous
         totalGamesPlayed: 0, // Not tracked for anonymous
-        lastPlayedDate: anonymousStreak.lastCompletedDate,
+        lastPlayedDate: isHydrated ? anonymousStreak.lastCompletedDate : "",
         playedDates: [], // Not used
         achievements: [], // Not tracked for anonymous
       };
     }
-  }, [isSignedIn, convexUser, anonymousStreak]);
+  }, [isSignedIn, convexUser, anonymousStreak, isHydrated]);
 
   // Update streak function - routes to correct persistence layer
   const updateStreak = useCallback(

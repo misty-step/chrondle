@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { motion } from "motion/react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -21,8 +20,6 @@ interface NavbarButtonProps {
 export const NavbarButton: React.FC<NavbarButtonProps> = ({
   children,
   href,
-  overlayColor = "primary",
-  showOverlay = true,
   className,
   as = "button",
   size = "md",
@@ -30,81 +27,58 @@ export const NavbarButton: React.FC<NavbarButtonProps> = ({
   title,
   "aria-label": ariaLabel,
 }) => {
-  // Size classes
   const sizeClasses = {
-    sm: "h-8 w-8",
-    md: "h-10 w-10",
-    lg: "h-12 w-12",
-  };
-
-  // Overlay color classes
-  const overlayColors = {
-    primary: "bg-primary/10",
-    rose: "bg-rose-500/10",
-    blue: "bg-feedback-info/10",
-    green: "bg-feedback-success/10",
+    sm: "h-11 w-11 text-sm",
+    md: "h-11 w-11 text-base",
+    lg: "h-12 w-12 text-lg",
   };
 
   const buttonClasses = cn(
     sizeClasses[size],
-    "rounded relative overflow-hidden",
-    "transition-all duration-200",
-    "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-    "flex items-center justify-center group",
-    "hover:bg-accent/50",
-    "cursor-pointer",
-    "text-body-primary",
-    "border border-transparent hover:border-primary/20",
+    "relative flex shrink-0 cursor-pointer items-center justify-center rounded-lg",
+    "text-muted-foreground hover:bg-surface-inset hover:text-foreground transition-colors duration-150",
+    "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none",
     className,
   );
 
-  const content = (
-    <>
-      {children}
-      {showOverlay && (
-        <motion.div
-          className={cn(
-            "pointer-events-none absolute inset-0 rounded opacity-0",
-            overlayColors[overlayColor],
-          )}
-          initial={false}
-          whileHover={{ opacity: 1 }}
-          transition={{ duration: 0.2 }}
-          aria-hidden="true"
-        />
-      )}
-    </>
-  );
-
-  // If href is provided, render as Link
   if (href) {
     return (
-      <Link href={href} className={buttonClasses}>
-        <motion.div
-          whileTap={{ scale: 0.95 }}
-          whileHover={{ scale: 1.05 }}
-          transition={{ duration: 0.2, ease: "easeInOut" }}
-        >
-          {content}
-        </motion.div>
+      <Link
+        href={href}
+        className={buttonClasses}
+        onClick={onClick}
+        title={title}
+        aria-label={ariaLabel || title}
+      >
+        {children}
       </Link>
     );
   }
 
-  // Render based on 'as' prop
-  const Component = as === "div" ? motion.div : motion.button;
+  const Component = as === "div" ? "div" : "button";
 
   return (
     <Component
-      className={buttonClasses}
-      whileTap={{ scale: 0.95 }}
-      whileHover={{ scale: 1.05 }}
-      transition={{ duration: 0.2, ease: "easeInOut" }}
+      type={as === "div" ? undefined : "button"}
+      role={as === "div" ? "button" : undefined}
+      tabIndex={as === "div" ? 0 : undefined}
+      onKeyDown={(event) => {
+        if (as !== "div") return;
+        if (event.key === " ") event.preventDefault();
+        if (event.key === "Enter") event.currentTarget.click();
+      }}
+      onKeyUp={(event) => {
+        if (as === "div" && event.key === " ") {
+          event.preventDefault();
+          event.currentTarget.click();
+        }
+      }}
       onClick={onClick}
+      className={buttonClasses}
       title={title}
-      aria-label={ariaLabel}
+      aria-label={ariaLabel || title}
     >
-      {content}
+      {children}
     </Component>
   );
 };

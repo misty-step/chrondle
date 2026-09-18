@@ -9,39 +9,7 @@ interface GameCardProps {
   as?: "section" | "div" | "article";
 }
 
-/**
- * Deep module for game surfaces - cards, panels, sections.
- *
- * **Hides complexity:**
- * - Refined surface treatment
- * - Subtle borders
- * - Responsive padding
- * - Semantic color variants
- *
- * **Simple interface:**
- * Just specify variant + content. All styling decisions internal.
- *
- * **Ousterhout Deep Module:**
- * - Interface complexity: 2 props (variant, padding)
- * - Implementation complexity: 12+ styling decisions
- * - Value = Functionality - Interface ≈ 10 decisions hidden
- *
- * @example
- * // Default card
- * <GameCard>Content here</GameCard>
- *
- * @example
- * // Success variant with compact padding
- * <GameCard variant="success" padding="compact">
- *   Correct event ordering!
- * </GameCard>
- *
- * @example
- * // Muted background for comparison grids
- * <GameCard variant="muted" padding="spacious">
- *   Event comparison grid
- * </GameCard>
- */
+/** Shared game surfaces with responsive spacing and semantic feedback. */
 export function GameCard({
   children,
   variant = "default",
@@ -52,8 +20,7 @@ export function GameCard({
   return (
     <Component
       className={cn(
-        // Core surface treatment
-        "border-border bg-surface-elevated rounded border",
+        "border-border bg-surface-elevated min-w-0 rounded-xl border",
 
         // Responsive padding (mobile-first, desktop enhancement)
         padding === "compact" && "p-3 md:p-4",
@@ -62,7 +29,7 @@ export function GameCard({
 
         // Semantic variants - feedback and emphasis
         variant === "success" && "bg-feedback-success/5 border-feedback-success/20",
-        variant === "muted" && "bg-muted/30 border-border",
+        variant === "muted" && "bg-surface-inset border-border",
 
         className,
       )}

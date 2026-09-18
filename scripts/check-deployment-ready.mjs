@@ -177,7 +177,7 @@ async function checkDeploymentReadiness() {
     log("   ✓ TypeScript compiles without errors");
     log("   ✓ Build script available");
 
-    log("\n🚀 Ready for the DigitalOcean App Platform deployment!", colors.green);
+    log("\n🚀 Ready for the native public-host deployment!", colors.green);
 
     if (warnings.length > 0) {
       log("\n⚠️  Note: Review warnings above for best practices", colors.yellow);

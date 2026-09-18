@@ -9,11 +9,11 @@ interface AuthSkeletonProps {
 export function AuthSkeleton({ className }: AuthSkeletonProps) {
   return (
     <div
-      className={cn("flex items-center justify-center w-10 h-10", className)}
+      className={cn("flex h-11 w-11 items-center justify-center", className)}
       role="status"
       aria-label="Loading authentication status"
     >
-      <div className="w-8 h-8 bg-muted rounded-full animate-pulse" />
+      <div className="bg-muted h-8 w-8 rounded-full motion-safe:animate-pulse" />
       <span className="sr-only">Loading authentication status</span>
     </div>
   );
