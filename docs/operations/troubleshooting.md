@@ -347,10 +347,7 @@ git commit -m "Remove .env from tracking"
 2. Check API availability:
    ```javascript
    console.log("Share API:", navigator.share ? "Available" : "Not available");
-   console.log(
-     "Clipboard API:",
-     navigator.clipboard ? "Available" : "Not available",
-   );
+   console.log("Clipboard API:", navigator.clipboard ? "Available" : "Not available");
    ```
 
 ### Problem: Puzzle not loading
@@ -370,16 +367,17 @@ git commit -m "Remove .env from tracking"
 
 ## Deployment Issues
 
-### Problem: Vercel build failing
+### Problem: Native host build or start failing
 
 **Checklist:**
 
-1. Environment variables set in Vercel dashboard
-2. Build command: `pnpm build`
-3. Output directory: `.next`
-4. Node version matches local:
+1. Environment variables are installed in `/etc/public-apps/chrondle.env`
+2. Build command: `bun install --frozen-lockfile && bun run build:do`
+3. Standalone output includes `.next/standalone`, `.next/static`, and `public`
+4. Host service and logs:
    ```bash
-   node --version  # Should be 18.x
+   ssh root@public-apps.tail5f5eb4.ts.net \
+     'systemctl status chrondle.service --no-pager; journalctl -u chrondle.service -n 100 --no-pager'
    ```
 
 ### Problem: 404 errors in production

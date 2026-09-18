@@ -174,4 +174,15 @@ describe("sendToCanary", () => {
 
     await expect(sendToCanary(notification)).resolves.toBeUndefined();
   });
+
+  it("falls back to the stable canonical Canary endpoint", async () => {
+    vi.stubEnv("CANARY_ENDPOINT", "");
+    vi.stubEnv("NEXT_PUBLIC_CANARY_ENDPOINT", "");
+    const notification = createMockNotification("System Health Check", "info");
+
+    await sendToCanary(notification);
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://canary.mistystep.io/api/v1/errors");
+  });
 });

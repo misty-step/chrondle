@@ -18,8 +18,8 @@ export type { RetryConfig };
  * @example
  * ```typescript
  * const result = useQueryWithRetry(
- *   api.puzzles.getDailyPuzzle,
- *   undefined,
+ *   api.puzzles.getPuzzleByDate,
+ *   { date: localDate },
  *   {
  *     maxRetries: 3,
  *     onRetry: (attempt, error) => {
@@ -49,7 +49,7 @@ export function useQueryWithRetry<
  * @example
  * ```typescript
  * export const usePuzzleDataWithRetry = createQueryHookWithRetry(
- *   api.puzzles.getDailyPuzzle,
+ *   api.puzzles.getPuzzleByDate,
  *   { maxRetries: 5 }
  * );
  * ```

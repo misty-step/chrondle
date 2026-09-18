@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chrondle × Misty Step comic-ops — aesthetic decision lab</title>
+<style>
+  :root {
+    --bg:#ffffff; --text:#1a1a1b; --muted:#787c7e; --border:#d3d6da;
+    --success:#4a9b7f; --earlier:#ef4444; --later:#3b82f6;
+    /* Misty Step comic-ops (Silver Age) palette */
+    --ink:#141019; --paper:#fdf6e3; --pow-red:#e23636; --pow-yellow:#ffd23f;
+    --pow-blue:#2b6cb0; --pow-teal:#0f8b8d;
+  }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:"Karla",-apple-system,sans-serif; background:#f4f4f5; color:var(--text); padding:2rem 1rem 6rem; }
+  .lab-header { max-width:920px; margin:0 auto 1.5rem; }
+  .lab-header h1 { font-family:"Outfit",sans-serif; font-size:1.4rem; }
+  .lab-header p { color:var(--muted); font-size:.9rem; margin-top:.4rem; max-width:70ch; }
+  nav.pager { max-width:920px; margin:0 auto 2rem; display:flex; flex-wrap:wrap; gap:.4rem; }
+  nav.pager button { padding:.45rem .7rem; border:1px solid var(--border); background:#fff; border-radius:4px; cursor:pointer; font-size:.8rem; font-weight:600; }
+  nav.pager button.active { background:var(--text); color:#fff; border-color:var(--text); }
+  .option { display:none; max-width:920px; margin:0 auto; }
+  .option.active { display:block; }
+  .option > .meta { margin-bottom:1rem; padding:1rem; background:#fff; border:1px solid var(--border); border-radius:4px; }
+  .option > .meta h2 { font-family:"Outfit",sans-serif; font-size:1.05rem; }
+  .option > .meta p { font-size:.85rem; color:var(--muted); margin-top:.35rem; }
+  .stage { border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+
+  /* ---------- shared game mock ---------- */
+  .game { padding:2rem 1.5rem 2.5rem; min-height:540px; }
+  .masthead { text-align:center; margin-bottom:1.6rem; }
+  .masthead .title { font-family:"Outfit",sans-serif; font-weight:700; font-size:2rem; letter-spacing:-.02em; }
+  .masthead .sub { font-size:.75rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-top:.25rem; }
+  .hintcard { border:1px solid var(--border); border-left:4px solid var(--success); border-radius:4px; padding:1rem 1.2rem; background:#fff; max-width:560px; margin:0 auto 1.4rem; }
+  .hintcard .tag { display:inline-block; background:var(--success); color:#fff; font-size:.65rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:.15rem .5rem; border-radius:3px; margin-bottom:.5rem; }
+  .hintcard .event { font-size:1.05rem; line-height:1.5; }
+  .inputrow { display:flex; gap:.6rem; max-width:560px; margin:0 auto 1.6rem; }
+  .inputrow input { flex:1; height:44px; border:1px solid var(--border); border-radius:4px; padding:0 .8rem; font-family:ui-monospace,monospace; font-size:1rem; background:#fff; color:inherit; }
+  .era { display:flex; border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+  .era span { display:flex; align-items:center; padding:0 .8rem; font-size:.8rem; font-weight:700; }
+  .era .on { background:var(--success); color:#fff; }
+  .guessbtn { height:44px; padding:0 1.4rem; background:var(--success); color:#fff; border:0; border-radius:4px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; }
+  .history { max-width:560px; margin:0 auto; display:flex; flex-direction:column; gap:.6rem; }
+  .guessrow { display:flex; align-items:center; gap:.8rem; border:1px solid var(--border); border-radius:4px; padding: .8rem 1rem; background:#fff; }
+  .guessrow .n { color:var(--muted); font-size:.8rem; font-weight:600; }
+  .badge { font-size:.65rem; font-weight:700; letter-spacing:.06em; padding:.2rem .6rem; border-radius:999px; color:#fff; }
+  .badge.earlier { background:var(--earlier); }
+  .badge.later { background:var(--later); }
+  .badge.correct { background:var(--success); }
+  .yr { font-family:ui-monospace,monospace; font-weight:700; font-size:1.05rem; margin-left:auto; }
+
+  /* ---------- 2: full comic-ops ---------- */
+  .opt-full .game { background:var(--paper); background-image:radial-gradient(circle, rgba(20,16,25,.14) 1px, transparent 1.5px); background-size:9px 9px; }
+  .opt-full .masthead .title { font-family:Impact,"Arial Black",sans-serif; font-size:2.6rem; letter-spacing:.02em; color:var(--pow-red); -webkit-text-stroke:2px var(--ink); text-transform:uppercase; transform:rotate(-2deg); display:inline-block; text-shadow:3px 3px 0 var(--pow-yellow); }
+  .opt-full .masthead .sub { color:var(--ink); font-weight:700; }
+  .opt-full .hintcard, .opt-full .guessrow { border:3px solid var(--ink); border-radius:6px; box-shadow:5px 5px 0 var(--ink); background:#fff; }
+  .opt-full .hintcard { border-left-width:3px; }
+  .opt-full .hintcard .tag { background:var(--pow-yellow); color:var(--ink); border:2px solid var(--ink); border-radius:0; transform:rotate(-1.5deg); }
+  .opt-full .hintcard .event { font-weight:600; }
+  .opt-full .inputrow input, .opt-full .era { border:3px solid var(--ink); border-radius:6px; box-shadow:3px 3px 0 var(--ink); }
+  .opt-full .era .on { background:var(--pow-teal); }
+  .opt-full .guessbtn { background:var(--pow-red); border:3px solid var(--ink); border-radius:6px; box-shadow:4px 4px 0 var(--ink); font-family:Impact,"Arial Black",sans-serif; letter-spacing:.06em; }
+  .opt-full .badge { border:2px solid var(--ink); border-radius:4px; box-shadow:2px 2px 0 var(--ink); }
+  .opt-full .badge.earlier { background:var(--pow-red); }
+  .opt-full .badge.later { background:var(--pow-blue); }
+
+  /* ---------- 3: comic chrome only ---------- */
+  .opt-chrome .masthead { background:var(--pow-yellow); border:3px solid var(--ink); box-shadow:4px 4px 0 var(--ink); padding:.8rem; max-width:560px; margin:0 auto 1.8rem; transform:rotate(-.5deg); }
+  .opt-chrome .masthead .title { font-family:Impact,"Arial Black",sans-serif; text-transform:uppercase; color:var(--ink); }
+  .opt-chrome .masthead .sub { color:var(--ink); font-weight:700; }
+  .opt-chrome .chrome-footer { max-width:560px; margin:1.6rem auto 0; background:var(--ink); color:var(--pow-yellow); font-family:Impact,"Arial Black",sans-serif; letter-spacing:.08em; text-align:center; padding:.5rem; border-radius:4px; font-size:.8rem; text-transform:uppercase; }
+
+  /* ---------- 4: comic moments ---------- */
+  .opt-moments .stage { position:relative; }
+  .opt-moments .pow { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(20,16,25,.45); }
+  .opt-moments .powcard { background:var(--pow-yellow); border:4px solid var(--ink); box-shadow:8px 8px 0 var(--ink); padding:2rem 2.6rem; text-align:center; transform:rotate(-3deg); }
+  .opt-moments .powcard .bam { font-family:Impact,"Arial Black",sans-serif; font-size:3rem; color:var(--pow-red); -webkit-text-stroke:2px var(--ink); text-transform:uppercase; }
+  .opt-moments .powcard .det { font-weight:700; margin-top:.5rem; color:var(--ink); }
+
+  /* ---------- 5: ink & paper hybrid ---------- */
+  .opt-ink .hintcard, .opt-ink .guessrow { border:2px solid var(--ink); box-shadow:3px 3px 0 rgba(20,16,25,.9); border-radius:4px; }
+  .opt-ink .hintcard { border-left:6px solid var(--success); }
+  .opt-ink .inputrow input, .opt-ink .era { border:2px solid var(--ink); }
+  .opt-ink .guessbtn { border:2px solid var(--ink); box-shadow:3px 3px 0 rgba(20,16,25,.9); }
+  .opt-ink .badge { border-radius:3px; }
+
+  /* ---------- 6: newsprint archive ---------- */
+  .opt-news .game { background:#f7f3e8; }
+  .opt-news .masthead { border-top:3px double #1a1a1b; border-bottom:3px double #1a1a1b; padding:.8rem 0; max-width:560px; margin:0 auto 1.8rem; }
+  .opt-news .masthead .title { font-family:Georgia,"Times New Roman",serif; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
+  .opt-news .masthead .sub { font-family:Georgia,serif; font-style:italic; text-transform:none; letter-spacing:.02em; }
+  .opt-news .hintcard { background:#fffdf5; border-color:#b7b09a; font-family:Georgia,serif; }
+  .opt-news .hintcard .event { font-family:Georgia,serif; }
+  .opt-news .guessrow { background:#fffdf5; border-color:#b7b09a; }
+
+  /* ---------- 7: share-card only ---------- */
+  .opt-share .sharewrap { max-width:560px; margin:1.6rem auto 0; }
+  .opt-share .sharecard { background:var(--ink); color:var(--paper); border:3px solid var(--ink); border-radius:8px; padding:1.4rem; box-shadow:6px 6px 0 var(--pow-yellow); }
+  .opt-share .sharecard .sc-title { font-family:Impact,"Arial Black",sans-serif; color:var(--pow-yellow); text-transform:uppercase; letter-spacing:.05em; font-size:1.3rem; }
+  .opt-share .sharecard .sc-grid { font-family:ui-monospace,monospace; margin:.7rem 0; font-size:1.1rem; letter-spacing:.15em; }
+  .opt-share .sharecard .sc-foot { font-size:.75rem; color:#c9c2d4; }
+
+  /* ---------- 8: dark comic-ops ---------- */
+  .opt-darkcomic .game { background:#141019; background-image:radial-gradient(circle, rgba(255,210,63,.12) 1px, transparent 1.5px); background-size:9px 9px; color:#f2ecdc; }
+  .opt-darkcomic .masthead .title { font-family:Impact,"Arial Black",sans-serif; color:var(--pow-yellow); text-transform:uppercase; -webkit-text-stroke:1.5px #000; text-shadow:3px 3px 0 var(--pow-red); transform:rotate(-1.5deg); display:inline-block; }
+  .opt-darkcomic .masthead .sub { color:#a99fc0; }
+  .opt-darkcomic .hintcard, .opt-darkcomic .guessrow { background:#211a2c; border:2px solid var(--pow-yellow); box-shadow:4px 4px 0 #000; color:#f2ecdc; }
+  .opt-darkcomic .inputrow input { background:#211a2c; border:2px solid var(--pow-yellow); color:#f2ecdc; }
+  .opt-darkcomic .era { border:2px solid var(--pow-yellow); }
+  .opt-darkcomic .era span { color:#f2ecdc; }
+  .opt-darkcomic .era .on { background:var(--pow-teal); }
+  .opt-darkcomic .guessbtn { background:var(--pow-red); border:2px solid #000; box-shadow:3px 3px 0 #000; }
+  .opt-darkcomic .hintcard .tag { background:var(--pow-yellow); color:var(--ink); }
+
+  .verdict { max-width:920px; margin:3rem auto 0; padding:1.4rem; background:#fff; border:2px solid var(--text); border-radius:4px; }
+  .verdict h2 { font-family:"Outfit",sans-serif; font-size:1.1rem; margin-bottom:.6rem; }
+  .verdict p, .verdict li { font-size:.9rem; line-height:1.6; }
+  .verdict ul { padding-left:1.2rem; margin:.5rem 0; }
+  .verdict .win { display:inline-block; background:var(--success); color:#fff; font-weight:700; font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; padding:.2rem .55rem; border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="lab-header">
+  <h1>Chrondle × Misty Step comic-ops — aesthetic decision lab</h1>
+  <p>Card <strong>chrondle-eng-ui-tokens</strong> (absorbing backlog.d/017). Question: does Chrondle adopt the
+  Misty Step comic-ops aesthetic (any flavor), or keep its bespoke archival token system? Each option mocks the
+  classic game surface (masthead, hint card, guess input, guess history). Options are structurally distinct
+  directions, not shade variations.</p>
+</div>
+<nav class="pager" id="pager"></nav>
+<div id="options"></div>
+
+<div class="verdict">
+  <h2>Verdict <span class="win">Winner: Option 1 — no-adopt (bespoke archival tokens)</span></h2>
+  <p><strong>Decision:</strong> Chrondle does NOT adopt the Misty Step comic-ops aesthetic on any product surface.
+  The bespoke archival token system (Outfit/Karla, 4px radius, paper metaphor, feedback-* semantic tokens) remains
+  the design system of record, now fully consolidated by the token sweep shipped with this card.</p>
+  <p><strong>Rationale:</strong></p>
+  <ul>
+    <li><strong>Puzzle-clarity risk (options 2, 5, 8):</strong> halftone fields, ink outlines, and offset shadows add
+    visual noise exactly where the game demands fast scanning of year digits and EARLIER/LATER direction. Rotated
+    Impact-style display type actively fights the tabular-numeral discipline the guess history depends on.</li>
+    <li><strong>Genre trust:</strong> Chrondle is a daily Wordle-genre game with paying subscribers. The quiet
+    NYT-adjacent register is a conversion asset; a comic register reads as a different (younger, jokier) product and
+    repositions the brand without a product reason.</li>
+    <li><strong>Identity coherence beats fleet coherence here:</strong> comic-ops is Misty Step's internal ops
+    voice. Chrondle is a consumer product with its own established identity; forcing the fleet skin onto it is
+    brand centralization without user benefit.</li>
+    <li><strong>Chrome-only and moments-only flavors (3, 4) are the worst of both:</strong> two competing registers
+    on one screen; the win-moment "POW" (option 4) is charming once and grating on day 30 of a streak.</li>
+    <li><strong>Newsprint (6) is the strongest challenger</strong> — it is history-native and clarity-preserving —
+    but it is a full bespoke rebrand, out of scope and not obviously better than the shipped archival direction it
+    largely duplicates.</li>
+    <li><strong>Share card (7) is the only surface where comic-ops earns anything</strong> (loud, social, outside
+    the play loop), noted as a possible future standalone ticket — not shipped here, and not enough to justify
+    adopting the system.</li>
+  </ul>
+  <p><strong>Shipped direction:</strong> the semantic-token sweep, registry/kit split, and vendor-boundary
+  centralization in this card ARE the implementation of the winning direction: Chrondle's bespoke tokens, made
+  rigorous. Backlog item 017's oracle is satisfied as a deliberate no-adoption decision with rendered option set
+  (this lab).</p>
+  <p style="margin-top:.6rem;color:var(--muted)">Decided 2026-07-07 by builder lane under the operator's delegated
+  design-verdict authority (2026-07-07); re-verdict by opening this lab and overriding on the card.</p>
+</div>
+
+<template id="game-t">
+  <div class="game">
+    <header class="masthead"><div class="title">CHRONDLE</div><div class="sub">The Daily History Game · #418</div></header>
+    <div class="hintcard"><span class="tag">Hint 2 of 6</span>
+      <p class="event">The Colossus of Rhodes is completed to celebrate the island's defense against a siege.</p>
+    </div>
+    <div class="inputrow">
+      <input value="1520" readonly aria-label="Year guess" />
+      <div class="era"><span class="on">BC</span><span>AD</span></div>
+      <button class="guessbtn">Guess</button>
+    </div>
+    <div class="history">
+      <div class="guessrow"><span class="n">#2</span><span class="badge later">LATER</span><span class="yr">560 BC</span></div>
+      <div class="guessrow"><span class="n">#1</span><span class="badge earlier">EARLIER</span><span class="yr">146 BC</span></div>
+    </div>
+  </div>
+</template>
+
+<script>
+const OPTIONS = [
+ { id:"baseline", cls:"", name:"1 · Baseline — bespoke archival tokens (no-adopt control)",
+   desc:"Current shipped identity after the semantic-token sweep: Outfit/Karla, 4px radius, paper metaphor, feedback-* tokens. The control every adoption flavor must beat." },
+ { id:"full", cls:"opt-full", name:"2 · Full comic-ops",
+   desc:"Silver Age palette, halftone paper, thick ink borders, offset shadows, rotated Impact masthead. Maximum fleet coherence, maximum register change." },
+ { id:"chrome", cls:"opt-chrome", name:"3 · Comic chrome only",
+   desc:"Comic-ops masthead/footer chrome; game board untouched. Tests whether the brand can go comic while play stays sober." },
+ { id:"moments", cls:"opt-moments", name:"4 · Comic moments",
+   desc:"Core play untouched; win/celebration overlay goes full comic (POW card). Comic as reward punctuation, not ambient style." },
+ { id:"ink", cls:"opt-ink", name:"5 · Ink & paper hybrid",
+   desc:"Comic structure (ink outlines, offset shadows) with Chrondle's own palette and type. Halfway house: comic bones, archival skin." },
+ { id:"news", cls:"opt-news", name:"6 · Newsprint archive",
+   desc:"Rejects comic-ops toward a history-native direction instead: double-rule masthead, serif event copy, newsprint paper. The strongest bespoke alternative." },
+ { id:"share", cls:"opt-share", name:"7 · Share-card-only adoption",
+   desc:"Product UI unchanged; only the social share/result card adopts comic-ops. Comic where loudness helps (feeds), quiet where clarity matters (play)." },
+ { id:"darkcomic", cls:"opt-darkcomic", name:"8 · Night-edition comic-ops",
+   desc:"Comic-ops tuned for dark mode: ink-black halftone, yellow ink lines. Tests whether the flavor survives Chrondle's majority-dark audience." },
+];
+const pager = document.getElementById("pager");
+const wrap = document.getElementById("options");
+const tpl = document.getElementById("game-t");
+OPTIONS.forEach((o,i)=>{
+  const b=document.createElement("button"); b.textContent=o.name.split("—")[0].split("·").join("·"); b.onclick=()=>show(i); pager.appendChild(b);
+  const sec=document.createElement("section"); sec.className="option "+o.cls; sec.id="opt-"+o.id;
+  sec.innerHTML=`<div class="meta"><h2>${o.name}</h2><p>${o.desc}</p></div>`;
+  const stage=document.createElement("div"); stage.className="stage";
+  stage.appendChild(tpl.content.cloneNode(true));
+  if(o.id==="chrome"){ const f=document.createElement("div"); f.className="chrome-footer"; f.textContent="A Misty Step Production ★ Issue #418"; stage.querySelector(".game").appendChild(f); }
+  if(o.id==="moments"){ const p=document.createElement("div"); p.className="pow"; p.innerHTML=`<div class="powcard"><div class="bam">Got it!</div><div class="det">280 BC · 3 guesses · streak 12 🔥</div></div>`; stage.appendChild(p); }
+  if(o.id==="share"){ const s=document.createElement("div"); s.className="sharewrap"; s.innerHTML=`<div class="sharecard"><div class="sc-title">Chrondle #418 — Cracked it!</div><div class="sc-grid">⬛⬛🟨🟩 · 3/6 · 🔥12</div><div class="sc-foot">chrondle.app — the daily history game</div></div>`; stage.querySelector(".game").appendChild(s); }
+  sec.appendChild(stage); wrap.appendChild(sec);
+});
+function show(i){ document.querySelectorAll(".option").forEach((el,j)=>el.classList.toggle("active",j===i)); document.querySelectorAll("nav.pager button").forEach((el,j)=>el.classList.toggle("active",j===i)); }
+show(0);
+</script>
+</body>
+</html>

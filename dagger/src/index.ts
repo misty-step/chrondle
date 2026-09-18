@@ -1,6 +1,6 @@
 import { dag, argument, Container, Directory, Secret, func, object } from "@dagger.io/dagger";
 
-const BUN_IMAGE = "oven/bun:1.3.9";
+const BUN_IMAGE = "oven/bun:1.4.2";
 const NODE_IMAGE = "node:22-bookworm-slim";
 const PLAYWRIGHT_IMAGE = "mcr.microsoft.com/playwright:v1.57.0-noble";
 const BUN_CACHE = "/root/.bun/install/cache";
@@ -134,6 +134,7 @@ export class Ci {
       .withExec(["sh", "-lc", SECRET_SCAN_SCRIPT])
       .withExec(["sh", "-lc", SECURITY_AUDIT_SCRIPT])
       .withExec(["bun", "run", "verify:convex"])
+      .withExec(["bun", "run", "verify:provider-retirement"])
       .withExec(["bunx", "tsc", "-p", "dagger/tsconfig.json", "--noEmit"]);
 
     if (check === "lint") {
@@ -152,6 +153,7 @@ export class Ci {
       .withExec(["sh", "-lc", SECRET_SCAN_SCRIPT])
       .withExec(["sh", "-lc", SECURITY_AUDIT_SCRIPT])
       .withExec(["bun", "run", "verify:convex"])
+      .withExec(["bun", "run", "verify:provider-retirement"])
       .directory(WORKDIR);
   }
 
@@ -306,7 +308,7 @@ export class Ci {
     clerkSecretKey?: Secret,
   ): Container {
     let container = this.baseContainer(PLAYWRIGHT_IMAGE)
-      .withExec(["npm", "install", "--global", "bun@1.3.9"])
+      .withExec(["npm", "install", "--global", "bun@1.4.2"])
       .withFile(`${WORKDIR}/package.json`, source.file("package.json"))
       .withFile(`${WORKDIR}/bun.lock`, source.file("bun.lock"))
       .withExec(["bun", "install", "--frozen-lockfile"])

@@ -3,7 +3,7 @@
 import React from "react";
 import { useQuery } from "convex/react";
 import { anyPublicApi } from "@/lib/convexAnyApi";
-import { Card } from "@/components/ui/Card";
+import { Card } from "@/components/kit/Card";
 
 /**
  * Pool Health Card - Event pool availability monitoring
@@ -43,10 +43,10 @@ export function PoolHealthCard({ mode = "all" }: PoolHealthCardProps) {
   // Color coding for days until depletion
   const depletionColor =
     poolHealth.daysUntilDepletion > 90
-      ? "text-green-600 dark:text-green-400"
+      ? "text-feedback-success"
       : poolHealth.daysUntilDepletion > 30
         ? "text-yellow-600 dark:text-yellow-400"
-        : "text-red-600 dark:text-red-400";
+        : "text-feedback-error";
 
   return (
     <Card className="p-6">
@@ -78,7 +78,7 @@ export function PoolHealthCard({ mode = "all" }: PoolHealthCardProps) {
           </div>
           <div className="bg-surface-secondary h-2 rounded-full">
             <div
-              className="h-2 rounded-full bg-blue-500"
+              className="bg-feedback-info h-2 rounded-full"
               style={{
                 width: `${Math.min(100, (poolHealth.coverageByEra.ancient / poolHealth.unusedEvents) * 100)}%`,
               }}
@@ -110,7 +110,7 @@ export function PoolHealthCard({ mode = "all" }: PoolHealthCardProps) {
           </div>
           <div className="bg-surface-secondary h-2 rounded-full">
             <div
-              className="h-2 rounded-full bg-green-500"
+              className="bg-feedback-success h-2 rounded-full"
               style={{
                 width: `${Math.min(100, (poolHealth.coverageByEra.modern / poolHealth.unusedEvents) * 100)}%`,
               }}

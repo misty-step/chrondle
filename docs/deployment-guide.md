@@ -69,46 +69,44 @@ cp .env.example .env.local
 bun run dev
 ```
 
-### 2. Production Deployment (Vercel)
+### 2. Production Web Deployment (Native Host)
 
 #### A. Environment Setup
 
-1. **Use `.env.example` as the production checklist**
+1. Use `.env.example` as the production checklist.
+2. Store production values in root-owned mode-`0600`
+   `/etc/public-apps/chrondle.env`.
+3. Use `pk_live_` and `sk_live_` keys, set `NODE_ENV=production`, and point to
+   the production Convex deployment.
 
-2. **Update with production values:**
-   - Replace placeholder keys with actual production keys
-   - Use `pk_live_` and `sk_live_` for Clerk (not test keys)
-   - Set `NODE_ENV=production`
-   - Point to production Convex deployment
+#### B. Build and Install
 
-#### B. Vercel Configuration
-
-1. **Add environment variables in Vercel Dashboard:**
-   - Go to Project Settings → Environment Variables
-   - Add all required variables from `.env.example`
-   - Ensure production branch uses production values
-
-2. **Configure build settings:**
-   - Vercel should auto-detect the Next.js settings for this repository
-   - `vercel.json` only declares the framework, so no custom build or install command is required
-
-3. **Deploy:**
-   ```bash
-   vercel --prod
-   ```
-
-### 3. Production Deployment (Self-Hosted)
+From a reviewed `master` commit:
 
 ```bash
-# Build for production
-bun run build
-
-# Deploy Convex functions
-bunx convex deploy --prod
-
-# Start production server
-NODE_ENV=production bun run start
+bun install --frozen-lockfile
+bun run build:do
 ```
+
+`next.config.ts` emits a standalone runtime. Package `.next/standalone`,
+`.next/static`, and `public` as one immutable release under
+`/opt/public-apps/chrondle/releases/<git-commit>`. Atomically repoint
+`/opt/public-apps/chrondle/current`, then restart `chrondle.service`.
+
+The systemd service runs as the unprivileged `chrondle` user on port `3007`.
+The host's default-deny firewall blocks direct public access; Caddy is the only
+allowed public ingress for `chrondle.app` and `www.chrondle.app`.
+
+#### C. Verify and Roll Back
+
+```bash
+curl -fsS https://chrondle.app/api/health
+bun run deploy:verify
+```
+
+Rollback repoints `/opt/public-apps/chrondle/current` to an already installed
+release, restarts `chrondle.service`, and repeats both checks. Convex deploys
+separately; do not roll it back as part of a web-only release.
 
 ## Environment Configuration Patterns
 
@@ -288,6 +286,7 @@ console.log("✅ Environment variables validated successfully");
 
 ### Post-Deployment
 
+- [ ] Hosting parity doctor passes (`bun run doctor:hosting`)
 - [ ] Daily puzzle loads correctly
 - [ ] Authentication working
 - [ ] User progress saves
@@ -295,12 +294,16 @@ console.log("✅ Environment variables validated successfully");
 - [ ] Performance metrics acceptable
 - [ ] Monitoring configured
 
+`bun run doctor:hosting` is the provider-independent production probe. It fails
+if the Clerk custom-domain CNAME disappears, Clerk's client edge or sign-in
+route stops loading, the production Convex corpus is unavailable, application
+health degrades, or signed-out Stripe requests reach provider actions.
+
 ## Additional Resources
 
 - [Convex Documentation](https://docs.convex.dev)
 - [Clerk Documentation](https://clerk.com/docs)
 - [Next.js Deployment](https://nextjs.org/docs/deployment)
-- [Vercel Documentation](https://vercel.com/docs)
 
 ## Support
 

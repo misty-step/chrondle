@@ -51,12 +51,12 @@ function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
 
               <div className="space-y-4">
                 <div>
-                  <h2 className="mb-2 font-semibold">For Vercel deployments:</h2>
+                  <h2 className="mb-2 font-semibold">For hosted deployments:</h2>
                   <ol className="text-muted-foreground list-inside list-decimal space-y-2 text-sm">
-                    <li>Go to your Vercel dashboard</li>
-                    <li>Navigate to Settings → Environment Variables</li>
-                    <li>Add the missing variables for all environments</li>
-                    <li>Trigger a new deployment</li>
+                    <li>Update the root-owned host environment file</li>
+                    <li>Build and install a new standalone release</li>
+                    <li>Restart the systemd service</li>
+                    <li>Verify the public health endpoint</li>
                   </ol>
                 </div>
 

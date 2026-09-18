@@ -2,7 +2,7 @@
 
 /**
  * Verifies that required Convex generated files are present and not staged for deletion.
- * This prevents accidental deletion of files needed for Vercel deployments.
+ * This prevents accidental deletion of files needed for reproducible hosted builds.
  */
 
 import { existsSync } from "fs";
@@ -11,7 +11,7 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
-// These files MUST exist and be committed for Vercel deployments
+// These files MUST exist and be committed for hosted deployments.
 const REQUIRED_FILES = [
   "convex/_generated/api.d.ts",
   "convex/_generated/api.js",
@@ -66,7 +66,7 @@ async function verifyConvexFiles() {
         console.error("\n❌ ERROR: Attempting to delete required Convex files!");
         console.error("\nFiles marked for deletion:");
         deletedFiles.forEach((file) => console.error(`   - ${file}`));
-        console.error("\n⚠️  These files MUST remain in Git for Vercel deployments to work.");
+        console.error("\n⚠️  These files MUST remain in Git for hosted builds to work.");
         console.error("💡 If you need to update them:");
         console.error("   1. Run `bunx convex codegen` to regenerate");
         console.error("   2. Stage the updated files with `git add convex/_generated/`");

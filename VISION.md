@@ -38,6 +38,47 @@ The north star is a fair daily ritual: clues teach and challenge, the UI never l
 - Keep Convex, auth, deploy, and quality checks wired to real scripts.
 - Treat Clio voice as flavor, not permission to weaken engineering gates.
 
+## Application-Floor Five-Faces Disposition
+
+Decision date: 2026-07-07. Source card: `chrondle-912`.
+
+Chrondle is UI-only for this backburnered phase. That is an intentional product
+disposition, not an untracked floor gap: the current consumer is a human daily
+game player in the browser, and the core integrity rule is that the answer is
+earned through hints, guesses, and post-solve/archive review. Programmatic
+surfaces must not expose the current day's answer, leak era proximity, or create
+validation tells that the UI is forbidden to show.
+
+- **API waiver - no public archive contract:** There is no committed external
+  API consumer while Chrondle is backburnered. The genuine future candidate is a
+  read-only public puzzle-archive API over past puzzles and curated events, but
+  it needs its own card before work begins. That card must require
+  past-puzzles-only access, no current-day answer exposure before the player's
+  local calendar-day reset, rate limits, and responses that never reveal
+  live-game proximity clues.
+- **CLI waiver - no non-browser operator/player workflow:** There is no player,
+  operator, or educator workflow that needs a CLI instead of the browser or
+  existing repo scripts. A CLI that queries puzzle data would also risk
+  bypassing the earned-hint loop unless it is limited to solved or archived
+  puzzles.
+- **MCP waiver - depends on archive API first:** MCP-equipped agents are
+  plausible educational or trivia consumers, but without a public archive
+  contract the only useful MCP surface would expose internal Convex data and
+  could leak active answers.
+- **Skill waiver - no external harness consumer:** No external harness needs a
+  reusable Chrondle skill today; repo-local instructions already cover
+  development. A player-facing or educator-facing skill should ride on the
+  future archive API/MCP contract rather than scraping UI or internal tables.
+- **SDK waiver - no partner integration contract:** There is no third-party
+  integration target, stable public schema, or partner application. Publishing
+  an SDK before an API would freeze internals and encourage integrations that
+  can violate puzzle integrity.
+
+This section is the citation path for the Misty Step application-floor audit
+(`misty-step-915`). Revisit the disposition only when Chrondle becomes an active
+product bet again or when a named consumer appears for the read-only archive
+surface.
+
 Recent commit signals read for this draft:
 
 - 5cb682b fix(observability): harden Canary ingest-only proof

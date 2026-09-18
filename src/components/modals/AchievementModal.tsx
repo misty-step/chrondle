@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Celebration } from "@/components/ui/Celebration";
+import { Celebration } from "@/components/kit/Celebration";
 import { ANIMATION_DURATIONS } from "@/lib/animationConstants";
 
 interface AchievementModalProps {

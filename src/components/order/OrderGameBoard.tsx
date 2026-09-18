@@ -4,8 +4,8 @@ import { useCallback, useMemo } from "react";
 import { OrderEventList } from "@/components/order/OrderEventList";
 import { OrderInstructions } from "@/components/order/OrderInstructions";
 import { AttemptHistory } from "@/components/order/AttemptFeedback";
-import { GameCard } from "@/components/ui/GameCard";
-import { SubmitButton } from "@/components/ui/SubmitButton";
+import { GameCard } from "@/components/kit/GameCard";
+import { SubmitButton } from "@/components/kit/SubmitButton";
 import type { OrderAttempt, ReadyState, PositionFeedback } from "@/types/orderGameState";
 import type { MutationError } from "@/observability/mutationErrorAdapter";
 

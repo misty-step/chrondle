@@ -10,7 +10,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/Card";
+} from "@/components/kit/Card";
 import { Button } from "@/components/ui/button";
 import { anyPublicApi } from "@/lib/convexAnyApi";
 import { logger } from "@/lib/logger";

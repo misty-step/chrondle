@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -13,6 +13,7 @@ import {
   closestCenter,
   useSensor,
   useSensors,
+  type Announcements,
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
@@ -80,6 +81,65 @@ export function OrderEventList({
     return map;
   }, [events]);
 
+  const describe = useCallback(
+    (id: string | number) => eventMap.get(String(id))?.text ?? "Event",
+    [eventMap],
+  );
+
+  // Design-lab R2 winner (docs/labs/order-reorder-interaction-lab.html): drag pickup/move/drop/cancel
+  // is announced through dnd-kit's own accessible live region, with event-specific text.
+  const dndAnnouncements = useMemo<Announcements>(
+    () => ({
+      onDragStart({ active }) {
+        const position = ordering.indexOf(String(active.id));
+        return `${describe(active.id)} picked up. Position ${position + 1} of ${ordering.length}. Use the up and down arrow keys to move, space bar to drop, escape to cancel.`;
+      },
+      onDragOver({ active, over }) {
+        if (!over) return `${describe(active.id)} is no longer over a droppable position.`;
+        const position = latestOrderRef.current.indexOf(String(active.id));
+        if (position === -1) return undefined;
+        return `${describe(active.id)} moved to position ${position + 1} of ${ordering.length}.`;
+      },
+      onDragEnd({ active, over }) {
+        if (!over) {
+          return `${describe(active.id)} dropped. Order unchanged.`;
+        }
+        const position = latestOrderRef.current.indexOf(String(active.id));
+        return `${describe(active.id)} dropped at position ${position === -1 ? 1 : position + 1} of ${ordering.length}.`;
+      },
+      onDragCancel({ active }) {
+        const position = ordering.indexOf(String(active.id));
+        return `Reorder cancelled. ${describe(active.id)} back at position ${position + 1} of ${ordering.length}.`;
+      },
+    }),
+    [describe, ordering],
+  );
+
+  const screenReaderInstructions = useMemo(
+    () => ({
+      draggable:
+        "To reorder this event: press space or enter to pick it up, use the up and down arrow keys to move it, then press space or enter again to drop it. Press escape to cancel. Alternatively, use the Move up and Move down buttons next to each event.",
+    }),
+    [],
+  );
+
+  // Discrete/keyboard control (design-lab R2 winner) — moves one position at a time via the same
+  // onOrderingChange path drag already uses, and announces through our own live region since
+  // stepper clicks are not part of the DnD lifecycle dnd-kit's own announcer covers.
+  const moveItem = useCallback(
+    (id: string, direction: "up" | "down") => {
+      const from = ordering.indexOf(id);
+      if (from === -1) return;
+      const to = direction === "up" ? from - 1 : from + 1;
+      if (to < 0 || to >= ordering.length) return;
+
+      const next = arrayMove(ordering, from, to);
+      onOrderingChange(next, id);
+      setAnnouncement(`${describe(id)} moved to position ${to + 1} of ${ordering.length}.`);
+    },
+    [ordering, onOrderingChange, describe],
+  );
+
   const handleDragStart = (event: DragStartEvent) => {
     setLocalOrder(ordering);
     latestOrderRef.current = ordering;
@@ -113,14 +173,8 @@ export function OrderEventList({
     const finalOrder = latestOrderRef.current;
 
     onOrderingChange(finalOrder, movedId);
-
-    const movedEvent = eventMap.get(movedId);
-    const newIndex = finalOrder.indexOf(movedId);
-    if (movedEvent && newIndex !== -1) {
-      setAnnouncement(`${movedEvent.text} moved to position ${newIndex + 1}`);
-    } else if (newIndex !== -1) {
-      setAnnouncement(`Item moved to position ${newIndex + 1}`);
-    }
+    // Pickup/move/drop/cancel are announced by dnd-kit's own live region via `dndAnnouncements`
+    // below — no separate announcement needed here.
 
     setLocalOrder(finalOrder);
   };
@@ -142,19 +196,28 @@ export function OrderEventList({
         onDragCancel={handleDragCancel}
         collisionDetection={closestCenter}
         modifiers={[restrictToVerticalAxis]}
+        accessibility={{ announcements: dndAnnouncements, screenReaderInstructions }}
       >
         <SortableContext items={displayedOrder} strategy={verticalListSortingStrategy}>
           <ol className="space-y-4">
             {displayedOrder.map((eventId, index) => {
               const event = eventMap.get(eventId);
               if (!event) return null;
+              const committedIndex = ordering.indexOf(eventId);
               return (
                 <DraggableEventCard
                   key={event.id}
                   event={event}
                   index={index}
+                  total={displayedOrder.length}
                   feedback={feedback?.[index]}
                   onCardClick={() => handleCardClick(event)}
+                  onMoveUp={committedIndex > 0 ? () => moveItem(eventId, "up") : undefined}
+                  onMoveDown={
+                    committedIndex !== -1 && committedIndex < ordering.length - 1
+                      ? () => moveItem(eventId, "down")
+                      : undefined
+                  }
                 />
               );
             })}

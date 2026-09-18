@@ -66,6 +66,12 @@ vi.mock("@/hooks/useWebShare", () => ({
   }),
 }));
 
+// KeepPlaying's today-state hook needs Clerk/Convex providers; DuelBoard's
+// contract is only that the cross-mode strip renders.
+vi.mock("@/hooks/useTodayModeStatus", () => ({
+  useTodayModeStatus: () => ({ classic: "unknown", order: "unknown", duel: "endless" }),
+}));
+
 const ROUND: DuelRoundView = {
   roundIndex: 0,
   first: { id: "a", year: 1066, text: "Battle of Hastings" },
@@ -220,7 +226,7 @@ describe("DuelBoard — run over", () => {
   it("offers the other modes", () => {
     render(<DuelBoard game={lostGame()} />);
 
-    expect(screen.getByText("Keep playing")).toBeInTheDocument();
+    expect(screen.getByText(/keep playing/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Classic/ })).toHaveAttribute("href", "/classic");
     expect(screen.getByRole("link", { name: /Order/ })).toHaveAttribute("href", "/order");
     expect(screen.queryByRole("link", { name: /Duel/ })).not.toBeInTheDocument();

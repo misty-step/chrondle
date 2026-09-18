@@ -115,42 +115,6 @@ export class SemanticLeakageDetector {
       return [];
     }
   }
-
-  addPhrase(entry: LeakyPhrase): void {
-    this.phrases.push(withTokens(entry));
-  }
-
-  /**
-   * Persist current phrases to disk (append-only).
-   * Called after learning from rejected events to maintain database.
-   */
-  persistToFile(): void {
-    try {
-      // Ensure directory exists
-      const dir = path.dirname(this.phrasesFile);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-
-      // Serialize only persistent fields — tokens is a runtime-only Set
-      const payload = JSON.stringify(
-        this.phrases.map(({ phrase, yearRange }) => ({ phrase, yearRange })),
-        null,
-        2,
-      );
-      const tempFile = path.join(
-        dir,
-        `${path.basename(this.phrasesFile)}.tmp-${process.pid}-${Date.now()}`,
-      );
-
-      fs.writeFileSync(tempFile, payload, "utf-8");
-      fs.renameSync(tempFile, this.phrasesFile);
-    } catch (error) {
-      // Don't throw - learning is best-effort, shouldn't break generation
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`Failed to persist leaky phrases: ${message}`);
-    }
-  }
 }
 
 export class QualityValidatorImpl implements QualityValidator {
@@ -188,25 +152,6 @@ export class QualityValidatorImpl implements QualityValidator {
         : "No strong leakage detected",
       suggestions,
     };
-  }
-
-  /**
-   * Learn from rejected event with high semantic leakage.
-   * Extracts key phrase, adds to database, and persists to disk.
-   *
-   * @param eventText - The rejected event text containing leaky phrases
-   * @param inferredYearRange - Year range this phrase is associated with [start, end]
-   */
-  learnFromRejected(eventText: string, inferredYearRange: [number, number]): void {
-    if (!eventText.trim()) return;
-    const phrase = eventText.toLowerCase().slice(0, 180);
-    this.leakageDetector.addPhrase({
-      phrase,
-      yearRange: inferredYearRange,
-    });
-
-    // Persist updated database to disk (append-only)
-    this.leakageDetector.persistToFile();
   }
 
   private scoreMetadata(metadata: unknown): number {

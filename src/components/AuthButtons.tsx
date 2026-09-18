@@ -1,8 +1,9 @@
 "use client";
 
+import React from "react";
 import { useUser, SignInButton, UserButton } from "@clerk/nextjs";
-import { NavbarButton } from "@/components/ui/NavbarButton";
-import { SignIn } from "@phosphor-icons/react";
+import { NavbarButton } from "@/components/kit/NavbarButton";
+import { SignIn } from "@/components/kit/icons";
 import { AuthSkeleton } from "@/components/skeletons/AuthSkeleton";
 import { isMobileDevice } from "@/lib/platformDetection";
 import { useClientSnapshot } from "@/hooks/useClientSnapshot";
@@ -27,14 +28,15 @@ export function AuthButtons({ className }: AuthButtonsProps) {
   // User is signed in - show user button
   if (isSignedIn) {
     return (
-      <div className={`flex h-10 w-10 items-center justify-center ${className ?? ""}`}>
+      <div className={`flex h-11 w-11 items-center justify-center ${className ?? ""}`}>
         <UserButton
           afterSignOutUrl="/"
           appearance={{
             elements: {
               avatarBox: "w-8 h-8",
               userButtonPopoverCard: "shadow-lg",
-              userButtonTrigger: "focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-full",
+              userButtonTrigger:
+                "min-h-11 min-w-11 justify-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full",
             },
           }}
         />
@@ -46,7 +48,6 @@ export function AuthButtons({ className }: AuthButtonsProps) {
   return (
     <SignInButton mode={isMobile ? "redirect" : "modal"}>
       <NavbarButton
-        as="div"
         title="Sign in to save progress across devices"
         aria-label="Sign in to your account"
         overlayColor="primary"

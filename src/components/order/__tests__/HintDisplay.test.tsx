@@ -25,7 +25,7 @@ vi.mock("motion/react", () => ({
   useReducedMotion: () => false,
 }));
 
-vi.mock("@/components/ui/LoadingSpinner", () => ({
+vi.mock("@/components/kit/LoadingSpinner", () => ({
   LoadingSpinner: () => <span data-testid="spinner" />,
 }));
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useShareGame } from "../useShareGame";
 import * as useWebShareModule from "../useWebShare";
-import * as sharingGenerator from "@/lib/sharing/generator";
+import * as sharingModule from "@/lib/sharing";
 import type { RangeGuess } from "@/types/range";
 
 // Mock useWebShare
@@ -10,9 +10,9 @@ vi.mock("../useWebShare", () => ({
   useWebShare: vi.fn(),
 }));
 
-// Mock sharing generator
-vi.mock("@/lib/sharing/generator", () => ({
-  generateShareText: vi.fn(),
+// Mock the shared sharing module
+vi.mock("@/lib/sharing", () => ({
+  generateClassicShareText: vi.fn(),
 }));
 
 // Mock logger
@@ -46,8 +46,8 @@ describe("useShareGame", () => {
       shareStrategy: "clipboard",
     });
 
-    vi.mocked(sharingGenerator.generateShareText).mockReturnValue(
-      "Chrondle #42\nRange: 🗓️ 21 years\nHints: ⬛⬛⬜⬜⬜⬜\nScore: 😎 75/100\n\nchrondle.app",
+    vi.mocked(sharingModule.generateClassicShareText).mockReturnValue(
+      "Chrondle #42\n\n🔻 21y\n✅ Contained\n😎 75/100\n\nhttps://chrondle.app",
     );
 
     // Mock window.dispatchEvent
@@ -122,7 +122,7 @@ describe("useShareGame", () => {
       });
 
       expect(mockShare).toHaveBeenCalledWith(
-        "Chrondle #42\nRange: 🗓️ 21 years\nHints: ⬛⬛⬜⬜⬜⬜\nScore: 😎 75/100\n\nchrondle.app",
+        "Chrondle #42\n\n🔻 21y\n✅ Contained\n😎 75/100\n\nhttps://chrondle.app",
       );
     });
 
@@ -273,32 +273,47 @@ describe("useShareGame", () => {
     });
   });
 
-  describe("generateShareText integration", () => {
-    it("should pass ranges, score, hasWon, puzzleNumber to generator", () => {
-      renderHook(() => useShareGame(defaultRanges, 75, true, 42));
+  describe("generateClassicShareText integration", () => {
+    it("should pass ranges, score, hasWon, puzzleNumber, and miss info to the generator", () => {
+      renderHook(() =>
+        useShareGame(defaultRanges, 75, true, 42, { missDistance: null, missDirection: null }),
+      );
 
-      expect(sharingGenerator.generateShareText).toHaveBeenCalledWith(defaultRanges, 75, true, 42, {
-        targetYear: undefined,
-      });
+      expect(sharingModule.generateClassicShareText).toHaveBeenCalledWith(
+        defaultRanges,
+        75,
+        true,
+        42,
+        { missDistance: null, missDirection: null },
+      );
     });
 
-    it("should pass targetYear option to generator", () => {
-      renderHook(() => useShareGame(defaultRanges, 75, true, 42, { targetYear: 1969 }));
+    it("should pass missDistance/missDirection through on a loss", () => {
+      renderHook(() =>
+        useShareGame(defaultRanges, 0, false, 42, {
+          missDistance: 5,
+          missDirection: "earlier",
+        }),
+      );
 
-      expect(sharingGenerator.generateShareText).toHaveBeenCalledWith(defaultRanges, 75, true, 42, {
-        targetYear: 1969,
-      });
+      expect(sharingModule.generateClassicShareText).toHaveBeenCalledWith(
+        defaultRanges,
+        0,
+        false,
+        42,
+        { missDistance: 5, missDirection: "earlier" },
+      );
     });
 
     it("should handle missing puzzleNumber", () => {
       renderHook(() => useShareGame(defaultRanges, 75, true, undefined));
 
-      expect(sharingGenerator.generateShareText).toHaveBeenCalledWith(
+      expect(sharingModule.generateClassicShareText).toHaveBeenCalledWith(
         defaultRanges,
         75,
         true,
         undefined,
-        { targetYear: undefined },
+        { missDistance: undefined, missDirection: undefined },
       );
     });
   });

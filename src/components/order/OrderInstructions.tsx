@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ModeHero } from "@/components/ui/ModeHero";
+import { ModeHero } from "@/components/kit/ModeHero";
 import { formatYear } from "@/lib/displayFormatting";
 import type { OrderEvent } from "@/types/orderGameState";
 

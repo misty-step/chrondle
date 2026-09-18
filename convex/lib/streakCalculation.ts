@@ -128,6 +128,33 @@ function isValidDateString(dateString: string): boolean {
 }
 
 /**
+ * Signed difference in whole days between two ISO date strings (b - a)
+ *
+ * @param a - First date (ISO string YYYY-MM-DD)
+ * @param b - Second date (ISO string YYYY-MM-DD)
+ * @returns Number of days from a to b (positive if b is after a)
+ *
+ * @throws Error if date strings are invalid
+ *
+ * @example
+ * dayDifference("2025-10-07", "2025-10-08") // 1
+ * dayDifference("2025-10-08", "2025-10-07") // -1
+ * dayDifference("2025-10-08", "2025-10-08") // 0
+ */
+export function dayDifference(a: string, b: string): number {
+  if (!isValidDateString(a)) {
+    throw new Error(`Invalid first date: ${a}`);
+  }
+  if (!isValidDateString(b)) {
+    throw new Error(`Invalid second date: ${b}`);
+  }
+
+  const first = new Date(a + "T00:00:00.000Z").getTime();
+  const second = new Date(b + "T00:00:00.000Z").getTime();
+  return Math.round((second - first) / 86_400_000);
+}
+
+/**
  * Check if two dates are consecutive (second date is exactly one day after first)
  *
  * @param firstDate - Earlier date (ISO string YYYY-MM-DD)

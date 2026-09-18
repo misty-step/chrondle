@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chrondle 911 — OG image decision lab</title>
+    <style>
+      :root {
+        --paper: #fbfaf7;
+        --sheet: #ffffff;
+        --ink: #171717;
+        --muted: #6f6b63;
+        --line: #d9d4ca;
+        --accent: #ea5a1b;
+        --blue: #1f6feb;
+        --green: #188a5d;
+        --gold: #b7791f;
+        --rose: #b42318;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #f1eee8;
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        padding: 32px 20px 72px;
+      }
+      header,
+      .verdict {
+        max-width: 1120px;
+        margin: 0 auto 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .locked {
+        margin-top: 14px;
+        border: 1px solid var(--line);
+        background: var(--sheet);
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-size: 14px;
+      }
+      .grid {
+        max-width: 1120px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+      }
+      @media (max-width: 920px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .option {
+        background: var(--sheet);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .meta {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .meta h2 {
+        margin: 0;
+        font-size: 17px;
+      }
+      .meta p {
+        margin-top: 6px;
+        font-size: 13px;
+      }
+      .winner .meta {
+        border-color: #95d5b2;
+        background: #f1fbf5;
+      }
+      .badge {
+        display: inline-block;
+        margin-left: 8px;
+        border: 1px solid var(--green);
+        color: var(--green);
+        border-radius: 999px;
+        padding: 1px 8px;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .preview-wrap {
+        padding: 16px;
+        background: #e8e4db;
+      }
+      .preview {
+        width: 100%;
+        aspect-ratio: 1200 / 630;
+        border: 1px solid #bdb6aa;
+        background: var(--paper);
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+      }
+      .small {
+        width: 240px;
+        aspect-ratio: 1200 / 630;
+        margin-top: 10px;
+        border: 1px solid #bdb6aa;
+        background: var(--paper);
+        position: relative;
+        overflow: hidden;
+      }
+      .wordmark {
+        font-weight: 850;
+        letter-spacing: 0.12em;
+      }
+      .kicker {
+        font-size: 12px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-weight: 800;
+      }
+      .domain {
+        position: absolute;
+        bottom: 7.5%;
+        left: 7%;
+        font-size: 16px;
+        color: var(--muted);
+      }
+      .mini-label {
+        font-size: 9px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      /* Option-specific 1200x630 scaled compositions. */
+      .opt1 .preview,
+      .opt1 .small {
+        padding: 7%;
+      }
+      .opt1 h3 {
+        margin: 24px 0 0;
+        font-size: 46px;
+        line-height: 1.02;
+        max-width: 78%;
+      }
+      .opt1 .steps {
+        display: flex;
+        gap: 12px;
+        margin-top: 32px;
+      }
+      .opt1 .step {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 12px;
+        flex: 1;
+        background: #fff;
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .opt2 .preview,
+      .opt2 .small {
+        padding: 6%;
+        background: #171717;
+        color: white;
+      }
+      .opt2 h3 {
+        margin: 22px 0 0;
+        font-size: 42px;
+        line-height: 1.05;
+      }
+      .opt2 .ticket {
+        margin-top: 28px;
+        border: 1px dashed #777;
+        border-radius: 6px;
+        padding: 14px;
+        color: #ddd;
+      }
+
+      .opt3 .preview,
+      .opt3 .small {
+        padding: 6.5%;
+      }
+      .opt3 .cards {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 12px;
+        margin-top: 28px;
+      }
+      .opt3 .card {
+        min-height: 88px;
+        border: 2px solid var(--ink);
+        border-radius: 6px;
+        padding: 12px;
+        background: #fff;
+        box-shadow: 5px 5px 0 #f2c94c;
+      }
+      .opt3 h3 {
+        margin: 18px 0 0;
+        font-size: 39px;
+      }
+
+      .opt4 .preview,
+      .opt4 .small {
+        padding: 6%;
+        background: #f8fafc;
+      }
+      .opt4 .timeline {
+        height: 10px;
+        background: linear-gradient(90deg, var(--blue), var(--green), var(--gold), var(--rose));
+        margin-top: 44px;
+        border-radius: 999px;
+      }
+      .opt4 h3 {
+        margin: 26px 0 0;
+        font-size: 44px;
+        max-width: 72%;
+      }
+
+      .opt5 .preview,
+      .opt5 .small {
+        padding: 6%;
+        background: #fff;
+      }
+      .opt5 .receipt {
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 18px;
+        width: 55%;
+        background: #fbfaf7;
+      }
+      .opt5 h3 {
+        margin: 18px 0 0;
+        font-size: 34px;
+      }
+      .opt5 .range {
+        position: absolute;
+        right: 7%;
+        top: 26%;
+        font-size: 74px;
+        font-weight: 900;
+        color: var(--accent);
+      }
+
+      .opt6 .preview,
+      .opt6 .small {
+        padding: 6.5%;
+        background: #f8f5ee;
+      }
+      .opt6 h3 {
+        margin: 18px 0 0;
+        font-size: 45px;
+        line-height: 1.04;
+        max-width: 78%;
+      }
+      .opt6 .tiles {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 28px;
+      }
+      .opt6 .tile {
+        border: 1px solid var(--line);
+        background: white;
+        border-radius: 6px;
+        padding: 12px;
+        min-height: 80px;
+      }
+      .opt6 .tile b {
+        display: block;
+        font-size: 12px;
+        color: var(--accent);
+        margin-bottom: 6px;
+      }
+
+      .small * {
+        transform-origin: top left;
+      }
+      .small .wordmark {
+        font-size: 13px;
+      }
+      .small .kicker {
+        font-size: 5px;
+      }
+      .small h3 {
+        font-size: 18px;
+        margin-top: 8px;
+      }
+      .small .steps,
+      .small .cards,
+      .small .tiles {
+        gap: 4px;
+        margin-top: 9px;
+      }
+      .small .step,
+      .small .card,
+      .small .tile {
+        padding: 4px;
+        font-size: 5px;
+        min-height: 30px;
+        box-shadow: none;
+        border-width: 1px;
+      }
+      .small .ticket,
+      .small .receipt {
+        padding: 5px;
+        font-size: 5px;
+      }
+      .small .timeline {
+        margin-top: 16px;
+        height: 4px;
+      }
+      .small .range {
+        font-size: 24px;
+      }
+      .small .domain {
+        font-size: 6px;
+      }
+      .verdict {
+        margin-top: 28px;
+        border: 2px solid var(--green);
+        border-radius: 8px;
+        background: #f1fbf5;
+        padding: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Chrondle 911 — OG image decision lab</h1>
+      <p>
+        Six structurally distinct 1200x630 share-preview directions. Each option also includes a
+        small-preview render because issue #191 complained the current image was too big, too dark,
+        and muddy at social-card sizes.
+      </p>
+      <div class="locked">
+        <strong>Locked pitch:</strong> A daily history puzzle: read the clues, guess the year. One
+        real event per day, free at chrondle.app.
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="option opt1">
+        <div class="meta">
+          <h2>1. Editorial How Strip</h2>
+          <p>
+            Plain product explanation: wordmark, direct headline, three mechanic tiles. Strongest at
+            small sizes because the hierarchy survives compression.
+          </p>
+        </div>
+        <div class="preview-wrap">
+          <div class="preview">
+            <div class="wordmark">CHRONDLE</div>
+            <div class="kicker">Daily history puzzle</div>
+            <h3>Read clues. Guess the year.</h3>
+            <div class="steps">
+              <div class="step">1 Read a real event</div>
+              <div class="step">2 Enter your range</div>
+              <div class="step">3 Share your score</div>
+            </div>
+            <div class="domain">Free at chrondle.app</div>
+          </div>
+          <div class="small">
+            <div class="wordmark">CHRONDLE</div>
+            <div class="kicker">Daily history puzzle</div>
+            <h3>Read clues. Guess the year.</h3>
+            <div class="steps">
+              <div class="step">1 Read a real event</div>
+              <div class="step">2 Enter your range</div>
+              <div class="step">3 Share your score</div>
+            </div>
+            <div class="domain">Free at chrondle.app</div>
+          </div>
+          <div class="mini-label">Small preview</div>
+        </div>
+      </section>
+
+      <section class="option opt2">
+        <div class="meta">
+          <h2>2. Night Archive</h2>
+          <p>
+            Dark, cinematic archive-ticket framing. Memorable, but it repeats the complaint's
+            darkness and loses small-text legibility.
+          </p>
+        </div>
+        <div class="preview-wrap">
+          <div class="preview">
+            <div class="wordmark">CHRONDLE</div>
+            <div class="kicker">Free daily game</div>
+            <h3>A real event. Six clues. One year.</h3>
+            <div class="ticket">TODAY'S PUZZLE · Guess the year from history</div>
+            <div class="domain">chrondle.app</div>
+          </div>
+          <div class="small">
+            <div class="wordmark">CHRONDLE</div>
+            <div class="kicker">Free daily game</div>
+            <h3>A real event. Six clues. One year.</h3>
+            <div class="ticket">TODAY'S PUZZLE · Guess the year from history</div>
+            <div class="domain">chrondle.app</div>
+          </div>
+          <div class="mini-label">Small preview</div>
+        </div>
+      </section>
+
+      <section class="option opt3">
+        <div class="meta">
+          <h2>3. Stacked Clue Cards</h2>
+          <p>
+            Three clue-card blocks dramatize the game object. It is lively, but the cards compete
+            with the brand and can look noisy in message previews.
+          </p>
+        </div>
+        <div class="preview-wrap">
+          <div class="preview">
+            <div class="wordmark">CHRONDLE</div>
+            <div class="kicker">Daily history puzzle</div>
+            <h3>Can you place the event?</h3>
+            <div class="cards">
+              <div class="card">Clue 1<br />Real event</div>
+              <div class="card">Clue 2<br />Narrow range</div>
+              <div class="card">Clue 3<br />Score</div>
+            </div>
+            <div class="domain">chrondle.app</div>
+          </div>
+          <div class="small">
+            <div class="wordmark">CHRONDLE</div>
+            <div class="kicker">Daily history puzzle</div>
+            <h3>Can you place the event?</h3>
+            <div class="cards">
+              <div class="card">Clue 1<br />Real event</div>
+              <div class="card">Clue 2<br />Narrow range</div>
+              <div class="card">Clue 3<br />Score</div>
+            </div>
+            <div class="domain">chrondle.app</div>
+          </div>
+          <div class="mini-label">Small preview</div>
+        </div>
+      </section>
+
+      <section class="option opt4">
+        <div class="meta">
+          <h2>4. Timeline Sweep</h2>
+          <p>
+            One long timeline makes the year-guessing premise obvious. It is clean, but it hints at
+            eras as a visual map and risks feeling like a history app, not a daily game.
+          </p>
+        </div>
+        <div class="preview-wrap">
+          <div class="preview">
+            <div class="wordmark">CHRONDLE</div>
+            <div class="timeline"></div>
+            <h3>Where on the timeline did it happen?</h3>
+            <div class="domain">Free at chrondle.app</div>
+          </div>
+          <div class="small">
+            <div class="wordmark">CHRONDLE</div>
+            <div class="timeline"></div>
+            <h3>Where on the timeline did it happen?</h3>
+            <div class="domain">Free at chrondle.app</div>
+          </div>
+          <div class="mini-label">Small preview</div>
+        </div>
+      </section>
+
+      <section class="option opt5">
+        <div class="meta">
+          <h2>5. Score Receipt</h2>
+          <p>
+            Leans into post-game sharing with a result-receipt object. Useful for score posts, but
+            less clear for a first-time preview because it shows outcome grammar before the premise.
+          </p>
+        </div>
+        <div class="preview-wrap">
+          <div class="preview">
+            <div class="wordmark">CHRONDLE</div>
+            <div class="receipt">
+              <div class="kicker">Today</div>
+              <h3>Read clues. Guess the year.</h3>
+              <p>One real event per day.</p>
+            </div>
+            <div class="range">100</div>
+            <div class="domain">chrondle.app</div>
+          </div>
+          <div class="small">
+            <div class="wordmark">CHRONDLE</div>
+            <div class="receipt">
+              <div class="kicker">Today</div>
+              <h3>Read clues. Guess the year.</h3>
+              <p>One real event per day.</p>
+            </div>
+            <div class="range">100</div>
+            <div class="domain">chrondle.app</div>
+          </div>
+          <div class="mini-label">Small preview</div>
+        </div>
+      </section>
+
+      <section class="option opt6 winner">
+        <div class="meta">
+          <h2>6. Clean Clue Tiles <span class="badge">Winner</span></h2>
+          <p>
+            Combines option 1's readable hierarchy with option 3's game-object hint. The wordmark
+            and headline stay dominant; the tiles explain the loop without leaking any era/year
+            data.
+          </p>
+        </div>
+        <div class="preview-wrap">
+          <div class="preview">
+            <div class="wordmark">CHRONDLE</div>
+            <div class="kicker">Daily history puzzle</div>
+            <h3>Read the clues. Guess the year.</h3>
+            <div class="tiles">
+              <div class="tile"><b>1</b>One real event</div>
+              <div class="tile"><b>2</b>Six clues</div>
+              <div class="tile"><b>3</b>Score your range</div>
+            </div>
+            <div class="domain">Free at chrondle.app</div>
+          </div>
+          <div class="small">
+            <div class="wordmark">CHRONDLE</div>
+            <div class="kicker">Daily history puzzle</div>
+            <h3>Read the clues. Guess the year.</h3>
+            <div class="tiles">
+              <div class="tile"><b>1</b>One real event</div>
+              <div class="tile"><b>2</b>Six clues</div>
+              <div class="tile"><b>3</b>Score your range</div>
+            </div>
+            <div class="domain">Free at chrondle.app</div>
+          </div>
+          <div class="mini-label">Small preview</div>
+        </div>
+      </section>
+    </main>
+
+    <section class="verdict">
+      <h2>Decision</h2>
+      <p>
+        <strong>Implement option 6, Clean Clue Tiles.</strong> It is the clearest small-preview
+        read: brand, "read clues / guess year," one real event per day, and free URL are visible
+        without relying on tiny body copy or dark contrast. It also avoids the puzzle-integrity
+        trap: no sample event, no era, no calendar year, no proximity behavior.
+      </p>
+    </section>
+  </body>
+</html>

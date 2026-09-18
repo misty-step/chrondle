@@ -82,4 +82,16 @@ describe("captureCanaryException", () => {
     const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("https://server-canary.test/api/v1/errors");
   });
+
+  it("falls back to the stable canonical Canary endpoint", async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+    vi.stubEnv("CANARY_ENDPOINT", "");
+    vi.stubEnv("NEXT_PUBLIC_CANARY_ENDPOINT", "");
+
+    const { captureCanaryException } = await import("../canary");
+    await captureCanaryException(new Error("canonical endpoint probe"));
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://canary.mistystep.io/api/v1/errors");
+  });
 });

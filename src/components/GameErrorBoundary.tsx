@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { Warning, ArrowClockwise, House, Bug } from "@phosphor-icons/react";
+import { Warning, ArrowClockwise, House, Bug } from "@/components/kit/icons";
 import Link from "next/link";
 import { logger } from "@/lib/logger";
 
@@ -274,20 +274,4 @@ export class GameErrorBoundary extends Component<Props, State> {
 
     return this.props.children;
   }
-}
-
-/**
- * Higher-order component to wrap game components with error boundary
- */
-export function withGameErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
-  puzzleNumber?: number,
-) {
-  return function WrappedComponent(props: P) {
-    return (
-      <GameErrorBoundary puzzleNumber={puzzleNumber}>
-        <Component {...props} />
-      </GameErrorBoundary>
-    );
-  };
 }

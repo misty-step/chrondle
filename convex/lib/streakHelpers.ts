@@ -1,6 +1,6 @@
 import { DatabaseWriter } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
-import { calculateStreakUpdate, applyStreakUpdate, getUTCDateString } from "./streakCalculation";
+import { calculateStreakUpdate, applyStreakUpdate, dayDifference } from "./streakCalculation";
 import { classifyPuzzle, isDailyPuzzle } from "./puzzleType";
 
 /**
@@ -12,9 +12,48 @@ import { classifyPuzzle, isDailyPuzzle } from "./puzzleType";
  * CRITICAL BUSINESS RULE: Only updates streak for TODAY'S daily puzzle.
  * Archive/historical puzzle plays MUST NOT affect daily streak mechanics.
  *
+ * DAY SEMANTICS: The puzzle's own date is the streak day marker. Chrondle's
+ * canonical "today" is the player's local calendar day (the puzzle they play
+ * is resolved by local date; see src/lib/time/dailyDate.ts), so the server
+ * clock must never define the streak boundary — after 00:00 UTC a player's
+ * daily puzzle date is one day behind the server's UTC date. Consecutive
+ * puzzle dates are consecutive days by construction.
+ *
  * Dependencies:
  * - streakCalculation: Pure functions for streak state management
  */
+
+/**
+ * Decide whether a puzzle play may touch the user's streak
+ *
+ * Pure decision function (exported for tests):
+ * - "archive": puzzle date outside the timezone envelope (see puzzleType.ts)
+ * - "older-than-last": puzzle dated before the user's last completion —
+ *   playing backwards must never rewind or reset a streak
+ * - "daily": streak update proceeds (calculateStreakUpdate owns the rest:
+ *   same-day replay, consecutive-day increment, gap restart, loss reset)
+ *
+ * @param puzzleDate - ISO date (YYYY-MM-DD) of the puzzle being played
+ * @param lastCompletedDate - User's last completion date or null
+ * @param currentDate - Optional server date override (defaults to UTC now)
+ */
+export function shouldUpdateStreakForPuzzle(
+  puzzleDate: string,
+  lastCompletedDate: string | null,
+  currentDate?: string,
+): { update: boolean; reason: "daily" | "archive" | "older-than-last" } {
+  const classification = classifyPuzzle(puzzleDate, currentDate);
+
+  if (!isDailyPuzzle(classification)) {
+    return { update: false, reason: "archive" };
+  }
+
+  if (lastCompletedDate && dayDifference(puzzleDate, lastCompletedDate) > 0) {
+    return { update: false, reason: "older-than-last" };
+  }
+
+  return { update: true, reason: "daily" };
+}
 
 /**
  * Update user streak after completing a puzzle
@@ -39,32 +78,31 @@ export async function updateUserStreak(
     throw new Error("User not found");
   }
 
-  // CRITICAL: Capture UTC date ONCE to prevent midnight rollover race condition
-  // between puzzle classification and streak calculation. If midnight occurs
-  // between these calls, classification might use yesterday's date while
-  // streak calculation uses today's date, causing incorrect streak updates.
-  const today = getUTCDateString();
+  // CRITICAL: Only update streak for a daily puzzle (puzzle date within the
+  // timezone envelope of the server's UTC day; see puzzleType.ts), and never
+  // rewind: a play of an older-dated puzzle after a newer completion (e.g. a
+  // UTC+14 player finishing tomorrow's puzzle, then replaying yesterday's
+  // inside the envelope) must not reset or rewind the streak.
+  const decision = shouldUpdateStreakForPuzzle(puzzleDate, user.lastCompletedDate || null);
 
-  // CRITICAL: Only update streak for today's daily puzzle
-  // Archive/historical puzzle plays should NOT affect daily streak
-  // Type-safe classification ensures this rule is enforced at compile time
-  // Pass 'today' to ensure classification and calculation use same date reference
-  const classification = classifyPuzzle(puzzleDate, today);
-
-  if (!isDailyPuzzle(classification)) {
-    console.warn("[updateUserStreak] Skipping streak update for archive puzzle:", {
-      puzzleType: classification.type,
-      puzzleDate: classification.date,
+  if (!decision.update) {
+    console.warn("[updateUserStreak] Skipping streak update:", {
+      reason: decision.reason,
+      puzzleDate,
+      lastCompletedDate: user.lastCompletedDate,
       userId,
     });
-    return; // No streak update for archive puzzles
+    return;
   }
 
-  // Calculate streak update using explicit discriminated union
+  // Calculate streak update using explicit discriminated union.
+  // The PUZZLE date — not the server clock — is the day marker: it is the
+  // player's local "today" for daily play, and consecutive puzzle dates are
+  // consecutive days by construction.
   const update = calculateStreakUpdate(
     user.lastCompletedDate || null,
     user.currentStreak,
-    today,
+    puzzleDate,
     hasWon,
   );
 

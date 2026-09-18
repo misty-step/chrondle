@@ -189,7 +189,6 @@ git log --oneline -10
 ### Site Loading Too Slowly
 
 1. **Check bundle sizes:**
-
    - Look at latest merge commit comments
    - Check performance-data branch
 
@@ -439,16 +438,15 @@ pnpm install -D @types/react @types/node
 
 ## 🌐 Deployment Issues
 
-### Vercel Deploy Failed
+### Native Host Deploy Failed
 
-1. **Check build logs:**
-
-   - Vercel dashboard → Project → Functions → Logs
+1. **Check service logs:**
+   - `ssh root@public-apps.tail5f5eb4.ts.net 'journalctl -u chrondle.service -n 100 --no-pager'`
 
 2. **Common fixes:**
-   - Check environment variables are set
-   - Ensure build command is correct
-   - Verify Node version matches local
+   - Check `/etc/public-apps/chrondle.env` exists and is mode `0600`
+   - Ensure the standalone release contains `server.js`, `.next/static`, and `public`
+   - Verify `/opt/node-v24/bin/node` and the release are executable by `chrondle`
 
 ### Bundle Size Check Failing
 
@@ -471,7 +469,6 @@ pnpm install -D @types/react @types/node
 ### Share Feature Not Working
 
 1. **Test conditions:**
-
    - HTTPS required for Web Share API
    - Mobile browser required
    - Check navigator.share availability
@@ -487,7 +484,6 @@ pnpm install -D @types/react @types/node
 ### Exposed Secrets
 
 1. **Immediate action:**
-
    - Rotate all affected keys
    - Check git history: `git log -p | grep -i api`
    - Use `git filter-branch` if needed
@@ -531,7 +527,6 @@ git stash pop
 ### When to Escalate
 
 1. **Escalate immediately if:**
-
    - Production is down for >15 minutes
    - User data is at risk
    - Security vulnerability discovered

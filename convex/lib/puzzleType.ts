@@ -6,11 +6,18 @@
  * This module provides type-safe classification of puzzles as "daily" or "archive"
  * to enforce the business rule that only today's daily puzzle should affect user streaks.
  *
+ * DAY SEMANTICS: Chrondle's canonical "today" is the PLAYER'S local calendar
+ * day (see src/lib/time/dailyDate.ts). Clients resolve their daily puzzle by
+ * local date, so the daily puzzle a player legitimately completes can carry a
+ * date up to one day away from the server's UTC date (timezone envelope
+ * UTC-12..UTC+14). A puzzle is therefore classified "daily" when its date is
+ * within one day of the server's UTC date; anything further out is archive.
+ *
  * Implementation: Classification is derived from puzzle date vs. current date,
  * ensuring a single source of truth with no possibility of type/date mismatch.
  */
 
-import { getUTCDateString } from "./streakCalculation";
+import { dayDifference, getUTCDateString } from "./streakCalculation";
 
 /**
  * Discriminated union for puzzle classification
@@ -49,7 +56,11 @@ export type PuzzleType = { type: "daily"; date: string } | { type: "archive"; da
 export function classifyPuzzle(puzzleDate: string, currentDate?: string): PuzzleType {
   const today = currentDate ?? getUTCDateString();
 
-  if (puzzleDate === today) {
+  // Daily = within the timezone envelope of the server's UTC day. A player's
+  // local "today" (the canonical day; see module doc) is always within one
+  // day of UTC, so |diff| <= 1 admits every legitimate daily play and rejects
+  // all genuinely historical puzzles.
+  if (Math.abs(dayDifference(today, puzzleDate)) <= 1) {
     return { type: "daily", date: puzzleDate };
   } else {
     return { type: "archive", date: puzzleDate };

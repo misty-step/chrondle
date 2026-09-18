@@ -1,79 +1,61 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
-import { motion } from "motion/react";
-import { Lightbulb } from "@phosphor-icons/react";
+import React, { useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { EraToggle } from "@/components/ui/EraToggle";
+import { EraToggle } from "@/components/kit/EraToggle";
 import { SCORING_CONSTANTS, computeScoreBreakdown } from "@/lib/scoring";
 import { GAME_CONFIG } from "@/lib/constants";
 import { convertToInternalYear, convertFromInternalYear, type Era } from "@/lib/eraUtils";
+import { formatYearRange, formatYearStandard } from "@/lib/displayFormatting";
 import { cn } from "@/lib/utils";
-import { useReducedMotion } from "@/lib/animationConstants";
 import type { HintCount } from "@/types/range";
 
 interface RangeInputProps {
-  onCommit: (payload: { start: number; end: number; hintsUsed: number }) => void;
+  onCommit: (payload: {
+    start: number;
+    end: number;
+    hintsUsed: number;
+  }) => void | boolean | Promise<void | boolean>;
   minYear?: number;
   maxYear?: number;
   disabled?: boolean;
   className?: string;
-  hintsUsed?: number; // Number of historical events revealed (0-6)
-  isOneGuessMode?: boolean; // Display "Submit Final Guess - ONE TRY" text
-  // Controlled component props
-  value?: [number, number]; // External range state (controlled mode)
-  onChange?: (range: [number, number]) => void; // Range change callback
+  hintsUsed?: number;
+  isOneGuessMode?: boolean;
+  value?: [number, number];
+  onChange?: (range: [number, number]) => void;
 }
 
-/**
- * Creates default range spanning the full timeline
- * This forces user to modify before submitting
- */
-function createFullTimelineRange(_minYear: number, _maxYear: number): [number, number] {
-  return [0, 0];
+type YearField = "start" | "end";
+interface YearDraft {
+  text: string;
+  era: Era;
+  touched: boolean;
+}
+interface RangeDraft {
+  key: string;
+  start: YearDraft;
+  end: YearDraft;
 }
 
-interface InternalRangeState {
-  boundsKey: string;
-  range: [number, number];
-}
-
-interface RangeDraftState {
-  syncedRangeKey: string;
-  startInput: string;
-  endInput: string;
-  startEra: Era;
-  endEra: Era;
-  startError: string | null;
-  endError: string | null;
-  hasBeenModified: boolean;
-}
-
-function getBoundsKey(minYear: number, maxYear: number) {
-  return `${minYear}:${maxYear}`;
-}
-
-function getRangeKey(range: [number, number]) {
-  return `${range[0]}:${range[1]}`;
-}
-
-function createDraftState(
-  range: [number, number],
-  hasBeenModified: boolean = false,
-): RangeDraftState {
-  const start = convertFromInternalYear(range[0]);
-  const end = convertFromInternalYear(range[1]);
-
-  return {
-    syncedRangeKey: getRangeKey(range),
-    startInput: String(start.year),
-    endInput: String(end.year),
-    startEra: start.era,
-    endEra: end.era,
-    startError: null,
-    endError: null,
-    hasBeenModified,
+function createDraft(key: string, value?: [number, number]): RangeDraft {
+  const field = (year?: number): YearDraft => {
+    const converted = year ? convertFromInternalYear(year) : null;
+    return {
+      text: converted ? String(converted.year) : "",
+      era: converted?.era ?? "AD",
+      touched: false,
+    };
   };
+  return { key, start: field(value?.[0]), end: field(value?.[1]) };
+}
+
+function parseYear(draft: YearDraft, minYear: number, maxYear: number): number | null {
+  if (!/^\d+$/.test(draft.text.trim())) return null;
+  const year = Number(draft.text);
+  if (!Number.isSafeInteger(year) || year <= 0) return null;
+  const internalYear = convertToInternalYear(year, draft.era);
+  return internalYear >= minYear && internalYear <= maxYear ? internalYear : null;
 }
 
 export function RangeInput({
@@ -87,416 +69,189 @@ export function RangeInput({
   value,
   onChange,
 }: RangeInputProps) {
-  const prefersReducedMotion = useReducedMotion();
-  const defaultRange = useMemo(() => createFullTimelineRange(minYear, maxYear), [minYear, maxYear]);
-  const boundsKey = useMemo(() => getBoundsKey(minYear, maxYear), [minYear, maxYear]);
-  const isControlled = value !== undefined && onChange !== undefined;
-  const [internalRangeState, setInternalRangeState] = useState<InternalRangeState>(() => ({
-    boundsKey,
-    range: defaultRange,
-  }));
-  const internalRange =
-    internalRangeState.boundsKey === boundsKey ? internalRangeState.range : defaultRange;
-  const range = isControlled ? value : internalRange;
-  const rangeKey = getRangeKey(range);
-  const [draftState, setDraftState] = useState<RangeDraftState>(() => createDraftState(range));
-  const draft = draftState.syncedRangeKey === rangeKey ? draftState : createDraftState(range);
-  const { startInput, endInput, startEra, endEra, startError, endError, hasBeenModified } = draft;
+  const id = useId();
+  const endRef = useRef<HTMLInputElement>(null);
+  const submitRef = useRef<HTMLButtonElement>(null);
+  const submittingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const controlled = value !== undefined && onChange !== undefined;
+  const key = `${minYear}:${maxYear}:${controlled ? value.join(":") : "internal"}`;
+  const [storedDraft, setDraft] = useState(() => createDraft(key, controlled ? value : undefined));
+  const draft =
+    storedDraft.key === key ? storedDraft : createDraft(key, controlled ? value : undefined);
+  const start = parseYear(draft.start, minYear, maxYear);
+  const end = parseYear(draft.end, minYear, maxYear);
+  const hasRange = start !== null && end !== null;
+  const rangeStart = hasRange ? Math.min(start, end) : 0;
+  const rangeEnd = hasRange ? Math.max(start, end) : 0;
+  const width = hasRange ? rangeEnd - rangeStart + 1 : 0;
+  const tooWide = width > SCORING_CONSTANTS.W_MAX;
+  const valid = hasRange && !tooWide;
+  const hints = Math.min(Math.max(Math.floor(hintsUsed), 0), 6) as HintCount;
+  const possibleScore = valid
+    ? computeScoreBreakdown(rangeStart, rangeEnd, hints).potentialScore
+    : null;
+  const inactive = disabled || isSubmitting;
 
-  const updateRange = useCallback(
-    (newRange: [number, number]) => {
-      if (isControlled) {
-        onChange?.(newRange);
-      } else {
-        setInternalRangeState({
-          boundsKey,
-          range: newRange,
-        });
-      }
-    },
-    [boundsKey, isControlled, onChange],
-  );
+  const updateField = (field: YearField, change: Partial<YearDraft>) => {
+    const next = { ...draft, [field]: { ...draft[field], ...change } };
+    const nextStart = parseYear(next.start, minYear, maxYear);
+    const nextEnd = parseYear(next.end, minYear, maxYear);
+    if (controlled && nextStart !== null && nextEnd !== null) {
+      const range: [number, number] = [Math.min(nextStart, nextEnd), Math.max(nextStart, nextEnd)];
+      next.key = `${minYear}:${maxYear}:${range.join(":")}`;
+      onChange(range);
+    }
+    setDraft(next);
+    setSubmissionError(null);
+  };
 
-  const width = range[1] - range[0] + 1;
-  const rangeTooWide = width > SCORING_CONSTANTS.W_MAX;
-  const commitDisabled = disabled || rangeTooWide || !hasBeenModified;
-  const progressPercent = Math.min((width / SCORING_CONSTANTS.W_MAX) * 100, 100);
-
-  // Live risk/reward readout: what this range pays if it contains the answer.
-  // Reacts to both width changes and hints taken, using the real curve.
-  const clampedHints = Math.min(Math.max(hintsUsed, 0), 6) as HintCount;
-  const potentialScore = useMemo(() => {
-    if (rangeTooWide) return null;
+  const commitRange = async () => {
+    if (!valid || inactive || submittingRef.current) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    setSubmissionError(null);
     try {
-      return computeScoreBreakdown(range[0], range[1], clampedHints).potentialScore;
+      const committed = await onCommit({ start: rangeStart, end: rangeEnd, hintsUsed: hints });
+      if (committed === false) {
+        setSubmissionError("Your guess wasn’t saved. Try again.");
+        return;
+      }
+      if (controlled) onChange([0, 0]);
+      setDraft(createDraft(`${minYear}:${maxYear}:${controlled ? "0:0" : "internal"}`));
     } catch {
-      return null;
+      setSubmissionError("Your guess wasn’t saved. Try again.");
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
-  }, [range, rangeTooWide, clampedHints]);
-
-  const resetRange = useCallback(() => {
-    const nextRange = createFullTimelineRange(minYear, maxYear);
-    updateRange(nextRange);
-    setDraftState(createDraftState(nextRange));
-  }, [minYear, maxYear, updateRange]);
-
-  const handleStartEraChange = (era: Era) => {
-    const parsed = parseInt(startInput, 10);
-    if (!Number.isNaN(parsed)) {
-      const internalYear = convertToInternalYear(parsed, era);
-      if (internalYear >= minYear && internalYear <= maxYear) {
-        const nextRange: [number, number] = [internalYear, Math.max(internalYear, range[1])];
-        updateRange(nextRange);
-        setDraftState(createDraftState(nextRange, true));
-        return;
-      }
-    }
-
-    setDraftState({
-      ...draft,
-      startEra: era,
-    });
-  };
-
-  const handleEndEraChange = (era: Era) => {
-    const parsed = parseInt(endInput, 10);
-    if (!Number.isNaN(parsed)) {
-      const internalYear = convertToInternalYear(parsed, era);
-      if (internalYear >= minYear && internalYear <= maxYear) {
-        const nextRange: [number, number] = [Math.min(range[0], internalYear), internalYear];
-        updateRange(nextRange);
-        setDraftState(createDraftState(nextRange, true));
-        return;
-      }
-    }
-
-    setDraftState({
-      ...draft,
-      endEra: era,
-    });
-  };
-
-  const applyStartYear = () => {
-    const parsed = parseInt(startInput, 10);
-    if (!Number.isNaN(parsed) && parsed > 0) {
-      const internalYear = convertToInternalYear(parsed, startEra);
-      if (internalYear >= minYear && internalYear <= maxYear) {
-        const nextRange: [number, number] = [internalYear, Math.max(internalYear, range[1])];
-        updateRange(nextRange);
-        setDraftState(createDraftState(nextRange, true));
-      } else {
-        setDraftState({
-          ...draft,
-          startError: formatValidRangeMessage(),
-        });
-      }
-    } else if (startInput.trim() === "") {
-      // Empty input - reset silently
-      const current = convertFromInternalYear(range[0]);
-      setDraftState({
-        ...draft,
-        startInput: String(current.year),
-        startEra: current.era,
-        startError: null,
-      });
-    } else {
-      setDraftState({
-        ...draft,
-        startError: "Enter a valid year",
-      });
-    }
-  };
-
-  const applyEndYear = () => {
-    const parsed = parseInt(endInput, 10);
-    if (!Number.isNaN(parsed) && parsed > 0) {
-      const internalYear = convertToInternalYear(parsed, endEra);
-      if (internalYear >= minYear && internalYear <= maxYear) {
-        const nextRange: [number, number] = [Math.min(range[0], internalYear), internalYear];
-        updateRange(nextRange);
-        setDraftState(createDraftState(nextRange, true));
-      } else {
-        setDraftState({
-          ...draft,
-          endError: formatValidRangeMessage(),
-        });
-      }
-    } else if (endInput.trim() === "") {
-      // Empty input - reset silently
-      const current = convertFromInternalYear(range[1]);
-      setDraftState({
-        ...draft,
-        endInput: String(current.year),
-        endEra: current.era,
-        endError: null,
-      });
-    } else {
-      setDraftState({
-        ...draft,
-        endError: "Enter a valid year",
-      });
-    }
-  };
-
-  const handleInputKeyDown = (e: React.KeyboardEvent, applyFn: () => void) => {
-    if (e.key === "Enter") applyFn();
-  };
-
-  const handleRangeCommit = () => {
-    if (commitDisabled) return;
-    onCommit({ start: range[0], end: range[1], hintsUsed });
-    resetRange();
-  };
-
-  // Format year for display
-  const formatYearDisplay = (internalYear: number) => {
-    if (internalYear < 0) {
-      return `${Math.abs(internalYear)} BC`;
-    }
-    return `${internalYear} AD`;
-  };
-
-  // Format valid range message for errors
-  const formatValidRangeMessage = () => {
-    return `Valid range: ${formatYearDisplay(minYear)} to ${formatYearDisplay(maxYear)}`;
   };
 
   return (
-    <div className={cn("space-y-6", className)}>
-      {/* Onboarding message for first-time users */}
-      {!hasBeenModified && !disabled && (
-        <div className="rounded border border-[#4a9b7f] bg-[#4a9b7f]/10 px-4 py-3 dark:bg-[#4a9b7f]/20">
-          <p className="flex items-center gap-2 text-sm font-medium text-[#3d8268] dark:text-[#5fb899]">
-            <Lightbulb className="h-4 w-4 shrink-0" aria-hidden="true" />
-            Adjust the years to narrow your range, then submit your guess
-          </p>
-        </div>
-      )}
+    <section
+      aria-labelledby={`${id}-title`}
+      className={cn("border-border bg-surface-elevated rounded-2xl border p-5 sm:p-6", className)}
+    >
+      <h3 id={`${id}-title`} className="font-display text-foreground text-xl font-semibold">
+        Your range
+      </h3>
+      <p id={`${id}-help`} className="text-muted-foreground mt-1 text-sm leading-relaxed">
+        Enter two years. Use the same year for an exact guess.
+      </p>
 
-      {/* Ledger Entry Card */}
-      <div
-        className={cn(
-          "group border-border bg-surface-elevated relative rounded border p-6 transition-all sm:p-8",
-          rangeTooWide
-            ? "border-feedback-error/50"
-            : hasBeenModified
-              ? "border-[#4a9b7f]"
-              : "border-outline-default",
-        )}
-      >
-        {/* Section Header */}
-        <div className="mb-6">
-          <h3 className="text-section-title text-body-secondary">Your Guess</h3>
-          <div className="ledger-divider mt-2" />
-        </div>
-
-        {/* Current Range Display */}
-        <div className="bg-muted/30 mb-6 rounded px-4 py-3">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-              Range
-            </span>
-            <span className="text-body-primary font-mono text-sm font-semibold tabular-nums">
-              {formatYearDisplay(range[0])}
-              <span className="text-muted-foreground mx-2">→</span>
-              {formatYearDisplay(range[1])}
-            </span>
-          </div>
-        </div>
-
-        {/* Input Controls - Ledger Style */}
-        <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:gap-12">
-          {/* Start Year Group */}
-          <div className="flex-1">
-            <label
-              htmlFor="start-year"
-              className="text-muted-foreground mb-3 block text-[10px] font-bold tracking-[0.15em] uppercase"
-            >
-              From Year
-            </label>
-            <div className="flex items-end gap-3">
-              <div className="relative flex-1">
-                <input
-                  id="start-year"
-                  type="text"
-                  inputMode="numeric"
-                  value={startInput}
-                  onChange={(e) => {
-                    setDraftState({
-                      ...draft,
-                      startInput: e.target.value,
-                      startError: null,
-                    });
-                  }}
-                  onBlur={applyStartYear}
-                  onKeyDown={(e) => handleInputKeyDown(e, applyStartYear)}
-                  disabled={disabled}
-                  className={cn(
-                    "ledger-entry-line w-full px-2 pt-1 pb-2 text-center font-mono text-3xl font-semibold tabular-nums",
-                    "text-body-primary placeholder:text-muted-foreground/50",
-                    "disabled:cursor-not-allowed disabled:opacity-50",
-                    startError && "border-feedback-error text-feedback-error border-b-2",
-                  )}
-                  aria-label="Start year"
-                  aria-invalid={!!startError}
-                  aria-describedby={startError ? "start-year-error" : undefined}
-                />
-              </div>
-              <EraToggle
-                value={startEra}
-                onChange={handleStartEraChange}
-                disabled={disabled}
-                size="sm"
+      <div className="mt-5 grid grid-cols-2 gap-4 sm:gap-6">
+        {(["start", "end"] as const).map((field) => {
+          const entry = draft[field];
+          const invalid =
+            entry.touched && entry.text !== "" && parseYear(entry, minYear, maxYear) === null;
+          const errorId = `${id}-${field}-error`;
+          return (
+            <div key={field} className="min-w-0">
+              <label
+                htmlFor={`${id}-${field}`}
+                className="text-foreground mb-2 block text-sm font-medium"
+              >
+                {field === "start" ? "From year" : "To year"}
+              </label>
+              <input
+                id={`${id}-${field}`}
+                ref={field === "end" ? endRef : undefined}
+                aria-label={field === "start" ? "Start year" : "End year"}
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                enterKeyHint="next"
+                placeholder="Year"
+                value={entry.text}
+                disabled={inactive}
+                onChange={(event) =>
+                  updateField(field, { text: event.target.value, touched: false })
+                }
+                onBlur={() => updateField(field, { touched: true })}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") return;
+                  event.preventDefault();
+                  if (field === "start") endRef.current?.focus();
+                  else if (valid) submitRef.current?.focus();
+                }}
+                aria-invalid={invalid}
+                aria-describedby={invalid ? errorId : `${id}-help`}
+                className={cn(
+                  "border-input bg-background text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/20 h-14 w-full rounded-lg border px-3 font-mono text-2xl tabular-nums outline-none focus-visible:ring-2 disabled:opacity-50 sm:text-3xl",
+                  invalid && "border-feedback-error",
+                )}
               />
-            </div>
-            {startError && (
-              <p
-                id="start-year-error"
-                className="text-feedback-error mt-2 flex items-center gap-1.5 text-xs font-medium"
-                role="alert"
-              >
-                <span aria-hidden="true">⚠</span>
-                {startError}
-              </p>
-            )}
-          </div>
-
-          {/* Arrow Separator */}
-          <div className="text-muted-foreground hidden pb-4 text-xl sm:block" aria-hidden="true">
-            →
-          </div>
-
-          {/* End Year Group */}
-          <div className="flex-1">
-            <label
-              htmlFor="end-year"
-              className="text-muted-foreground mb-3 block text-[10px] font-bold tracking-[0.15em] uppercase"
-            >
-              To Year
-            </label>
-            <div className="flex items-end gap-3">
-              <div className="relative flex-1">
-                <input
-                  id="end-year"
-                  type="text"
-                  inputMode="numeric"
-                  value={endInput}
-                  onChange={(e) => {
-                    setDraftState({
-                      ...draft,
-                      endInput: e.target.value,
-                      endError: null,
-                    });
-                  }}
-                  onBlur={applyEndYear}
-                  onKeyDown={(e) => handleInputKeyDown(e, applyEndYear)}
-                  disabled={disabled}
-                  className={cn(
-                    "ledger-entry-line w-full px-2 pt-1 pb-2 text-center font-mono text-3xl font-semibold tabular-nums",
-                    "text-body-primary placeholder:text-muted-foreground/50",
-                    "disabled:cursor-not-allowed disabled:opacity-50",
-                    endError && "border-feedback-error text-feedback-error border-b-2",
-                  )}
-                  aria-label="End year"
-                  aria-invalid={!!endError}
-                  aria-describedby={endError ? "end-year-error" : undefined}
-                />
-              </div>
               <EraToggle
-                value={endEra}
-                onChange={handleEndEraChange}
-                disabled={disabled}
-                size="sm"
+                value={entry.era}
+                onChange={(era) => updateField(field, { era })}
+                disabled={inactive}
+                aria-label={field === "start" ? "Start year era" : "End year era"}
+                width="full"
+                className="mt-2"
               />
+              {invalid && (
+                <p id={errorId} role="alert" className="text-feedback-error mt-2 text-sm">
+                  Enter a whole year from {formatYearStandard(minYear)} to{" "}
+                  {formatYearStandard(maxYear)}.
+                </p>
+              )}
             </div>
-            {endError && (
-              <p
-                id="end-year-error"
-                className="text-feedback-error mt-2 flex items-center gap-1.5 text-xs font-medium"
-                role="alert"
-              >
-                <span aria-hidden="true">⚠</span>
-                {endError}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="ledger-divider my-6" />
-
-        {/* Range Validation Section */}
-        <div className="space-y-3">
-          {/* Progress Bar */}
-          <div className="range-progress">
-            <div
-              className="range-progress-fill"
-              style={{ width: `${Math.min(progressPercent, 100)}%` }}
-              data-exceeds={rangeTooWide}
-            />
-          </div>
-
-          {/* Validation Status */}
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground font-mono text-xs tabular-nums">
-              {width.toLocaleString()} of {SCORING_CONSTANTS.W_MAX.toLocaleString()} years
-            </span>
-
-            {rangeTooWide ? (
-              <motion.span
-                key="error"
-                initial={prefersReducedMotion ? false : { scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                className="text-feedback-error text-xs font-semibold"
-              >
-                Exceeds Limit
-              </motion.span>
-            ) : hasBeenModified && potentialScore !== null ? (
-              <motion.span
-                key="worth"
-                initial={prefersReducedMotion ? false : { scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="text-feedback-success text-xs font-semibold"
-              >
-                ✓ Worth{" "}
-                <motion.span
-                  key={potentialScore}
-                  initial={prefersReducedMotion ? false : { scale: 1.25 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
-                  className="inline-block font-mono text-sm font-bold tabular-nums"
-                >
-                  {potentialScore}
-                </motion.span>{" "}
-                pts if right
-              </motion.span>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Submit Action */}
-        <motion.div
-          className="mt-6"
-          whileHover={!commitDisabled && !prefersReducedMotion ? { y: -2 } : undefined}
-          whileTap={!commitDisabled && !prefersReducedMotion ? { y: 1 } : undefined}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-        >
-          <Button
-            onClick={handleRangeCommit}
-            disabled={commitDisabled}
-            variant="default"
-            size="lg"
-            className={cn(
-              "h-14 w-full rounded text-lg font-bold tracking-wide transition-shadow duration-200",
-              "border-2 border-[#4a9b7f] bg-[#4a9b7f] text-white hover:bg-[#4a9b7f]",
-              commitDisabled ? "cursor-not-allowed opacity-50 shadow-none" : "",
-            )}
-          >
-            {isOneGuessMode ? "Lock In Final Guess" : "Submit Range"}
-          </Button>
-        </motion.div>
+          );
+        })}
       </div>
-    </div>
+
+      <div
+        className="border-border mt-5 min-h-16 border-t pt-4"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {hasRange ? (
+          <>
+            <p className="text-foreground text-sm font-medium">
+              {formatYearRange(rangeStart, rangeEnd)}
+            </p>
+            <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+              <span className="text-muted-foreground tabular-nums">
+                {width.toLocaleString()} {width === 1 ? "year" : "years"} wide
+              </span>
+              {possibleScore !== null && (
+                <span className="text-foreground">
+                  <strong className="font-mono tabular-nums">{possibleScore}</strong> pts if correct
+                </span>
+              )}
+            </div>
+            {tooWide && (
+              <p role="alert" className="text-feedback-error mt-2 text-sm">
+                Narrow your range to {SCORING_CONSTANTS.W_MAX} years or fewer.
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Up to {SCORING_CONSTANTS.W_MAX} years wide. Narrower ranges earn more points.
+          </p>
+        )}
+      </div>
+
+      <Button
+        ref={submitRef}
+        type="button"
+        onClick={commitRange}
+        disabled={!valid || inactive}
+        soundCue={false}
+        className="bg-feedback-success text-feedback-success-foreground hover:bg-feedback-success-hover mt-5 h-12 w-full rounded-xl text-base font-semibold tracking-normal normal-case"
+      >
+        {isSubmitting ? "Saving guess…" : isOneGuessMode ? "Lock in range" : "Submit range"}
+      </Button>
+      {isOneGuessMode && (
+        <p className="text-muted-foreground mt-2 text-center text-xs">One guess. Make it count.</p>
+      )}
+      {submissionError && (
+        <p role="alert" className="text-feedback-error mt-3 text-sm">
+          {submissionError}
+        </p>
+      )}
+    </section>
   );
 }

@@ -75,7 +75,7 @@ The script checks:
 
 #### 2. Production Deployment Testing
 
-- [ ] Deploy to production environment (Vercel/Netlify)
+- [ ] Deploy the reviewed standalone release to the production host
 - [ ] Test sign-in on production URL
 - [ ] Verify webhook events in Clerk Dashboard → Webhooks
 - [ ] Check user creation in Convex Dashboard → Data
@@ -155,22 +155,18 @@ npx convex run users:count
 ## Security Best Practices
 
 1. **Never commit real keys to version control**
-
    - Use `.env.local` for development
    - Use environment variables in production
 
 2. **Rotate keys regularly**
-
    - After any potential exposure
    - On a regular schedule (quarterly)
 
 3. **Use production keys in production**
-
    - Never use test keys (pk*test*, sk*test*) in production
    - Separate development and production Clerk applications
 
 4. **Enable security features**
-
    - Rate limiting in Clerk Dashboard
    - Domain allowlist for production
    - Webhook signature verification
@@ -182,37 +178,24 @@ npx convex run users:count
 
 ## Production Deployment Guide
 
-### Vercel Deployment
+### Native Web Host Deployment
 
-1. Add environment variables in Vercel Dashboard:
-
-   - All Clerk keys (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, etc.)
-   - Convex configuration
-   - Google OAuth credentials
-
-2. Configure build command:
-
-   ```json
-   {
-     "buildCommand": "npx convex deploy --cmd 'npm run build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL"
-   }
-   ```
-
-3. Set up domain:
-   - Add custom domain in Vercel
-   - Update Clerk application with production domain
-   - Configure webhook URL with production domain
+1. Add all Clerk keys, Convex configuration, and OAuth credentials to
+   root-owned mode-`0600` `/etc/public-apps/chrondle.env`.
+2. Build and install a standalone release, then restart `chrondle.service`.
+   Convex deploys separately.
+3. Keep the Clerk application and webhook endpoint bound to
+   `https://chrondle.app`.
 
 ### Post-Deployment Verification
 
 1. Run verification script against production:
 
    ```bash
-   pnpm verify:auth:prod
+   bun run verify:auth:prod
    ```
 
 2. Test authentication flow:
-
    - Sign up with new email
    - Sign in with existing account
    - Test Google OAuth

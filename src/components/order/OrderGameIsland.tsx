@@ -13,7 +13,7 @@ import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { LoadErrorState } from "@/components/LoadErrorState";
 import { useLoadErrorRecovery } from "@/hooks/useLoadErrorRecovery";
-import { generateArchivalShareText } from "@/lib/order/shareCard";
+import { generateOrderShareText } from "@/lib/sharing";
 import type { ReadyState } from "@/types/orderGameState";
 
 interface OrderGameIslandProps {
@@ -75,7 +75,7 @@ export function OrderGameIsland({ preloadedPuzzle }: OrderGameIslandProps) {
 
   if (gameState.status === "completed") {
     const handleShare = async () => {
-      const text = generateArchivalShareText({
+      const text = generateOrderShareText({
         puzzleNumber: gameState.puzzle.puzzleNumber,
         score: gameState.score,
         attempts: gameState.attempts,

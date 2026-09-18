@@ -8,12 +8,21 @@ import { OrderGameIsland } from "@/components/order/OrderGameIsland";
 import { LoadingShell } from "@/components/LoadingShell";
 import { logger } from "@/lib/logger";
 import { isBackendUnavailablePreloadError } from "@/lib/preloadQueryAvailability";
+import { getUTCDateString } from "@/lib/time/dailyDate";
 
 export default async function OrderPage() {
   let preloadedPuzzle = null;
 
   try {
-    preloadedPuzzle = await preloadQuery(api.orderPuzzles.getDailyOrderPuzzle);
+    // Best-effort SSR seed only: the server cannot know the player's local
+    // date, so it seeds with its own (UTC) date. The client hook
+    // (useTodaysOrderPuzzle) validates the seed against the player's LOCAL
+    // date — Chrondle's canonical "today", see src/lib/time/dailyDate.ts —
+    // and refetches when they differ. The seed never decides which puzzle is
+    // played.
+    preloadedPuzzle = await preloadQuery(api.orderPuzzles.getOrderPuzzleByDate, {
+      date: getUTCDateString(),
+    });
   } catch (error) {
     if (!isBackendUnavailablePreloadError(error)) {
       throw error;

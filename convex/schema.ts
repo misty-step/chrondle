@@ -8,7 +8,7 @@ export default defineSchema({
     event: v.string(), // "Neil Armstrong walks on the moon"
     classicPuzzleId: v.optional(v.id("puzzles")), // Links to Classic mode puzzle (null = unused in Classic)
     orderPuzzleId: v.optional(v.id("orderPuzzles")), // Links to Order mode puzzle (null = unused in Order)
-    groupsPuzzleId: v.optional(v.id("groupsPuzzles")), // Links to Groups mode puzzle (null = unused in Groups)
+    groupsPuzzleId: v.optional(v.id("groupsPuzzles")), // Legacy retired Groups usage marker.
     updatedAt: v.number(), // Manual timestamp (Convex provides _creationTime)
     /**
      * Optional metadata used to power richer game modes (Timeline, Category, per-era pool health, etc.).
@@ -55,10 +55,10 @@ export default defineSchema({
     .index("by_year", ["year"])
     .index("by_classic_puzzle", ["classicPuzzleId"]) // Classic puzzle-to-event lookup
     .index("by_order_puzzle", ["orderPuzzleId"]) // Order puzzle-to-event lookup
-    .index("by_groups_puzzle", ["groupsPuzzleId"]) // Groups puzzle-to-event lookup
+    .index("by_groups_puzzle", ["groupsPuzzleId"]) // Legacy retired Groups lookup.
     .index("by_year_classic_available", ["year", "classicPuzzleId"]) // Unused Classic events by year
     .index("by_year_order_available", ["year", "orderPuzzleId"]) // Unused Order events by year
-    .index("by_year_groups_available", ["year", "groupsPuzzleId"]), // Unused Groups events by year
+    .index("by_year_groups_available", ["year", "groupsPuzzleId"]), // Legacy retired Groups availability.
 
   // Daily puzzles (starts empty, populated by cron job)
   puzzles: defineTable({

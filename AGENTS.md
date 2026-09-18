@@ -77,6 +77,20 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 - Deterministic hash selects year daily → events for that year = hints
 - Same date = same puzzle globally
 
+**Daily Day Semantics (canonical — do not re-litigate per surface):**
+
+- "Today" is the **player's local calendar day**. The single day-resolution
+  module is `src/lib/time/dailyDate.ts`; UI resolves puzzles by explicit date
+  (`getPuzzleByDate` / `getOrderPuzzleByDate`) via `useTodaysPuzzle` /
+  `useTodaysOrderPuzzle`. The countdown targets local midnight.
+- Never resolve a UI "today" from a server clock. `getDailyPuzzle` /
+  `getDailyOrderPuzzle` (UTC-day) are quarantined for stale clients only and
+  lint-banned in `src/`.
+- Streak boundaries derive from the **puzzle's date**; a puzzle is "daily"
+  when its date is within one day of server-UTC (timezone envelope). See
+  `convex/lib/puzzleType.ts`, `convex/lib/streakHelpers.ts`, and the
+  "Daily Day Semantics" section of README.md for the full rationale.
+
 **Convex Deployments:**
 
 - **DEV:** `handsome-raccoon-955` (for development)
@@ -129,10 +143,22 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 - `bun build` then `bun start` — For production preview.
 - `bun test`, `bun lint`, `bun type-check` — To verify the integrity of the scroll.
 - `bun quality` — The high-level audit of our dependencies and cache.
+- **Run the `.claude/skills/chrondle-verify` skill** before claiming a change
+  is done — it runs both gates below in the right order.
+
+There are two gates, not one, and they are not interchangeable:
 
 ```bash
-# Before committing
+# 1. Fast local gate — tight edit/test loop, matches the raw bun scripts
 bun run lint && bun run type-check && bun run test
+
+# 2. CI-equivalent gate — the ACTUAL gate .github/workflows/ci.yml enforces
+#    on every PR, wrapped in Dagger (requires the dagger CLI + Docker/Colima).
+#    Run this before opening/merging a PR; the raw `bun run` commands above
+#    can pass while this fails (e.g. coverage thresholds).
+bun run ci:dagger:lint          # dagger call quality --check=lint
+bun run ci:dagger:type-check    # dagger call quality --check=type-check
+bun run ci:dagger:coverage      # dagger call test-coverage-artifacts --output=coverage
 
 # Convex DB integrity
 bunx convex run puzzles:getTotalPuzzles
@@ -141,6 +167,23 @@ bunx convex run puzzles:getTotalPuzzles
 bunx convex dev  # Terminal 1
 bun run dev      # Terminal 2
 ```
+
+## Deployed Surfaces
+
+Verifying the live app (native public host + Convex prod) is a separate concern
+from the code gate above. Three discoverable scripts cover it:
+
+- `bun run deployment:check` (`scripts/check-deployment-ready.mjs`) — **before
+  deploying.** Pre-deploy readiness: generated Convex files present, clean git
+  status, hosting doctor present, env vars set, TypeScript clean, build scripts
+  present.
+- `bun run deploy:verify` (`scripts/verify-deployment.mjs`) — **after
+  deploying.** Post-deploy health check: Convex connectivity, event-table
+  stats, cron/daily-generation activity, and today's puzzle (existence +
+  integrity — no leaked answers).
+- `bun run validate-puzzles` (`scripts/check-convex-state.mjs`) — **ad hoc.**
+  Read-only snapshot of live Convex state (today's puzzle + archive) for
+  debugging, independent of deploy timing.
 
 ## Coding Style & Naming Conventions
 
@@ -160,7 +203,54 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 
 ### 3. Vigilance in the Cloud
 
-Our deployments (Vercel/Convex) happen in parallel with our checks. Therefore, the seeker must be certain _before_ the push. Local `bun test` and `bun type-check` are the fires through which all code must pass.
+The isolated public application host runs an explicitly released standalone
+web build from `master`; Convex deploys through its path-scoped workflow. Be
+certain before either release. Local `bun test` and `bun type-check` are the
+fires through which all code must pass.
+
+## TODO-Debt Convention
+
+A bare `// TODO: fix this later` is unenforceable and unowned. Every TODO left
+in `src/`, `convex/`, or `scripts/` must carry an owner and enough context to
+re-evaluate it:
+
+```typescript
+// TODO(phrazzld): re-enable strict range validation once chrondle-eng-XXX lands
+// https://github.com/misty-step/chrondle/issues/XXX
+```
+
+- **Owner:** a GitHub handle or agent identity — someone who can be asked
+  "is this still true?"
+- **Context:** explain the unresolved condition or link existing source,
+  a pull request, or a project note. Work proceeds ad hoc from current
+  operator requests; creating a ticket is not required.
+- Free-form `// TODO` with no owner/context is a lint-review flag: reviewers
+  should ask the author to supply it before merge (not a CI gate — TODOs are
+  legitimate in WIP branches; the convention applies at merge time).
+- Prefer fixing the thing over leaving a TODO. A TODO is for debt that is
+  genuinely out of scope for the current change, not a way to skip writing
+  the fix.
+
+## Security-Hotfix Scope-Isolation Checklist
+
+Security hotfixes ship fast and under pressure — that combination is exactly
+when scope creep hides an unreviewed change inside an urgent one. Before
+opening a security-hotfix PR:
+
+1. **Isolate the diff.** The PR touches only the vulnerable path. Refactors,
+   renames, and unrelated cleanup go in a separate, normally-reviewed PR —
+   even if you noticed them while you were in there.
+2. **State the vulnerability and the fix in the PR body**, not just the
+   commit message: what was exploitable, who could exploit it, what the fix
+   changes, and what it does not change.
+3. **Add or update the regression test first** (red before green) so the
+   hotfix is provably closed, not just patched by inspection.
+4. **Call out blast radius.** Note every surface that consumes the changed
+   code path (API routes, Convex functions, client hooks) so reviewers can
+   check each one, not just the one that triggered the fix.
+5. **Skip the design-lab / broad-refactor process for the hotfix itself.**
+   Follow-up hardening or cleanup is a normal follow-up card, not part of the
+   emergency PR.
 
 ## Live Patterns
 
@@ -227,7 +317,7 @@ curl -s -o /dev/null -w "%{http_code}" -I -X POST "https://www.chrondle.app/api/
 ```bash
 # Resend event and watch logs
 stripe events resend evt_xxx --webhook-endpoint we_xxx
-vercel logs chrondle.app --json | grep webhook
+ssh root@public-apps.tail5f5eb4.ts.net 'journalctl -u chrondle.service -f'
 
 # Verify delivery metric decreased
 stripe events retrieve evt_xxx | jq '.pending_webhooks'

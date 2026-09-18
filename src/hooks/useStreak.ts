@@ -5,13 +5,11 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { anonymousStreakStorage } from "@/lib/secureStorage";
 import { anyPublicApi } from "@/lib/convexAnyApi";
-import {
-  calculateStreakUpdate,
-  applyStreakUpdate,
-  getUTCDateString,
-} from "../../convex/lib/streakCalculation";
+import { calculateStreakUpdate, applyStreakUpdate } from "../../convex/lib/streakCalculation";
+import { getLocalDateString } from "@/lib/time/dailyDate";
 import { STREAK_CONFIG } from "@/lib/constants";
 import { logger } from "@/lib/logger";
+import { useHydrated } from "@/hooks/useClientSnapshot";
 
 /**
  * Streak data structure (compatible with existing interface)
@@ -48,6 +46,7 @@ interface UseStreakReturn {
  * Hidden Complexity: Auth state branching, migration logic, dual persistence layers
  */
 export function useStreak(): UseStreakReturn {
+  const isHydrated = useHydrated();
   // Clerk authentication state
   const { isSignedIn, user: clerkUser } = useUser();
 
@@ -85,25 +84,30 @@ export function useStreak(): UseStreakReturn {
         achievements: [], // TODO: Implement achievements in Convex
       };
     } else {
-      // Anonymous: use localStorage data
+      // Browser storage has no server snapshot; expose it only after hydration.
+      const currentStreak = isHydrated ? anonymousStreak.currentStreak : 0;
       return {
-        currentStreak: anonymousStreak.currentStreak,
-        longestStreak: anonymousStreak.currentStreak, // No history for anonymous
+        currentStreak,
+        longestStreak: currentStreak, // No history for anonymous
         totalGamesPlayed: 0, // Not tracked for anonymous
-        lastPlayedDate: anonymousStreak.lastCompletedDate,
+        lastPlayedDate: isHydrated ? anonymousStreak.lastCompletedDate : "",
         playedDates: [], // Not used
         achievements: [], // Not tracked for anonymous
       };
     }
-  }, [isSignedIn, convexUser, anonymousStreak]);
+  }, [isSignedIn, convexUser, anonymousStreak, isHydrated]);
 
   // Update streak function - routes to correct persistence layer
   const updateStreak = useCallback(
     (hasWon: boolean): StreakData => {
       if (isSignedIn && convexUser) {
         // Authenticated: Calculate optimistic update while backend processes
-        // submitGuess mutation handles actual persistence, but we provide immediate feedback
-        const today = getUTCDateString();
+        // submitGuess mutation handles actual persistence, but we provide immediate feedback.
+        // Canonical day semantics: the player's LOCAL calendar day — this
+        // matches the date of the daily puzzle being completed (game pages
+        // resolve puzzles by local date) and the server's puzzle-date-based
+        // streak update.
+        const today = getLocalDateString();
 
         const update = calculateStreakUpdate(
           convexUser.lastCompletedDate || null,
@@ -140,7 +144,8 @@ export function useStreak(): UseStreakReturn {
         let resultData: StreakData | null = null;
 
         setAnonymousStreak((prev) => {
-          const today = getUTCDateString();
+          // Local calendar day: same day marker the daily puzzle carries.
+          const today = getLocalDateString();
 
           // Calculate what should happen (explicit command pattern)
           const update = calculateStreakUpdate(

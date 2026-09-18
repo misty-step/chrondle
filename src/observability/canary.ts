@@ -1,4 +1,4 @@
-const DEFAULT_ENDPOINT = "https://canary-obs.fly.dev";
+const DEFAULT_ENDPOINT = "https://canary.mistystep.io";
 const REQUEST_TIMEOUT_MS = 2_000;
 const SERVICE = "chrondle";
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;

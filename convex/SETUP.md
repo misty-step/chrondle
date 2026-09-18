@@ -3,8 +3,8 @@
 ## Prerequisites
 
 - Convex account (create at https://dashboard.convex.dev)
-- Vercel CLI configured
-- Access to Vercel project settings
+- Tailscale SSH access to the public application host
+- Access to root-owned `/etc/public-apps/chrondle.env`
 
 ## Setup Steps
 
@@ -24,23 +24,14 @@ From the Convex dashboard:
 2. Copy the `CONVEX_DEPLOY_KEY`
 3. Note the Convex URL (format: https://your-project.convex.cloud)
 
-### 3. Add to Vercel Environment Variables
+### 3. Add to the Web Host Environment
 
-Using Vercel CLI:
+Set these in root-owned mode-`0600` `/etc/public-apps/chrondle.env`:
 
-```bash
-# Add CONVEX_DEPLOY_KEY for all environments
-vercel env add CONVEX_DEPLOY_KEY
-
-# Add NEXT_PUBLIC_CONVEX_URL for all environments
-vercel env add NEXT_PUBLIC_CONVEX_URL
-```
-
-Or via Vercel Dashboard:
-
-1. Go to project settings
-2. Navigate to Environment Variables
-3. Add both variables for all environments (Development, Preview, Production)
+1. `CONVEX_DEPLOY_KEY`
+2. `NEXT_PUBLIC_CONVEX_URL`
+3. Build a new standalone web release so the public URL is embedded, install
+   it, and restart `chrondle.service`
 
 ### 4. Local Development Setup
 
@@ -70,8 +61,8 @@ This will:
 Run these commands to verify setup:
 
 ```bash
-# Check environment variables
-vercel env ls | grep CONVEX
+# Check local environment variable names without printing their values
+env | awk -F= '/^CONVEX_DEPLOY_KEY=|^NEXT_PUBLIC_CONVEX_URL=/{print $1}'
 
 # Test Convex connection
 npx convex dev --once

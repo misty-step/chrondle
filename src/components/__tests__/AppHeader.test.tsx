@@ -18,7 +18,7 @@ vi.mock("@/components/ModeDropdown", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/ThemeToggle", () => ({
+vi.mock("@/components/kit/ThemeToggle", () => ({
   ThemeToggle: () => <button data-testid="theme-toggle">theme</button>,
 }));
 
@@ -30,11 +30,7 @@ vi.mock("@/components/AdminButton", () => ({
   AdminButton: () => null,
 }));
 
-vi.mock("@/components/MobileNavMenu", () => ({
-  MobileNavMenu: () => <div data-testid="mobile-nav-menu">MobileNav</div>,
-}));
-
-vi.mock("@/components/ui/NavbarButton", () => ({
+vi.mock("@/components/kit/NavbarButton", () => ({
   NavbarButton: ({ href, children, ...rest }: { href?: string; children: React.ReactNode }) => (
     <a href={href} data-testid="navbar-button" data-rest={JSON.stringify(rest)}>
       {children}
@@ -58,5 +54,17 @@ describe("AppHeader", () => {
   it("renders puzzle number when provided", () => {
     render(<AppHeader puzzleNumber={42} />);
     expect(screen.getByText(/42/)).toBeTruthy();
+  });
+
+  // Regression guard for the live-prod mode-hub dead-end: the wordmark's
+  // gallery escape hatch must use a value-bearing `all` param. Bare `/?all` is
+  // stripped by edge proxy query normalization, so the home redirect reads
+  // `all` as undefined and bounces a returning visitor straight back to their
+  // mode — the mode hub becomes unreachable from `/`. A value survives.
+  it("wordmark escapes to the gallery with a value-bearing param (survives edge normalization)", () => {
+    render(<AppHeader />);
+    const wordmark = screen.getByRole("link", { name: /chrondle/i });
+    const href = wordmark.getAttribute("href") ?? "";
+    expect(href).toMatch(/^\/\?all=.+/); // e.g. /?all=1 — never bare /?all
   });
 });

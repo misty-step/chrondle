@@ -1,7 +1,19 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import type { Gemini3Client } from "../../../lib/gemini3Client";
 import type { CandidateEvent, CritiqueResult } from "../schemas";
 import { critiqueCandidatesForYear } from "../critic";
+
+const qualityValidatorMocks = vi.hoisted(() => ({
+  validateEvent: vi.fn(),
+  learnFromRejected: vi.fn(),
+}));
+
+vi.mock("../../../lib/qualityValidator", () => ({
+  QualityValidatorImpl: vi.fn().mockImplementation(() => ({
+    validateEvent: qualityValidatorMocks.validateEvent,
+    learnFromRejected: qualityValidatorMocks.learnFromRejected,
+  })),
+}));
 
 function mockCandidate(overrides: Partial<CandidateEvent> = {}): CandidateEvent {
   return {
@@ -65,6 +77,15 @@ function createMockClient(returnValue: CritiqueResult[]): Gemini3Client {
 }
 
 describe("critiqueCandidatesForYear", () => {
+  beforeEach(() => {
+    qualityValidatorMocks.validateEvent.mockResolvedValue({
+      passed: true,
+      scores: { semantic_leakage: 0 },
+      suggestions: [],
+    });
+    qualityValidatorMocks.learnFromRejected.mockClear();
+  });
+
   it("marks deterministic failures as failing even if LLM passes", async () => {
     const candidate = mockCandidate({ event_text: "Battle of 1066 decides realm" });
     const client = createMockClient([mockCritique({ event: candidate })]);
@@ -99,5 +120,23 @@ describe("critiqueCandidatesForYear", () => {
 
     expect(result.results[0].passed).toBe(false);
     expect(result.results[0].issues).toContain("Leak risk above 0.15");
+  });
+
+  it("does not write learned leakage phrases from rejected candidates", async () => {
+    const candidate = mockCandidate();
+    const critique = mockCritique({
+      scores: { factual: 0.9, leak_risk: 0.9, ambiguity: 0.1, guessability: 0.8, diversity: 0.5 },
+      passed: false,
+    });
+    const client = createMockClient([critique]);
+
+    await critiqueCandidatesForYear({
+      year: 1969,
+      era: "CE",
+      candidates: [candidate],
+      llmClient: client,
+    });
+
+    expect(qualityValidatorMocks.learnFromRejected).not.toHaveBeenCalled();
   });
 });

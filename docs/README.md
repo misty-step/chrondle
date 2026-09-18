@@ -18,8 +18,9 @@
 
 ### Development
 
-- [Deployment Guide](./deployment-guide.md) - Vercel + Convex deployment
+- [Deployment Guide](./deployment-guide.md) - Native public host + Convex deployment
 - [Contributing](./guides/contributing.md) - How to contribute
+- [Notifications](./guides/notifications.md) - Daily reminder setup, states, and troubleshooting
 - [Code Review](./development/code-review.md) - Review checklist and patterns
 - [Button Migration](./development/button-migration.md) - Component patterns
 - [CI Debugging](./development/ci-debugging.md) - GitHub Actions troubleshooting

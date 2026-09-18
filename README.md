@@ -1,59 +1,49 @@
 # Chrondle: The Daily History Game
 
-[![Lines](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-lines.json)](https://github.com/misty-step/chrondle/actions)
-[![Branches](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-branches.json)](https://github.com/misty-step/chrondle/actions)
-[![Functions](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-functions.json)](https://github.com/misty-step/chrondle/actions)
-[![Statements](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-statements.json)](https://github.com/misty-step/chrondle/actions)
+[![Lines](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/misty-step/chrondle/badges/coverage-lines.json)](https://github.com/misty-step/chrondle/actions)
+[![Branches](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/misty-step/chrondle/badges/coverage-branches.json)](https://github.com/misty-step/chrondle/actions)
+[![Functions](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/misty-step/chrondle/badges/coverage-functions.json)](https://github.com/misty-step/chrondle/actions)
+[![Statements](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/misty-step/chrondle/badges/coverage-statements.json)](https://github.com/misty-step/chrondle/actions)
 
-**Chrondle** is an engaging web-based puzzle game where your knowledge of history is put to the test! Guess the year of a historical event based on a series of revealing clues. Each day brings a new challenge, spanning millennia of human history.
-
-## Features
-
-- **Daily Puzzles:** A fresh historical event to guess every day, dynamically generated from our database of 1,821 historical events.
-- **Progressive Hints:** Uncover more clues with each incorrect guess.
-- **Intuitive Interface:** Clean and responsive design built with Next.js and Tailwind CSS.
-- **Historical Range:** Puzzles cover a vast timeline, from ancient civilizations to recent events.
-- **Dynamic Puzzle Generation:** Puzzles are created on-demand each day from our events database using a deterministic algorithm - ensuring the same puzzle globally for all players.
-- **Daily Notifications:** Optional reminders to play each day's puzzle, with customizable notification times.
-- **Smart Timezone Handling:** Daily puzzle resets at midnight Central Time, automatically adjusting for daylight saving time transitions.
-
-## Daily Notifications
-
-Chrondle offers optional daily reminders to help you maintain your streak:
-
-### Features
-
-- **Customizable Time:** Set your preferred notification time (default: 9:00 AM)
-- **Browser Notifications:** Native browser push notifications on desktop and mobile
-- **Service Worker Support:** Notifications work even when the app isn't open
-- **Smart Permission Flow:** Two-step process that explains benefits before requesting permission
-- **Visual Feedback:** Bell icon shows notification status at a glance
-
-### Setting Up Notifications
-
-1. Click the **bell icon** in the top navigation bar
-2. Toggle notifications on and select your preferred time
-3. Click "Enable Notifications" to see the benefits
-4. Grant permission when prompted by your browser
-5. You'll receive a daily reminder at your chosen time!
-
-### Notification States
-
-- **🔔 Bell icon (filled):** Notifications enabled and active
-- **🔔 Bell icon (outline):** Notifications available but not enabled
-- **🔕 Bell with slash:** Notifications blocked by browser settings
-
-### Troubleshooting
-
-- **Not receiving notifications?** Check your browser's notification settings
-- **Mobile issues?** Ensure the site is added to your home screen for best results
-- **Changed your mind?** You can disable notifications anytime from the bell menu
+Chrondle is a free daily history puzzle: read the clues, enter a year range,
+and see whether it contains the year a historical event happened.
+Play today's puzzle at **[chrondle.app](https://chrondle.app)**.
 
 ## How to Play
 
-You can play Chrondle directly at [chrondle.app](https://chrondle.app).
+1. **Read the Clues:** Start with one historical event. Take additional hints before committing; each hint lowers the maximum score.
+2. **Enter Your Range:** Type two years and choose BC or AD for each. Use the same year for an exact guess. The range can be up to 250 years wide.
+3. **Check Your Potential Score:** Width and possible points update as you type. Narrower ranges earn more points if they contain the answer.
+4. **Lock In Your Range:** You get one submission. See the answer, your score breakdown, and the historical context, then share your result or play another mode.
+
+## Features
+
+- **Classic Mode:** the core daily range-guess puzzle described above, free for everyone.
+- **Duel Mode:** two historical events, tap the one that happened first, and see how long your streak lasts. Free for everyone.
+- **Order Mode:** arrange a set of events from earliest to latest, with limited misses. Free for everyone.
+- **Archive:** browse and replay past puzzles. Recent puzzles are free; deeper archive access is part of the paid subscription (see below).
+- **Progressive Hints:** choose how many of the six clues to read before locking in your range.
+- **Optional Sound:** off by default, with a persistent header toggle. Short synthesized cues confirm deliberate actions; completed games do not replay a celebration on reload.
+- **Local-Day Puzzles:** "today" is your local calendar day — the daily puzzle rolls over at YOUR midnight, and every surface (homepage, game pages, archive, countdown, streaks) agrees on which puzzle is today's.
+- **Daily Notifications:** optional reminders to play each day's puzzle, with a customizable time. See [Notifications](docs/guides/notifications.md) for setup and troubleshooting.
+- **Accounts:** play anonymously with local-storage progress, or sign in (email magic link or Google) for cross-device sync and permanent history.
+
+### Free / Paid Boundary
+
+Classic, Duel, and Order are free to play, full stop. A $0.99/mo (or $9.99/yr)
+subscription via Stripe unlocks the full puzzle archive and funds daily event
+generation and maintenance — see [chrondle.app/pricing](https://chrondle.app/pricing).
 
 ## Development
+
+This project is built with:
+
+- **Next.js 16:** React framework for production.
+- **React 19:** for building interactive user interfaces.
+- **Convex:** real-time backend and database.
+- **Tailwind CSS:** for rapid UI development and styling.
+- **TypeScript:** for type safety and improved developer experience.
+- **Vitest:** for unit and integration testing.
 
 ### Dependency Management
 
@@ -71,10 +61,12 @@ If `public/logo.svg` changes, regenerate all favicon assets with:
 bun run assets:favicons
 ```
 
-1.  **Dial in a Range:** Drag or type a historical range (e.g., 1910–1930) that you believe captures the event.
-2.  **Check Containment:** Submit the range to learn whether the true year sits inside; containment is required to win.
-3.  **Reveal up to Six Hints:** Each miss unlocks another clue (era buckets through precise deltas). Every hint slightly lowers the max score.
-4.  **Chase 100 Points:** Narrower ranges earn more of the 100-point cap. Win by containing the year before you run out of attempts—or learn from the revealed answer and hint trail.
+### Daily Day Semantics
+
+Chrondle's canonical "today" is the **player's local calendar day**, not a
+server-clock day — see [DST Handling](docs/development/DST_HANDLING_RESEARCH.md)
+for the full rationale and the timezone edge cases it resolves. The
+single day-resolution module is [`src/lib/time/dailyDate.ts`](src/lib/time/dailyDate.ts).
 
 ## User Accounts & Anonymous Play
 
@@ -82,81 +74,33 @@ Chrondle supports both anonymous and authenticated gameplay:
 
 ### Anonymous Play
 
-- **No account required:** Start playing immediately without signing up
-- **Local progress saving:** Your game progress is automatically saved to your browser's local storage
-- **24-hour persistence:** Anonymous sessions remain active for 24 hours
-- **Cross-session continuity:** Close your browser and return later - your puzzle progress is preserved
+- **No account required:** start playing immediately without signing up
+- **Local progress saving:** your game progress is automatically saved to your browser's local storage
+- **24-hour persistence:** anonymous sessions remain active for 24 hours
+- **Cross-session continuity:** close your browser and return later — your puzzle progress is preserved
 
 ### Authenticated Play
 
-- **Sign in with email:** Use magic links for passwordless authentication
-- **Google sign-in:** Quick authentication with your Google account
-- **Cross-device sync:** Your progress syncs across all your devices
-- **Permanent history:** All your past games are saved permanently
-- **Automatic migration:** When you create an account, your anonymous progress automatically transfers
+- **Sign in with email:** use magic links for passwordless authentication
+- **Google sign-in:** quick authentication with your Google account
+- **Cross-device sync:** your progress syncs across all your devices
+- **Permanent history:** all your past games are saved permanently
+- **Automatic migration:** when you create an account, your anonymous progress automatically transfers
 
 ### Mobile Authentication
 
-- **Optimized for mobile:** Authentication uses redirect flow on mobile devices for better compatibility
-- **Email app friendly:** Magic link authentication works seamlessly when switching between browser and email apps
-
-## Technical Architecture
-
-### Daily Puzzle Scheduling
-
-Chrondle implements sophisticated scheduling to ensure puzzles reset at midnight Central Time:
-
-#### DST-Aware Cron System
-
-- **Automatic DST Handling:** The system detects whether Central Time is in CST (UTC-6) or CDT (UTC-5)
-- **Daily Recalculation:** UTC offset is computed daily to handle DST transitions seamlessly
-- **Spring Forward/Fall Back:** Correctly handles the twice-yearly time changes without manual intervention
-- **Global Consistency:** All players worldwide receive the same puzzle at Central Time midnight
-
-#### Implementation Details
-
-```typescript
-// Dynamic UTC hour calculation for Central Time midnight
-function getUTCHourForCentralMidnight(): number {
-  const now = new Date();
-  const chicagoTime = new Date(now.toLocaleString("en-US", {
-    timeZone: "America/Chicago"
-  }));
-  const isDST = /* DST detection logic */;
-  return isDST ? 5 : 6; // UTC 5 AM (CDT) or 6 AM (CST)
-}
-```
-
-- **Convex Cron Jobs:** Backend scheduled tasks run at the calculated UTC hour
-- **Timezone Library:** Uses standard IANA timezone database (America/Chicago)
-- **Edge Case Handling:** Properly manages the ambiguous hour during "fall back"
-
-### Notification System Architecture
-
-- **Service Worker:** Background script handles push notifications
-- **Permission Management:** Graceful handling of permission states
-- **Persistence:** User preferences saved to both localStorage and Convex
-- **Cross-Device Sync:** Authenticated users' settings sync across devices
-
-## Development
-
-This project is built with:
-
-- **Next.js 15:** React framework for production.
-- **React 19:** For building interactive user interfaces.
-- **Tailwind CSS:** For rapid UI development and styling.
-- **TypeScript:** For type safety and improved developer experience.
-- **Vitest:** For unit and integration testing.
+- **Optimized for mobile:** authentication uses a redirect flow on mobile devices for better compatibility
+- **Email app friendly:** magic link authentication works seamlessly when switching between browser and email apps
 
 ## Requirements
 
-- **Node.js 20+**: This project requires Node.js version 20 or higher. Use the `.nvmrc` file with nvm:
+- **Node.js 20+**: this project requires Node.js version 20 or higher. Use the `.nvmrc` file with nvm:
   ```bash
   nvm use
   ```
-- **Bun**: This project uses Bun exclusively as the package manager. pnpm, npm, and yarn are not supported.
-- **Colima**: Local Dagger-backed CI uses Colima on macOS. Start it with `colima start --profile default`.
-- **ESM Modules**: The codebase uses ES modules throughout. All configuration files use `.mjs` extensions or TypeScript.
+- **Bun**: this project uses Bun exclusively as the package manager. pnpm, npm, and yarn are not supported.
+- **Colima**: local Dagger-backed CI uses Colima on macOS. Start it with `colima start --profile default`.
+- **ESM Modules**: the codebase uses ES modules throughout. All configuration files use `.mjs` extensions or TypeScript.
 
 ## Getting Started
 
@@ -165,7 +109,7 @@ This project is built with:
 1.  Clone the repository:
 
     ```bash
-    git clone https://github.com/phaedrus/chrondle.git
+    git clone https://github.com/misty-step/chrondle.git
     cd chrondle
     ```
 
@@ -211,7 +155,7 @@ The repo-local wrapper lives at [`scripts/dagger-local.sh`](./scripts/dagger-loc
 
 Before deploying Chrondle, you'll need accounts for:
 
-- **[Vercel](https://vercel.com)** - For hosting the Next.js application
+- **[DigitalOcean](https://www.digitalocean.com/)** - For hosting the Next.js application
 - **[Convex](https://convex.dev)** - For the backend database and real-time sync
 - **[Clerk](https://clerk.com)** - For authentication (optional but recommended)
 
@@ -237,47 +181,45 @@ Chrondle requires several environment variables for production deployment. Copy 
 #### Optional Variables
 
 - `OPENROUTER_API_KEY` - For AI-powered historical context features
-- Stripe keys - For future premium features
+- Stripe keys - For subscription/archive-access features
 
-### Deploying to Vercel
+### Deploying the web service
 
-1. **Fork or push this repository to GitHub**
+1. **Merge a reviewed commit to `master`.** A merge does not mutate
+   production.
 
-2. **Set up Convex:**
+2. **Deploy Convex separately when `convex/` changed:**
 
    ```bash
    bunx convex deploy --prod
    ```
 
-   This will create a production deployment and provide your `NEXT_PUBLIC_CONVEX_URL`.
+3. **Build the native host release:**
 
-3. **Import to Vercel:**
-   - Go to [Vercel Dashboard](https://vercel.com/dashboard)
-   - Click "New Project"
-   - Import your GitHub repository
+   ```bash
+   bun install --frozen-lockfile
+   bun run build:do
+   ```
 
-4. **Configure Environment Variables in Vercel:**
-   - Go to Project Settings → Environment Variables
-   - Add all required variables from `.env.example`:
-     - `NEXT_PUBLIC_CONVEX_URL`
-     - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-     - `CLERK_SECRET_KEY`
-     - `CONVEX_DEPLOY_KEY`
-     - `CLERK_WEBHOOK_SECRET` (if using Clerk webhooks)
+   `next.config.ts` emits the standalone Next.js runtime. Install the
+   standalone tree, `.next/static`, and `public` under
+   `/opt/public-apps/chrondle/releases/<git-commit>`.
 
-5. **Configure Build Settings:**
-   - Vercel should auto-detect the Next.js settings for this repository
-   - `vercel.json` only declares the framework, so no custom build or install command is required
+4. **Configure the host:** keep production variables from `.env.example` in
+   root-owned mode-`0600` `/etc/public-apps/chrondle.env`. The
+   `chrondle.service` systemd unit runs the active release on port `3007`.
+   The host's default-deny firewall blocks direct public access; Caddy is the
+   only allowed public ingress for `chrondle.app` and `www.chrondle.app`.
 
-6. **Deploy:**
-   - Click "Deploy"
-   - Vercel will build and deploy your application
+5. **Activate and verify:** atomically repoint
+   `/opt/public-apps/chrondle/current`, restart `chrondle.service`, then run
+   `bun run deploy:verify` and verify `https://chrondle.app/api/health`.
 
 ### Post-Deployment
 
 1. **Configure Clerk Webhook (if using authentication):**
    - In Clerk Dashboard, update the webhook endpoint to your production URL:
-     `https://your-app.vercel.app/api/webhooks/clerk`
+     `https://chrondle.app/api/webhooks/clerk`
 
 2. **Verify Deployment:**
    - Visit your deployed URL
@@ -288,10 +230,11 @@ Chrondle requires several environment variables for production deployment. Copy 
 ### Deployment Checklist
 
 - [ ] Convex project created and deployed
-- [ ] All environment variables added to Vercel
+- [ ] All environment variables installed in `/etc/public-apps/chrondle.env`
 - [ ] Clerk authentication configured (optional)
-- [ ] Webhook endpoints updated with production URLs
-- [ ] Build succeeds without errors
+- [ ] Webhook endpoints use the production URL
+- [ ] Standalone build succeeds without errors
+- [ ] `chrondle.service` and `/api/health` are healthy
 - [ ] Daily puzzle loads correctly
 - [ ] Archive page displays puzzles
 - [ ] User authentication works (if enabled)
@@ -331,16 +274,13 @@ bun run verify:convex
 - Verify `bun run build` succeeds locally
 - Review build logs for specific errors
 
-**Notification issues:**
-
-- Verify service worker is registered (check Application tab in DevTools)
-- Ensure HTTPS is enabled (required for service workers)
-- Check browser notification permissions
+**Notification issues:** see [docs/guides/notifications.md](docs/guides/notifications.md).
 
 **Daily puzzle timing:**
 
 - Confirm cron job is running (check Convex dashboard logs)
-- Verify DST calculations are correct for current date
-- Check that server timezone handling matches Central Time
+- Remember "today" is the PLAYER'S local calendar day (see [Daily Day Semantics](#daily-day-semantics)
+  above) — a puzzle number that differs between two machines usually means the
+  machines are on different local dates, not a bug
 
 For more detailed setup instructions, see the [Convex Next.js Quickstart](https://docs.convex.dev/quickstart/nextjs) and [Clerk Next.js Documentation](https://clerk.com/docs/quickstarts/nextjs).

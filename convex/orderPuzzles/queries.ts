@@ -7,7 +7,7 @@ import { query } from "../_generated/server";
  *
  * Exports:
  * - getOrderPuzzleByDate: Get Order puzzle for specific date (local date support)
- * - getDailyOrderPuzzle: Get today's Order puzzle (UTC, backward compat)
+ * - getDailyOrderPuzzle: QUARANTINED (UTC-day; stale-client compat only)
  * - getOrderPuzzleByNumber: Get Order puzzle by sequential number
  * - getArchiveOrderPuzzles: Get paginated archive Order puzzles
  */
@@ -32,10 +32,18 @@ export const getOrderPuzzleByDate = query({
 });
 
 /**
- * Get today's Order puzzle using UTC date
+ * QUARANTINED — DO NOT CONSUME FROM UI CODE.
  *
- * Wrapper for backward compatibility.
- * For new code, prefer getOrderPuzzleByDate with client's local date.
+ * Resolves "today" on the SERVER'S UTC clock, which disagrees with Chrondle's
+ * canonical day (the player's local calendar day — see
+ * src/lib/time/dailyDate.ts) for part of every day. All app consumers were
+ * removed (chrondle-ux-daily-identity) and an ESLint no-restricted-syntax
+ * rule blocks reintroduction in src/.
+ *
+ * Kept ONLY so stale client bundles deployed before the fix don't hard-error;
+ * safe to delete after a release window.
+ *
+ * @deprecated Use getOrderPuzzleByDate with the client's local date.
  */
 export const getDailyOrderPuzzle = query({
   handler: async (ctx) => {

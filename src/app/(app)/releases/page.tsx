@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { LayoutContainer } from "@/components/LayoutContainer";
-import { InlineMarkdown } from "@/components/ui/InlineMarkdown";
+import { InlineMarkdown } from "@/components/kit/InlineMarkdown";
 import { loadAllReleases } from "@/lib/releases/loader";
 import { CHANGE_TYPE_LABELS, CHANGE_TYPE_ORDER } from "@/lib/releases/types";
 import type { ChangeType } from "@/lib/releases/types";

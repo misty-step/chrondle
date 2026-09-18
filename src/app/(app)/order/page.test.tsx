@@ -14,7 +14,7 @@ vi.mock("convex/nextjs", () => ({
 vi.mock("@/lib/convexServer", () => ({
   api: {
     orderPuzzles: {
-      getDailyOrderPuzzle: "order-query",
+      getOrderPuzzleByDate: "order-by-date-query",
     },
   },
 }));
@@ -56,6 +56,16 @@ describe("OrderPage", () => {
 
     expect(screen.getByTestId("order-game-island")).toHaveTextContent("loaded");
     expect(screen.queryByTestId("mode-unavailable-state")).not.toBeInTheDocument();
+  });
+
+  it("seeds the preload with an explicit date (never the implicit UTC-day query)", async () => {
+    preloadQueryMock.mockResolvedValueOnce({ preloaded: true });
+
+    render(await OrderPage());
+
+    expect(preloadQueryMock).toHaveBeenCalledWith("order-by-date-query", {
+      date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    });
   });
 
   it("renders the unavailable state when preload returns null", async () => {

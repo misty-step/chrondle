@@ -1,8 +1,8 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { NavbarButton } from "@/components/ui/NavbarButton";
-import { GearSix } from "@phosphor-icons/react";
+import { NavbarButton } from "@/components/kit/NavbarButton";
+import { GearSix } from "@/components/kit/icons";
 
 interface AdminButtonProps {
   className?: string;

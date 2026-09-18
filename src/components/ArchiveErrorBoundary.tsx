@@ -2,7 +2,7 @@
 
 import React from "react";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { Archive, House, ArrowClockwise } from "@phosphor-icons/react";
+import { Archive, House, ArrowClockwise } from "@/components/kit/icons";
 import Link from "next/link";
 import { logger } from "@/lib/logger";
 

@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { Check, ShareNetwork } from "@phosphor-icons/react";
+import { Check, ShareNetwork } from "@/components/kit/icons";
 import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
-import { NextPuzzleCountdownCard } from "@/components/game/NextPuzzleCountdownCard";
+import { ReturnTomorrowCard } from "@/components/game/ReturnTomorrowCard";
 import { TimelineReveal } from "@/components/order/TimelineReveal";
 import { useCountdown } from "@/hooks/useCountdown";
 import type { AttemptScore, OrderEvent } from "@/types/orderGameState";
@@ -64,7 +64,7 @@ export function OrderReveal({
   const [isShared, setIsShared] = useState(false);
 
   // Only show countdown for daily puzzles (not archive)
-  const { timeString } = useCountdown({ strategy: "localMidnight" });
+  const { timeString } = useCountdown();
 
   const archivalDisplay = useMemo(() => getArchivalDisplay(score.attempts), [score.attempts]);
 
@@ -172,7 +172,7 @@ export function OrderReveal({
       </motion.div>
 
       {/* Countdown Card - only for daily puzzles */}
-      {!isArchive && <NextPuzzleCountdownCard timeString={timeString} />}
+      {!isArchive && <ReturnTomorrowCard timeString={timeString} mode="order" />}
     </div>
   );
 }

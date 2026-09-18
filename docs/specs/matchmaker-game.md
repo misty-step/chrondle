@@ -1,6 +1,8 @@
-### [FEATURE] Chrondle Matchmaker - NEW GAME MODE
+### [ARCHIVED] Chrondle Matchmaker - Retired Third-Mode Concept
 
-> Status note (April 8, 2026): this document predates Order mode shipping and is retained as an archived alternative. The current preferred third-mode direction is [Chrondle Groups](./groups-mode.md).
+> Status note (July 2026): this document predates Order mode shipping and is
+> retained as an archived alternative. Groups mode was also removed in PR #244,
+> so this is not live product direction.
 
 **Current State**: Archived concept written before Order mode shipped
 **Perspectives**: product-visionary, user-experience-advocate

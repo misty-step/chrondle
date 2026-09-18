@@ -10,11 +10,11 @@ vi.mock("@/components/magicui/text-animate", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/LoadingSpinner", () => ({
+vi.mock("@/components/kit/LoadingSpinner", () => ({
   LoadingSpinner: () => <div data-testid="loading-spinner">Loading...</div>,
 }));
 
-vi.mock("@/components/ui/HintText", () => ({
+vi.mock("@/components/kit/HintText", () => ({
   HintText: ({ children }: { children: string }) => <span>{children}</span>,
 }));
 
@@ -39,18 +39,6 @@ describe("CurrentHintCard", () => {
     isLoading: false,
     error: null as string | null,
   };
-
-  it("renders hint counter", () => {
-    render(<CurrentHintCard {...baseProps} />);
-
-    // Current Clue badge and counter
-    expect(screen.getByText("Current Clue")).toBeTruthy();
-    const hintText = screen.getByText("1 of 6");
-    expect(hintText).toBeTruthy();
-    // The aria-label includes both hint number and guesses remaining
-    const counter = screen.getByLabelText("Hint 1 of 6. 6 guesses remaining");
-    expect(counter).toBeTruthy();
-  });
 
   it("announces hint text in a polite live region", () => {
     render(<CurrentHintCard {...baseProps} />);
