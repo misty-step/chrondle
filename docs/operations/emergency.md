@@ -438,15 +438,15 @@ pnpm install -D @types/react @types/node
 
 ## 🌐 Deployment Issues
 
-### App Platform Deploy Failed
+### Native Host Deploy Failed
 
-1. **Check build logs:**
-   - DigitalOcean console → App → Runtime Logs, or `doctl apps logs <app-id>`
+1. **Check service logs:**
+   - `ssh root@public-apps.tail5f5eb4.ts.net 'journalctl -u chrondle.service -n 100 --no-pager'`
 
 2. **Common fixes:**
-   - Check environment variables are set
-   - Ensure build command is correct
-   - Verify the Bun/Node versions match the app build environment
+   - Check `/etc/public-apps/chrondle.env` exists and is mode `0600`
+   - Ensure the standalone release contains `server.js`, `.next/static`, and `public`
+   - Verify `/opt/node-v24/bin/node` and the release are executable by `chrondle`
 
 ### Bundle Size Check Failing
 

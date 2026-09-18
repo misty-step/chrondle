@@ -9,10 +9,11 @@ import { AdminButton } from "@/components/AdminButton";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { ModeDropdown } from "@/components/ModeDropdown";
 import { ThemeToggle } from "@/components/kit/ThemeToggle";
+import { SoundToggle } from "@/components/kit/SoundToggle";
 import { NavbarButton } from "@/components/kit/NavbarButton";
-import { getStreakColorClasses } from "@/lib/ui/streak-styling";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/displayFormatting";
+import { getStreakColorClasses } from "@/lib/ui/streak-styling";
 
 interface AppHeaderProps {
   currentStreak?: number;
@@ -35,106 +36,79 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const archiveHref = mode === "order" ? "/archive/order" : "/archive";
 
   return (
-    <>
-      <header
-        className="w-full border-b border-[var(--elevation-navbar-border)] bg-[var(--elevation-navbar-bg)] py-4"
-        style={{ boxShadow: "var(--elevation-navbar-shadow)" }}
-      >
-        <LayoutContainer className="transition-all duration-200 ease-out">
-          <div className="flex min-h-[40px] items-center justify-between">
-            {/* Logo/Brand - with integrated mode switcher */}
-            <div className="flex h-10 items-baseline gap-2">
-              {/* Keeps the gallery reachable for players whose mode-preference
-                  cookie redirects bare `/` to their mode. The param MUST carry
-                  a value (`all=1`, not bare `?all`): edge proxy query
-                  normalization drops valueless params, so bare `?all` reaches
-                  the server as `undefined` and the home redirect fires anyway,
-                  turning the wordmark into a dead-end in production. */}
-              <Link href="/?all=1" className="flex items-baseline">
-                <h1 className="font-display text-body-primary m-0 flex cursor-pointer items-baseline text-2xl transition-opacity hover:opacity-80 md:text-3xl">
-                  <span className="flex h-10 w-10 items-center justify-center sm:hidden">C</span>
-                  <span className="hidden sm:inline">CHRONDLE</span>
-                </h1>
-              </Link>
+    <header className="bg-background border-border sticky top-0 z-40 w-full border-b py-2">
+      <LayoutContainer>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-x-5">
+          <div className="flex min-w-0 items-center gap-2">
+            {/* A valued query parameter keeps the gallery reachable when the
+                mode-preference cookie redirects bare `/` to a game. */}
+            <Link
+              href="/?all=1"
+              className="font-display text-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex min-h-11 items-center rounded-sm text-2xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              Chrondle
+            </Link>
+            {isDebugMode && (
+              <span
+                className="bg-feedback-warning h-2 w-2 shrink-0 rounded-full"
+                title="Debug mode active"
+                aria-label="Debug mode indicator"
+              />
+            )}
+          </div>
 
-              {/* Mode Dropdown inline with brand */}
-              <span className="bg-border hidden h-4 w-px sm:inline" aria-hidden="true" />
-              <ModeDropdown className="hidden sm:inline-flex" />
+          <div className="flex shrink-0 items-center gap-1 lg:col-start-3 lg:row-start-1">
+            <SoundToggle />
+            <ThemeToggle />
+            <AuthButtons />
+          </div>
 
-              {/* Puzzle Number and Date */}
-              {puzzleNumber && (
-                <>
-                  <span className="bg-border hidden h-4 w-px sm:inline" aria-hidden="true" />
-                  <span
-                    className={cn(
-                      "font-mono text-xs sm:text-sm",
-                      isArchive ? "text-muted-foreground italic" : "text-foreground/70",
-                    )}
-                  >
-                    {`#${puzzleNumber}`}
-                    {puzzleDate && (
-                      <span className="text-muted-foreground/60 ml-1.5 hidden text-xs sm:inline">
-                        • {formatDate(puzzleDate)}
-                      </span>
-                    )}
-                  </span>
-                </>
-              )}
-
-              {isDebugMode && (
-                <span
-                  className="ml-2 h-2 w-2 rounded-full bg-orange-600 opacity-75"
-                  title="Debug mode active"
-                  aria-label="Debug mode indicator"
-                />
-              )}
-            </div>
-
-            {/* Action Buttons with Streak Counter */}
-            <div className="flex h-10 items-center gap-3">
-              {/* Streak Counter - Archival Badge */}
-              {currentStreak !== undefined && currentStreak > 0 && streakColors && (
-                <div
-                  className={`flex items-center gap-2 rounded border-2 px-3 py-2 ${streakColors.borderColor} h-10`}
-                  title={streakColors.milestone || `${currentStreak} day streak`}
-                  aria-label={`Current streak: ${currentStreak} day streak`}
-                >
-                  <Fire className={`h-4 w-4 ${streakColors.textColor}`} />
-                  <span
-                    className={`font-accent text-sm font-bold ${streakColors.textColor} whitespace-nowrap`}
-                  >
-                    <span className="hidden sm:inline">{currentStreak} day streak</span>
-                    <span className="sm:hidden">{currentStreak}</span>
-                  </span>
-                </div>
-              )}
-
-              {/* Mobile Mode Dropdown */}
-              <ModeDropdown className="flex sm:hidden" />
-
-              {/* Archive Button */}
+          <div className="col-span-2 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 lg:col-span-1 lg:col-start-2 lg:row-start-1">
+            <nav aria-label="Game navigation" className="flex items-center gap-1">
+              <ModeDropdown />
               <NavbarButton
                 href={archiveHref}
                 title="Browse puzzle archive"
                 aria-label="Browse puzzle archive"
-                overlayColor="primary"
-                className="flex"
               >
-                <Archive className="h-5 w-5" />
+                <Archive className="h-5 w-5" aria-hidden="true" />
               </NavbarButton>
+              <AdminButton />
+            </nav>
 
-              {/* Admin Button - Only visible to admins */}
-              <AdminButton className="hidden sm:flex" />
-
-              {/* Theme Toggle */}
-              <ThemeToggle className="flex" />
-
-              {/* Auth Buttons - Rightmost */}
-              <AuthButtons className="flex" />
+            <div className="text-muted-foreground flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 text-sm tabular-nums">
+              {puzzleNumber && (
+                <span
+                  className={cn(
+                    "inline-flex flex-wrap items-center gap-x-2",
+                    isArchive && "italic",
+                  )}
+                >
+                  <span aria-label={`Puzzle ${puzzleNumber}`}>#{puzzleNumber}</span>
+                  {puzzleDate && (
+                    <time dateTime={puzzleDate} className="hidden sm:inline">
+                      {formatDate(puzzleDate)}
+                    </time>
+                  )}
+                </span>
+              )}
+              {currentStreak !== undefined && currentStreak > 0 && streakColors && (
+                <div
+                  className="flex items-center gap-1.5"
+                  title={streakColors.milestone || `${currentStreak} day streak`}
+                  aria-label={`Current streak: ${currentStreak} day streak`}
+                >
+                  <Fire className={cn("h-4 w-4", streakColors.textColor)} aria-hidden="true" />
+                  <span className="font-medium">
+                    {currentStreak}
+                    <span className="hidden sm:inline"> day streak</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
-        </LayoutContainer>
-      </header>
-    </>
+        </div>
+      </LayoutContainer>
+    </header>
   );
 };

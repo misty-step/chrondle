@@ -1,10 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import React from "react";
 import { LoadingSpinner } from "@/components/kit/LoadingSpinner";
 import { HintText } from "@/components/kit/HintText";
-import { ANIMATION_DURATIONS } from "@/lib/animationConstants";
 
 interface CurrentHintCardProps {
   event: string | null;
@@ -12,100 +10,37 @@ interface CurrentHintCardProps {
   totalHints: number;
   isLoading: boolean;
   error: string | null;
-  isInitialHint?: boolean; // True for first hint on load, false for hints after guesses
 }
 
 export const CurrentHintCard: React.FC<CurrentHintCardProps> = React.memo(
-  ({ event, hintNumber, totalHints, isLoading, error, isInitialHint = false }) => {
-    const shouldReduceMotion = useReducedMotion();
-
-    // State for incorrect guess feedback animation
-    const [showFeedback, setShowFeedback] = useState(false);
-    const prevHintNumber = useRef(hintNumber);
-
-    // Trigger feedback pulse when hint number changes (indicates incorrect guess)
-    useEffect(() => {
-      // If hint number increased and this isn't the initial mount
-      if (hintNumber > prevHintNumber.current && prevHintNumber.current > 0) {
-        const animationFrame = requestAnimationFrame(() => {
-          setShowFeedback(true);
-        });
-        const timeout = setTimeout(() => {
-          setShowFeedback(false);
-        }, ANIMATION_DURATIONS.HINT_FEEDBACK);
-        prevHintNumber.current = hintNumber;
-        return () => {
-          cancelAnimationFrame(animationFrame);
-          clearTimeout(timeout);
-        };
-      }
-      prevHintNumber.current = hintNumber;
-    }, [hintNumber]);
-
-    // Determine entrance delay based on context
-    // - Initial hint (first load): 600ms delay for dramatic reveal
-    // - Subsequent hints (after demotion): 1400ms delay for coordination
-    const entranceDelay = isInitialHint
-      ? ANIMATION_DURATIONS.HINT_DELAY / 1000
-      : ANIMATION_DURATIONS.NEW_HINT_DELAY / 1000;
-
-    // Don't render if we have an error
-    if (error) {
-      return null;
-    }
-
-    const hintText = event || "[DATA MISSING]";
+  ({ event, hintNumber, totalHints, isLoading, error }) => {
+    if (error) return null;
 
     return (
-      <motion.div
-        key={hintNumber}
-        initial={shouldReduceMotion ? undefined : { opacity: 0 }}
-        animate={
-          shouldReduceMotion
-            ? undefined
-            : {
-                opacity: 1,
-                borderColor: showFeedback ? "rgb(239, 68, 68)" : undefined,
-              }
-        }
-        exit={shouldReduceMotion ? undefined : { opacity: 0, y: -20 }}
-        transition={{
-          duration: ANIMATION_DURATIONS.HINT_TRANSITION / 1000,
-          delay: shouldReduceMotion ? 0 : entranceDelay,
-          borderColor: {
-            duration: ANIMATION_DURATIONS.HINT_FEEDBACK / 1000,
-            ease: "easeInOut",
-          },
-        }}
-        className="w-full"
-      >
-        <div className="border-border bg-surface-elevated border-l-feedback-success rounded border border-l-4 px-4 py-3">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="bg-feedback-success rounded px-2 py-0.5 text-xs font-bold tracking-wide text-white uppercase">
-              Current Clue
-            </span>
-            <span
-              className="text-muted-foreground font-accent text-xs tracking-wide"
-              aria-label={`Hint ${hintNumber} of ${totalHints}. ${totalHints - hintNumber + 1} guesses remaining`}
-            >
-              {hintNumber} of {totalHints}
-            </span>
-          </div>
+      <div className="border-border w-full border-y py-5 sm:py-6">
+        <div className="mb-3 flex items-center justify-between gap-3 text-sm">
+          <span className="text-feedback-success font-semibold">Current clue</span>
+          <span
+            className="text-muted-foreground tabular-nums"
+            aria-label={`Hint ${hintNumber} of ${totalHints}`}
+          >
+            {hintNumber} of {totalHints}
+          </span>
+        </div>
 
+        <div role="status" aria-live="polite" aria-atomic="true" aria-busy={isLoading}>
           {isLoading ? (
-            <div className="flex items-center gap-3">
-              <LoadingSpinner size="sm" />
+            <div className="flex items-center gap-3 py-2">
+              <LoadingSpinner size="sm" className="motion-reduce:animate-none" />
               <span className="font-body text-muted-foreground text-base">Loading hint...</span>
             </div>
           ) : (
-            <div role="status" aria-live="polite" aria-atomic="true">
-              <HintText className="font-body text-foreground text-left text-base leading-relaxed sm:text-lg">
-                {hintText}
-              </HintText>
-            </div>
+            <HintText className="font-body text-foreground text-left text-lg leading-relaxed font-normal sm:text-xl sm:leading-relaxed">
+              {event || "[DATA MISSING]"}
+            </HintText>
           )}
         </div>
-      </motion.div>
+      </div>
     );
   },
 );

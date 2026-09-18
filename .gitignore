@@ -141,3 +141,10 @@ test-results/
 # harness). Ignored rather than deleted since ownership is ambiguous and
 # they may belong to a concurrent session. See chrondle-eng-repo-litter.
 /check-lab*.mjs
+
+# OpenNext / Cloudflare Workers
+/.open-next/
+/.wrangler/
+.dev.vars
+.dev.vars.*
+

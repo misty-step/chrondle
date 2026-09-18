@@ -53,10 +53,10 @@ function MissingEnvironmentVariables({ variables }: { variables: string[] }) {
                 <div>
                   <h2 className="mb-2 font-semibold">For hosted deployments:</h2>
                   <ol className="text-muted-foreground list-inside list-decimal space-y-2 text-sm">
-                    <li>Open the DigitalOcean App Platform settings</li>
-                    <li>Navigate to the application environment variables</li>
-                    <li>Add the missing variables to the web service</li>
-                    <li>Trigger a new deployment so public variables are rebuilt</li>
+                    <li>Update the root-owned host environment file</li>
+                    <li>Build and install a new standalone release</li>
+                    <li>Restart the systemd service</li>
+                    <li>Verify the public health endpoint</li>
                   </ol>
                 </div>
 

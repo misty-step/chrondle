@@ -1,0 +1,51 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "chrondle",
+  "account_id": "b069014f6a46558ea9146fb6c4ff8f6c",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-17",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "send_metrics": false,
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "env": {
+    // Staging: workers.dev URL only. No routes, no custom domain.
+    // Deploy with: wrangler deploy --env staging
+    "staging": {
+      "name": "chrondle-staging",
+      "workers_dev": true,
+      // Backends intentionally match the live Caddy origin (prod Convex
+      // deployment + prod-scoped Clerk/Canary keys): staging proves the
+      // new web runtime against the real contracts.
+      "vars": {
+        "NEXT_PUBLIC_CONVEX_URL": "https://fleet-goldfish-183.convex.cloud",
+        "NEXT_PUBLIC_CANARY_ENDPOINT": "https://canary.mistystep.io",
+        "NEXT_PUBLIC_CANARY_ENVIRONMENT": "production",
+        "NEXT_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
+        "CANARY_ENDPOINT": "https://canary.mistystep.io",
+        "CANARY_ENVIRONMENT": "production",
+      },
+    },
+    // Production: named `chrondle`. The chrondle.mistystep.io custom domain
+    // is attached here; Cloudflare manages the proxied DNS record itself
+    // (the old grey-cloud A record was removed to clear error 100117).
+    "production": {
+      "name": "chrondle",
+      "workers_dev": false,
+      "routes": [{ "pattern": "chrondle.mistystep.io", "custom_domain": true }],
+      "vars": {
+        "NEXT_PUBLIC_CONVEX_URL": "https://fleet-goldfish-183.convex.cloud",
+        "NEXT_PUBLIC_CANARY_ENDPOINT": "https://canary.mistystep.io",
+        "NEXT_PUBLIC_CANARY_ENVIRONMENT": "production",
+        "NEXT_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
+        "CANARY_ENDPOINT": "https://canary.mistystep.io",
+        "CANARY_ENVIRONMENT": "production",
+      },
+    },
+  },
+}
