@@ -1,22 +1,20 @@
 # Chrondle: The Daily History Game
 
-[![Lines](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-lines.json)](https://github.com/misty-step/chrondle/actions)
-[![Branches](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-branches.json)](https://github.com/misty-step/chrondle/actions)
-[![Functions](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-functions.json)](https://github.com/misty-step/chrondle/actions)
-[![Statements](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/phrazzld/e8c4bf5ebfd4fbacdd6d2261a22d21b3/raw/coverage-statements.json)](https://github.com/misty-step/chrondle/actions)
+[![Lines](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/misty-step/chrondle/badges/coverage-lines.json)](https://github.com/misty-step/chrondle/actions)
+[![Branches](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/misty-step/chrondle/badges/coverage-branches.json)](https://github.com/misty-step/chrondle/actions)
+[![Functions](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/misty-step/chrondle/badges/coverage-functions.json)](https://github.com/misty-step/chrondle/actions)
+[![Statements](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/misty-step/chrondle/badges/coverage-statements.json)](https://github.com/misty-step/chrondle/actions)
 
-Chrondle is a free daily history puzzle: read the clues, drag a range onto the
-timeline, and see if it contains the real year a historical event happened.
+Chrondle is a free daily history puzzle: read the clues, enter a year range,
+and see whether it contains the year a historical event happened.
 Play today's puzzle at **[chrondle.app](https://chrondle.app)**.
-
-![Chrondle gameplay: dragging a year range to contain a historical event](docs/launch/product-hunt/assets/gameplay-preview.gif)
 
 ## How to Play
 
-1. **Dial in a Range:** Drag or type a historical range (e.g., 1910–1930) that you believe contains the event.
-2. **Check Containment:** Submit the range to learn whether the true year sits inside; containment is required to win.
-3. **Reveal up to Six Hints:** Each miss unlocks another clue (era buckets through precise deltas). Every hint slightly lowers the max score.
-4. **Chase 100 Points:** Narrower ranges earn more of the 100-point cap. Win by containing the year before you run out of attempts — or learn from the revealed answer and hint trail.
+1. **Read the Clues:** Start with one historical event. Take additional hints before committing; each hint lowers the maximum score.
+2. **Enter Your Range:** Type two years and choose BC or AD for each. Use the same year for an exact guess. The range can be up to 250 years wide.
+3. **Check Your Potential Score:** Width and possible points update as you type. Narrower ranges earn more points if they contain the answer.
+4. **Lock In Your Range:** You get one submission. See the answer, your score breakdown, and the historical context, then share your result or play another mode.
 
 ## Features
 
@@ -24,7 +22,8 @@ Play today's puzzle at **[chrondle.app](https://chrondle.app)**.
 - **Duel Mode:** two historical events, tap the one that happened first, and see how long your streak lasts. Free for everyone.
 - **Order Mode:** arrange a set of events from earliest to latest, with limited misses. Free for everyone.
 - **Archive:** browse and replay past puzzles. Recent puzzles are free; deeper archive access is part of the paid subscription (see below).
-- **Progressive Hints:** each incorrect guess reveals another clue.
+- **Progressive Hints:** choose how many of the six clues to read before locking in your range.
+- **Optional Sound:** off by default, with a persistent header toggle. Short synthesized cues confirm deliberate actions; completed games do not replay a celebration on reload.
 - **Local-Day Puzzles:** "today" is your local calendar day — the daily puzzle rolls over at YOUR midnight, and every surface (homepage, game pages, archive, countdown, streaks) agrees on which puzzle is today's.
 - **Daily Notifications:** optional reminders to play each day's puzzle, with a customizable time. See [Notifications](docs/guides/notifications.md) for setup and troubleshooting.
 - **Accounts:** play anonymously with local-storage progress, or sign in (email magic link or Google) for cross-device sync and permanent history.
@@ -184,36 +183,37 @@ Chrondle requires several environment variables for production deployment. Copy 
 - `OPENROUTER_API_KEY` - For AI-powered historical context features
 - Stripe keys - For subscription/archive-access features
 
-### Deploying to DigitalOcean App Platform
+### Deploying the web service
 
-1. **Fork or push this repository to GitHub**
+1. **Merge a reviewed commit to `master`.** A merge does not mutate
+   production.
 
-2. **Set up Convex:**
+2. **Deploy Convex separately when `convex/` changed:**
 
    ```bash
    bunx convex deploy --prod
    ```
 
-   This will create a production deployment and provide your `NEXT_PUBLIC_CONVEX_URL`.
+3. **Build the native host release:**
 
-3. **Create the App Platform service:**
-   - Connect the `misty-step/chrondle` repository and `master` branch
-   - Set the build command to `bun install --frozen-lockfile && bun run build`
-   - Set the run command to `bun run start` and HTTP port to `3000`
-   - Configure `/api/health` as the health-check path
+   ```bash
+   bun install --frozen-lockfile
+   bun run build:do
+   ```
 
-4. **Configure environment variables:**
-   - Open the web service's environment settings
-   - Add all required variables from `.env.example`:
-     - `NEXT_PUBLIC_CONVEX_URL`
-     - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-     - `CLERK_SECRET_KEY`
-     - `CONVEX_DEPLOY_KEY`
-     - `CLERK_WEBHOOK_SECRET` (if using Clerk webhooks)
+   `next.config.ts` emits the standalone Next.js runtime. Install the
+   standalone tree, `.next/static`, and `public` under
+   `/opt/public-apps/chrondle/releases/<git-commit>`.
 
-5. **Deploy:**
-   - App Platform builds from `master`; an operator can also create an exact
-     deployment with `doctl apps create-deployment <app-id>`.
+4. **Configure the host:** keep production variables from `.env.example` in
+   root-owned mode-`0600` `/etc/public-apps/chrondle.env`. The
+   `chrondle.service` systemd unit runs the active release on port `3007`.
+   The host's default-deny firewall blocks direct public access; Caddy is the
+   only allowed public ingress for `chrondle.app` and `www.chrondle.app`.
+
+5. **Activate and verify:** atomically repoint
+   `/opt/public-apps/chrondle/current`, restart `chrondle.service`, then run
+   `bun run deploy:verify` and verify `https://chrondle.app/api/health`.
 
 ### Post-Deployment
 
@@ -230,10 +230,11 @@ Chrondle requires several environment variables for production deployment. Copy 
 ### Deployment Checklist
 
 - [ ] Convex project created and deployed
-- [ ] All environment variables added to the App Platform web service
+- [ ] All environment variables installed in `/etc/public-apps/chrondle.env`
 - [ ] Clerk authentication configured (optional)
-- [ ] Webhook endpoints updated with production URLs
-- [ ] Build succeeds without errors
+- [ ] Webhook endpoints use the production URL
+- [ ] Standalone build succeeds without errors
+- [ ] `chrondle.service` and `/api/health` are healthy
 - [ ] Daily puzzle loads correctly
 - [ ] Archive page displays puzzles
 - [ ] User authentication works (if enabled)

@@ -504,6 +504,11 @@
   <body>
     <header class="lab">
       <h1>Classic Guess Entry - One-Gesture Range Control</h1>
+      <p class="rule">
+        <strong>Superseded exploration.</strong> The drag-to-draw proposal compressed the full
+        historical span into a phone-width track. Classic now uses direct year entry instead. The
+        alternatives below remain a record of that earlier exploration, not implementation guidance.
+      </p>
       <p class="sub">
         Today's entry is two numeric text boxes plus two BC/AD segmented toggles - four controls for
         one decision, defaulting to the historically nonexistent
@@ -1105,16 +1110,11 @@
         </tr>
       </table>
       <p class="sub" style="margin-bottom: 0">
-        Implementation: new <code>TimelineRangeBar.tsx</code> (pointer-drag + keyboard-adjustable
-        dual handles, no new dependency) composed into <code>RangeInput.tsx</code> as the primary
-        control; the existing numeric FROM/TO + era-toggle fields stay mounted, unchanged
-        internally, directly beneath as the exact-entry fallback (so every existing e2e/unit path
-        that drives them keeps working). The layout-shift bug is fixed by deleting the onboarding
-        banner that mounted/unmounted above the card and folding its "one guess" teaching copy into
-        the panel's existing fixed-height status row instead of a separate block. Default state
-        changes from a fake <code>0 AD → 0 AD</code> to a genuinely empty, un-set range. Post-submit
-        focus moves to the results heading via a <code>tabIndex=-1</code> ref in
-        <code>GameLayout</code>.
+        Current implementation: <code>RangeInput.tsx</code> uses two independent year fields with
+        explicit BC/AD selection, live validation, and width/score feedback. It starts empty and
+        never infers an era or changes the other endpoint. Enter advances focus rather than
+        submitting the one-shot guess. After deliberate submission, <code>GameLayout</code>
+        moves focus to the results. The original drag proposal is no longer part of the application.
       </p>
     </section>
   </body>

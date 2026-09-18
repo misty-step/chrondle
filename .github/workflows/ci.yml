@@ -88,14 +88,44 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file-coverage-mode: changes
 
-      - name: Update Coverage Badges
-        if: matrix.check == 'test' && github.ref == 'refs/heads/master'
-        env:
-          GH_TOKEN: ${{ secrets.GIST_TOKEN }}
+      - name: Upload coverage summary for badge publishing
+        if: matrix.check == 'test' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-summary
+          path: coverage/coverage-summary.json
+          retention-days: 7
+
+  # Publish coverage badges to the dedicated `badges` branch with the
+  # built-in GITHUB_TOKEN. README renders them through the shields.io
+  # endpoint, pointing at raw.githubusercontent.com (no gist, no PAT).
+  coverage-badges:
+    name: coverage-badges
+    runs-on: ubuntu-latest
+    needs: quality-checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download coverage summary
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage-summary
+          path: coverage-badges-data
+
+      - name: Publish badges to badges branch
         run: |
+          set -euo pipefail
+
           # Generate badge JSON files with color logic
           for metric in lines branches functions statements; do
-            VALUE=$(jq ".total.${metric}.pct" coverage/coverage-summary.json)
+            VALUE=$(jq ".total.${metric}.pct" coverage-badges-data/coverage-summary.json)
 
             # Color thresholds: brightgreen (≥80%), yellow (≥70%), red (<70%)
             if (( $(echo "$VALUE >= 80" | bc -l) )); then
@@ -108,21 +138,48 @@ jobs:
 
             # Capitalize metric for label
             LABEL=$(echo "$metric" | sed 's/.*/\u&/')
-            echo "{\"schemaVersion\":1,\"label\":\"$LABEL\",\"message\":\"${VALUE}%\",\"color\":\"$COLOR\"}" > /tmp/coverage-${metric}.json
+            echo "{\"schemaVersion\":1,\"label\":\"$LABEL\",\"message\":\"${VALUE}%\",\"color\":\"$COLOR\"}" > "$RUNNER_TEMP/coverage-${metric}.json"
           done
 
-          # Update all badge files atomically via API (avoids 409 conflicts)
-          jq -n \
-            --arg lines "$(cat /tmp/coverage-lines.json)" \
-            --arg branches "$(cat /tmp/coverage-branches.json)" \
-            --arg functions "$(cat /tmp/coverage-functions.json)" \
-            --arg statements "$(cat /tmp/coverage-statements.json)" \
-            '{files: {
-              "coverage-lines.json": {content: $lines},
-              "coverage-branches.json": {content: $branches},
-              "coverage-functions.json": {content: $functions},
-              "coverage-statements.json": {content: $statements}
-            }}' | gh api --method PATCH /gists/${{ vars.COVERAGE_GIST_ID }} --input -
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Publish on a separate worktree so the checked-out ref is untouched
+          BADGES_WORKTREE="$RUNNER_TEMP/badges-branch"
+          rm -rf "$BADGES_WORKTREE"
+          git fetch origin badges || true
+          if git show-ref --verify --quiet refs/remotes/origin/badges; then
+            git worktree add "$BADGES_WORKTREE" -B badges origin/badges
+          else
+            git worktree add --detach "$BADGES_WORKTREE"
+            (
+              cd "$BADGES_WORKTREE"
+              git checkout --orphan badges
+              git rm -rf . >/dev/null 2>&1 || true
+            )
+          fi
+          cd "$BADGES_WORKTREE"
+          cp "$RUNNER_TEMP"/coverage-*.json .
+          git add coverage-*.json
+          if git diff --cached --quiet; then
+            echo "Coverage badges unchanged; nothing to publish."
+            exit 0
+          fi
+          git commit -m "chore(badges): update coverage badges [skip ci]"
+          pushed=0
+          for attempt in 1 2 3; do
+            if git push origin badges; then
+              pushed=1
+              break
+            fi
+            git pull --rebase origin badges || true
+            sleep 2
+          done
+          if [ "$pushed" != "1" ]; then
+            echo "::error::Failed to push coverage badges after 3 attempts"
+            exit 1
+          fi
+          echo "Published coverage badges to the badges branch."
 
   validation:
     runs-on: ubuntu-latest

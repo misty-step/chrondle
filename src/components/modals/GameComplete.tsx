@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 
 import { formatYear, pluralize } from "@/lib/displayFormatting";
 import { SCORING_CONSTANTS, computeScoreBreakdown } from "@/lib/scoring";
@@ -93,10 +93,7 @@ function buildOutcomeCopy(
   if (hasWon) {
     const detail =
       typeof targetYear === "number" && !Number.isNaN(targetYear)
-        ? `${formatYear(targetYear)} landed inside your ${pluralize(
-            range.end - range.start + 1,
-            "year",
-          )} window.`
+        ? `${formatYear(targetYear)} fell within your ${range.end - range.start + 1}-year range.`
         : "Your range captured the target year.";
 
     return {
@@ -112,25 +109,21 @@ function buildOutcomeCopy(
 }
 
 function RangeSummary({ range, index }: { range: RangeGuess; index: number }) {
-  const widthYears = range.end - range.start + 1;
-  const contained = range.score > 0;
-
+  const width = range.end - range.start + 1;
   return (
-    <div className="border-border/40 bg-surface-elevated rounded border p-3">
-      <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs font-medium tracking-wide uppercase">
-        <span>Range {index + 1}</span>
-        <span className={contained ? "text-feedback-success" : "text-feedback-error"}>
-          {contained ? "Contained" : "Missed"}
+    <div className="border-border border-t py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+        <span className="text-foreground font-semibold">Attempt {index + 1}</span>
+        <span className="text-foreground font-mono tabular-nums">
+          {formatYear(range.start)} - {formatYear(range.end)}
         </span>
       </div>
-
-      <p className="text-sm font-semibold">
-        {formatYear(range.start)} – {formatYear(range.end)}
-      </p>
-      <p className="text-muted-foreground text-xs">
-        {pluralize(widthYears, "year")} wide · {pluralize(range.hintsUsed, "hint")} used ·{" "}
-        {range.score} pts
-      </p>
+      <div className="text-muted-foreground mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span>Width: {width.toLocaleString()} years</span>
+        <span className="text-foreground font-semibold">
+          Score: {range.score.toLocaleString()} pts
+        </span>
+      </div>
     </div>
   );
 }
@@ -197,10 +190,9 @@ export function GameComplete({
     return "Share";
   })();
 
-  // Share button stays success green - feedback via icon + animation, not color change
+  // Share feedback is immediate and stays quiet.
   const shareButtonIcon = (() => {
-    if (shareStatus === "success")
-      return <Check className="size-4 animate-[check-in_250ms_ease-out_forwards]" />;
+    if (shareStatus === "success") return <Check className="size-4" aria-hidden="true" />;
     if (shareStatus === "error") return <WarningCircle className="size-4" />;
     return null;
   })();
@@ -209,27 +201,32 @@ export function GameComplete({
 
   // Progressive disclosure - details collapsed by default
   const [showDetails, setShowDetails] = useState(false);
+  const detailsId = useId();
 
   return (
-    <section className={cn("border-border/60 bg-card rounded border p-5 shadow-lg", className)}>
-      <div className="mb-5 flex flex-col gap-4">
-        <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] sm:items-stretch">
-          <div className="border-border/40 bg-surface-elevated rounded border p-4 shadow-inner">
-            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-              Game Summary
-            </p>
-            <h3 className="text-foreground text-2xl font-bold">{outcomeCopy.title}</h3>
+    <section className={cn("border-border bg-card rounded-2xl border p-5 sm:p-6", className)}>
+      <div className="mb-6 flex flex-col gap-5">
+        <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] sm:items-start">
+          <div>
+            <h3 className="text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
+              {outcomeCopy.title}
+            </h3>
+            {outcomeCopy.detail && (
+              <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                {outcomeCopy.detail}
+              </p>
+            )}
           </div>
 
-          <div className="border-border/40 bg-primary/5 rounded border p-4 text-right shadow-sm">
-            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-              Total Score
-            </p>
-            <p className="text-body-primary text-3xl leading-tight font-black">
+          <div className="sm:border-border sm:border-l sm:pl-5 sm:text-right">
+            <p className="text-muted-foreground text-sm">Total score</p>
+            <p
+              className={cn(
+                "mt-1 text-3xl leading-tight font-semibold tabular-nums",
+                hasWon ? "text-feedback-success" : "text-muted-foreground",
+              )}
+            >
               {totalScore.toLocaleString()} pts
-            </p>
-            <p className="text-muted-foreground text-xs">
-              {hasWon ? "Contained range" : "Answer outside range"}
             </p>
           </div>
         </div>
@@ -237,10 +234,8 @@ export function GameComplete({
         <Button
           onClick={() => shareGame()}
           disabled={isSharing}
-          className={cn(
-            "w-full justify-center gap-2 text-sm font-semibold text-white",
-            shareStatus === "success" && "animate-[stamp-confirm_200ms_ease-out]",
-          )}
+          size="lg"
+          className="text-feedback-success-foreground w-full justify-center gap-2 text-base"
         >
           {shareButtonIcon}
           {shareButtonLabel}
@@ -266,8 +261,8 @@ export function GameComplete({
                     className={cn(
                       "size-4",
                       index < ladderFilled
-                        ? "fill-yellow-500 text-yellow-600"
-                        : "text-muted-foreground/30 fill-none",
+                        ? "fill-feedback-success/15 text-feedback-success"
+                        : "text-muted-foreground/50 fill-none",
                     )}
                     aria-label={index < ladderFilled ? "Hint used" : "Hint unused"}
                   />
@@ -281,23 +276,26 @@ export function GameComplete({
 
       {/* Progressive disclosure toggle */}
       <button
+        type="button"
         onClick={() => setShowDetails(!showDetails)}
-        className="text-muted-foreground hover:text-foreground mt-4 flex w-full items-center justify-center gap-2 py-2 text-sm font-medium transition-colors"
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
         aria-expanded={showDetails}
+        aria-controls={detailsId}
       >
         <span>{showDetails ? "Hide details" : "Show score breakdown"}</span>
         <CaretDown
-          className={cn("size-4 transition-transform duration-200", showDetails && "rotate-180")}
+          className={cn(
+            "size-4 transition-transform duration-200 motion-reduce:transition-none",
+            showDetails && "rotate-180",
+          )}
           aria-hidden="true"
         />
       </button>
 
       {showDetails && (
-        <>
-          <div className="border-border/40 bg-surface-elevated mt-2 rounded border p-4">
-            <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
-              Score breakdown
-            </p>
+        <div id={detailsId}>
+          <div className="border-border mt-2 border-t pt-4">
+            <p className="text-foreground mb-4 text-sm font-semibold">Score breakdown</p>
 
             <div className="space-y-3 text-sm">
               {/* Base potential */}
@@ -326,14 +324,14 @@ export function GameComplete({
               <Separator />
 
               {/* Width calculation */}
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Ruler className="text-muted-foreground size-4" aria-hidden="true" />
                   <span className="text-muted-foreground">
                     Range width ({breakdown ? pluralize(breakdown.width, "year") : "—"})
                   </span>
                 </div>
-                <span className="font-mono">
+                <span className="font-mono whitespace-nowrap">
                   {cappedScore} × {widthFactor.toFixed(2)} = {widthScore}
                 </span>
               </div>
@@ -346,7 +344,12 @@ export function GameComplete({
                   <Target className="text-muted-foreground size-4" aria-hidden="true" />
                   <span className="text-muted-foreground">Containment</span>
                 </div>
-                <span className={cn("font-medium", hasWon ? "text-emerald-600" : "text-rose-500")}>
+                <span
+                  className={cn(
+                    "font-medium",
+                    hasWon ? "text-feedback-success" : "text-destructive",
+                  )}
+                >
                   {hasWon ? "Contained" : "Missed ×0"}
                 </span>
               </div>
@@ -357,7 +360,7 @@ export function GameComplete({
               <div className="flex items-center justify-between pt-1">
                 <div className="flex items-center gap-2">
                   <Medal className="size-5" aria-hidden="true" />
-                  <span className="font-semibold tracking-wide uppercase">Final Score</span>
+                  <span className="font-semibold">Final score</span>
                 </div>
                 <span className="text-body-primary font-mono text-lg font-bold">
                   {displayedFinalScore} pts
@@ -368,14 +371,12 @@ export function GameComplete({
 
           {/* Puzzle Hints Section */}
           {events && events.length > 0 && (
-            <div className="border-border/40 bg-surface-elevated mt-4 rounded border p-4">
-              <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
-                Puzzle Hints
-              </p>
-              <ol className="space-y-2">
+            <div className="border-border mt-5 border-t pt-4">
+              <p className="text-foreground mb-3 text-sm font-semibold">Puzzle hints</p>
+              <ol className="divide-border divide-y">
                 {events.map((event, index) => (
-                  <li key={index} className="flex items-start gap-3 text-sm">
-                    <span className="text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-medium dark:bg-amber-900/30">
+                  <li key={index} className="flex items-start gap-3 py-3 text-sm leading-relaxed">
+                    <span className="text-muted-foreground w-5 shrink-0 tabular-nums">
                       {index + 1}
                     </span>
                     <span className="text-foreground">{event}</span>
@@ -386,11 +387,9 @@ export function GameComplete({
           )}
 
           {earlierRanges.length > 0 && (
-            <div className="border-border/40 bg-surface-elevated mt-4 rounded border p-4">
-              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                Previous windows
-              </p>
-              <div className="mt-3 space-y-2">
+            <div className="mt-5">
+              <p className="text-foreground text-sm font-semibold">Previous windows</p>
+              <div className="mt-3">
                 {earlierRanges.map((range, index) => (
                   <RangeSummary
                     key={`${range.start}-${range.timestamp ?? index}`}
@@ -401,7 +400,7 @@ export function GameComplete({
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </section>
   );

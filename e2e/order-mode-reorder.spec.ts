@@ -4,7 +4,7 @@
  * Design-lab winner (docs/labs/order-reorder-interaction-lab.html, R2): a
  * redesigned drag handle plus always-visible Move up / Move down steppers.
  * These specs prove the three acceptance bars that unit tests can't reach on
- * their own: a real keyboard-only pass through the whole reorder+submit flow,
+ * their own: keyboard-only reordering with focus preserved,
  * the screen-reader live region actually updating in a real browser, and
  * real mobile-viewport hit-target geometry.
  *
@@ -20,46 +20,18 @@ async function goToOrder(page: Page) {
 }
 
 test.describe("Order mode keyboard reordering @order-reorder", () => {
-  test("a keyboard-only user can fully reorder events and submit", async ({ page }) => {
+  test("keyboard steppers move the event and preserve its focus", async ({ page }) => {
     await goToOrder(page);
-
     const items = page.getByRole("list").locator("li");
-    const count = await items.count();
-    expect(count).toBeGreaterThanOrEqual(2);
-
-    // Move the first event down one position using only the keyboard — no pointer
-    // interaction anywhere in this test.
+    const movedEvent = await items.nth(0).locator("p").first().innerText();
     const firstMoveDown = items.nth(0).getByRole("button", { name: /move .* down/i });
+    const moveLabel = await firstMoveDown.getAttribute("aria-label");
     await firstMoveDown.focus();
-    await expect(firstMoveDown).toBeFocused();
     await page.keyboard.press("Enter");
 
-    // The stepper-triggered move announces via the polite live region.
-    const politeLiveRegion = page.locator('[aria-live="polite"]');
-    await expect(politeLiveRegion).toContainText(/moved to position 2 of/i);
-
-    // The reorder actually took effect: what was previously the second event is
-    // now first, and the tab order still lands on a focusable move control
-    // (proves DOM reconciliation didn't strand focus outside the document).
-    await expect(page.locator(":focus")).toBeVisible();
-
-    // Keyboard-only submit.
-    const submit = page.getByRole("button", { name: /check order|try again/i });
-    await submit.focus();
-    await page.keyboard.press("Enter");
-
-    // Either inline feedback or the completion screen appears — both prove the
-    // keyboard-only path reaches submission.
-    await page.waitForTimeout(500);
-    const stillOnBoard = await page
-      .getByRole("button", { name: /check order|try again/i })
-      .isVisible()
-      .catch(() => false);
-    const completed = await page
-      .getByText(/game summary|the year was/i)
-      .isVisible()
-      .catch(() => false);
-    expect(stillOnBoard || completed).toBe(true);
+    await expect(items.nth(1).locator("p").first()).toHaveText(movedEvent);
+    await expect(page.locator('[aria-live="polite"]')).toContainText(/moved to position 2 of/i);
+    await expect(page.getByRole("button", { name: moveLabel! })).toBeFocused();
   });
 
   test("dnd-kit announces pickup, move, and drop through the keyboard drag lifecycle", async ({

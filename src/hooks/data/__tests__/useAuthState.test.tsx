@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { useAuthState } from "../useAuthState";
 import * as clerk from "@clerk/nextjs";
 import * as userCreationProvider from "@/components/UserCreationProvider";
 import * as reporter from "@/observability/reporter";
+import type { UserResource } from "@clerk/types";
+import type { Doc } from "../../../../convex/_generated/dataModel";
 
 // Mock Clerk
 vi.mock("@clerk/nextjs", () => ({
@@ -59,6 +61,44 @@ describe("useAuthState", () => {
       expect(result.current.isLoading).toBe(true);
       expect(result.current.isAuthenticated).toBe(false);
       expect(result.current.userId).toBeNull();
+    });
+
+    it("waits for a slow signed-in session without briefly enabling anonymous play", () => {
+      vi.useFakeTimers();
+      try {
+        vi.mocked(clerk.useUser).mockReturnValue({
+          isLoaded: false,
+          isSignedIn: undefined,
+          user: undefined,
+        });
+        const { result, rerender, unmount } = renderHook(() => useAuthState());
+        act(() => vi.advanceTimersByTime(10000));
+        expect(result.current.isLoading).toBe(true);
+        // Identity-only fixtures: this hook never reads other Clerk or Convex fields.
+        const clerkUser = { id: "clerk_123" } as UserResource;
+        const convexUser = { _id: "convex_456" } as Doc<"users">;
+        vi.mocked(clerk.useUser).mockReturnValue({
+          isLoaded: true,
+          isSignedIn: true,
+          user: clerkUser,
+        });
+        vi.mocked(userCreationProvider.useUserCreation).mockReturnValue({
+          currentUser: convexUser,
+          userCreationLoading: false,
+          userCreated: true,
+          userCreationError: null,
+          isUserReady: true,
+        });
+        rerender();
+        expect(result.current).toEqual({
+          isLoading: false,
+          isAuthenticated: true,
+          userId: "convex_456",
+        });
+        unmount();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("should return isLoading: true when userCreationLoading is true", () => {

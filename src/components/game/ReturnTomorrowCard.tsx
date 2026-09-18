@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { motion, useReducedMotion } from "motion/react";
 
 import { useStreak } from "@/hooks/useStreak";
 import { analytics, AnalyticsEvent } from "@/lib/analytics";
 import { downloadDailyReminder } from "@/lib/reminder";
-import { ANIMATION_DURATIONS, msToSeconds } from "@/lib/animationConstants";
 import { cn } from "@/lib/utils";
 
 interface ReturnTomorrowCardProps {
@@ -25,24 +23,13 @@ interface ReturnTomorrowCardProps {
   className?: string;
 }
 
-/**
- * The completion return hook (design-lab winner C2).
- *
- * Replaces the passive "Next puzzle in …" countdown at the moment of maximal
- * engagement with an explicit next-day contract: streak stake ("win tomorrow
- * to make it N+1"), the countdown, and a measurable reminder opt-in (a
- * recurring calendar event — works logged-out, no push infra, no permission
- * prompt).
- *
- * Integrity: renders streak/countdown copy only — never puzzle content.
- */
+/** Tomorrow's puzzle time and an optional calendar reminder; never puzzle content. */
 export function ReturnTomorrowCard({
   timeString,
   mode,
   currentStreak,
   className,
 }: ReturnTomorrowCardProps) {
-  const prefersReducedMotion = useReducedMotion();
   const { streakData } = useStreak();
   const streak = currentStreak ?? streakData.currentStreak;
 
@@ -61,38 +48,27 @@ export function ReturnTomorrowCard({
   };
 
   return (
-    <motion.section
+    <section
       aria-label="Come back tomorrow"
-      className={cn(
-        "from-primary/5 to-primary/10 border-primary/20 rounded-card w-full border bg-gradient-to-br p-6",
-        className,
-      )}
-      initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
-      animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-      transition={{
-        duration: msToSeconds(ANIMATION_DURATIONS.HINT_TRANSITION),
-        delay: msToSeconds(ANIMATION_DURATIONS.PROXIMITY_DELAY),
-      }}
+      className={cn("border-border w-full border-t py-5", className)}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-1">
-          <p className="text-body-primary text-lg font-bold">
-            {streak > 0 ? (
-              <>
-                <span aria-hidden="true">🔥</span> {streak}-day streak
-              </>
-            ) : (
-              "Come back tomorrow"
-            )}
+          <p className="text-body-primary text-lg font-semibold">
+            {streak > 0 ? `${streak}-day streak` : "Come back tomorrow"}
           </p>
           <p className="text-muted-foreground text-sm">
             {streak > 0
               ? `Win tomorrow's puzzle to make it ${streak + 1}.`
               : "Win tomorrow's puzzle to start a streak."}
           </p>
-          <p className="text-muted-foreground mt-1 text-xs font-medium tracking-wide uppercase">
+          <p className="text-muted-foreground mt-1 text-sm">
             New puzzle in{" "}
-            <span className="text-body-primary font-mono text-sm font-bold normal-case">
+            <span
+              role="timer"
+              aria-label="Time until the next puzzle"
+              className="text-body-primary font-mono font-semibold tabular-nums"
+            >
               {timeString || "00:00:00"}
             </span>
           </p>
@@ -102,8 +78,8 @@ export function ReturnTomorrowCard({
           type="button"
           onClick={handleReminderClick}
           className={cn(
-            "border-primary/40 text-body-primary inline-flex min-h-11 items-center justify-center gap-2 rounded border-2 px-4 py-2 text-sm font-semibold",
-            "hover:bg-primary/10 transition-colors duration-200 ease-out",
+            "border-border text-foreground inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold",
+            "hover:bg-surface-inset transition-colors duration-150 motion-reduce:transition-none",
             "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
           )}
         >
@@ -124,6 +100,6 @@ export function ReturnTomorrowCard({
           Get a daily reminder
         </button>
       </div>
-    </motion.section>
+    </section>
   );
 }

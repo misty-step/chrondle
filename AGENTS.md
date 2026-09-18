@@ -170,8 +170,8 @@ bun run dev      # Terminal 2
 
 ## Deployed Surfaces
 
-Verifying the live app (DigitalOcean App Platform + Convex prod) is a separate concern from the
-code gate above. Three discoverable scripts cover it:
+Verifying the live app (native public host + Convex prod) is a separate concern
+from the code gate above. Three discoverable scripts cover it:
 
 - `bun run deployment:check` (`scripts/check-deployment-ready.mjs`) — **before
   deploying.** Pre-deploy readiness: generated Convex files present, clean git
@@ -203,14 +203,16 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 
 ### 3. Vigilance in the Cloud
 
-DigitalOcean App Platform deploys the web service from `master`; Convex deploys
-through its path-scoped workflow. Be certain before either push. Local
-`bun test` and `bun type-check` are the fires through which all code must pass.
+The isolated public application host runs an explicitly released standalone
+web build from `master`; Convex deploys through its path-scoped workflow. Be
+certain before either release. Local `bun test` and `bun type-check` are the
+fires through which all code must pass.
 
 ## TODO-Debt Convention
 
 A bare `// TODO: fix this later` is unenforceable and unowned. Every TODO left
-in `src/`, `convex/`, or `scripts/` must carry an owner and a tracker link:
+in `src/`, `convex/`, or `scripts/` must carry an owner and enough context to
+re-evaluate it:
 
 ```typescript
 // TODO(phrazzld): re-enable strict range validation once chrondle-eng-XXX lands
@@ -219,11 +221,11 @@ in `src/`, `convex/`, or `scripts/` must carry an owner and a tracker link:
 
 - **Owner:** a GitHub handle or agent identity — someone who can be asked
   "is this still true?"
-- **Tracker link:** a GitHub issue or Powder card URL. If neither exists yet,
-  file one before writing the TODO — a debt with no ticket is a debt no one
-  will ever pay down.
-- Free-form `// TODO` with no owner/link is a lint-review flag: reviewers
-  should ask the author to attach one before merge (not a CI gate — TODOs are
+- **Context:** explain the unresolved condition or link existing source,
+  a pull request, or a project note. Work proceeds ad hoc from current
+  operator requests; creating a ticket is not required.
+- Free-form `// TODO` with no owner/context is a lint-review flag: reviewers
+  should ask the author to supply it before merge (not a CI gate — TODOs are
   legitimate in WIP branches; the convention applies at merge time).
 - Prefer fixing the thing over leaving a TODO. A TODO is for debt that is
   genuinely out of scope for the current change, not a way to skip writing
@@ -315,7 +317,7 @@ curl -s -o /dev/null -w "%{http_code}" -I -X POST "https://www.chrondle.app/api/
 ```bash
 # Resend event and watch logs
 stripe events resend evt_xxx --webhook-endpoint we_xxx
-doctl apps logs 9c935d41-f841-4c96-a927-a598afa5a8a0 --type run --follow
+ssh root@public-apps.tail5f5eb4.ts.net 'journalctl -u chrondle.service -f'
 
 # Verify delivery metric decreased
 stripe events retrieve evt_xxx | jq '.pending_webhooks'
