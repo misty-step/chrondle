@@ -34,10 +34,16 @@
     // Production: named `chrondle`. The chrondle.mistystep.io custom domain
     // is attached here; Cloudflare manages the proxied DNS record itself
     // (the old grey-cloud A record was removed to clear error 100117).
+    // chrondle.app + www.chrondle.app are attached to the same worker; the
+    // chrondle.app zone is pending activation (registrar NS flip pending).
     "production": {
       "name": "chrondle",
       "workers_dev": false,
-      "routes": [{ "pattern": "chrondle.mistystep.io", "custom_domain": true }],
+      "routes": [
+        { "pattern": "chrondle.mistystep.io", "custom_domain": true },
+        { "pattern": "chrondle.app", "custom_domain": true },
+        { "pattern": "www.chrondle.app", "custom_domain": true },
+      ],
       "vars": {
         "NEXT_PUBLIC_CONVEX_URL": "https://fleet-goldfish-183.convex.cloud",
         "NEXT_PUBLIC_CANARY_ENDPOINT": "https://canary.mistystep.io",
