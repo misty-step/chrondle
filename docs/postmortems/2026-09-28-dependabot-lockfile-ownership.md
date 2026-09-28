@@ -1,7 +1,7 @@
 # Postmortem: dependency updater and lockfile ownership drift
 
 - **Incident date:** 2026-09-28, 04:09 UTC
-- **Status:** Verified repair branch; activation blocked on production-safe CI. MIS-178 remains open.
+- **Recovery:** Repair and CI isolation; merged revision and hosted activation receipts are tracked in MIS-178.
 - **Operational owner:** Chrondle maintainers; Kaylee's GitHub failure intake owns incident triage.
 - **Tracker:** [MIS-178](https://linear.app/misty-step/issue/MIS-178/github-production-failure)
 
@@ -76,8 +76,8 @@ owned `chrondle-ws` workspace at snapshot
 `b712e072b0c007d031911b5d32a3a7151476c571`: 165 test files, 1,994 tests.
 The Dagger lint, type-check, and coverage gates also passed at snapshot
 `bf8b776e087fc78e35f651c2bbaea9b82e917827`. System One diff review passed without
-blocks or warnings. These snapshots prove branch verification only; no PR was
-opened and hosted activation remains blocked on production-safe CI.
+blocks or warnings. These initial snapshots proved branch verification only;
+hosted activation was paused until production-safe CI was authorized.
 
 The online command paginates GitHub's recent dynamic runs and requires the newest
 completed root Bun updater run to succeed within nine days (weekly cadence plus
@@ -96,7 +96,7 @@ Both full gates were rerun for this correction at snapshot
 
 How can we pokayoke this so this kind of error never happens again?
 
-**Class closed by this change, pending activation:** allowing the application's
+**Class closed by the ownership guard:** allowing the application's
 package manager, authoritative lockfile, and dependency updater ecosystem to
 disagree while verification passes. [`verify-dependabot.mjs`](../../scripts/verify-dependabot.mjs)
 requires Bun, its text lockfile, exactly one native Bun root updater, no competing
@@ -106,7 +106,7 @@ regression runs in the ordinary Vitest gate. The independent
 executes the ownership guard on every PR and default-branch push. A change back to
 npm now fails before it can be mistaken for a verified configuration.
 
-**Silent-stall control, pending activation:** the same workflow runs daily at 06:17 UTC
+**Silent-stall control:** the same workflow runs daily at 06:17 UTC
 and on demand, requiring real recent successful Bun execution. A nonzero status
 uses the existing GitHub workflow-failure intake that opened MIS-178. It uses only the
 built-in read-only GitHub token, has a five-minute deadline, and neither changes
@@ -124,18 +124,16 @@ and the existing production dependency audit are not substitutes for that featur
 
 ## Follow-up
 
-**Phaedrus decision required before PR creation or merge:** isolate the existing
-PR/default-branch E2E gate from production Convex. The current
-[CI workflow](../../.github/workflows/ci.yml) passes `secrets.NEXT_PUBLIC_CONVEX_URL`
-to both the build and E2E jobs. The
-[Dagger Playwright container](../../dagger/src/index.ts) injects that URL unchanged.
-There is no checked-in `.env.test.local` override; dotenv does not override an
-already-injected value. The build artifact from
+### CI isolation prerequisite
+
+Initial investigation found the
+[CI workflow](../../.github/workflows/ci.yml) passing `secrets.NEXT_PUBLIC_CONVEX_URL`
+to both build and E2E. The build artifact from
 [successful PR run 35483723414](https://github.com/misty-step/chrondle/actions/runs/35483723414)
-contains `https://fleet-goldfish-183.convex.cloud` in its compiled application chunks.
+contained `https://fleet-goldfish-183.convex.cloud` in compiled application chunks.
 [habit-loop.spec.ts](../../e2e/habit-loop.spec.ts) calls
-`puzzles.ensurePuzzleForDate` as a mutation when a test date is absent. Thus opening
-a PR or pushing master can run production mutations even without a deploy.
+`puzzles.ensurePuzzleForDate` when a test date is absent. Opening a PR or pushing
+master could therefore run production mutations without deploying.
 
 This is a conditional write path, not a claim that anonymous range submissions
 write to Convex: those return locally in `useGameActions`. The selected Chromium
@@ -144,18 +142,69 @@ migration are authentication-gated; Order reordering is local. In addition to th
 test helper, both daily puzzle hooks can generate a missing puzzle on page load.
 Read-only preflight found Classic and Order puzzles present for September 26, 27,
 and 28, covering the selected UTC and Los Angeles clock-shifted journeys at the
-time of inspection. Consequently the observed data should avoid those generation
-branches in an immediate run. It does not impose a read-only boundary on later
-CI execution or reruns; the suite still has no production-mutation guard. This is
-an authority/safety decision, not a missing-credential claim.
+time of inspection. That avoided a known immediate write, not later missing dates
+or reruns. Activation was deliberately paused rather than waiving the boundary.
 
-Recommendation: authorize a separate CI isolation change using a dedicated
-non-production Convex target for both build and tests, with a fail-closed target
-check before any mutation-capable journey. Do not disable the E2E gate or waive the
-no-production-write boundary to activate this repair. No PR was opened and master
-was not changed.
+Phaedrus subsequently authorized CI isolation using existing resources. Build,
+E2E, and bundle-size checks now use the existing `handsome-raccoon-955`
+development deployment, not a production secret. The CI validator no longer
+receives a Convex deploy key.
+[`verify-ci-backend.mjs`](../../scripts/verify-ci-backend.mjs) rejects any other
+runtime target or deployment credential before a build or test journey. It also
+requires the compiled client to contain the development URL and rejects the
+production Convex host before tests start, protecting against a production-bound
+artifact paired with a safe-looking runtime environment. The Content Security Policy
+allows HTTP/WebSocket connections to only the configured Convex origin rather
+than hardcoding production.
 
-MIS-178 owns that decision, hosted activation, and the green native Bun run receipt.
-Close only after linking the class-closing change, this postmortem, repository gate
-results, and actual successful updater execution. The branch closes the tested
-configuration mistake, but production dependency automation is not yet repaired.
+The new validator regression first failed because the original CI validator
+accepted production (`exit 0` instead of `1`). Its regression also covers
+production-bound lazy client chunks despite a development runtime, missing
+compiled backend configuration, and deployment-credential injection.
+
+Production-oriented read-only environment/Stripe validation remains intact.
+This repair does not deploy production or alter the production deployment
+workflow. No new paid deployment or operator-supplied credential is required.
+
+Real-path checks exercised both sides of the boundary: Dagger's `build-artifacts`
+entrypoint rejected a supplied production URL before Next built, while the
+development build at snapshot `f4a97ca78d202ee7505598f6fd1f56fd516deb38`
+passed its runtime guard, compiled-artifact guard, secret scan, and bundle-size
+check. The initial artifact scan incorrectly treated a Convex SDK error-message
+example as a configured target. Its regression failed before correcting the
+guard to require the development binding and reject the known production host,
+without maintaining an allowlist of SDK examples.
+
+Independent review also caught an empty-origin CSP fallback that broke missing-env
+startup. The behavioral regression failed before repair, then passed alongside
+the production/development CSP cases. The final focused suite has 27 tests:
+19 updater contracts and 8 CI/backend/security-header contracts.
+
+Public DEV queries independently confirmed six-event Classic and Order puzzles
+for September 26–29. Native authentication and the existing deployment suffice;
+production player data and production Convex credentials are not needed for CI gameplay.
+
+The existing DEV backend was brought to the tracked schema through a temporary,
+data-preserving migration: 1,818 legacy event-to-puzzle links moved from `puzzleId`
+to `classicPuzzleId`, with historical puzzle documents retained. Reusable copies
+of the existing public event text replenished the unused DEV pool. Temporary
+migration functions were removed by redeploying the exact tracked backend.
+After the four seeded dates, 295 years remained eligible for Classic generation.
+The pool is finite and has no paid AI key: maintainers must replenish it rather
+than redirect failing CI to production. The native DEV backup uses ordinary
+existing Convex snapshot storage/bandwidth, not a new service or subscription.
+
+Final isolation code at snapshot `f4a97ca78d202ee7505598f6fd1f56fd516deb38`
+passed both required loops: raw lint/type-check/test (166 files, 2,005 tests),
+then Dagger lint/type-check/coverage (2,005 tests). Independent review approved
+the corrected implementation; System One reported no blocks or warnings.
+The subsequent production read-only check again found health `ok` and Classic
+puzzle 412 for September 28, showing Clue 1 of 6 with empty range inputs.
+
+### Closure receipts
+
+MIS-178 owns the final PR, independent review, green hosted checks, merged
+revision, successful native Bun updater run, and successful online health check.
+The updater run must be real GitHub execution: passing configuration tests or
+serving the live game is not a substitute. Record those links before closing
+MIS-178; a dependency updater success is not permission to merge its upgrades.

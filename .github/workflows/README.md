@@ -67,6 +67,23 @@ The CI workflow includes a Dagger-driven `verify-environment` job that runs on P
 
 For Clerk specifically, `ci.yml` builds and runs Playwright against a fixed public test instance so localhost-backed smoke tests do not embed the production custom domain. The `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` secret is still validated in the production-oriented checks and used by deploy flows.
 
+For Convex, the main build, E2E, and bundle-size jobs use the existing
+`handsome-raccoon-955` development deployment. `scripts/verify-ci-backend.mjs`
+rejects any other runtime target, deployment credentials, or a client artifact
+containing the production Convex host. It runs before builds and Playwright,
+including reruns. The CI validator has no Convex deploy key; production secrets
+remain restricted to the
+existing production-oriented validation and deployment paths. The app's CSP
+derives its HTTP/WebSocket allowlist from the selected backend.
+
+Missing test puzzles may be generated only on that development target. Maintain
+its existing event corpus and backend functions when the application schema
+changes; do not repoint tests at production to repair missing development data.
+DEV has no paid AI key and does not automatically replenish consumed events;
+maintainers must refresh its public event corpus before unused years are exhausted.
+Missing data must fail against DEV, never fall back to production.
+No additional paid deployment or GitHub credential is needed for this isolation.
+
 ### Deploy Fail-Fast
 
 The deploy workflow validates all required secrets at the start, providing clear error messages:

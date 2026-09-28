@@ -12,12 +12,14 @@
  *   - development (default): Core vars only
  *   - preview: Core + Stripe (test keys allowed)
  *   - production: Core + Stripe (live keys required)
- *   - ci: Core + deploy key
+ *   - ci: Core vars, development-only Convex, no deployment credential
  *
  * Exit Codes:
  *   0 = All checks passed
  *   1 = Validation errors found
  */
+
+import { verifyCiBackend } from "./verify-ci-backend.mjs";
 
 // =============================================================================
 // CONFIGURATION (mirrors src/lib/env.schema.ts)
@@ -60,10 +62,6 @@ const PATTERNS = {
     pattern: /^price_/,
     description: "Must start with price_",
   },
-  CONVEX_DEPLOY_KEY: {
-    pattern: /^(prod|dev):/,
-    description: "Must start with prod: or dev:",
-  },
   NEXT_PUBLIC_CANARY_API_KEY: {
     pattern: /^sk_live_[A-Za-z0-9_-]{24}$/,
     description: "Must be the raw Canary ingest key (sk_live_ plus 24 URL-safe characters)",
@@ -96,7 +94,6 @@ const REQUIRED_VARS = {
     "NEXT_PUBLIC_CANARY_API_KEY",
     "CANARY_API_KEY",
   ],
-  ci: ["CONVEX_DEPLOY_KEY"],
 };
 
 // =============================================================================
@@ -110,8 +107,6 @@ function getRequiredVars(env) {
       return [...base, ...REQUIRED_VARS.production];
     case "preview":
       return [...base, ...REQUIRED_VARS.preview];
-    case "ci":
-      return [...base, ...REQUIRED_VARS.ci];
     default:
       return base;
   }
@@ -207,6 +202,14 @@ function main() {
   // Check live mode for production
   const liveModeErrors = checkLiveMode(env, process.env);
   invalid.push(...liveModeErrors);
+
+  if (env === "ci") {
+    try {
+      verifyCiBackend();
+    } catch (error) {
+      invalid.push({ key: "CI Convex isolation", error: error.message });
+    }
+  }
 
   // Report results
   if (valid.length > 0) {
