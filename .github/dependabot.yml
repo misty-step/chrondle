@@ -3,8 +3,8 @@
 
 version: 2
 updates:
-  # Check for updates to npm packages
-  - package-ecosystem: "npm"
+  # Bun owns package.json and bun.lock together.
+  - package-ecosystem: "bun"
     directory: "/"
     schedule:
       interval: "weekly"
