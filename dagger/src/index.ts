@@ -54,13 +54,6 @@ const ENV_VERIFY_SCRIPT = `
 set -euo pipefail
 echo "🔍 Verifying environment variable handling..."
 
-if grep -q "NEXT_PUBLIC_CONVEX_URL" .next/static/chunks/*.js 2>/dev/null || \
-   grep -q "fleet-goldfish-183" .next/static/chunks/*.js 2>/dev/null; then
-  echo "✅ NEXT_PUBLIC_CONVEX_URL properly embedded in client bundle"
-else
-  echo "⚠️ Warning: NEXT_PUBLIC_CONVEX_URL might not be properly embedded"
-fi
-
 if grep -E "sk_(test|live)_[A-Za-z0-9]{40,}" .next/static/chunks/*.js 2>/dev/null; then
   echo "❌ ERROR: Actual Clerk secret key found in client bundle!"
   exit 1
@@ -202,7 +195,6 @@ export class Ci {
       stripePriceMonthly,
       stripePriceAnnual,
       clerkSecretKey,
-      convexDeployKey,
       stripeSecretKey,
       stripeWebhookSecret,
       stripeSyncSecret,
@@ -216,7 +208,6 @@ export class Ci {
       stripePriceAnnual?: string;
       nextPublicCanaryApiKey?: string;
       clerkSecretKey?: Secret;
-      convexDeployKey?: Secret;
       stripeSecretKey?: Secret;
       stripeWebhookSecret?: Secret;
       stripeSyncSecret?: Secret;
@@ -240,7 +231,6 @@ export class Ci {
       nextPublicCanaryApiKey,
     );
     container = this.withOptionalSecretVariable(container, "CLERK_SECRET_KEY", clerkSecretKey);
-    container = this.withOptionalSecretVariable(container, "CONVEX_DEPLOY_KEY", convexDeployKey);
     container = this.withOptionalSecretVariable(container, "STRIPE_SECRET_KEY", stripeSecretKey);
     container = this.withOptionalSecretVariable(
       container,
@@ -294,7 +284,9 @@ export class Ci {
       .withEnvVariable("DAGGER_ARTIFACT_BUILD", "1")
       .withEnvVariable("NEXT_PUBLIC_CONVEX_URL", nextPublicConvexUrl)
       .withEnvVariable("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", nextPublicClerkPublishableKey)
+      .withExec(["bun", "scripts/verify-ci-backend.mjs"])
       .withExec(["bun", "run", "build"])
+      .withExec(["bun", "scripts/verify-ci-backend.mjs", ".next"])
       .withExec(["sh", "-lc", ENV_VERIFY_SCRIPT])
       .withExec(["bun", "run", "size"])
       .withExec(["sh", "-lc", "find .next -name '*:*' -delete"])
@@ -314,7 +306,8 @@ export class Ci {
       .withExec(["bun", "install", "--frozen-lockfile"])
       .withDirectory(WORKDIR, source)
       .withEnvVariable("NEXT_PUBLIC_CONVEX_URL", nextPublicConvexUrl)
-      .withEnvVariable("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", nextPublicClerkPublishableKey);
+      .withEnvVariable("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", nextPublicClerkPublishableKey)
+      .withExec(["bun", "scripts/verify-ci-backend.mjs", ".next"]);
 
     if (clerkSecretKey) {
       container = container.withSecretVariable("CLERK_SECRET_KEY", clerkSecretKey);
@@ -590,7 +583,6 @@ exit 0
     })
     source: Directory,
     clerkSecretKey?: Secret,
-    convexDeployKey?: Secret,
     stripeSecretKey?: Secret,
     stripeWebhookSecret?: Secret,
     stripeSyncSecret?: Secret,
@@ -607,7 +599,6 @@ exit 0
       stripePriceMonthly,
       stripePriceAnnual,
       clerkSecretKey,
-      convexDeployKey,
       stripeSecretKey,
       stripeWebhookSecret,
       stripeSyncSecret,

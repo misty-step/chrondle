@@ -1,0 +1,32 @@
+name: Dependency Update Health
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  dependency-updates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - name: Verify lockfile updater ownership
+        run: bun scripts/verify-dependabot.mjs
+      # Keep network health out of PR gates. Failures use the same GitHub
+      # workflow-failure intake that opened MIS-178; never swallow the exit code.
+      - name: Require a successful recent Bun update
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: bun scripts/verify-dependabot.mjs --runs
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -188,7 +188,8 @@
     "typescript": "^5.9.3",
     "unimported": "1.31.1",
     "vitest": "^3.2.7",
-    "wrangler": "^4.134.0"
+    "wrangler": "^4.134.0",
+    "yaml": "^2.9.0"
   },
   "trustedDependencies": [
     "@clerk/shared",

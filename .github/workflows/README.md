@@ -2,13 +2,14 @@
 
 ## Workflows Overview
 
-| Workflow                   | Trigger                      | Purpose                                                                              |
-| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------ |
-| `ci.yml`                   | PR & push to main/master     | Quality checks, tests, build validation                                              |
-| `deploy.yml`               | Push to main/master          | Production deployment                                                                |
-| `size-limit.yml`           | PR                           | Bundle size checks                                                                   |
-| `claude-code-review.yml`   | PR                           | Automated code review                                                                |
-| `webhook-health-check.yml` | Schedule (every 6h) & manual | Fails if the production Stripe webhook route redirects (see INCIDENT-2026-01-17T.md) |
+| Workflow                   | Trigger                                  | Purpose                                                                                                          |
+| -------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `ci.yml`                   | PR & push to main/master                 | Quality checks, tests, build validation                                                                          |
+| `deploy.yml`               | Push to main/master                      | Production deployment                                                                                            |
+| `size-limit.yml`           | PR                                       | Bundle size checks                                                                                               |
+| `claude-code-review.yml`   | PR                                       | Automated code review                                                                                            |
+| `webhook-health-check.yml` | Schedule (every 6h) & manual             | Fails if the production Stripe webhook route redirects (see INCIDENT-2026-01-17T.md)                             |
+| `dependency-updates.yml`   | PR & push to main/master; daily & manual | Checks Bun lockfile/updater ownership; daily/manual runs also detect failed or stale updater execution (MIS-178) |
 
 ## Required GitHub Secrets
 
@@ -65,6 +66,23 @@ paths.
 The CI workflow includes a Dagger-driven `verify-environment` job that runs on PRs targeting main/master. It validates CI and production env requirements, including Stripe configuration, before merge.
 
 For Clerk specifically, `ci.yml` builds and runs Playwright against a fixed public test instance so localhost-backed smoke tests do not embed the production custom domain. The `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` secret is still validated in the production-oriented checks and used by deploy flows.
+
+For Convex, the main build, E2E, and bundle-size jobs use the existing
+`handsome-raccoon-955` development deployment. `scripts/verify-ci-backend.mjs`
+rejects any other runtime target, deployment credentials, or a client artifact
+containing the production Convex host. It runs before builds and Playwright,
+including reruns. The CI validator has no Convex deploy key; production secrets
+remain restricted to the
+existing production-oriented validation and deployment paths. The app's CSP
+derives its HTTP/WebSocket allowlist from the selected backend.
+
+Missing test puzzles may be generated only on that development target. Maintain
+its existing event corpus and backend functions when the application schema
+changes; do not repoint tests at production to repair missing development data.
+DEV has no paid AI key and does not automatically replenish consumed events;
+maintainers must refresh its public event corpus before unused years are exhausted.
+Missing data must fail against DEV, never fall back to production.
+No additional paid deployment or GitHub credential is needed for this isolation.
 
 ### Deploy Fail-Fast
 
