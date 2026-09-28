@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.5.1](https://github.com/misty-step/chrondle/compare/v1.5.0...v1.5.1) (2026-09-28)
+
+### Bug Fixes
+
+- **ci:** restore Bun updates and isolate backend (MIS-178) ([80eb866](https://github.com/misty-step/chrondle/commit/80eb866d2a1cc1e4497a5266775eee41098e9102))
+
 # [1.5.0](https://github.com/misty-step/chrondle/compare/v1.4.1...v1.5.0) (2026-09-17)
 
 ### Bug Fixes
