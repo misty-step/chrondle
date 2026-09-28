@@ -48,9 +48,13 @@ const success = {
   html_url: "https://github.com/misty-step/chrondle/actions/runs/123",
 };
 
-test("accepts a recent completed root Bun run regardless of API ordering", () => {
+test.each([
+  "bun in / - Update #123",
+  "bun in / for next - Update #123",
+  "bun in /. for vitest - Update #123",
+])("accepts a recent completed root run regardless of API ordering: %s", (name) => {
   const olderFailure = { ...success, conclusion: "failure", created_at: "2026-09-27T06:00:00Z" };
-  expect(verifyDependabotRuns([olderFailure, success], now)).toBe(success.html_url);
+  expect(verifyDependabotRuns([olderFailure, { ...success, name }], now)).toBe(success.html_url);
 });
 
 test("a newer failure cannot be hidden by an older success or unrelated successful updater", () => {
@@ -63,6 +67,7 @@ test.each([
   ["no runs", []],
   ["old npm ecosystem", [{ ...success, name: "npm_and_yarn in / - Update #123" }]],
   ["different directory", [{ ...success, name: "bun in /dagger - Update #123" }]],
+  ["dot-prefixed subdirectory", [{ ...success, name: "bun in /./dagger - Update #123" }]],
   ["never completes", [{ ...success, status: "in_progress", conclusion: null }]],
 ])("fails closed when the root Bun updater has %s", (_label, runs) => {
   expect(() => verifyDependabotRuns(runs, now)).toThrow(/No completed root Bun updater/);

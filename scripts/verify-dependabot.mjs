@@ -37,7 +37,7 @@ export function verifyDependabotConfig(root = process.cwd()) {
 // A green unrelated workflow (or GitHub Actions updater) cannot certify Bun updates.
 export function verifyDependabotRuns(runs, now = Date.now()) {
   const latest = runs
-    .filter((run) => /^bun in \/(?: |$)/.test(run.name) && run.status === "completed")
+    .filter((run) => /^bun in \/\.?(?: |$)/.test(run.name) && run.status === "completed")
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
   assert.ok(latest, "No completed root Bun updater run in the last nine days");
   assert.equal(

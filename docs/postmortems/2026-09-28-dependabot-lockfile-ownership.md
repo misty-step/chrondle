@@ -76,14 +76,21 @@ owned `chrondle-ws` workspace at snapshot
 `b712e072b0c007d031911b5d32a3a7151476c571`: 165 test files, 1,994 tests.
 The Dagger lint, type-check, and coverage gates also passed at snapshot
 `bf8b776e087fc78e35f651c2bbaea9b82e917827`. System One diff review passed without
-blocks or warnings. Final formatting and documentation-only evidence updates do
-not change the exercised behavior; the linked PR records the hosted candidate SHA.
+blocks or warnings. These snapshots prove branch verification only; no PR was
+opened and hosted activation remains blocked on production-safe CI.
 
 The online command paginates GitHub's recent dynamic runs and requires the newest
 completed root Bun updater run to succeed within nine days (weekly cadence plus
 two days' grace). It rejects missing, stale, failed, cancelled, and invalid-dated
 results. Unrelated workflows, GitHub Actions updates, other directories, and old
 npm updater successes cannot satisfy the check. API errors fail closed.
+
+The root-run matcher accepts both `/` and `/.`, spellings observed in Dependabot
+history, without accepting subdirectories. Its additional protocol regression
+failed before that correction and passed afterward (19 focused tests total).
+Both full gates were rerun for this correction at snapshot
+`186805ac50970d1842646ccdeb30de8f7579a52b`: lint, type-check, 165 test files /
+1,997 tests, and Dagger lint, type-check, and coverage all passed.
 
 ## Pokayoke
 
@@ -129,6 +136,18 @@ contains `https://fleet-goldfish-183.convex.cloud` in its compiled application c
 [habit-loop.spec.ts](../../e2e/habit-loop.spec.ts) calls
 `puzzles.ensurePuzzleForDate` as a mutation when a test date is absent. Thus opening
 a PR or pushing master can run production mutations even without a deploy.
+
+This is a conditional write path, not a claim that anonymous range submissions
+write to Convex: those return locally in `useGameActions`. The selected Chromium
+suite excludes subscription/authentication tests. User creation and streak
+migration are authentication-gated; Order reordering is local. In addition to the
+test helper, both daily puzzle hooks can generate a missing puzzle on page load.
+Read-only preflight found Classic and Order puzzles present for September 26, 27,
+and 28, covering the selected UTC and Los Angeles clock-shifted journeys at the
+time of inspection. Consequently the observed data should avoid those generation
+branches in an immediate run. It does not impose a read-only boundary on later
+CI execution or reruns; the suite still has no production-mutation guard. This is
+an authority/safety decision, not a missing-credential claim.
 
 Recommendation: authorize a separate CI isolation change using a dedicated
 non-production Convex target for both build and tests, with a fail-closed target

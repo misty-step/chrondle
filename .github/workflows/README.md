@@ -2,13 +2,14 @@
 
 ## Workflows Overview
 
-| Workflow                   | Trigger                      | Purpose                                                                              |
-| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------ |
-| `ci.yml`                   | PR & push to main/master     | Quality checks, tests, build validation                                              |
-| `deploy.yml`               | Push to main/master          | Production deployment                                                                |
-| `size-limit.yml`           | PR                           | Bundle size checks                                                                   |
-| `claude-code-review.yml`   | PR                           | Automated code review                                                                |
-| `webhook-health-check.yml` | Schedule (every 6h) & manual | Fails if the production Stripe webhook route redirects (see INCIDENT-2026-01-17T.md) |
+| Workflow                   | Trigger                                  | Purpose                                                                                                          |
+| -------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `ci.yml`                   | PR & push to main/master                 | Quality checks, tests, build validation                                                                          |
+| `deploy.yml`               | Push to main/master                      | Production deployment                                                                                            |
+| `size-limit.yml`           | PR                                       | Bundle size checks                                                                                               |
+| `claude-code-review.yml`   | PR                                       | Automated code review                                                                                            |
+| `webhook-health-check.yml` | Schedule (every 6h) & manual             | Fails if the production Stripe webhook route redirects (see INCIDENT-2026-01-17T.md)                             |
+| `dependency-updates.yml`   | PR & push to main/master; daily & manual | Checks Bun lockfile/updater ownership; daily/manual runs also detect failed or stale updater execution (MIS-178) |
 
 ## Required GitHub Secrets
 
