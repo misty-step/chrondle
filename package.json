@@ -185,7 +185,7 @@
     "ts-prune": "0.10.3",
     "tsx": "^4.23.13",
     "tw-animate-css": "1.3.4",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "unimported": "1.31.1",
     "vitest": "^3.2.7",
     "wrangler": "^4.134.0",
