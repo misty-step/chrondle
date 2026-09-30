@@ -182,8 +182,9 @@ npx convex run users:count
 
 1. Add all Clerk keys, Convex configuration, and OAuth credentials to
    root-owned mode-`0600` `/etc/public-apps/chrondle.env`.
-2. Build and install a standalone release, then restart `chrondle.service`.
-   Convex deploys separately.
+2. Merge the reviewed, green change to `master`; CD deploys compatible Convex
+   first, then builds, installs, activates, and verifies the native web release.
+   The build identity receives only public configuration, never Clerk secrets.
 3. Keep the Clerk application and webhook endpoint bound to
    `https://chrondle.app`.
 

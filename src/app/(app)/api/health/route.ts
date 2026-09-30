@@ -86,7 +86,12 @@ export async function GET() {
   }
 
   return NextResponse.json(
-    { status: "ok", service: "chrondle", checks: result.checks },
+    {
+      status: "ok",
+      service: "chrondle",
+      revision: process.env.CHRONDLE_REVISION || "development",
+      checks: result.checks,
+    },
     { status: 200 },
   );
 }

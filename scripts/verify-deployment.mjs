@@ -140,7 +140,6 @@ async function verifyDeployment() {
     if (todaysPuzzle) {
       console.log("   ✅ Today's puzzle is available");
       console.log(`      - Date: ${todaysPuzzle.date}`);
-      console.log(`      - Target Year: ${todaysPuzzle.targetYear}`);
       console.log(`      - Events: ${todaysPuzzle.events.length}`);
       console.log(`      - Play count: ${todaysPuzzle.playCount}`);
       

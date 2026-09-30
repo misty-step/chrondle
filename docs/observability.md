@@ -92,7 +92,13 @@ export const myMutation = mutation({
 The deployment workflow (`.github/workflows/deploy.yml`) automatically:
 
 1. Requires browser and server Canary ingest keys before production deployment.
-2. Builds the app with Canary endpoint, key, and environment values.
+2. Waits for exact-revision CI and secret scanning before deploying compatible Convex.
 3. Updates Convex runtime Canary configuration before deploying backend functions.
-4. Verifies the deployment with `bun run deploy:verify`.
-5. Exposes `/api/health` for Canary uptime checks.
+4. Verifies the backend, then observes the native host build/install/activation.
+5. Requires revision-bound host smoke before the public deployment receipt becomes healthy.
+
+Deployment failures, including a host that never completes activation, fail the
+default-branch Actions run and reach Kaylee's signed GitHub agent intake. An
+`alert_probe` dispatch safely exercises that route without production mutation.
+See [the deployment guide](deployment-guide.md#d-verify-alert-and-recover) for
+the exact failure route, recovery, and runtime readback commands.

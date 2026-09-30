@@ -30,8 +30,8 @@ Set these in root-owned mode-`0600` `/etc/public-apps/chrondle.env`:
 
 1. `CONVEX_DEPLOY_KEY`
 2. `NEXT_PUBLIC_CONVEX_URL`
-3. Build a new standalone web release so the public URL is embedded, install
-   it, and restart `chrondle.service`
+3. Merge a reviewed, green change to `master`. CD deploys compatible Convex,
+   embeds the public URL in the native build, and installs/verifies that release.
 
 ### 4. Local Development Setup
 
