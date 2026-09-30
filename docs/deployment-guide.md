@@ -145,8 +145,11 @@ mutation, for safe route verification. It is an optional drill, not a release
 gate. A successful CI hook alone is not host deployment evidence.
 
 Failed post-activation smoke automatically restores the previous web symlink
-and restarts the service. The controller never rolls back Convex or restores
-data. `/var/lib/chrondle-cd/result.json` and the journal retain the bounded
+and restarts the service. The controller never rolls back Convex or restores data.
+An interrupted activation is also recovered through systemd `ExecStopPost`,
+using the durable pre-activation pointer; stopping or killing the controller
+cannot strand an unchecked release merely by bypassing a Python exception.
+`/var/lib/chrondle-cd/result.json` and the journal retain the bounded
 revision/run outcome. Repair the cause and merge normally; a rerun of the
 reviewed release can retry the same immutable artifact.
 

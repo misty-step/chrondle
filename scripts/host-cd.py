@@ -8,6 +8,7 @@ import pwd
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
 import time
@@ -81,6 +82,7 @@ def as_builder(argv, source, environment):
         "systemd-run", "--quiet", "--wait", "--pipe", "--collect",
         f"--uid={BUILD_USER}", f"--working-directory={source}",
         "--property=Type=exec", "--property=MemoryMax=2500M",
+        "--property=RuntimeMaxSec=10min",
         "--property=CPUQuota=150%", "--property=Nice=15",
         "--property=OOMScoreAdjust=500", "--property=ProtectSystem=strict",
         f'--property=ReadWritePaths={environment["HOME"]}',
@@ -201,6 +203,31 @@ def smoke(revision, source, environment):
                 raise RuntimeError("page_smoke_failed")
 
 
+def recover_interrupted_activation():
+    path = STATE / "result.json"
+    if not path.exists():
+        return
+    result = json.loads(path.read_text())
+    if result.get("status") != "activating":
+        return
+    previous = Path(result["previous"]).resolve(strict=True)
+    if not previous.is_relative_to(ROOT / "releases") or not previous.is_dir():
+        raise RuntimeError("rollback_target_escaped")
+    activate(previous)
+    deadline = time.monotonic() + 30
+    while True:
+        try:
+            if request_json("http://127.0.0.1:3007/api/health").get("status") == "ok":
+                break
+        except OSError:
+            pass
+        if time.monotonic() >= deadline:
+            raise RuntimeError("rollback_health_failed")
+        time.sleep(2)
+    write_json(path, {**result, "status": "failed", "error_class": "IncompleteHostSmoke"})
+    event("release.rolled_back", revision=result["revision"], run_id=result["run_id"], restored=previous.name)
+
+
 def deploy(run):
     revision = run["head_sha"]
     receipt = {"revision": revision, "run_id": run["id"], "run_attempt": run["run_attempt"],
@@ -214,19 +241,23 @@ def deploy(run):
             environment = public_build_environment(revision, workspace, host_public_environment())
             source = build_release(revision, workspace, environment)
             release = install_release(source, revision, receipt)
+            write_json(STATE / "result.json", {**receipt, "status": "activating", "previous": str(previous)})
             try:
                 activate(release)
                 smoke(revision, source, environment)
             except Exception:
-                # Backend stays deployed and compatible; no accepted writes are undone.
-                activate(previous)
-                event("release.rolled_back", **receipt, restored=previous.name)
+                # The same durable recovery also runs after a kill/timeout.
+                recover_interrupted_activation()
                 raise
+            write_json(STATE / "result.json", {**receipt, "status": "healthy", "previous": previous.name})
             write_json(release / "public/deployment.json", {**receipt, "status": "healthy"})
-        write_json(STATE / "result.json", {**receipt, "status": "healthy", "previous": previous.name})
         event("release.healthy", **receipt)
     except Exception as error:
-        write_json(STATE / "result.json", {**receipt, "status": "failed", "error_class": type(error).__name__})
+        result_path = STATE / "result.json"
+        pending = json.loads(result_path.read_text()) if result_path.exists() else {}
+        # Leave an incomplete rollback recoverable by systemd ExecStopPost.
+        if pending.get("status") != "activating":
+            write_json(result_path, {**receipt, "status": "failed", "error_class": type(error).__name__})
         event("release.failed", **receipt, error_class=type(error).__name__)
         raise
 
@@ -251,7 +282,10 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
+        if sys.argv[1:] == ["--recover"]:
+            recover_interrupted_activation()
+        else:
+            main()
     except Exception as error:
         event("reconcile.failed", error_class=type(error).__name__)
         raise SystemExit(1) from None

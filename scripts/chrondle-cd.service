@@ -6,9 +6,11 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/python3 /usr/local/lib/chrondle-cd/host-cd.py
+ExecStopPost=/usr/bin/python3 /usr/local/lib/chrondle-cd/host-cd.py --recover
 StateDirectory=chrondle-cd
 StateDirectoryMode=0711
 TimeoutStartSec=15min
+TimeoutStopSec=90s
 MemoryMax=512M
 CPUQuota=50%
 Nice=15
