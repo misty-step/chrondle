@@ -22,9 +22,11 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  generateBuildId: async () => process.env.CHRONDLE_REVISION || null,
   // Expose version to client
   env: {
     NEXT_PUBLIC_APP_VERSION: appVersion,
+    CHRONDLE_REVISION: process.env.CHRONDLE_REVISION || "development",
   },
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react"],
@@ -60,6 +62,10 @@ const nextConfig: NextConfig = {
   // Security headers configuration
   async headers() {
     return [
+      {
+        source: "/deployment.json",
+        headers: [{ key: "Cache-Control", value: "no-store" }],
+      },
       {
         // Apply security headers to all routes
         source: "/(.*)",

@@ -185,6 +185,12 @@ from the code gate above. Three discoverable scripts cover it:
   Read-only snapshot of live Convex state (today's puzzle + archive) for
   debugging, independent of deploy timing.
 
+Normal releases are automatic on reviewed, green `master` merges. Read
+`docs/deployment-guide.md` for the backend-first compatibility contract, native
+host pull/controller, revision-bound smoke receipts, agent failure route, and
+rollback. `node scripts/verify-native-release.mjs` checks the shipped host
+receipt and runtime SHA. Host bootstrap is not an ordinary release step.
+
 ## Coding Style & Naming Conventions
 
 - Prettier (`bun run format`) enforces 2-space indent, double quotes, and Tailwind sorting.
@@ -203,10 +209,10 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 
 ### 3. Vigilance in the Cloud
 
-The isolated public application host runs an explicitly released standalone
-web build from `master`; Convex deploys through its path-scoped workflow. Be
-certain before either release. Local `bun test` and `bun type-check` are the
-fires through which all code must pass.
+The isolated public application host and Convex ship together through
+`.github/workflows/deploy.yml` after exact-revision CI and secret scanning.
+Keep Convex changes compatible with the prior web release and a web rollback;
+production secrets never reach the unprivileged native compiler.
 
 ## TODO-Debt Convention
 

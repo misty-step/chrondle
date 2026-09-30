@@ -1,86 +1,81 @@
-name: Deploy Convex Production
+name: Deploy Production
 
 on:
   push:
-    branches:
-      - main
-      - master # Include both common default branch names
-    paths:
-      - "convex/**/*.js"
-      - "convex/**/*.ts"
-      - "convex.json"
-      - "src/lib/duel/**"
-      - "src/lib/scoring.ts"
-      - "src/types/range.ts"
+    branches: [master]
   workflow_dispatch:
+    inputs:
+      alert_probe:
+        description: "Exercise the agent failure route without changing production"
+        type: boolean
+        default: false
 
-env:
-  NODE_VERSION: 20
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: chrondle-production
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy and verify Convex
+  gate:
+    name: Wait for production gates
     runs-on: ubuntu-latest
-
+    timeout-minutes: 35
     steps:
-      # Step 1: Checkout code
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0 # Needed for git history if required
-
-      # Step 2: Validate required secrets (fail fast)
-      - name: Validate required secrets
-        id: validate-secrets
+      - name: Exercise agent alert route
+        if: inputs.alert_probe == true
         run: |
-          errors=0
-
-          check_required() {
-            if [ -z "$1" ]; then
-              echo "::error::Missing required secret: $2"
-              errors=$((errors + 1))
-            else
-              echo "✓ $2"
-            fi
-          }
-
-          echo "=== Required Secrets ==="
-          check_required "$CLERK_KEY" "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
-          check_required "$CONVEX_URL" "NEXT_PUBLIC_CONVEX_URL"
-          check_required "$CONVEX_KEY" "CONVEX_DEPLOY_KEY"
-          check_required "$PUBLIC_CANARY_API_KEY" "NEXT_PUBLIC_CANARY_API_KEY (browser Canary ingest-only key; never admin/read)"
-          check_required "$SERVER_CANARY_API_KEY" "CANARY_API_KEY (server and Convex Canary ingest-only key; never admin/read)"
-
-          if [ $errors -gt 0 ]; then
-            echo ""
-            echo "::error::$errors required secret(s) missing. Add them at:"
-            echo "GitHub repo → Settings → Secrets and variables → Actions"
-            exit 1
-          fi
+          echo "::error::Controlled deployment alert probe; production was not changed"
+          exit 1
+      - name: Require green CI and secret scan on this revision
         env:
-          CLERK_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
-          CONVEX_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-          PUBLIC_CANARY_API_KEY: ${{ secrets.NEXT_PUBLIC_CANARY_API_KEY }}
-          SERVER_CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 90); do
+            ready=true
+            for workflow in ci.yml trufflehog.yml; do
+              run=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs?head_sha=$GITHUB_SHA&event=push&per_page=10" \
+                --jq '.workflow_runs[0] | {status, conclusion, html_url}')
+              status=$(jq -r '.status // "missing"' <<< "$run")
+              conclusion=$(jq -r '.conclusion // "pending"' <<< "$run")
+              if [[ "$status" == completed && "$conclusion" != success ]]; then
+                echo "::error::$workflow is $conclusion on $GITHUB_SHA: $(jq -r .html_url <<< "$run")"
+                exit 1
+              fi
+              [[ "$status" == completed && "$conclusion" == success ]] || ready=false
+            done
+            if [[ "$ready" == true ]]; then
+              echo "CI and secret scan passed on $GITHUB_SHA"
+              exit 0
+            fi
+            echo "Waiting for exact-revision gates (attempt $attempt/90)"
+            sleep 20
+          done
+          echo "::error::Timed out waiting for this revision's production gates"
+          exit 1
 
-      # Step 3: Setup Bun
+  backend:
+    name: Deploy compatible backend
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact release revision
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v5
         with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
+          bun-version: "1.4.2"
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
-      # Step 3.5: Validate environment configuration
-      - name: Validate production environment configuration
+      - name: Validate production configuration
         run: node scripts/verify-env-config.mjs production
         env:
           NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
@@ -94,7 +89,6 @@ jobs:
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_CANARY_API_KEY: ${{ secrets.NEXT_PUBLIC_CANARY_API_KEY }}
           CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
-
       - name: Validate browser Canary key scope
         run: node scripts/verify-canary-key-scope.mjs
         env:
@@ -103,7 +97,6 @@ jobs:
           CANARY_SCOPE_LABEL: NEXT_PUBLIC_CANARY_API_KEY
           CANARY_SERVICE: chrondle
           CANARY_ENVIRONMENT: production
-
       - name: Validate server Canary key scope
         run: node scripts/verify-canary-key-scope.mjs
         env:
@@ -112,7 +105,6 @@ jobs:
           CANARY_SCOPE_LABEL: CANARY_API_KEY
           CANARY_SERVICE: chrondle
           CANARY_ENVIRONMENT: production
-
       - name: Validate Stripe prices exist
         run: node scripts/verify-stripe-config.mjs --live
         env:
@@ -121,56 +113,43 @@ jobs:
           STRIPE_PRICE_MONTHLY: ${{ secrets.STRIPE_PRICE_MONTHLY }}
           STRIPE_PRICE_ANNUAL: ${{ secrets.STRIPE_PRICE_ANNUAL }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-
-      # Step 4: Build Next.js app
-      - name: Build Next.js application
-        run: bun run build
-        env:
-          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          NEXT_PUBLIC_CANARY_ENDPOINT: ${{ secrets.NEXT_PUBLIC_CANARY_ENDPOINT }}
-          NEXT_PUBLIC_CANARY_API_KEY: ${{ secrets.NEXT_PUBLIC_CANARY_API_KEY }}
-          NEXT_PUBLIC_CANARY_ENVIRONMENT: production
-          CANARY_ENDPOINT: ${{ secrets.NEXT_PUBLIC_CANARY_ENDPOINT }}
-          CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
-          CANARY_ENVIRONMENT: production
-
-      # Step 5: Deploy to Convex (production)
-      # Note: CONVEX_DEPLOY_KEY starting with "prod:" triggers production deploy
+      # Expand/contract only: the old web release stays live during this step.
       - name: Configure Convex Canary runtime
         run: |
-          endpoint="${CANARY_ENDPOINT:-https://canary.mistystep.io}"
-          npx convex env set CANARY_API_KEY "$CANARY_API_KEY"
-          npx convex env set CANARY_ENDPOINT "$endpoint"
-          npx convex env set CANARY_ENVIRONMENT production
+          bunx convex env set CANARY_API_KEY "$CANARY_API_KEY"
+          bunx convex env set CANARY_ENDPOINT "${CANARY_ENDPOINT:-https://canary.mistystep.io}"
+          bunx convex env set CANARY_ENVIRONMENT production
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
           CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
           CANARY_ENDPOINT: ${{ secrets.NEXT_PUBLIC_CANARY_ENDPOINT }}
-
-      - name: Deploy to Convex
-        run: npx convex deploy
+      - name: Deploy Convex production
+        run: bunx convex deploy
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-
-      # Step 6: Verify deployment
-      - name: Verify deployment
+      - name: Verify backend before host activation
         run: bun run deploy:verify
         env:
           NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
 
-  # Optional: Send notification on deployment status
-  notify:
-    name: Notify deployment status
+  host:
+    name: Deploy native host
+    needs: backend
     runs-on: ubuntu-latest
-    needs: deploy
-    if: always()
-
+    timeout-minutes: 22
+    environment:
+      name: Production
+      url: https://chrondle.app
     steps:
-      - name: Send success notification
-        if: ${{ needs.deploy.result == 'success' }}
-        run: echo "✅ Deployment successful!"
-
-      - name: Send failure notification
-        if: ${{ needs.deploy.result == 'failure' }}
-        run: echo "❌ Deployment failed!"
+      - name: Checkout exact release revision
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      # The host pulls public GitHub metadata and source; Actions has no host key.
+      # It activates only while this observer is running and backend is green.
+      - name: Require completed host smoke and exact production revision
+        run: node scripts/verify-native-release.mjs --wait
+      - name: Verify Stripe webhook ingress after release
+        run: node scripts/verify-webhook-redirect.mjs

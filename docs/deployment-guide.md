@@ -23,12 +23,12 @@ Both deployments contain the same data structure:
 
 ### Core Configuration
 
-| Variable                 | Required | Description                          | Example                                   |
+| Variable | Required | Description | Example |
 | ------------------------ | -------- | ------------------------------------ | ----------------------------------------- | ------------- |
-| `NODE_ENV`               | ✅       | Environment mode                     | `production` or `development`             |
-| `NEXT_PUBLIC_CONVEX_URL` | ✅       | Convex deployment URL (client-side)  | `https://fleet-goldfish-183.convex.cloud` |
-| `CONVEX_DEPLOY_KEY`      | ✅       | Convex deployment key for production | `prod:fleet-goldfish-183                  | base64key...` |
-| `CONVEX_DEPLOYMENT`      | ✅       | Convex deployment identifier         | `prod:fleet-goldfish-183`                 |
+| `NODE_ENV` | ✅ | Environment mode | `production` or `development` |
+| `NEXT_PUBLIC_CONVEX_URL` | ✅ | Convex deployment URL (client-side) | `https://fleet-goldfish-183.convex.cloud` |
+| `CONVEX_DEPLOY_KEY` | ✅ | Convex deployment key for production | `prod:fleet-goldfish-183                  | base64key...` |
+| `CONVEX_DEPLOYMENT` | ✅ | Convex deployment identifier | `prod:fleet-goldfish-183` |
 
 ### Authentication (Clerk)
 
@@ -79,34 +79,93 @@ bun run dev
 3. Use `pk_live_` and `sk_live_` keys, set `NODE_ENV=production`, and point to
    the production Convex deployment.
 
-#### B. Build and Install
+#### B. Continuous Release
 
-From a reviewed `master` commit:
+Every reviewed, green `master` merge runs `.github/workflows/deploy.yml`, without
+path filters or a manual promotion. The workflow serializes releases and waits
+for the complete CI workflow and TruffleHog on the same SHA before mutation.
+Existing production configuration, ingest-only Canary scope, and Stripe checks
+remain blocking.
 
-```bash
-bun install --frozen-lockfile
-bun run build:do
-```
+Convex deploys and passes `bun run deploy:verify` **before** native host activation.
+Backend changes must remain compatible with the still-running previous web
+release and with a web rollback: use expand/contract, never destructive data
+migrations in an ordinary release. Credential, billing, privacy, and data-loss
+changes retain their own boundaries; CD does not authorize those operations.
 
-`next.config.ts` emits a standalone runtime. Package `.next/standalone`,
-`.next/static`, and `public` as one immutable release under
-`/opt/public-apps/chrondle/releases/<git-commit>`. Atomically repoint
-`/opt/public-apps/chrondle/current`, then restart `chrondle.service`.
+The root-owned `chrondle-cd.timer` polls public GitHub metadata every three
+minutes (at most 40 API requests/hour/IP while busy, 20 while idle). It accepts
+only an exact-SHA `master` production run with a successful backend job and a
+live native-host observer. No Actions host key, runner, or new inbound access is
+needed. The compiler and install hooks run as the no-login `chrondle-build`
+identity with only public environment values, in bounded transient systemd
+units. Root validates the artifact, installs an immutable standalone release,
+atomically repoints `current`, and restarts the existing `chrondle.service`.
 
-The systemd service runs as the unprivileged `chrondle` user on port `3007`.
+The application still runs as the unprivileged `chrondle` user on port `3007`.
 The host's default-deny firewall blocks direct public access; Caddy is the only
 allowed public ingress for `chrondle.app` and `www.chrondle.app`.
 
-#### C. Verify and Roll Back
+#### C. Host Bootstrap and Deployment Machinery Updates
+
+From the exact reviewed checkout on `public-apps`, run once when installing or
+changing the deployment machinery:
 
 ```bash
-curl -fsS https://chrondle.app/api/health
-bun run deploy:verify
+bash scripts/install-host-cd.sh
 ```
 
-Rollback repoints `/opt/public-apps/chrondle/current` to an already installed
-release, restarts `chrondle.service`, and repeats both checks. Convex deploys
-separately; do not roll it back as part of a web-only release.
+Use existing native Tailscale SSH to transfer that reviewed checkout. The
+installer verifies the pinned Bun download, root-only environment file, and
+existing active release, installs the root-owned controller and timer, and
+creates the separate no-login build identity. Routine application merges do
+not need this bootstrap command or a machine credential in GitHub.
+
+#### D. Verify, Alert, and Recover
+
+```bash
+node scripts/verify-native-release.mjs
+bun run deploy:verify
+ssh root@public-apps.tail5f5eb4.ts.net \
+  'journalctl -u chrondle-cd.service -u chrondle.service -n 100 --no-pager'
+```
+
+The controller checks local and public `/api/health` against the artifact SHA,
+live Convex puzzles/event integrity, Stripe webhook ingress, the home page,
+and the archive. Only then does `/deployment.json` become `healthy` with the
+SHA, Actions run ID, attempt, and URL. Actions independently requires that
+receipt and exact runtime SHA. A stopped timer, failed build/install/activation,
+or rollback makes the observer fail within 20 minutes. GitHub's signed
+`workflow_run`/`deployment_status` hooks deliver failures to
+`https://kaylee-alert-intake.misty-step.workers.dev/github/misty-step`;
+Kaylee's agent triage intake owns the incident. No human notification is added.
+
+An `alert_probe: true` manual dispatch deliberately fails before any production
+mutation, for safe route verification. It is an optional drill, not a release
+gate. A successful CI hook alone is not host deployment evidence.
+
+Failed post-activation smoke automatically restores the previous web symlink
+and restarts the service. The controller never rolls back Convex or restores data.
+An interrupted activation is also recovered through systemd `ExecStopPost`,
+using the durable pre-activation pointer; stopping or killing the controller
+cannot strand an unchecked release merely by bypassing a Python exception.
+`/var/lib/chrondle-cd/result.json` and the journal retain the bounded
+revision/run outcome. Repair the cause and merge normally; a rerun of the
+reviewed release can retry the same immutable artifact.
+
+For exceptional web-only recovery, atomically repoint
+`/opt/public-apps/chrondle/current` to an already installed healthy release,
+restart `chrondle.service`, and repeat the checks above. Do not roll Convex
+back as part of a web-only recovery.
+
+#### E. Provenance
+
+The manual host flow first appeared in `8c946aa3fcd6e3196457107faf6fce1b4d9d134d`
+(`chore: prepare native host runtime`, 2026-08-15). The later
+`d281c134b9acd93d405b781dac42d4d6097b987a` recorded the firewall boundary.
+These commits describe runtime preparation and isolation, not a written
+human-only release decision. The 2026-09-30 instruction authorizes routine
+continuous deployment; the native isolation and credential boundaries remain.
 
 ## Environment Configuration Patterns
 

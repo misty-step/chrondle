@@ -26,7 +26,6 @@ const activeRoots = [
 const excludedPaths = new Set([
   "docs/archive",
   "scripts/check-provider-retirement.mjs",
-  "scripts/check-provider-retirement.test.mjs",
 ]);
 
 const retiredProviderPattern = /\bvercel(?:\.com)?\b|\bVERCEL(?:_[A-Z0-9_]+)?\b/gi;

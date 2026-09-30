@@ -24,12 +24,15 @@ Automation utilities for Chrondle development, deployment, and maintenance.
 
 ## Deployment & Verification
 
-| Script                       | Purpose                      | Usage                                    |
-| ---------------------------- | ---------------------------- | ---------------------------------------- |
-| `verify-deployment.mjs`      | Post-deployment verification | `bun run deploy:verify`                  |
-| `check-deployment-ready.mjs` | Pre-deployment checks        | `bun scripts/check-deployment-ready.mjs` |
-| `verify-hosting-parity.mjs`  | Probe live hosting parity    | `bun run doctor:hosting`                 |
-| `verify-auth-production.mjs` | Verify production auth       | `bun run verify:auth:prod`               |
+| Script                       | Purpose                           | Usage                                                 |
+| ---------------------------- | --------------------------------- | ----------------------------------------------------- |
+| `verify-deployment.mjs`      | Post-deployment verification      | `bun run deploy:verify`                               |
+| `check-deployment-ready.mjs` | Pre-deployment checks             | `bun scripts/check-deployment-ready.mjs`              |
+| `verify-hosting-parity.mjs`  | Probe live hosting parity         | `bun run doctor:hosting`                              |
+| `verify-auth-production.mjs` | Verify production auth            | `bun run verify:auth:prod`                            |
+| `verify-native-release.mjs`  | Read back healthy native SHA/run  | `node scripts/verify-native-release.mjs`              |
+| `host-cd.py`                 | Root-owned native CD controller   | Installed `chrondle-cd.service`; see deployment guide |
+| `install-host-cd.sh`         | Reviewed host CD bootstrap/update | `bash scripts/install-host-cd.sh` on the host         |
 
 ## Convex Database
 

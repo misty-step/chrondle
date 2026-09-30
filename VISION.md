@@ -103,7 +103,9 @@ Live QA / operator routes:
 
 Side-effect constraints:
 
-- live game/Convex/Stripe surfaces. Do not deploy or touch live Stripe/Convex production without explicit scope.
+- Routine compatible Convex/native-host releases are covered by reviewed, green
+  `master` merges and continuous deployment. Live billing changes, credential
+  changes, private-data use, and destructive migrations still need explicit scope.
 
 No dirty working-tree entries were present when this draft was generated.
 

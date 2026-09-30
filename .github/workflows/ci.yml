@@ -184,6 +184,15 @@ jobs:
           fi
           echo "Published coverage badges to the badges branch."
 
+  deployment-contract:
+    name: deployment-contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Check native deployment authorization and artifact boundaries
+        run: python3 scripts/host-cd.test.py
+
   validation:
     runs-on: ubuntu-latest
     name: validation-checks
@@ -313,7 +322,7 @@ jobs:
   merge-gate:
     runs-on: ubuntu-latest
     if: always()
-    needs: [quality-checks, validation, docs, build, e2e, verify-environment]
+    needs: [quality-checks, validation, docs, build, e2e, verify-environment, deployment-contract]
     steps:
       - name: Check all jobs
         run: |

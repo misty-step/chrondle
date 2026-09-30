@@ -2,14 +2,14 @@
 
 ## Workflows Overview
 
-| Workflow                   | Trigger                                  | Purpose                                                                                                          |
-| -------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `ci.yml`                   | PR & push to main/master                 | Quality checks, tests, build validation                                                                          |
-| `deploy.yml`               | Push to main/master                      | Production deployment                                                                                            |
-| `size-limit.yml`           | PR                                       | Bundle size checks                                                                                               |
-| `claude-code-review.yml`   | PR                                       | Automated code review                                                                                            |
-| `webhook-health-check.yml` | Schedule (every 6h) & manual             | Fails if the production Stripe webhook route redirects (see INCIDENT-2026-01-17T.md)                             |
-| `dependency-updates.yml`   | PR & push to main/master; daily & manual | Checks Bun lockfile/updater ownership; daily/manual runs also detect failed or stale updater execution (MIS-178) |
+| Workflow                   | Trigger                                    | Purpose                                                                                                          |
+| -------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `ci.yml`                   | PR & push to main/master                   | Quality checks, tests, build validation                                                                          |
+| `deploy.yml`               | Every push to master; optional drill/retry | Backend-first production deployment and exact native-host readback                                               |
+| `size-limit.yml`           | PR                                         | Bundle size checks                                                                                               |
+| `claude-code-review.yml`   | PR                                         | Automated code review                                                                                            |
+| `webhook-health-check.yml` | Schedule (every 6h) & manual               | Fails if the production Stripe webhook route redirects (see INCIDENT-2026-01-17T.md)                             |
+| `dependency-updates.yml`   | PR & push to main/master; daily & manual   | Checks Bun lockfile/updater ownership; daily/manual runs also detect failed or stale updater execution (MIS-178) |
 
 ## Required GitHub Secrets
 
@@ -96,14 +96,19 @@ The deploy workflow validates all required secrets at the start, providing clear
 
 Steps:
 
-1. Checkout code
-2. **Validate secrets** (fail-fast on missing required secrets)
-3. Setup Bun 1.3.9
-4. Install dependencies
-5. Build Next.js application
-6. Deploy to Convex production
-7. Verify deployment
-8. Verify the Stripe webhook route doesn't redirect (`verify:webhook`)
+1. Wait for successful full CI and TruffleHog on this exact revision
+2. Install with pinned Bun and validate existing production credentials/configuration
+3. Verify Canary ingest-only scopes and Stripe prices
+4. Deploy backward-compatible Convex and verify live puzzle/event health
+5. Observe the native host's unprivileged build, immutable install, and activation
+6. Require healthy host smoke receipt and exact runtime SHA, run ID, and attempt
+7. Verify the Stripe webhook route doesn't redirect (`verify:webhook`)
+
+The host polls public metadata/source; Actions holds no host SSH or root key.
+A host failure or stopped timer fails the observer within 20 minutes and the
+existing signed GitHub failure hook alerts Kaylee's agent intake.
+The host bootstrap/recovery procedure lives in
+[the deployment guide](../../docs/deployment-guide.md#2-production-web-deployment-native-host).
 
 ### Webhook Health Check (`webhook-health-check.yml`)
 
@@ -161,9 +166,13 @@ Check that `CONVEX_DEPLOY_KEY` is set and has the correct format:
 prod:project-name|base64-encoded-key
 ```
 
-## Manual Deployment
+## Deployment Verification and Alert Drill
 
 ```bash
-bun run deploy        # Full deploy
-bun run deploy:verify # Verify deployment health
+node scripts/verify-native-release.mjs  # Healthy deployed SHA and Actions run
+bun run deploy:verify                  # Live backend puzzle/event health
+gh workflow run deploy.yml --ref master -f alert_probe=true
 ```
+
+The optional alert drill fails before production mutation. Ordinary compatible
+releases need only the normal reviewed merge and green CI, not a manual dispatch.

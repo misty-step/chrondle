@@ -1,0 +1,22 @@
+[Unit]
+Description=Chrondle green-merge native deployment
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/chrondle-cd/host-cd.py
+ExecStopPost=/usr/bin/python3 /usr/local/lib/chrondle-cd/host-cd.py --recover
+StateDirectory=chrondle-cd
+StateDirectoryMode=0711
+TimeoutStartSec=15min
+TimeoutStopSec=90s
+MemoryMax=512M
+CPUQuota=50%
+Nice=15
+OOMScoreAdjust=500
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/public-apps/chrondle /var/lib/chrondle-cd

@@ -185,35 +185,27 @@ Chrondle requires several environment variables for production deployment. Copy 
 
 ### Deploying the web service
 
-1. **Merge a reviewed commit to `master`.** A merge does not mutate
-   production.
+Merge a reviewed, green commit to `master`. Every merge ships automatically:
+the [production workflow](.github/workflows/deploy.yml) waits for exact-revision
+CI and secret scanning, deploys the backward-compatible Convex backend, and
+observes the native host build, install, activation, and smoke check.
 
-2. **Deploy Convex separately when `convex/` changed:**
+The host pulls public GitHub source and deployment metadata through
+`chrondle-cd.timer`; GitHub Actions has no host SSH key or root credential.
+Production secrets stay in root-owned mode-`0600`
+`/etc/public-apps/chrondle.env`. The compiler receives only public configuration.
+The existing unprivileged `chrondle.service`, default-deny firewall, and
+Caddy-only ingress remain unchanged.
 
-   ```bash
-   bunx convex deploy --prod
-   ```
+`/api/health` reads back the running Git SHA. `/deployment.json` identifies
+the exact Actions run and becomes healthy only after the host smoke passes.
+A failed host smoke automatically restores the previous web release without
+rolling back Convex or accepted writes. Failed deployment runs reach Kaylee's
+agent triage intake, not a human inbox.
 
-3. **Build the native host release:**
-
-   ```bash
-   bun install --frozen-lockfile
-   bun run build:do
-   ```
-
-   `next.config.ts` emits the standalone Next.js runtime. Install the
-   standalone tree, `.next/static`, and `public` under
-   `/opt/public-apps/chrondle/releases/<git-commit>`.
-
-4. **Configure the host:** keep production variables from `.env.example` in
-   root-owned mode-`0600` `/etc/public-apps/chrondle.env`. The
-   `chrondle.service` systemd unit runs the active release on port `3007`.
-   The host's default-deny firewall blocks direct public access; Caddy is the
-   only allowed public ingress for `chrondle.app` and `www.chrondle.app`.
-
-5. **Activate and verify:** atomically repoint
-   `/opt/public-apps/chrondle/current`, restart `chrondle.service`, then run
-   `bun run deploy:verify` and verify `https://chrondle.app/api/health`.
+See the [deployment guide](docs/deployment-guide.md#2-production-web-deployment-native-host)
+for bootstrap, compatibility, failure diagnosis, and recovery. No ordinary
+release requires a separate build, install, activation, or approval step.
 
 ### Post-Deployment
 

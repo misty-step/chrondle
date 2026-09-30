@@ -1,0 +1,10 @@
+[Unit]
+Description=Observe Chrondle production deployment requests
+
+[Timer]
+OnBootSec=1min
+OnUnitInactiveSec=3min
+Unit=chrondle-cd.service
+
+[Install]
+WantedBy=timers.target
