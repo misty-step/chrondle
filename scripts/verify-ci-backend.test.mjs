@@ -89,7 +89,9 @@ test.each([devUrl, prodUrl])(
     vi.resetModules();
     const { default: config } = await import("../next.config.ts");
     const routes = await config.headers();
-    const policy = routes[0].headers.find(({ key }) => key === "Content-Security-Policy").value;
+    const policy = routes
+      .find(({ source }) => source === "/(.*)")
+      .headers.find(({ key }) => key === "Content-Security-Policy").value;
     const connect = policy.split("; ").find((directive) => directive.startsWith("connect-src "));
     assert.ok(connect.includes(url));
     assert.ok(connect.includes(url.replace("https:", "wss:")));
@@ -104,7 +106,9 @@ test.each(["", "invalid-url"])(
     vi.resetModules();
     const { default: config } = await import("../next.config.ts");
     const routes = await config.headers();
-    const policy = routes[0].headers.find(({ key }) => key === "Content-Security-Policy").value;
+    const policy = routes
+      .find(({ source }) => source === "/(.*)")
+      .headers.find(({ key }) => key === "Content-Security-Policy").value;
     assert.ok(!policy.includes(".convex.cloud"));
   },
 );

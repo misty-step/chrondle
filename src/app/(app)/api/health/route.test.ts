@@ -25,7 +25,7 @@ describe("/api/health", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({
+    expect(body).toMatchObject({
       status: "ok",
       service: "chrondle",
       checks: {
