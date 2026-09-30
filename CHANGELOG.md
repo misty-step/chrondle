@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.5.2](https://github.com/misty-step/chrondle/compare/v1.5.1...v1.5.2) (2026-09-30)
+
+### Bug Fixes
+
+- **deploy:** ship native host after green master merges ([#314](https://github.com/misty-step/chrondle/issues/314)) ([6604534](https://github.com/misty-step/chrondle/commit/66045345f34bc85586cf1dd2340d57f4ad9c4252))
+
 ## [1.5.1](https://github.com/misty-step/chrondle/compare/v1.5.0...v1.5.1) (2026-09-28)
 
 ### Bug Fixes
