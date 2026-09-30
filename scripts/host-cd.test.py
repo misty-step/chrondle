@@ -45,6 +45,12 @@ class DeploymentBoundary(unittest.TestCase):
         self.assertEqual(environment["NEXT_PUBLIC_CONVEX_URL"], "https://fleet-goldfish-183.convex.cloud")
         self.assertFalse(any(value.startswith("synthetic-private") for value in environment.values()))
 
+    def test_native_release_cannot_embed_a_nonproduction_backend(self):
+        with self.assertRaisesRegex(RuntimeError, "native_backend_is_not_production"):
+            cd.public_build_environment("a" * 40, Path("/build"), {
+                "NEXT_PUBLIC_CONVEX_URL": "https://handsome-raccoon-955.convex.cloud",
+            })
+
     def test_artifact_links_cannot_make_root_copy_host_secrets(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory)
