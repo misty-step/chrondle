@@ -97,7 +97,7 @@ jobs:
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
       # Expand/contract only: the old web release stays live during this step.
       - name: Deploy Convex production
-        run: bunx convex deploy
+        run: bun run deploy:backend
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
       - name: Verify backend before host activation

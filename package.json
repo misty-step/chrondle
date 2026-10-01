@@ -46,6 +46,7 @@
     "events": "tsx scripts/manage-events.ts",
     "events:audit": "tsx scripts/audit-events.ts",
     "deploy:verify": "node scripts/verify-deployment.mjs",
+    "deploy:backend": "convex deploy",
     "doctor:hosting": "node scripts/verify-hosting-parity.mjs",
     "verify:provider-retirement": "node scripts/check-provider-retirement.mjs",
     "validate-puzzles": "node scripts/check-convex-state.mjs",

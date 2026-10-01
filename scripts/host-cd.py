@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import sys
+import socket
 import tarfile
 import tempfile
 import time
@@ -125,8 +126,13 @@ def build_release(revision, workspace, environment):
             os.chown(Path(directory) / name, account.pw_uid, account.pw_gid, follow_symlinks=False)
     (workspace / "tmp").mkdir()
     os.chown(workspace / "tmp", account.pw_uid, account.pw_gid)
-    as_builder([BUN, "install", "--frozen-lockfile"], source, environment)
-    as_builder([BUN, "run", "build"], source, environment)
+    return compile_release(revision, source, environment, as_builder, BUN)
+
+
+def compile_release(revision, source, environment, builder, bun):
+    """One native artifact producer, used by the sandbox and inert PR preflight."""
+    builder([bun, "install", "--frozen-lockfile"], source, environment)
+    builder([bun, "run", "build"], source, environment)
     if (source / ".next/BUILD_ID").read_text().strip() != revision:
         raise RuntimeError("build_revision_mismatch")
     return source
@@ -141,11 +147,11 @@ def validate_artifact_tree(tree, source):
             raise RuntimeError("artifact_link_escaped")
 
 
-def install_release(source, revision, receipt):
-    release = ROOT / "releases" / revision
+def install_release(source, revision, receipt, root=ROOT):
+    release = root / "releases" / revision
     # Releases are immutable. A rerun may reuse the identical installed artifact.
     if not release.exists():
-        staging = ROOT / "releases" / f".{revision}.{os.getpid()}"
+        staging = root / "releases" / f".{revision}.{os.getpid()}"
         try:
             for tree in [source / ".next/standalone", source / ".next/static", source / "public"]:
                 validate_artifact_tree(tree, source)
@@ -165,6 +171,78 @@ def install_release(source, revision, receipt):
     # after all real smoke checks pass, so Actions cannot race a later rollback.
     write_json(release / "public/deployment.json", {**receipt, "status": "checking"})
     return release
+
+
+def local_builder(argv, source, environment):
+    subprocess.run(argv, cwd=source, env=environment, check=True, timeout=720)
+
+
+def preflight(revision):
+    """Build and consume an exact Git artifact without host privileges or activation."""
+    if os.geteuid() == 0 or not SHA.fullmatch(revision):
+        raise RuntimeError("preflight_requires_unprivileged_user_and_exact_sha")
+    bun = shutil.which("bun")
+    node = shutil.which("node")
+    if not bun or not node:
+        raise RuntimeError("preflight_requires_bun_and_node")
+    with tempfile.TemporaryDirectory(prefix="chrondle-preflight-") as directory:
+        workspace = Path(directory)
+        source = workspace / "source"
+        source.mkdir()
+        archive = workspace / "source.tar"
+        subprocess.run(["git", "archive", "--format=tar", f"--output={archive}", revision], check=True)
+        with tarfile.open(archive) as source_archive:
+            source_archive.extractall(source, filter="data")
+        (workspace / "tmp").mkdir()
+        environment = {
+            **{key: value for key, value in os.environ.items() if key in PUBLIC_BUILD_VARS},
+            "PATH": os.environ["PATH"], "HOME": str(workspace), "TMPDIR": str(workspace / "tmp"),
+            "NODE_ENV": "production", "CI": "1", "HUSKY": "0",
+            "NEXT_TELEMETRY_DISABLED": "1", "DAGGER_ARTIFACT_BUILD": "1",
+            "CHRONDLE_REVISION": revision, "CONVEX_DISABLE_ANALYTICS": "1",
+        }
+        local_builder([bun, "scripts/verify-ci-backend.mjs"], source, environment)
+        compile_release(revision, source, environment, local_builder, bun)
+        local_builder([bun, "scripts/verify-ci-backend.mjs", ".next"], source, environment)
+        local_builder([bun, "run", "size"], source, environment)
+        # Convex's own producer exports its real root modules/schema and exits
+        # before push. The closed loopback target has no issuer or real credential.
+        backend = workspace / "backend"
+        local_builder([bun, "run", "deploy:backend", "--url", "http://127.0.0.1:1",
+                       "--admin-key", "inert-local-artifact", "--debug-bundle-path", str(backend),
+                       "--codegen", "disable"], source, environment)
+        bundle = json.loads((backend / "fullConfig.json").read_text())
+        if not any(module["path"] == "health.js" for module in bundle["modules"]):
+            raise RuntimeError("backend_health_module_missing")
+        root = workspace / "consumer"
+        (root / "releases").mkdir(parents=True)
+        release = install_release(source, revision, {"revision": revision, "preflight": True}, root)
+        # Serve an actual installed CSS asset, not a synthetic fixture. This
+        # exercises standalone packaging without Clerk/server secrets or gameplay.
+        asset = next((release / ".next/static").rglob("*.css"))
+        with socket.socket() as listener:
+            listener.bind(("127.0.0.1", 0))
+            port = listener.getsockname()[1]
+        process = subprocess.Popen([node, "server.js"], cwd=release,
+                                   env={**environment, "HOSTNAME": "127.0.0.1", "PORT": str(port)})
+        try:
+            url = f"http://127.0.0.1:{port}/_next/static/{asset.relative_to(release / '.next/static')}"
+            deadline = time.monotonic() + 30
+            while True:
+                try:
+                    with urllib.request.urlopen(url, timeout=5) as response:
+                        if response.read() != asset.read_bytes():
+                            raise RuntimeError("installed_asset_consumer_mismatch")
+                    break
+                except OSError:
+                    if process.poll() is not None or time.monotonic() >= deadline:
+                        raise
+                    time.sleep(0.2)
+            event("preflight.passed", revision=revision, backend="native_bundle",
+                  artifact="standalone", consumer="installed_css", activation=False)
+        finally:
+            process.terminate()
+            process.wait(timeout=15)
 
 
 def activate(release):
@@ -283,8 +361,12 @@ if __name__ == "__main__":
     try:
         if sys.argv[1:] == ["--recover"]:
             recover_interrupted_activation()
-        else:
+        elif len(sys.argv) == 3 and sys.argv[1] == "--preflight":
+            preflight(sys.argv[2])
+        elif not sys.argv[1:]:
             main()
+        else:
+            raise RuntimeError("unknown_release_command")
     except Exception as error:
         event("reconcile.failed", error_class=type(error).__name__)
         raise SystemExit(1) from None
