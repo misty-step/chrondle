@@ -372,7 +372,7 @@ git commit -m "Remove .env from tracking"
 **Checklist:**
 
 1. Environment variables are installed in `/etc/public-apps/chrondle.env`
-2. Build command: `bun install --frozen-lockfile && bun run build:do`
+2. Build command: `bun install --frozen-lockfile && bun run build`
 3. Standalone output includes `.next/standalone`, `.next/static`, and `public`
 4. Host service and logs:
    ```bash

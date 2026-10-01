@@ -134,7 +134,7 @@ error TS2307: Cannot find module '../_generated/api'
 before installing a release:
 
 ```bash
-bunx convex codegen && bun run build:do
+bunx convex codegen && bun run build
 ```
 
 ## ⚠️ Critical: Convex Generated Files

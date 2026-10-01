@@ -1,11 +1,13 @@
+/// <reference types="vite/client" />
+
 /**
  * Convex Test Setup
  *
  * Exports modules for convex-test to discover Convex functions.
  * Matches all .ts/.js files while excluding test/config/setup files.
  *
- * Note: import.meta.glob is a Vite-specific feature that's available
- * at runtime but not in TypeScript's type system.
+ * Vite owns import.meta.glob and declares it through vite/client.
+ * Convex deployment excludes this multi-dot test module from its entrypoints.
  */
 export const modules = import.meta.glob([
   "./**/*.{ts,js}",
