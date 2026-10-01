@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.5.3](https://github.com/misty-step/chrondle/compare/v1.5.2...v1.5.3) (2026-10-01)
+
+### Bug Fixes
+
+- **observability:** retire decommissioned Canary authority ([#316](https://github.com/misty-step/chrondle/issues/316)) ([fec9c8e](https://github.com/misty-step/chrondle/commit/fec9c8e4d660430acb07745be09ca4c73b12dd85))
+
 ## [1.5.2](https://github.com/misty-step/chrondle/compare/v1.5.1...v1.5.2) (2026-09-30)
 
 ### Bug Fixes
