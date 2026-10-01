@@ -3,7 +3,7 @@ import { sanitizeErrorForLogging } from "../../convex/lib/errorSanitization";
 
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 const SENSITIVE_KEY_PATTERN =
-  /^(?:authorization|cookie|set-cookie|password|token|secret|api[_-]?key|(?:access|refresh|id|auth)[_-]?token|client[_-]?secret)$/i;
+  /(?:authorization|cookie|password|token|secret|api[_-]?key|private[_-]?key)/i;
 
 export interface ErrorReportContext {
   tags?: Record<string, string | number | boolean>;

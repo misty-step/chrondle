@@ -22,6 +22,11 @@ Chrondle reports sanitized structured errors through its existing browser/native
 Structured error reporting requires no retired-provider key or endpoint. Private
 server/deploy credentials must never be browser-public or compiler inputs.
 
+The app-facing reporter redacts emails and compound credential fields such as
+`sessionToken`, `privateKey`, and `x-api-key` before encoding structured context.
+Keep context minimal; do not forward raw request headers. Convex sinks retain
+the shared recognizable-token sanitizer and their existing argument exclusions.
+
 | Variable                      | Description                                    | Required |
 | :---------------------------- | :--------------------------------------------- | :------- |
 | `ORDER_FAILURE_SLACK_WEBHOOK` | Webhook URL for critical order failure alerts. | Optional |

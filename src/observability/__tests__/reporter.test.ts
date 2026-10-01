@@ -58,4 +58,36 @@ describe("error reporter", () => {
     expect(extras.password).toBe("plain-password");
     expect(shared.nestedEmail).toBe("shared@example.com");
   });
+
+  it("redacts compound credential fields without relying on recognized value shapes", () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const credentials = {
+      sessionToken: "opaque-session-fixture",
+      privateKey: "opaque-private-fixture",
+      "x-api-key": "opaque-api-fixture",
+      bearerToken: "opaque-bearer-fixture",
+      userPassword: "opaque-password-fixture",
+    };
+
+    captureClientException(new Error("Credential context failed"), {
+      extras: { credentials, attemptCount: 2 },
+    });
+
+    const report = String(consoleErrorSpy.mock.calls[0][1]);
+    const payload = JSON.parse(report);
+    expect(payload.context.extras).toEqual({
+      credentials: {
+        sessionToken: "[REDACTED]",
+        privateKey: "[REDACTED]",
+        "x-api-key": "[REDACTED]",
+        bearerToken: "[REDACTED]",
+        userPassword: "[REDACTED]",
+      },
+      attemptCount: 2,
+    });
+    for (const value of Object.values(credentials)) {
+      expect(report).not.toContain(value);
+    }
+    expect(credentials.sessionToken).toBe("opaque-session-fixture");
+  });
 });
