@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.5.5](https://github.com/misty-step/chrondle/compare/v1.5.4...v1.5.5) (2026-10-01)
+
+### Bug Fixes
+
+- **release:** run native producer and consumer before merge ([#318](https://github.com/misty-step/chrondle/issues/318)) ([f29acb3](https://github.com/misty-step/chrondle/commit/f29acb3fe162d0fc7194b65044191517354fef8f))
+
 ## [1.5.4](https://github.com/misty-step/chrondle/compare/v1.5.3...v1.5.4) (2026-10-01)
 
 ### Bug Fixes
