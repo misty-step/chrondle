@@ -594,7 +594,15 @@ npx convex run events:getEventCount
 2. Maintain backward compatibility via barrel files
 3. Add tests for new behavior
 4. Update JSDoc comments
-5. Run `pnpm type-check && pnpm test` before committing
+5. Run `bun run type-check && bun run test` before committing. Both the root
+   and isolated Convex TypeScript projects are checked; CI uses the same two
+   projects without the root incremental cache.
+
+`test.setup.ts` is a Vite-only test consumer. Convex's deployment bundler excludes
+multi-dot module filenames; its TypeScript project still checks the helper.
+The file-local `vite/client` reference follows the
+[Convex test setup contract](https://docs.convex.dev/testing/convex-test).
+Do not disable deployment typechecking to work around a missing test type.
 
 ## References
 
