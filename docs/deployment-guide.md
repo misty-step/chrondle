@@ -90,6 +90,22 @@ compiler (`next build --webpack`), rather than verifying a different compiler
 path. The CSS budget counts every stylesheet under `.next/static`, independent
 of the compiler's output directory; the existing byte budgets remain unchanged.
 
+The required PR `deployment-contract` gate runs the real native release owner
+inertly: `python3 scripts/host-cd.py --preflight "$GITHUB_SHA"`. It archives the
+exact commit into a clean workspace, invokes the shared production compiler
+and artifact installer, verifies `BUILD_ID` and artifact-tree containment, and
+serves an installed CSS asset from the actual standalone server. It uses only
+public test configuration and the existing development Convex URL; no root,
+systemd, activation, or production credential is available to this path.
+
+Production and preflight share `bun run deploy:backend`. In preflight the native
+Convex CLI's `--debug-bundle-path` exports real deployment modules locally and
+exits before push, using a closed loopback target and inert selector. This proves
+the producer/bundler path, not production authentication, hosted schema checks,
+or data migration. Those remain trusted-main boundaries.
+See the [canonical retired-service postmortem](postmortems/2026-10-01-retired-canary-release-veto.md)
+for the original failure, subtraction, regression evidence, and limits.
+
 Convex deploys and passes `bun run deploy:verify` **before** native host activation.
 Backend changes must remain compatible with the still-running previous web
 release and with a web rollback: use expand/contract, never destructive data
