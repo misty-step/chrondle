@@ -15,21 +15,18 @@
 
 ### Core Secrets (Required - Deploy will fail without these)
 
-| Secret                              | Description           | How to Get                                                                        |
-| ----------------------------------- | --------------------- | --------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_CONVEX_URL`            | Convex project URL    | Convex Dashboard                                                                  |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk auth public key | [Clerk Dashboard](https://dashboard.clerk.com) → API Keys                         |
-| `CONVEX_DEPLOY_KEY`                 | Convex deployment key | Convex Dashboard → Settings → Deploy Keys                                         |
-| `NEXT_PUBLIC_CANARY_API_KEY`        | Browser Canary key    | Raw Canary `ingest-only` key for browser capture; never admin/read                |
-| `CANARY_API_KEY`                    | Server Canary key     | Raw Canary `ingest-only` key for Next server and Convex capture; never admin/read |
+| Secret                              | Description           | How to Get                                                |
+| ----------------------------------- | --------------------- | --------------------------------------------------------- |
+| `NEXT_PUBLIC_CONVEX_URL`            | Convex project URL    | Convex Dashboard                                          |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk auth public key | [Clerk Dashboard](https://dashboard.clerk.com) → API Keys |
+| `CONVEX_DEPLOY_KEY`                 | Convex deployment key | Convex Dashboard → Settings → Deploy Keys                 |
 
 ### Other Secrets (Used by specific workflows)
 
-| Secret                        | Used By     | Description                           |
-| ----------------------------- | ----------- | ------------------------------------- |
-| `CLERK_SECRET_KEY`            | E2E tests   | Clerk secret key for server-side auth |
-| `CLAUDE_CODE_OAUTH_TOKEN`     | Code review | Claude Code integration               |
-| `NEXT_PUBLIC_CANARY_ENDPOINT` | Deploy      | Optional Canary base URL override     |
+| Secret                    | Used By     | Description                           |
+| ------------------------- | ----------- | ------------------------------------- |
+| `CLERK_SECRET_KEY`        | E2E tests   | Clerk secret key for server-side auth |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Code review | Claude Code integration               |
 
 Coverage badges are published by the `coverage-badges` job to the `badges`
 branch with the built-in `GITHUB_TOKEN`; they require no personal token or
@@ -49,15 +46,7 @@ Quick setup with GitHub CLI:
 gh secret set NEXT_PUBLIC_CONVEX_URL --body "https://your-project.convex.cloud"
 gh secret set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY --body "pk_live_..."
 gh secret set CONVEX_DEPLOY_KEY --body "prod:project-name|..."
-gh secret set NEXT_PUBLIC_CANARY_API_KEY --body "sk_live_..."
-gh secret set CANARY_API_KEY --body "sk_live_..."
 ```
-
-Both Canary keys are write-only ingest keys scoped to `chrondle`; neither may
-use an admin or read scope. Use the one-time raw `sk_live_...` value returned by
-Canary, not the `KEY-*` database id. `NEXT_PUBLIC_CANARY_API_KEY` is embedded in
-browser JavaScript, while `CANARY_API_KEY` is used by server and Convex runtime
-paths.
 
 ## Validation & Safety
 
@@ -98,7 +87,7 @@ Steps:
 
 1. Wait for successful full CI and TruffleHog on this exact revision
 2. Install with pinned Bun and validate existing production credentials/configuration
-3. Verify Canary ingest-only scopes and Stripe prices
+3. Verify live Stripe prices
 4. Deploy backward-compatible Convex and verify live puzzle/event health
 5. Observe the native host's unprivileged build, immutable install, and activation
 6. Require healthy host smoke receipt and exact runtime SHA, run ID, and attempt

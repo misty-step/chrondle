@@ -216,7 +216,7 @@ describe("getMetrics", () => {
 
   it("sanitizes failure reasons before returning quality metrics", async () => {
     const now = Date.now();
-    const canaryWriteKey = ["sk", "live", "123456789012345678901234"].join("_");
+    const privateKey = ["sk", "live", "123456789012345678901234"].join("_");
     const mockLogs = [
       {
         _id: "log1" as Doc<"generation_logs">["_id"],
@@ -228,7 +228,7 @@ describe("getMetrics", () => {
         events_generated: 0,
         token_usage: { input: 300, output: 0, total: 300 },
         cost_usd: 0.01,
-        error_message: `provider failed with Bearer ${canaryWriteKey}`,
+        error_message: `provider failed with Bearer ${privateKey}`,
         timestamp: now,
       },
     ] as Doc<"generation_logs">[];

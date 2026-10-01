@@ -11,7 +11,7 @@ const healthyFetch = async (url, init = {}) => {
   }
   if (path === "/api/health") {
     return new Response(
-      JSON.stringify({ status: "ok", checks: { convex: "ok", canary: "configured" } }),
+      JSON.stringify({ status: "ok", checks: { convex: "ok" } }),
       { status: 200 },
     );
   }
@@ -28,7 +28,7 @@ const healthyFetch = async (url, init = {}) => {
 
 const healthyConvexCorpus = async () => ({ totalPuzzles: 365, latestPuzzleDate: "2026-07-09" });
 
-test("passes the public auth, Convex, Canary, and charge-free Stripe boundary", async () => {
+test("passes the public auth, Convex, and charge-free Stripe boundary", async () => {
   const report = await verifyHostingParity({
     appOrigin: "https://chrondle.app",
     clerkHost: "clerk.chrondle.app",

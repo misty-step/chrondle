@@ -63,11 +63,20 @@ def write_json(path, value):
         temporary.unlink(missing_ok=True)
 
 
+PUBLIC_BUILD_VARS = frozenset({
+    "NEXT_PUBLIC_ANALYTICS_DEBUG", "NEXT_PUBLIC_ANALYTICS_ENDPOINT",
+    "NEXT_PUBLIC_ANALYTICS_FORMAT", "NEXT_PUBLIC_APP_URL",
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "NEXT_PUBLIC_CONVEX_URL",
+    "NEXT_PUBLIC_DEBUG_HOOKS", "NEXT_PUBLIC_POSTHOG_KEY",
+    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+})
+
+
 def public_build_environment(revision, home, host_environment):
     # Production server/deploy secrets never reach install scripts or the compiler.
     if host_environment.get("NEXT_PUBLIC_CONVEX_URL") != "https://fleet-goldfish-183.convex.cloud":
         raise RuntimeError("native_backend_is_not_production")
-    return {**{key: value for key, value in host_environment.items() if key.startswith("NEXT_PUBLIC_")},
+    return {**{key: value for key, value in host_environment.items() if key in PUBLIC_BUILD_VARS},
             "PATH": "/opt/bun-1.4.2/bin:/opt/node-v24/bin:/usr/bin:/bin",
             "HOME": str(home), "TMPDIR": str(home / "tmp"),
             "NODE_ENV": "production", "CI": "1", "HUSKY": "0",
@@ -116,16 +125,6 @@ def build_release(revision, workspace, environment):
             os.chown(Path(directory) / name, account.pw_uid, account.pw_gid, follow_symlinks=False)
     (workspace / "tmp").mkdir()
     os.chown(workspace / "tmp", account.pw_uid, account.pw_gid)
-    # Validate the actual browser key from the host, not just Actions' separate
-    # secret. This alias is used only by the existing scope probe, never by build.
-    scope_environment = {
-        **environment,
-        "CANARY_API_KEY": environment.get("NEXT_PUBLIC_CANARY_API_KEY", ""),
-        "CANARY_ENDPOINT": environment.get("NEXT_PUBLIC_CANARY_ENDPOINT", "https://canary.mistystep.io"),
-        "CANARY_SCOPE_LABEL": "native NEXT_PUBLIC_CANARY_API_KEY",
-        "CANARY_SERVICE": "chrondle", "CANARY_ENVIRONMENT": "production",
-    }
-    as_builder([NODE, "scripts/verify-canary-key-scope.mjs"], source, scope_environment)
     as_builder([BUN, "install", "--frozen-lockfile"], source, environment)
     as_builder([BUN, "run", "build:do"], source, environment)
     if (source / ".next/BUILD_ID").read_text().strip() != revision:

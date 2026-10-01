@@ -20,15 +20,11 @@
       "name": "chrondle-staging",
       "workers_dev": true,
       // Backends intentionally match the live Caddy origin (prod Convex
-      // deployment + prod-scoped Clerk/Canary keys): staging proves the
+      // deployment + prod-scoped Clerk keys): staging proves the
       // new web runtime against the real contracts.
       "vars": {
         "NEXT_PUBLIC_CONVEX_URL": "https://fleet-goldfish-183.convex.cloud",
-        "NEXT_PUBLIC_CANARY_ENDPOINT": "https://canary.mistystep.io",
-        "NEXT_PUBLIC_CANARY_ENVIRONMENT": "production",
         "NEXT_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
-        "CANARY_ENDPOINT": "https://canary.mistystep.io",
-        "CANARY_ENVIRONMENT": "production",
       },
     },
     // Production: named `chrondle`. The chrondle.mistystep.io custom domain
@@ -40,11 +36,7 @@
       "routes": [{ "pattern": "chrondle.mistystep.io", "custom_domain": true }],
       "vars": {
         "NEXT_PUBLIC_CONVEX_URL": "https://fleet-goldfish-183.convex.cloud",
-        "NEXT_PUBLIC_CANARY_ENDPOINT": "https://canary.mistystep.io",
-        "NEXT_PUBLIC_CANARY_ENVIRONMENT": "production",
         "NEXT_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
-        "CANARY_ENDPOINT": "https://canary.mistystep.io",
-        "CANARY_ENVIRONMENT": "production",
       },
     },
   },

@@ -39,7 +39,7 @@ class DeploymentBoundary(unittest.TestCase):
             "NEXT_PUBLIC_CONVEX_URL": "https://fleet-goldfish-183.convex.cloud",
             "CLERK_SECRET_KEY": "synthetic-private-clerk",
             "CONVEX_DEPLOY_KEY": "synthetic-private-deploy",
-            "CANARY_API_KEY": "synthetic-private-canary",
+            "NEXT_PUBLIC_CLERK_SECRET_KEY": "synthetic-private-misnamed",
             "STRIPE_SECRET_KEY": "synthetic-private-stripe",
         })
         self.assertEqual(environment["NEXT_PUBLIC_CONVEX_URL"], "https://fleet-goldfish-183.convex.cloud")

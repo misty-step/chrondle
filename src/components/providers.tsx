@@ -5,7 +5,7 @@ import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { SessionThemeProvider } from "@/components/SessionThemeProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { CanaryClientObserver } from "@/components/CanaryClientObserver";
+import { ClientErrorObserver } from "@/components/ClientErrorObserver";
 import { UserCreationProvider } from "@/components/UserCreationProvider";
 import { MigrationProvider } from "@/components/providers/MigrationProvider";
 import { ToastProvider } from "@/hooks/use-toast";
@@ -107,7 +107,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ErrorBoundary>
-      <CanaryClientObserver />
+      <ClientErrorObserver />
       <ToastProvider>
         <MigrationProvider>
           <ClerkProvider publishableKey={clerkKey} dynamic>

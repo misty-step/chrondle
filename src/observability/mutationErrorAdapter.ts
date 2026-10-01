@@ -102,9 +102,9 @@ export function classifyMutationError(error: unknown): MutationError {
 }
 
 /**
- * Safe mutation wrapper that handles error classification and Canary reporting
+ * Safe mutation wrapper that handles error classification and structured reporting
  * @param mutationFn The async mutation function to execute
- * @param context Context for Canary (e.g., puzzleId, userId)
+ * @param context Error context (e.g., puzzleId, userId)
  * @returns Tuple of [result, null] or [null, MutationError]
  */
 export async function safeMutation<T>(
@@ -117,11 +117,7 @@ export async function safeMutation<T>(
   } catch (err) {
     const error = classifyMutationError(err);
 
-    // Only capture unexpected errors or critical failures
-    // Validation errors are usually user-driven and don't need Canary noise
-    // unless we want to track UX issues.
-    // DESIGN.md says: "Client shows toast... message logged to observability"
-    // So we capture all, maybe with different levels.
+    // Report validation failures at info level; other failures at error level.
 
     const level = error.code === "VALIDATION" ? "info" : "error";
 

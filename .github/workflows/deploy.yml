@@ -87,24 +87,6 @@ jobs:
           STRIPE_PRICE_MONTHLY: ${{ secrets.STRIPE_PRICE_MONTHLY }}
           STRIPE_PRICE_ANNUAL: ${{ secrets.STRIPE_PRICE_ANNUAL }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-          NEXT_PUBLIC_CANARY_API_KEY: ${{ secrets.NEXT_PUBLIC_CANARY_API_KEY }}
-          CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
-      - name: Validate browser Canary key scope
-        run: node scripts/verify-canary-key-scope.mjs
-        env:
-          CANARY_ENDPOINT: ${{ secrets.NEXT_PUBLIC_CANARY_ENDPOINT }}
-          CANARY_API_KEY: ${{ secrets.NEXT_PUBLIC_CANARY_API_KEY }}
-          CANARY_SCOPE_LABEL: NEXT_PUBLIC_CANARY_API_KEY
-          CANARY_SERVICE: chrondle
-          CANARY_ENVIRONMENT: production
-      - name: Validate server Canary key scope
-        run: node scripts/verify-canary-key-scope.mjs
-        env:
-          CANARY_ENDPOINT: ${{ secrets.NEXT_PUBLIC_CANARY_ENDPOINT }}
-          CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
-          CANARY_SCOPE_LABEL: CANARY_API_KEY
-          CANARY_SERVICE: chrondle
-          CANARY_ENVIRONMENT: production
       - name: Validate Stripe prices exist
         run: node scripts/verify-stripe-config.mjs --live
         env:
@@ -114,15 +96,6 @@ jobs:
           STRIPE_PRICE_ANNUAL: ${{ secrets.STRIPE_PRICE_ANNUAL }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
       # Expand/contract only: the old web release stays live during this step.
-      - name: Configure Convex Canary runtime
-        run: |
-          bunx convex env set CANARY_API_KEY "$CANARY_API_KEY"
-          bunx convex env set CANARY_ENDPOINT "${CANARY_ENDPOINT:-https://canary.mistystep.io}"
-          bunx convex env set CANARY_ENVIRONMENT production
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-          CANARY_API_KEY: ${{ secrets.CANARY_API_KEY }}
-          CANARY_ENDPOINT: ${{ secrets.NEXT_PUBLIC_CANARY_ENDPOINT }}
       - name: Deploy Convex production
         run: bunx convex deploy
         env:

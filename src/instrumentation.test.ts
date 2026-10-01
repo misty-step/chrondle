@@ -1,49 +1,23 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const { mockCaptureServerException } = vi.hoisted(() => ({
-  mockCaptureServerException: vi.fn(),
-}));
-
-const originalEnv = { ...process.env };
-
-vi.mock("./observability/reporter", () => ({
-  captureServerException: mockCaptureServerException,
-}));
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { onRequestError } from "./instrumentation";
 
 describe("instrumentation", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    process.env = { ...originalEnv };
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it("does not require SDK initialization", async () => {
-    process.env.NEXT_RUNTIME = "nodejs";
+  it("reports request failures without including request headers", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const { register } = await import("./instrumentation");
-
-    await expect(register()).resolves.toBeUndefined();
-    expect(mockCaptureServerException).not.toHaveBeenCalled();
-  });
-
-  it("awaits Canary server exception capture before resolving", async () => {
-    let resolveCapture: (() => void) | undefined;
-    const error = new Error("request failed");
-
-    mockCaptureServerException.mockImplementationOnce(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveCapture = resolve;
-        }),
-    );
-
-    const { onRequestError } = await import("./instrumentation");
-
-    const pending = onRequestError(
-      error,
+    await onRequestError(
+      new Error("request failed"),
       {
         path: "/play",
         method: "GET",
-        headers: {},
+        headers: {
+          authorization: "private-authorization",
+          cookie: "session=private-session",
+        },
       },
       {
         routePath: "/play",
@@ -51,10 +25,10 @@ describe("instrumentation", () => {
       },
     );
 
-    await vi.dynamicImportSettled();
-
-    expect(mockCaptureServerException).toHaveBeenCalledWith(error, {
-      level: "error",
+    const report = String(consoleErrorSpy.mock.calls[0][1]);
+    const payload = JSON.parse(report);
+    expect(payload.message).toBe("request failed");
+    expect(payload.context).toEqual({
       tags: {
         source: "nextjs.onRequestError",
         route_type: "page",
@@ -65,18 +39,7 @@ describe("instrumentation", () => {
         routePath: "/play",
       },
     });
-
-    let settled = false;
-    void pending.then(() => {
-      settled = true;
-    });
-
-    await Promise.resolve();
-    expect(settled).toBe(false);
-
-    resolveCapture?.();
-    await pending;
-
-    expect(settled).toBe(true);
+    expect(report).not.toContain("private-authorization");
+    expect(report).not.toContain("private-session");
   });
 });
