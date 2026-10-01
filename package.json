@@ -7,8 +7,7 @@
   "scripts": {
     "dev": "concurrently \"bunx convex dev\" \"next dev --turbopack\"",
     "dev:next": "next dev --turbopack",
-    "build": "next build",
-    "build:do": "next build --webpack",
+    "build": "next build --webpack",
     "start": "next start",
     "build:cf": "opennextjs-cloudflare build",
     "preview:cf": "opennextjs-cloudflare build && opennextjs-cloudflare preview",

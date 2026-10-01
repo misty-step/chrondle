@@ -126,7 +126,7 @@ def build_release(revision, workspace, environment):
     (workspace / "tmp").mkdir()
     os.chown(workspace / "tmp", account.pw_uid, account.pw_gid)
     as_builder([BUN, "install", "--frozen-lockfile"], source, environment)
-    as_builder([BUN, "run", "build:do"], source, environment)
+    as_builder([BUN, "run", "build"], source, environment)
     if (source / ".next/BUILD_ID").read_text().strip() != revision:
         raise RuntimeError("build_revision_mismatch")
     return source

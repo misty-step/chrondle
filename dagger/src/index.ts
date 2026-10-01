@@ -275,7 +275,7 @@ export class Ci {
       .withEnvVariable("NEXT_PUBLIC_CONVEX_URL", nextPublicConvexUrl)
       .withEnvVariable("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", nextPublicClerkPublishableKey)
       .withExec(["bun", "scripts/verify-ci-backend.mjs"])
-      .withExec(["bun", "run", "build", "--webpack"])
+      .withExec(["bun", "run", "build"])
       .withExec(["bun", "scripts/verify-ci-backend.mjs", ".next"])
       .withExec(["sh", "-lc", ENV_VERIFY_SCRIPT])
       .withExec(["bun", "run", "size"])
