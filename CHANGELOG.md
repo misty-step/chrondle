@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.5.4](https://github.com/misty-step/chrondle/compare/v1.5.3...v1.5.4) (2026-10-01)
+
+### Bug Fixes
+
+- **ci:** check the isolated Convex compiler contract ([#317](https://github.com/misty-step/chrondle/issues/317)) ([ba1ea38](https://github.com/misty-step/chrondle/commit/ba1ea38043762b336df56f7937e7710d21ed76eb))
+
 ## [1.5.3](https://github.com/misty-step/chrondle/compare/v1.5.2...v1.5.3) (2026-10-01)
 
 ### Bug Fixes
