@@ -8,7 +8,7 @@ const sizeLimits = [
   },
   {
     name: "CSS Bundle",
-    path: ".next/static/chunks/*.css",
+    path: ".next/static/**/*.css",
     limit: "150 KB",
     gzip: true,
     running: false,

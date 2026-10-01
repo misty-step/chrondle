@@ -86,7 +86,9 @@ path filters or a manual promotion. The workflow serializes releases and waits
 for the complete CI workflow and TruffleHog on the same SHA before mutation.
 Existing production configuration and live Stripe checks remain blocking.
 Hosted artifact/e2e gates and the native host use the same supported Webpack
-compiler (`build --webpack`), rather than verifying a different compiler path.
+compiler (`next build --webpack`), rather than verifying a different compiler
+path. The CSS budget counts every stylesheet under `.next/static`, independent
+of the compiler's output directory; the existing byte budgets remain unchanged.
 
 Convex deploys and passes `bun run deploy:verify` **before** native host activation.
 Backend changes must remain compatible with the still-running previous web
