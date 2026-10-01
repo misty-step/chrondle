@@ -1,35 +1,35 @@
 # Observability & Error Tracking
 
-Chrondle uses Canary for error reporting and health visibility across the Next.js client, Next.js server hooks, and Convex backend.
+Chrondle reports sanitized structured errors through its existing browser/native console and Convex logging owners. Native server records are retained by journald; Convex preserves error classification, metrics, and alert rules.
 
 ## Architecture
 
-- **Canary**: Primary error tracking and uptime/health monitoring for client, server, and Convex alert events.
+- **Structured error logs**: Browser console, native `chrondle.service` journal, and Convex platform logs. Canary was decommissioned; centralized remote browser error aggregation is not configured.
 - **Convex Metrics**: Custom metrics for tracking business-critical events (e.g., `order.submit.failure`).
 - **Slack Alerts**: Critical failure notifications (optional) via webhook.
 
 ### Key Modules
 
-- `src/components/CanaryClientObserver.tsx`: Captures browser global errors and exposes `window.ChrondleCanary` for smoke tests.
-- `src/observability/reporter.ts`: Stable app-facing error reporting facade.
-- `src/observability/canary.ts`: Canary HTTP ingest implementation.
-- `src/observability/mutationErrorAdapter.ts`: Normalizes Convex mutation errors for the UI and Canary.
+- `src/components/ClientErrorObserver.tsx`: Captures global browser errors and unhandled rejections without a testing-only window API.
+- `src/observability/reporter.ts`: Stable app-facing facade that emits sanitized structured exception records through the existing logger.
+- `src/observability/mutationErrorAdapter.ts`: Normalizes Convex mutation errors for the UI and structured reporting.
 - `convex/lib/observability.ts`: Backend wrapper for Convex functions to capture errors and metrics.
-- `convex/lib/observability/canaryNotifier.ts`: Sends Convex alert notifications to Canary.
+- `convex/lib/observability/logNotifier.ts`: Emits sanitized alert records to Convex platform logs. The action producer retrieves the existing registered metrics query through `runQuery`, not nonexistent action database access.
 - `src/app/(app)/api/health/route.ts`: Public `/api/health` route for uptime checks.
 
 ## Configuration
 
-Environment variables required for observability:
+Structured error reporting requires no retired-provider key or endpoint. Private
+server/deploy credentials must never be browser-public or compiler inputs.
 
-| Variable                         | Description                                                                                                                   | Required   |
-| :------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :--------- |
-| `NEXT_PUBLIC_CANARY_API_KEY`     | Raw Canary `ingest-only` key embedded for browser error capture. Use `sk_live_...`, not `KEY-*`. Never use an admin/read key. | Yes (Prod) |
-| `NEXT_PUBLIC_CANARY_ENDPOINT`    | Canary base URL. Defaults to `https://canary.mistystep.io`.                                                                   | Optional   |
-| `NEXT_PUBLIC_CANARY_ENVIRONMENT` | Deployment environment (`production`, `development`).                                                                         | Yes        |
-| `CANARY_API_KEY`                 | Raw server and Convex Canary `ingest-only` key. Use `sk_live_...`, not `KEY-*`. Never use an admin/read key.                  | Yes (Prod) |
-| `CANARY_ENDPOINT`                | Server and Convex Canary base URL. Defaults to `https://canary.mistystep.io`.                                                 | Optional   |
-| `ORDER_FAILURE_SLACK_WEBHOOK`    | Webhook URL for critical order failure alerts.                                                                                | Optional   |
+The app-facing reporter redacts emails and compound credential fields such as
+`sessionToken`, `privateKey`, and `x-api-key` before encoding structured context.
+Keep context minimal; do not forward raw request headers. Convex sinks retain
+the shared recognizable-token sanitizer and their existing argument exclusions.
+
+| Variable                      | Description                                    | Required |
+| :---------------------------- | :--------------------------------------------- | :------- |
+| `ORDER_FAILURE_SLACK_WEBHOOK` | Webhook URL for critical order failure alerts. | Optional |
 
 ## Game Analytics Verification
 
@@ -91,10 +91,10 @@ export const myMutation = mutation({
 
 The deployment workflow (`.github/workflows/deploy.yml`) automatically:
 
-1. Requires browser and server Canary ingest keys before production deployment.
-2. Waits for exact-revision CI and secret scanning before deploying compatible Convex.
-3. Updates Convex runtime Canary configuration before deploying backend functions.
-4. Verifies the backend, then observes the native host build/install/activation.
+1. Waits for exact-revision CI and secret scanning before mutation.
+2. Validates production credentials/configuration and live Stripe prices.
+3. Deploys compatible Convex and verifies live backend puzzle/event integrity.
+4. Observes the native host build/install/activation.
 5. Requires revision-bound host smoke before the public deployment receipt becomes healthy.
 
 Deployment failures, including a host that never completes activation, fail the
@@ -102,3 +102,11 @@ default-branch Actions run and reach Kaylee's signed GitHub agent intake. An
 `alert_probe` dispatch safely exercises that route without production mutation.
 See [the deployment guide](deployment-guide.md#d-verify-alert-and-recover) for
 the exact failure route, recovery, and runtime readback commands.
+
+The first automatic cutover run failed against the decommissioned Canary
+authority (`fetch failed`; native transport cause `UND_ERR_CONNECT_TIMEOUT`).
+It reached agent intake and incident MIS-195. The safe `alert_probe` dispatch
+also failed before mutation and was recorded as a duplicate of that incident:
+the current intake classifier sees `deploy.yml`, not the dispatch input. Treat
+that drill as a real routed failure until the intake supports a distinct probe
+marker; do not claim a dedicated test classification or silently bypass alerts.

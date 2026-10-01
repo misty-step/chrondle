@@ -95,11 +95,10 @@ export async function verifyHostingParity({
       const ok =
         response.status === 200 &&
         body.status === "ok" &&
-        body.checks?.convex === "ok" &&
-        body.checks?.canary === "configured";
+        body.checks?.convex === "ok";
       return {
         ok,
-        detail: `HTTP ${response.status}; convex=${body.checks?.convex ?? "missing"}; canary=${body.checks?.canary ?? "missing"}`,
+        detail: `HTTP ${response.status}; convex=${body.checks?.convex ?? "missing"}`,
       };
     }),
   );

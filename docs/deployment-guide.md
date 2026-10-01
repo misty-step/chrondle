@@ -84,8 +84,7 @@ bun run dev
 Every reviewed, green `master` merge runs `.github/workflows/deploy.yml`, without
 path filters or a manual promotion. The workflow serializes releases and waits
 for the complete CI workflow and TruffleHog on the same SHA before mutation.
-Existing production configuration, ingest-only Canary scope, and Stripe checks
-remain blocking.
+Existing production configuration and live Stripe checks remain blocking.
 
 Convex deploys and passes `bun run deploy:verify` **before** native host activation.
 Backend changes must remain compatible with the still-running previous web
@@ -98,13 +97,24 @@ minutes (at most 40 API requests/hour/IP while busy, 20 while idle). It accepts
 only an exact-SHA `master` production run with a successful backend job and a
 live native-host observer. No Actions host key, runner, or new inbound access is
 needed. The compiler and install hooks run as the no-login `chrondle-build`
-identity with only public environment values, in bounded transient systemd
-units. Root validates the artifact, installs an immutable standalone release,
-atomically repoints `current`, and restarts the existing `chrondle.service`.
+identity with an explicit allowlist of the app's public settings, in bounded
+transient systemd units. Server/deploy secrets and unrecognized public-prefixed
+credential names are never compiler inputs. A new public app setting must be
+added to `PUBLIC_BUILD_VARS` in `scripts/host-cd.py`. Root validates the artifact,
+installs an immutable standalone release, atomically repoints `current`, and
+restarts the existing `chrondle.service`.
 
 The application still runs as the unprivileged `chrondle` user on port `3007`.
 The host's default-deny firewall blocks direct public access; Caddy is the only
 allowed public ingress for `chrondle.app` and `www.chrondle.app`.
+
+Canary was explicitly decommissioned. The retired transport, credential
+dependencies, browser publication, CSP authority, health dependency, and
+release scope probe are removed, rather than bypassed. App errors use sanitized
+browser/native structured logs; backend exceptions and alerts use Convex logs
+and metrics.
+Centralized remote browser error aggregation is not configured. Deployment and
+post-deploy health failures still reach Kaylee's signed GitHub agent intake.
 
 #### C. Host Bootstrap and Deployment Machinery Updates
 

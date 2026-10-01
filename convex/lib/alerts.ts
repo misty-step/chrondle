@@ -13,28 +13,29 @@
  */
 
 import type { ActionCtx } from "../_generated/server";
-import { getMetrics } from "./observability/metricsService";
+import { api } from "../_generated/api";
 import { AlertEngine, STANDARD_ALERT_RULES } from "./observability/alertEngine";
-import { sendToCanary } from "./observability/canaryNotifier";
+import { sendToLog } from "./observability/logNotifier";
 import { sendEmail } from "./observability/emailNotifier";
 import type { AlertChannel, Notifier } from "./observability/alertEngine";
+import { sanitizeErrorForLogging } from "./errorSanitization";
 
 /**
  * Run alert checks after batch generation completes.
  *
  * Aggregates metrics from last 24 hours, evaluates alert rules,
- * and sends notifications via configured channels (Canary, email).
+ * and sends notifications via Convex platform logs and configured email.
  *
- * @param ctx - Action context with database access
+ * @param ctx - Action context with registered-query access
  */
 export async function runAlertChecks(ctx: ActionCtx): Promise<void> {
   try {
     // Aggregate metrics from last 24 hours
-    const metrics = await getMetrics(ctx, "24h");
+    const metrics = await ctx.runQuery(api.observability.getMetricsQuery, { timeRange: "24h" });
 
     // Set up notifiers for each channel
     const notifiers = new Map<AlertChannel, Notifier>([
-      ["canary", sendToCanary],
+      ["log", sendToLog],
       ["email", sendEmail],
     ]);
 
@@ -51,7 +52,7 @@ export async function runAlertChecks(ctx: ActionCtx): Promise<void> {
       console.log("[Alerts] All metrics within acceptable thresholds");
     }
   } catch (error) {
-    console.error("[Alerts] Failed to run alert checks:", error);
+    console.error("[Alerts] Failed to run alert checks:", sanitizeErrorForLogging(error));
     // Don't throw - graceful degradation, batch should complete even if alerts fail
   }
 }

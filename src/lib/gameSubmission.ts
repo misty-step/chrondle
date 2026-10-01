@@ -11,7 +11,7 @@ export type SubmissionAuthErrorCode = "AUTH_PENDING" | "AUTH_INCOMPLETE" | "MISS
 export interface SubmissionAuthError {
   code: SubmissionAuthErrorCode;
   message: string;
-  shouldAlert: boolean; // Whether to send to Canary
+  shouldAlert: boolean; // Whether the error should be reported
   retryable: boolean;
 }
 
@@ -69,7 +69,7 @@ export function checkSubmissionAuth(
       retryable: true,
     };
 
-    // Log to Canary with context
+    // Report the auth edge case with context
     if (context) {
       captureClientException(
         new Error(

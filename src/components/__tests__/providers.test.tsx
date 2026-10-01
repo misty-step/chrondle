@@ -37,10 +37,6 @@ vi.mock("@/components/ErrorBoundary", () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("@/components/CanaryClientObserver", () => ({
-  CanaryClientObserver: () => <div data-testid="canary-client-observer" />,
-}));
-
 vi.mock("@/components/UserCreationProvider", () => ({
   UserCreationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -112,7 +108,6 @@ describe("Providers", () => {
       "data-publishable-key",
       "pk_test_example",
     );
-    expect(screen.getByTestId("canary-client-observer")).toBeInTheDocument();
     expect(screen.getByTestId("convex-provider")).toBeInTheDocument();
     expect(screen.getByText("app-shell")).toBeInTheDocument();
   });

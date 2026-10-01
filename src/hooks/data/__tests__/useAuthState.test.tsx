@@ -17,7 +17,7 @@ vi.mock("@/components/UserCreationProvider", () => ({
   useUserCreation: vi.fn(),
 }));
 
-// Mock Canary client
+// Mock the error reporter
 vi.mock("@/observability/reporter", () => ({
   captureClientException: vi.fn(),
 }));
@@ -186,7 +186,7 @@ describe("useAuthState", () => {
       expect(result.current.userId).toBeNull();
     });
 
-    it("should capture to Canary when transitioning from loading to missing Convex user", () => {
+    it("reports when transitioning from loading to missing Convex user", () => {
       // Start with loading state (prevStateRef.current will have isLoading: true)
       vi.mocked(clerk.useUser).mockReturnValue({
         isLoaded: false,
@@ -203,7 +203,7 @@ describe("useAuthState", () => {
       expect(reporter.captureClientException).not.toHaveBeenCalled();
 
       // Transition to Clerk authenticated but missing Convex user
-      // Since prevStateRef.current has isLoading: true, this will capture to Canary
+      // The previous loading state makes this transition reportable
       vi.mocked(clerk.useUser).mockReturnValue({
         isLoaded: true,
         isSignedIn: true,

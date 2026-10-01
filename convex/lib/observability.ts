@@ -3,27 +3,28 @@ import { sanitizeErrorForLogging } from "./errorSanitization";
 type FailureReason = "validation" | "auth" | "not_found" | "server" | "unknown";
 
 /**
- * Canary-compatible capture for the Convex environment.
- * Logs structured error data that can be ingested by Canary or log processors.
+ * Emit sanitized structured error details to Convex platform logs.
  */
-function captureServerException(
+function logServerException(
   error: unknown,
   context?: { tags?: Record<string, string>; extras?: Record<string, unknown> },
 ) {
   console.error(
-    "[Canary Capture]",
-    JSON.stringify({
-      error: sanitizeErrorForLogging(error),
-      tags: context?.tags,
-      extras: context?.extras,
-      environment: process.env.CONVEX_ENV || "development", // Convex standard env
-    }),
+    "[Convex Error]",
+    sanitizeErrorForLogging(
+      JSON.stringify({
+        error: sanitizeErrorForLogging(error),
+        tags: context?.tags,
+        extras: context?.extras,
+        environment: process.env.CONVEX_ENV || "development",
+      }),
+    ),
   );
 }
 
 /**
  * Wraps a Convex mutation or action handler with observability:
- * - Error capturing (Canary-compatible logs)
+ * - Structured exception logging
  * - Failure classification
  * - Metrics logging
  */
@@ -49,7 +50,7 @@ export function withObservability<Ctx, Args, Return>(
       const reason = classifyError(error);
 
       // 1. Capture Exception
-      captureServerException(error, {
+      logServerException(error, {
         tags: {
           convexFn: config.name,
           reason,
@@ -64,7 +65,7 @@ export function withObservability<Ctx, Args, Return>(
       // 2. Emit Metric (Log-based)
       console.info(`[Metric] order.submit.failure`, {
         reason,
-        function: config.name,
+        function: sanitizeErrorForLogging(config.name),
       });
 
       throw error;

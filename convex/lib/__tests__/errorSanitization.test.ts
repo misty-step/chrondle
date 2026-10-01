@@ -45,11 +45,11 @@ describe("sanitizeErrorForLogging", () => {
 
     it("redacts common bearer and platform key shapes", () => {
       const secretMaterial = "123456789012345678901234";
-      const canaryWriteKey = ["sk", "live", secretMaterial].join("_");
+      const privateWriteKey = ["sk", "live", secretMaterial].join("_");
       const publishableKey = ["pk", "live", secretMaterial].join("_");
       const webhookSecret = ["whsec", secretMaterial.slice(0, 20)].join("_");
       const result = sanitizeErrorForLogging(
-        `Bearer ${canaryWriteKey} ${webhookSecret} ${publishableKey}`,
+        `Bearer ${privateWriteKey} ${webhookSecret} ${publishableKey}`,
       );
 
       expect(result).toContain("Bearer ***REDACTED***");

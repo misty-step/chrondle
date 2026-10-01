@@ -6,10 +6,6 @@ import { readFileSync } from "fs";
 const packageJson = JSON.parse(readFileSync("./package.json", "utf8"));
 const appVersion = packageJson.version;
 const artifactBuildOnly = process.env.DAGGER_ARTIFACT_BUILD === "1";
-const canaryConnectSrc = resolveExternalOrigin(
-  process.env.NEXT_PUBLIC_CANARY_ENDPOINT,
-  "https://canary.mistystep.io",
-);
 const convexOrigin = resolveExternalOrigin(process.env.NEXT_PUBLIC_CONVEX_URL, "");
 const convexConnectSrc = convexOrigin
   ? `${convexOrigin} ${convexOrigin.replace(/^https:/, "wss:").replace(/^http:/, "ws:")}`
@@ -95,7 +91,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: blob: https://img.clerk.com https://www.gravatar.com", // Clerk avatar CDN and Gravatar fallback
               "font-src 'self' data: https://fonts.gstatic.com", // Required for Google Fonts
               "worker-src 'self' blob:", // Required for Clerk and canvas-confetti web workers
-              `connect-src 'self' ${convexConnectSrc} https://openrouter.ai https://query.wikidata.org https://api.wikimedia.org https://healthy-doe-23.clerk.accounts.dev https://clerk.chrondle.app https://clerk-telemetry.com ${canaryConnectSrc}`, // Convex, Clerk, and Canary; PostHog uses the /ingest proxy (self)
+              `connect-src 'self' ${convexConnectSrc} https://openrouter.ai https://query.wikidata.org https://api.wikimedia.org https://healthy-doe-23.clerk.accounts.dev https://clerk.chrondle.app https://clerk-telemetry.com`, // Convex and Clerk; PostHog uses the /ingest proxy (self)
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

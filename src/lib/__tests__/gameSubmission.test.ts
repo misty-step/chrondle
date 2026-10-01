@@ -6,14 +6,14 @@ import {
   type AuthState,
   type SubmissionAuthError,
 } from "../gameSubmission";
-import * as CanaryClient from "@/observability/reporter";
+import * as Reporter from "@/observability/reporter";
 
-// Mock Canary
+// Mock the error reporter
 vi.mock("@/observability/reporter", () => ({
   captureClientException: vi.fn(),
 }));
 
-const captureClientExceptionMock = vi.mocked(CanaryClient.captureClientException);
+const captureClientExceptionMock = vi.mocked(Reporter.captureClientException);
 
 describe("checkSubmissionAuth", () => {
   const mockPuzzleId = "puzzle-123";
@@ -94,7 +94,7 @@ describe("checkSubmissionAuth", () => {
         retryable: true,
       });
 
-      // Verify Canary capture
+      // Verify error reporting
       expect(captureClientExceptionMock).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
@@ -141,7 +141,7 @@ describe("checkSubmissionAuth", () => {
       });
     });
 
-    it("does not alert Canary for missing puzzle (user-driven error)", () => {
+    it("does not report missing puzzle errors (user-driven error)", () => {
       const auth: AuthState = {
         isAuthenticated: true,
         userId: "user-456",

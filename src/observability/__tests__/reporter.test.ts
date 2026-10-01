@@ -1,75 +1,93 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { captureClientException } from "../reporter";
 
-const { mockCaptureCanaryException } = vi.hoisted(() => ({
-  mockCaptureCanaryException: vi.fn(),
-}));
-
-vi.mock("@/lib/logger", () => ({
-  logger: {
-    debug: vi.fn(),
-  },
-}));
-
-vi.mock("../canary", () => ({
-  captureCanaryException: mockCaptureCanaryException,
-}));
-
-import {
-  addBreadcrumb,
-  captureClientException,
-  captureServerException,
-  setUserContext,
-} from "../reporter";
-import { logger } from "@/lib/logger";
-
-describe("Canary reporter", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe("error reporter", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it("captures client exceptions through Canary", () => {
-    const error = new Error("Test error");
-    const context = {
-      tags: { operation: "test" },
-      extras: { detail: "info" },
-      level: "warning" as const,
+  it("sanitizes values while preserving reusable structured context", () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const secretMaterial = "abcdefghijklmnopqrstuvwxyz123456";
+    const platformKey = ["sk", "live", secretMaterial].join("_");
+    const happenedAt = new Date("2026-03-27T12:34:56.000Z");
+    const shared = { nestedEmail: "shared@example.com" };
+    const extras: Record<string, unknown> = {
+      email: "pat@example.com",
+      password: "plain-password",
+      credentials: { accessToken: "opaque-token", apiKey: platformKey },
+      keyText: platformKey,
+      happenedAt,
+      attempt: BigInt(42),
+      first: shared,
+      second: shared,
+      entries: [shared, ["pat@example.com"]],
+    };
+    extras.self = extras;
+    const error = new Error(`boom from pat@example.com with Bearer ${platformKey}`);
+    error.stack = `${error.message}\n  at run (/app.ts:1:1)`;
+
+    captureClientException(error, {
+      tags: { account: "pat@example.com" },
+      extras,
+    });
+
+    const report = String(consoleErrorSpy.mock.calls[0][1]);
+    const payload = JSON.parse(report);
+    expect(payload.error_class).toBe("Error");
+    expect(payload.message).toBe("boom from [EMAIL_REDACTED] with Bearer ***REDACTED***");
+    expect(payload.stack_trace).toBe(
+      "boom from [EMAIL_REDACTED] with Bearer ***REDACTED***\n  at run (/app.ts:1:1)",
+    );
+    expect(payload.context.tags).toEqual({ account: "[EMAIL_REDACTED]" });
+    expect(payload.context.extras).toEqual({
+      email: "[EMAIL_REDACTED]",
+      password: "[REDACTED]",
+      credentials: { accessToken: "[REDACTED]", apiKey: "[REDACTED]" },
+      keyText: "sk_live_***REDACTED***",
+      happenedAt: "2026-03-27T12:34:56.000Z",
+      attempt: "42",
+      first: { nestedEmail: "[EMAIL_REDACTED]" },
+      second: { nestedEmail: "[EMAIL_REDACTED]" },
+      entries: [{ nestedEmail: "[EMAIL_REDACTED]" }, ["[EMAIL_REDACTED]"]],
+      self: "[Circular]",
+    });
+    expect(report).not.toContain(secretMaterial);
+    expect(report).not.toContain("plain-password");
+    expect(report).not.toContain("opaque-token");
+    expect(extras.password).toBe("plain-password");
+    expect(shared.nestedEmail).toBe("shared@example.com");
+  });
+
+  it("redacts compound credential fields without relying on recognized value shapes", () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const credentials = {
+      sessionToken: "opaque-session-fixture",
+      privateKey: "opaque-private-fixture",
+      "x-api-key": "opaque-api-fixture",
+      bearerToken: "opaque-bearer-fixture",
+      userPassword: "opaque-password-fixture",
     };
 
-    captureClientException(error, context);
+    captureClientException(new Error("Credential context failed"), {
+      extras: { credentials, attemptCount: 2 },
+    });
 
-    expect(mockCaptureCanaryException).toHaveBeenCalledWith(error, context);
-  });
-
-  it("awaits server exception capture through Canary", async () => {
-    const error = new Error("Server error");
-    const context = { tags: { route: "/play" } };
-
-    await captureServerException(error, context);
-
-    expect(mockCaptureCanaryException).toHaveBeenCalledWith(error, context);
-  });
-
-  it("records lightweight user context breadcrumbs locally", () => {
-    setUserContext("user_123", "signed_in");
-
-    expect(logger.debug).toHaveBeenCalledWith(
-      "[Canary] User context updated",
-      expect.objectContaining({
-        hasUserId: true,
-        authState: "signed_in",
-      }),
-    );
-  });
-
-  it("records lightweight breadcrumbs locally", () => {
-    addBreadcrumb("Test action", { detail: "info" });
-
-    expect(logger.debug).toHaveBeenCalledWith(
-      "[Canary] Breadcrumb",
-      expect.objectContaining({
-        message: "Test action",
-        data: { detail: "info" },
-      }),
-    );
+    const report = String(consoleErrorSpy.mock.calls[0][1]);
+    const payload = JSON.parse(report);
+    expect(payload.context.extras).toEqual({
+      credentials: {
+        sessionToken: "[REDACTED]",
+        privateKey: "[REDACTED]",
+        "x-api-key": "[REDACTED]",
+        bearerToken: "[REDACTED]",
+        userPassword: "[REDACTED]",
+      },
+      attemptCount: 2,
+    });
+    for (const value of Object.values(credentials)) {
+      expect(report).not.toContain(value);
+    }
+    expect(credentials.sessionToken).toBe("opaque-session-fixture");
   });
 });

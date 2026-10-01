@@ -62,14 +62,6 @@ const PATTERNS = {
     pattern: /^price_/,
     description: "Must start with price_",
   },
-  NEXT_PUBLIC_CANARY_API_KEY: {
-    pattern: /^sk_live_[A-Za-z0-9_-]{24}$/,
-    description: "Must be the raw Canary ingest key (sk_live_ plus 24 URL-safe characters)",
-  },
-  CANARY_API_KEY: {
-    pattern: /^sk_live_[A-Za-z0-9_-]{24}$/,
-    description: "Must be the raw Canary ingest key (sk_live_ plus 24 URL-safe characters)",
-  },
 };
 
 const REQUIRED_VARS = {
@@ -81,8 +73,6 @@ const REQUIRED_VARS = {
     "STRIPE_PRICE_MONTHLY",
     "STRIPE_PRICE_ANNUAL",
     "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
-    "NEXT_PUBLIC_CANARY_API_KEY",
-    "CANARY_API_KEY",
   ],
   preview: [
     "STRIPE_SECRET_KEY",
@@ -91,8 +81,6 @@ const REQUIRED_VARS = {
     "STRIPE_PRICE_MONTHLY",
     "STRIPE_PRICE_ANNUAL",
     "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
-    "NEXT_PUBLIC_CANARY_API_KEY",
-    "CANARY_API_KEY",
   ],
 };
 

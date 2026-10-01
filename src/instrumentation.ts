@@ -1,15 +1,11 @@
 /**
  * Next.js Instrumentation
  *
- * Bootstraps server-side observability for Next.js 15.
+ * Captures server request errors through the application reporter.
  * This file is automatically loaded by Next.js when present in src/.
  *
  * @see https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
  */
-
-export async function register() {
-  // Canary uses direct request-time capture and does not require SDK bootstrapping.
-}
 
 export async function onRequestError(
   error: unknown,
