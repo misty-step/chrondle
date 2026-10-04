@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 import { normalizePlayData } from "../lib/migrationHelpers";
+import { isCompletedPlay } from "../lib/playCompletion";
 
 /**
  * Play Progress Queries
@@ -107,11 +108,11 @@ export const getUserCompletedPuzzles = query({
     userId: v.id("users"),
   },
   handler: async (ctx, { userId }) => {
-    const completedPlays = await ctx.db
+    const plays = await ctx.db
       .query("plays")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => q.neq(q.field("completedAt"), null))
       .collect();
+    const completedPlays = plays.filter(isCompletedPlay);
 
     return completedPlays.map((play) => ({ puzzleId: play.puzzleId }));
   },

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import { isCompletedPlay } from "../lib/playCompletion";
 
 export const getOrderPlay = query({
   args: {
@@ -21,11 +22,11 @@ export const getUserCompletedOrderPlays = query({
     userId: v.id("users"),
   },
   handler: async (ctx, { userId }) => {
-    const completedPlays = await ctx.db
+    const plays = await ctx.db
       .query("orderPlays")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => q.neq(q.field("completedAt"), null))
       .collect();
+    const completedPlays = plays.filter(isCompletedPlay);
 
     return completedPlays;
   },
