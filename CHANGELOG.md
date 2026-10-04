@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.5.6](https://github.com/misty-step/chrondle/compare/v1.5.5...v1.5.6) (2026-10-04)
+
+### Bug Fixes
+
+- count only finished plays ([#320](https://github.com/misty-step/chrondle/issues/320)) ([405b77f](https://github.com/misty-step/chrondle/commit/405b77fd8765a86416e4fd9ad1ac49e7f96314d4))
+
 ## [1.5.5](https://github.com/misty-step/chrondle/compare/v1.5.4...v1.5.5) (2026-10-01)
 
 ### Bug Fixes
