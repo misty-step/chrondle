@@ -1,5 +1,6 @@
 import { DatabaseWriter, QueryCtx } from "../_generated/server";
 import { Doc, Id } from "../_generated/dataModel";
+import { isCompletedPlay } from "./playCompletion";
 
 /**
  * Puzzle Helpers - Database Operations for Puzzles
@@ -62,11 +63,11 @@ export async function updatePuzzleStats(
   puzzleId: Id<"puzzles">,
 ): Promise<void> {
   // Get all completed plays for this puzzle
-  const completedPlays = await ctx.db
+  const plays = await ctx.db
     .query("plays")
     .withIndex("by_puzzle", (q) => q.eq("puzzleId", puzzleId))
-    .filter((q) => q.neq(q.field("completedAt"), null))
     .collect();
+  const completedPlays = plays.filter(isCompletedPlay);
 
   const playCount = completedPlays.length;
   if (playCount === 0) return;
