@@ -5,7 +5,7 @@
 | Workflow                   | Trigger                                    | Purpose                                                                                                          |
 | -------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
 | `ci.yml`                   | PR & push to main/master                   | Quality checks, tests, build validation                                                                          |
-| `deploy.yml`               | Every push to master; optional drill/retry | Backend-first production deployment and exact native-host readback                                               |
+| `deploy.yml`               | Every push to master; optional drill/retry | Backend-first Cloudflare deployment and exact Worker/domain readback                                             |
 | `size-limit.yml`           | PR                                         | Bundle size checks                                                                                               |
 | `claude-code-review.yml`   | PR                                         | Automated code review                                                                                            |
 | `webhook-health-check.yml` | Schedule (every 6h) & manual               | Fails if the production Stripe webhook route redirects (see INCIDENT-2026-01-17T.md)                             |
@@ -15,11 +15,17 @@
 
 ### Core Secrets (Required - Deploy will fail without these)
 
-| Secret                              | Description           | How to Get                                                |
-| ----------------------------------- | --------------------- | --------------------------------------------------------- |
-| `NEXT_PUBLIC_CONVEX_URL`            | Convex project URL    | Convex Dashboard                                          |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk auth public key | [Clerk Dashboard](https://dashboard.clerk.com) → API Keys |
-| `CONVEX_DEPLOY_KEY`                 | Convex deployment key | Convex Dashboard → Settings → Deploy Keys                 |
+| Secret                              | Description                       | How to Get                                                |
+| ----------------------------------- | --------------------------------- | --------------------------------------------------------- |
+| `NEXT_PUBLIC_CONVEX_URL`            | Convex project URL                | Convex Dashboard                                          |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk auth public key             | [Clerk Dashboard](https://dashboard.clerk.com) → API Keys |
+| `CONVEX_DEPLOY_KEY`                 | Convex deployment key             | Convex Dashboard → Settings → Deploy Keys                 |
+| `NEXT_PUBLIC_POSTHOG_KEY`           | Existing public analytics setting | Existing production secret broker                         |
+
+The `Production` environment also requires `CLOUDFLARE_API_TOKEN` from the
+existing native/pass broker. It is used only for Worker capture/deploy/rollback,
+never passed to the web compiler. Existing Clerk/Stripe/sync runtime values
+remain secrets on the production Worker.
 
 ### Other Secrets (Used by specific workflows)
 
