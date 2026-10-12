@@ -19,6 +19,8 @@ const eslintConfig = [
       "**/*.css",
       "convex/_generated/**",
       "coverage/**",
+      ".open-next/**",
+      ".wrangler/**",
       "dagger/sdk/**",
       "check-lab*.mjs",
     ],

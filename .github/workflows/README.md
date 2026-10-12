@@ -89,15 +89,16 @@ Steps:
 2. Install with pinned Bun and validate existing production credentials/configuration
 3. Verify live Stripe prices
 4. Deploy backward-compatible Convex and verify live puzzle/event health
-5. Observe the native host's unprivileged build, immutable install, and activation
-6. Require healthy host smoke receipt and exact runtime SHA, run ID, and attempt
-7. Verify the Stripe webhook route doesn't redirect (`verify:webhook`)
+5. Build exact-revision OpenNext using only public settings; capture the active Worker version
+6. Deploy the Cloudflare Worker and source-owned apex/www/alias custom domains
+7. Require exact runtime SHA and real Convex health on every production domain,
+   plus home/archive/sign-in and canonical Stripe webhook ingress
+8. Roll the Worker back on failed activation or smoke
 
-The host polls public metadata/source; Actions holds no host SSH or root key.
-A host failure or stopped timer fails the observer within 20 minutes and the
-existing signed GitHub failure hook alerts Kaylee's agent intake.
-The host bootstrap/recovery procedure lives in
-[the deployment guide](../../docs/deployment-guide.md#2-production-web-deployment-native-host).
+Actions uses the Production environment's Cloudflare token only for deployment
+and rollback, not the compiler. Existing signed GitHub failure hooks still alert
+Kaylee's agent intake. First-cutover readiness and DNS/Worker recovery live in
+[the deployment guide](../../docs/deployment-guide.md#2-production-web-deployment-cloudflare).
 
 ### Webhook Health Check (`webhook-health-check.yml`)
 
@@ -158,7 +159,7 @@ prod:project-name|base64-encoded-key
 ## Deployment Verification and Alert Drill
 
 ```bash
-node scripts/verify-native-release.mjs  # Healthy deployed SHA and Actions run
+bun run doctor:hosting                 # Live game/auth/backend boundaries
 bun run deploy:verify                  # Live backend puzzle/event health
 gh workflow run deploy.yml --ref master -f alert_probe=true
 ```

@@ -69,133 +69,121 @@ cp .env.example .env.local
 bun run dev
 ```
 
-### 2. Production Web Deployment (Native Host)
+### 2. Production Web Deployment (Cloudflare)
 
-#### A. Environment Setup
+The web runtime and authoritative DNS move to Cloudflare; hosted Convex,
+Clerk, Stripe and PostHog remain external vendors. No backend rewrite or data
+migration is part of this cutover. In particular, Convex is **not** hosted on
+Cloudflare.
 
-1. Use `.env.example` as the production checklist.
-2. Store production values in root-owned mode-`0600`
-   `/etc/public-apps/chrondle.env`.
-3. Use `pk_live_` and `sk_live_` keys, set `NODE_ENV=production`, and point to
-   the production Convex deployment.
+#### A. Source and release authority
 
-#### B. Continuous Release
+`wrangler.jsonc` owns the production Worker `chrondle` in account
+`b069014f6a46558ea9146fb6c4ff8f6c`, its existing compatibility settings, and
+three custom domains:
 
-Every reviewed, green `master` merge runs `.github/workflows/deploy.yml`, without
-path filters or a manual promotion. The workflow serializes releases and waits
-for the complete CI workflow and TruffleHog on the same SHA before mutation.
-Existing production configuration and live Stripe checks remain blocking.
-Hosted artifact/e2e gates and the native host use the same supported Webpack
-compiler (`next build --webpack`), rather than verifying a different compiler
-path. The CSS budget counts every stylesheet under `.next/static`, independent
-of the compiler's output directory; the existing byte budgets remain unchanged.
+- `chrondle.app`
+- `www.chrondle.app`
+- `chrondle.mistystep.io`
 
-The required PR `deployment-contract` gate runs the real native release owner
-inertly: `python3 scripts/host-cd.py --preflight "$GITHUB_SHA"`. It archives the
-exact commit into a clean workspace, invokes the shared production compiler
-and artifact installer, verifies `BUILD_ID` and artifact-tree containment, and
-serves an installed CSS asset from the actual standalone server. It uses only
-public test configuration and the existing development Convex URL; no root,
-systemd, activation, or production credential is available to this path.
+Custom domains invoke the Worker directly, not a proxied DigitalOcean origin.
+Cloudflare owns their proxied DNS records. Staging remains a separate Worker
+with no production custom domains. Do not replace source config with a
+generated OpenNext or dashboard-only config.
 
-Production and preflight share `bun run deploy:backend`. In preflight the native
-Convex CLI's `--debug-bundle-path` exports real deployment modules locally and
-exits before push, using a closed loopback target and inert selector. This proves
-the producer/bundler path, not production authentication, hosted schema checks,
-or data migration. Those remain trusted-main boundaries.
-See the [canonical retired-service postmortem](postmortems/2026-10-01-retired-canary-release-veto.md)
-for the original failure, subtraction, regression evidence, and limits.
+Reviewed, green `master` merges run `.github/workflows/deploy.yml`. Exact-SHA
+CI, secret scanning, production configuration and live Stripe price checks
+remain blocking. Compatible Convex deploys and passes `bun run deploy:verify`
+before web activation. Backend changes must remain compatible with the prior
+web release and a web rollback; an ordinary release never restores or
+destructively migrates data.
 
-Convex deploys and passes `bun run deploy:verify` **before** native host activation.
-Backend changes must remain compatible with the still-running previous web
-release and with a web rollback: use expand/contract, never destructive data
-migrations in an ordinary release. Credential, billing, privacy, and data-loss
-changes retain their own boundaries; CD does not authorize those operations.
+The OpenNext build receives only public application settings and
+`CHRONDLE_REVISION=$GITHUB_SHA`. Server keys, the Convex deploy key and the
+Cloudflare deployment token are not compiler inputs. The Production environment
+provides `CLOUDFLARE_API_TOKEN`; existing Worker secrets retain the live
+Clerk/Stripe/sync configuration. `NEXT_PUBLIC_POSTHOG_KEY` must match the
+existing production public setting at build time.
+The Open Graph image uses the Node runtime supported by the standard OpenNext
+bundle; changing the runtime does not change its image content.
 
-The root-owned `chrondle-cd.timer` polls public GitHub metadata every three
-minutes (at most 40 API requests/hour/IP while busy, 20 while idle). It accepts
-only an exact-SHA `master` production run with a successful backend job and a
-live native-host observer. No Actions host key, runner, or new inbound access is
-needed. The compiler and install hooks run as the no-login `chrondle-build`
-identity with an explicit allowlist of the app's public settings, in bounded
-transient systemd units. Server/deploy secrets and unrecognized public-prefixed
-credential names are never compiler inputs. A new public app setting must be
-added to `PUBLIC_BUILD_VARS` in `scripts/host-cd.py`. Root validates the artifact,
-installs an immutable standalone release, atomically repoints `current`, and
-restarts the existing `chrondle.service`.
+The release captures the previously active Worker version, deploys the
+source-owned domains, then requires exact-revision `/api/health` on all three
+domains, plus home/archive/sign-in and canonical Stripe webhook ingress.
+Health executes the real Convex `health.systemCheck`, which reads the
+`puzzles` table. A failed activation or smoke rolls the Worker back to the
+captured version; it does not roll back Convex or connected data.
 
-The application still runs as the unprivileged `chrondle` user on port `3007`.
-The host's default-deny firewall blocks direct public access; Caddy is the only
-allowed public ingress for `chrondle.app` and `www.chrondle.app`.
+#### B. First apex/www cutover
 
-Canary was explicitly decommissioned. The retired transport, credential
-dependencies, browser publication, CSP authority, health dependency, and
-release scope probe are removed, rather than bypassed. App errors use sanitized
-browser/native structured logs; backend exceptions and alerts use Convex logs
-and metrics.
-Centralized remote browser error aggregation is not configured. Deployment and
-post-deploy health failures still reach Kaylee's signed GitHub agent intake.
+An existing Worker at `chrondle.mistystep.io` is **not** evidence that the
+public apex/www moved. The 2026-10-12 baseline is:
 
-#### C. Host Bootstrap and Deployment Machinery Updates
+| Boundary         | Before                                                                 | Target                                                      |
+| ---------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Registrar        | Namecheap                                                              | Same registrar                                              |
+| Authoritative NS | `ns1.digitalocean.com`, `ns2.digitalocean.com`, `ns3.digitalocean.com` | `elsa.ns.cloudflare.com`, `miles.ns.cloudflare.com`         |
+| Cloudflare zone  | `168e4a43b922ad6e8230f8aee76fce33`, pending delegation                 | Same zone, active                                           |
+| Apex             | DO A `129.212.153.182`, TTL 30                                         | Existing Worker custom domain, proxied managed AAAA `100::` |
+| www              | DO CNAME `chrondle.app`, TTL 30                                        | Existing Worker custom domain, proxied managed AAAA `100::` |
+| Clerk            | DNS-only CNAME `frontend-api.clerk.services`, TTL 300                  | Unchanged                                                   |
+| SPF              | TXT `v=spf1 include:spf.efwd.registrar-servers.com ~all`, TTL 1800     | Unchanged                                                   |
 
-From the exact reviewed checkout on `public-apps`, run once when installing or
-changing the deployment machinery:
+1. Retain exact before-state NS, DNS records, Worker version and native release
+   in the initiative's private cutover receipt. Compare all portable DNS
+   records; do not copy obsolete DO origin records into Cloudflare.
+2. Build the exact independently reviewed candidate with production public
+   settings, deploy it through project-local Wrangler to production, and
+   verify the alias's revision and real game/auth paths. Retain its Worker
+   version and asset/source parity receipt. Do not promote the stale installed
+   Worker merely because its alias responds.
+3. Preserve Clerk DNS-only routing and SPF. Confirm Cloudflare certificates
+   cover apex/www and DNSSEC has no conflicting registrar DS before replacing
+   the registrar NS with `elsa.ns.cloudflare.com,miles.ns.cloudflare.com`.
+4. Read delegation back from the registrar, parent delegation and independent
+   resolvers. Require the Cloudflare zone to be active. Verify apex **and** www
+   reach the reviewed Worker, with no DO compute/DNS/storage/database origin.
+5. Walk real guess/hint/score and auth-relevant flows, observing Convex DB and
+   WebSocket traffic, Clerk origins and canonical webhook routing. Preserve
+   all callback URLs; Stripe's endpoint remains
+   `https://www.chrondle.app/api/webhooks/stripe` without a POST redirect.
+6. Merge the reviewed release-chain change only after apex/www readiness.
+   Record the merge SHA, deployed Worker version and all domain health SHAs.
+   A successful source build or alias-only walk does not satisfy this gate.
 
-```bash
-bash scripts/install-host-cd.sh
-```
+The registrar API must accept the actual request egress IP. A valid stored key
+does not bypass Namecheap's IP allowlist. A rejected request is an access
+blocker, not missing cutover permission; do not claim delegation changed.
 
-Use existing native Tailscale SSH to transfer that reviewed checkout. The
-installer verifies the pinned Bun download, root-only environment file, and
-existing active release, installs the root-owned controller and timer, and
-creates the separate no-login build identity. Routine application merges do
-not need this bootstrap command or a machine credential in GitHub.
+#### C. Exact rollback and retained native recovery
 
-#### D. Verify, Alert, and Recover
+Before every Worker deployment, capture the currently active 100% version.
+Restore it with project-local
+`bunx wrangler rollback <recorded-version> --env production --yes`.
+The pre-migration Worker version is
+`a82172fe-745e-4426-bb34-974b913a07c6`; it is a historical fallback, not proof of
+current source or privacy parity. Worker rollback does not restore DNS or data.
 
-```bash
-node scripts/verify-native-release.mjs
-bun run deploy:verify
-ssh root@public-apps.tail5f5eb4.ts.net \
-  'journalctl -u chrondle-cd.service -u chrondle.service -n 100 --no-pager'
-```
+For a DNS rollback, restore the registrar NS to
+`ns1.digitalocean.com,ns2.digitalocean.com,ns3.digitalocean.com`. Leave the DO
+zone intact: apex A `129.212.153.182`, www CNAME `chrondle.app`, both TTL 30,
+with the existing Clerk CNAME and SPF. Read delegation and the public game
+back again; recursive NS caches can delay recovery.
 
-The controller checks local and public `/api/health` against the artifact SHA,
-live Convex puzzles/event integrity, Stripe webhook ingress, the home page,
-and the archive. Only then does `/deployment.json` become `healthy` with the
-SHA, Actions run ID, attempt, and URL. Actions independently requires that
-receipt and exact runtime SHA. A stopped timer, failed build/install/activation,
-or rollback makes the observer fail within 20 minutes. GitHub's signed
-`workflow_run`/`deployment_status` hooks deliver failures to
-`https://kaylee-alert-intake.misty-step.workers.dev/github/misty-step`;
-Kaylee's agent triage intake owns the incident. No human notification is added.
+The retained native rollback runtime is `chrondle.service`, port `3007`,
+Caddy ingress on `public-apps`, release
+`405b77fd8765a86416e4fd9ad1ac49e7f96314d4` at
+`/opt/public-apps/chrondle/releases/405b77fd8765a86416e4fd9ad1ac49e7f96314d4`.
+The native release/controller/install scripts are retained only for this
+reversible migration. The new workflow has no `Deploy native host` observer;
+the installed controller therefore cannot activate these Cloudflare releases.
+Do not modify another host controller, stop the native service, delete DNS,
+or delete DO resources as part of this web/DNS cutover. Deletion belongs to
+the parent controller after the global dependency and off-DO Postgres export
+gates pass.
 
-An `alert_probe: true` manual dispatch deliberately fails before any production
-mutation, for safe route verification. It is an optional drill, not a release
-gate. A successful CI hook alone is not host deployment evidence.
-
-Failed post-activation smoke automatically restores the previous web symlink
-and restarts the service. The controller never rolls back Convex or restores data.
-An interrupted activation is also recovered through systemd `ExecStopPost`,
-using the durable pre-activation pointer; stopping or killing the controller
-cannot strand an unchecked release merely by bypassing a Python exception.
-`/var/lib/chrondle-cd/result.json` and the journal retain the bounded
-revision/run outcome. Repair the cause and merge normally; a rerun of the
-reviewed release can retry the same immutable artifact.
-
-For exceptional web-only recovery, atomically repoint
-`/opt/public-apps/chrondle/current` to an already installed healthy release,
-restart `chrondle.service`, and repeat the checks above. Do not roll Convex
-back as part of a web-only recovery.
-
-#### E. Provenance
-
-The manual host flow first appeared in `8c946aa3fcd6e3196457107faf6fce1b4d9d134d`
-(`chore: prepare native host runtime`, 2026-08-15). The later
-`d281c134b9acd93d405b781dac42d4d6097b987a` recorded the firewall boundary.
-These commits describe runtime preparation and isolation, not a written
-human-only release decision. The 2026-09-30 instruction authorizes routine
-continuous deployment; the native isolation and credential boundaries remain.
+Signed GitHub workflow/deployment failure hooks still reach Kaylee's existing
+agent intake. A failed release remains failed even after a successful rollback.
 
 ## Environment Configuration Patterns
 

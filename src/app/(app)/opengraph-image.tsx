@@ -4,7 +4,7 @@ import { siteConfig } from "@/lib/site";
 // NOTE: This file renders a static OG image via Satori, which cannot resolve
 // CSS custom properties. The literal color values below are approved asset
 // data (mirroring the design tokens in globals.css), not component styling.
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export const alt = "Chrondle daily history puzzle preview";
 export const size = { width: 1200, height: 630 };
