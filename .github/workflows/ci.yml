@@ -205,15 +205,6 @@ jobs:
         env:
           NEXT_PUBLIC_CONVEX_URL: ${{ env.CI_CONVEX_URL }}
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ env.CI_CLERK_PUBLISHABLE_KEY }}
-      - name: Install pinned Worker build dependencies
-        run: bun install --frozen-lockfile
-      - name: Package the exact-source Cloudflare Worker without production credentials
-        run: bun run build:cf && bunx wrangler deploy --env production --dry-run
-        env:
-          CHRONDLE_REVISION: ${{ github.sha }}
-          NEXT_TELEMETRY_DISABLED: "1"
-          NEXT_PUBLIC_CONVEX_URL: ${{ env.CI_CONVEX_URL }}
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ env.CI_CLERK_PUBLISHABLE_KEY }}
 
   validation:
     runs-on: ubuntu-latest

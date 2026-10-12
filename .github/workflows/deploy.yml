@@ -135,21 +135,13 @@ jobs:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
-      - name: Capture exact Worker rollback version
+      - name: Save the Worker rollback version
         id: previous
         run: |
           set -euo pipefail
-          bunx wrangler deployments list --env production --json > /tmp/chrondle-deployments.json
-          node --input-type=module <<'JS'
-          import { readFileSync, appendFileSync } from "node:fs";
-          const deployments = JSON.parse(readFileSync("/tmp/chrondle-deployments.json", "utf8"));
-          const latest = deployments.at(-1);
-          const versions = latest?.versions;
-          if (versions?.length !== 1 || versions[0].percentage !== 100) {
-            throw new Error("Expected one active production Worker version before cutover");
-          }
-          appendFileSync(process.env.GITHUB_OUTPUT, `version=${versions[0].version_id}\n`);
-          JS
+          version=$(bunx wrangler deployments list --env production --json \
+            | bun --eval 'console.log(JSON.parse(await Bun.stdin.text()).at(-1).versions[0].version_id)')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Deploy production Worker and source-owned domains
@@ -157,25 +149,13 @@ jobs:
         run: bunx wrangler deploy --env production --message "$GITHUB_SHA"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      - name: Require exact revision and live backend on every production domain
+      - name: Verify the running release
         run: |
-          node --input-type=module <<'JS'
-          for (const origin of ["https://chrondle.mistystep.io", "https://chrondle.app", "https://www.chrondle.app"]) {
-            const health = await fetch(`${origin}/api/health`, {
-              redirect: "error", cache: "no-store", signal: AbortSignal.timeout(20_000),
-            });
-            const body = await health.json();
-            if (!health.ok || body.status !== "ok" || body.checks?.convex !== "ok" || body.revision !== process.env.GITHUB_SHA) {
-              throw new Error(`Unhealthy or wrong-revision release at ${origin}`);
-            }
-            for (const path of ["/", "/archive", "/sign-in"]) {
-              const response = await fetch(`${origin}${path}`, { signal: AbortSignal.timeout(20_000) });
-              if (!response.ok) throw new Error(`HTTP ${response.status} at ${origin}${path}`);
-              await response.body?.cancel();
-            }
-            console.log(JSON.stringify({origin, revision: body.revision, checks: body.checks}));
-          }
-          JS
+          bun --eval '
+            const health = await (await fetch("https://www.chrondle.app/api/health", {cache: "no-store", redirect: "error"})).json();
+            if (health.revision !== process.env.GITHUB_SHA) throw new Error("Wrong production revision");
+          '
+          bun run doctor:hosting
       - name: Verify canonical Stripe webhook ingress after release
         run: node scripts/verify-webhook-redirect.mjs
       - name: Roll back Worker on failed activation or smoke

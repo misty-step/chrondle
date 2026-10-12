@@ -97,9 +97,8 @@ Steps:
 4. Deploy backward-compatible Convex and verify live puzzle/event health
 5. Build exact-revision OpenNext using only public settings; capture the active Worker version
 6. Deploy the Cloudflare Worker and source-owned apex/www/alias custom domains
-7. Require exact runtime SHA and real Convex health on every production domain,
-   plus home/archive/sign-in and canonical Stripe webhook ingress
-8. Roll the Worker back on failed activation or smoke
+7. Check the running SHA, then reuse `doctor:hosting` and the canonical webhook check
+8. Restore the previous Worker version if activation or checks fail
 
 Actions uses the Production environment's Cloudflare token only for deployment
 and rollback, not the compiler. Existing signed GitHub failure hooks still alert

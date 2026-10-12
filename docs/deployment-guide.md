@@ -107,12 +107,11 @@ existing production public setting at build time.
 The Open Graph image uses the Node runtime supported by the standard OpenNext
 bundle; changing the runtime does not change its image content.
 
-The release captures the previously active Worker version, deploys the
-source-owned domains, then requires exact-revision `/api/health` on all three
-domains, plus home/archive/sign-in and canonical Stripe webhook ingress.
-Health executes the real Convex `health.systemCheck`, which reads the
-`puzzles` table. A failed activation or smoke rolls the Worker back to the
-captured version; it does not roll back Convex or connected data.
+The release saves the previous Worker version, deploys the source-owned
+domains, checks the running revision, and reuses `bun run doctor:hosting` and
+the existing canonical Stripe webhook check. Health reads the real Convex
+`puzzles` table. A failed activation or check restores the saved Worker
+version; it does not roll back Convex or connected data.
 
 #### B. First apex/www cutover
 

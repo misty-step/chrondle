@@ -3,14 +3,10 @@
 ## Prerequisites
 
 - Convex account (create at https://dashboard.convex.dev)
-- Cloudflare account access for the existing web Worker
-- Access to the repository's existing production secret broker
+- Tailscale SSH access to the public application host
+- Access to root-owned `/etc/public-apps/chrondle.env`
 
 ## Setup Steps
-
-Production continues to use `fleet-goldfish-183`; the DigitalOcean web/DNS exit
-does not create a replacement Convex project or migrate its data. Project
-creation below applies only to a new development setup.
 
 ### 1. Create Convex Project
 
@@ -28,16 +24,14 @@ From the Convex dashboard:
 2. Copy the `CONVEX_DEPLOY_KEY`
 3. Note the Convex URL (format: https://your-project.convex.cloud)
 
-### 3. Configure the Existing Release Chain
+### 3. Add to the Web Host Environment
 
-Keep `CONVEX_DEPLOY_KEY` in the existing backend deployment secret and
-`NEXT_PUBLIC_CONVEX_URL` set to the existing production deployment for web
-builds and Worker runtime. Never pass the deployment key to the web compiler.
+Set these in root-owned mode-`0600` `/etc/public-apps/chrondle.env`:
 
-Merge a reviewed, green change to `master`. CD deploys compatible Convex first,
-embeds the public URL in the OpenNext build, then installs/verifies the
-Cloudflare Worker. See [the deployment guide](../docs/deployment-guide.md) for
-apex/www delegation and rollback; hosted Convex is unchanged.
+1. `CONVEX_DEPLOY_KEY`
+2. `NEXT_PUBLIC_CONVEX_URL`
+3. Merge a reviewed, green change to `master`. CD deploys compatible Convex,
+   embeds the public URL in the native build, and installs/verifies that release.
 
 ### 4. Local Development Setup
 
@@ -53,7 +47,7 @@ CONVEX_DEPLOY_KEY=your-deploy-key
 Once environment variables are set:
 
 ```bash
-bunx convex dev
+npx convex dev
 ```
 
 This will:
@@ -71,7 +65,7 @@ Run these commands to verify setup:
 env | awk -F= '/^CONVEX_DEPLOY_KEY=|^NEXT_PUBLIC_CONVEX_URL=/{print $1}'
 
 # Test Convex connection
-bunx convex dev --once
+npx convex dev --once
 ```
 
 ## Next Steps
