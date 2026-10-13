@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.6.0](https://github.com/misty-step/chrondle/compare/v1.5.6...v1.6.0) (2026-10-13)
+
+### Features
+
+- move Chrondle web releases to Cloudflare ([#325](https://github.com/misty-step/chrondle/issues/325)) ([caeae01](https://github.com/misty-step/chrondle/commit/caeae01f2aaee1b51946205ce273ad4897f520ee))
+
 ## [1.5.6](https://github.com/misty-step/chrondle/compare/v1.5.5...v1.5.6) (2026-10-04)
 
 ### Bug Fixes
