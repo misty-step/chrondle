@@ -155,7 +155,7 @@ The repo-local wrapper lives at [`scripts/dagger-local.sh`](./scripts/dagger-loc
 
 Before deploying Chrondle, you'll need accounts for:
 
-- **[DigitalOcean](https://www.digitalocean.com/)** - For hosting the Next.js application
+- **[Cloudflare](https://www.cloudflare.com/)** - For the Next.js Worker and authoritative DNS
 - **[Convex](https://convex.dev)** - For the backend database and real-time sync
 - **[Clerk](https://clerk.com)** - For authentication (optional but recommended)
 
@@ -187,25 +187,22 @@ Chrondle requires several environment variables for production deployment. Copy 
 
 Merge a reviewed, green commit to `master`. Every merge ships automatically:
 the [production workflow](.github/workflows/deploy.yml) waits for exact-revision
-CI and secret scanning, deploys the backward-compatible Convex backend, and
-observes the native host build, install, activation, and smoke check.
+CI and secret scanning, deploys the backward-compatible Convex backend,
+builds OpenNext with public settings only, and deploys the source-bound
+Cloudflare Worker and its apex/www/alias custom domains.
 
-The host pulls public GitHub source and deployment metadata through
-`chrondle-cd.timer`; GitHub Actions has no host SSH key or root credential.
-Production secrets stay in root-owned mode-`0600`
-`/etc/public-apps/chrondle.env`. The compiler receives only public configuration.
-The existing unprivileged `chrondle.service`, default-deny firewall, and
-Caddy-only ingress remain unchanged.
+Production server secrets remain Worker secrets; the compiler never receives
+server or deployment keys. `/api/health` reads back the exact Git SHA and
+queries the real Convex database. Every production domain must pass the
+revision and live-backend smoke, and the canonical Stripe webhook must not
+redirect. A failed rollout restores the captured Worker version without
+rolling back Convex or accepted writes. Failed runs reach Kaylee's existing
+agent intake.
 
-`/api/health` reads back the running Git SHA. `/deployment.json` identifies
-the exact Actions run and becomes healthy only after the host smoke passes.
-A failed host smoke automatically restores the previous web release without
-rolling back Convex or accepted writes. Failed deployment runs reach Kaylee's
-agent triage intake, not a human inbox.
-
-See the [deployment guide](docs/deployment-guide.md#2-production-web-deployment-native-host)
-for bootstrap, compatibility, failure diagnosis, and recovery. No ordinary
-release requires a separate build, install, activation, or approval step.
+See the [deployment guide](docs/deployment-guide.md#2-production-web-deployment-cloudflare)
+for the first registrar cutover, exact DNS/Worker rollback, retained native
+recovery, compatibility and verification. Convex/Clerk/Stripe stay external;
+the separate Rust rebuild is not part of the DigitalOcean exit.
 
 ### Post-Deployment
 
@@ -222,11 +219,11 @@ release requires a separate build, install, activation, or approval step.
 ### Deployment Checklist
 
 - [ ] Convex project created and deployed
-- [ ] All environment variables installed in `/etc/public-apps/chrondle.env`
+- [ ] Public build settings, Worker runtime secrets and Production deployment token configured
 - [ ] Clerk authentication configured (optional)
 - [ ] Webhook endpoints use the production URL
-- [ ] Standalone build succeeds without errors
-- [ ] `chrondle.service` and `/api/health` are healthy
+- [ ] `bun run build:cf` succeeds without server/deployment secrets
+- [ ] Apex/www/alias `/api/health` report the exact Worker release SHA
 - [ ] Daily puzzle loads correctly
 - [ ] Archive page displays puzzles
 - [ ] User authentication works (if enabled)
