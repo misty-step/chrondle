@@ -2,6 +2,10 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## Unreleased
+
+- Remove unused touch/tablet diagnostics and their tests; keep mobile detection and result-sharing behavior unchanged.
+
 # [1.6.0](https://github.com/misty-step/chrondle/compare/v1.5.6...v1.6.0) (2026-10-13)
 
 ### Features
