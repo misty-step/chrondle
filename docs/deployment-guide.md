@@ -107,11 +107,12 @@ existing production public setting at build time.
 The Open Graph image uses the Node runtime supported by the standard OpenNext
 bundle; changing the runtime does not change its image content.
 
-The release saves the previous Worker version, deploys the source-owned
-domains, checks the running revision, and reuses `bun run doctor:hosting` and
-the existing canonical Stripe webhook check. Health reads the real Convex
-`puzzles` table. A failed activation or check restores the saved Worker
-version; it does not roll back Convex or connected data.
+Normal CD requires the existing Cloudflare zone to be active before Worker
+activation. It saves the previous Worker version, deploys the source-owned
+domains, checks the direct alias's revision, then checks both public apex/www
+revisions, `bun run doctor:hosting` and the canonical Stripe webhook. Health
+reads the real Convex `puzzles` table. A failed activation or check restores the
+saved Worker version; it does not roll back Convex or connected data.
 
 #### B. First apex/www cutover
 
@@ -128,14 +129,15 @@ public apex/www moved. The 2026-10-12 baseline is:
 | Clerk            | DNS-only CNAME `frontend-api.clerk.services`, TTL 300                  | Unchanged                                                   |
 | SPF              | TXT `v=spf1 include:spf.efwd.registrar-servers.com ~all`, TTL 1800     | Unchanged                                                   |
 
-1. Retain exact before-state NS, DNS records, Worker version and native release
-   in the initiative's private cutover receipt. Compare all portable DNS
-   records; do not copy obsolete DO origin records into Cloudflare.
-2. Build the exact independently reviewed candidate with production public
-   settings, deploy it through project-local Wrangler to production, and
-   verify the alias's revision and real game/auth paths. Retain its Worker
-   version and asset/source parity receipt. Do not promote the stale installed
-   Worker merely because its alias responds.
+1. Read the current registrar NS, DNS records, Worker version and native release
+   before writing. Compare all portable DNS records; do not copy obsolete DO
+   origin records into Cloudflare. Keep the DO zone and native release intact.
+2. Before merging, bootstrap the exact independently reviewed, CI-green
+   candidate with production public settings using `bun run build:cf` and
+   project-local `bunx wrangler deploy --env production --message <candidate-sha>`.
+   Check `https://chrondle.mistystep.io/api/health` against that SHA and verify
+   real game/auth paths. This native first deployment precedes DNS delegation;
+   normal CD cannot verify www while it still reaches DO.
 3. Preserve Clerk DNS-only routing and SPF. Confirm Cloudflare certificates
    cover apex/www and DNSSEC has no conflicting registrar DS before replacing
    the registrar NS with `elsa.ns.cloudflare.com,miles.ns.cloudflare.com`.
@@ -146,9 +148,10 @@ public apex/www moved. The 2026-10-12 baseline is:
    WebSocket traffic, Clerk origins and canonical webhook routing. Preserve
    all callback URLs; Stripe's endpoint remains
    `https://www.chrondle.app/api/webhooks/stripe` without a POST redirect.
-6. Merge the reviewed release-chain change only after apex/www readiness.
-   Record the merge SHA, deployed Worker version and all domain health SHAs.
-   A successful source build or alias-only walk does not satisfy this gate.
+6. Only after both public domains serve the reviewed candidate and all public
+   checks pass, merge the reviewed release-chain change. Normal CD installs
+   and verifies the merge SHA on the alias and both public domains.
+   A source build or alias-only walk does not satisfy public readiness.
 
 The registrar API must accept the actual request egress IP. A valid stored key
 does not bypass Namecheap's IP allowlist. A rejected request is an access
