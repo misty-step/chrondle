@@ -163,19 +163,10 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Verify direct Worker readiness
-        run: |
-          bun --eval '
-            const health = await (await fetch("https://chrondle.mistystep.io/api/health", {cache: "no-store", redirect: "error"})).json();
-            if (health.revision !== process.env.GITHUB_SHA) throw new Error("Wrong Worker revision");
-          '
+        run: bun scripts/verify-worker-readiness.mjs https://chrondle.mistystep.io
       - name: Verify public release after DNS cutover
         run: |
-          bun --eval '
-            for (const host of ["chrondle.app", "www.chrondle.app"]) {
-              const health = await (await fetch(`https://${host}/api/health`, {cache: "no-store", redirect: "error"})).json();
-              if (health.revision !== process.env.GITHUB_SHA) throw new Error(`Wrong production revision on ${host}`);
-            }
-          '
+          bun scripts/verify-worker-readiness.mjs https://chrondle.app https://www.chrondle.app
           bun run doctor:hosting
       - name: Verify canonical Stripe webhook ingress after release
         run: node scripts/verify-webhook-redirect.mjs
