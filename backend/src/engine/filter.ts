@@ -53,7 +53,10 @@ function arithmetic(op: string, left: Value | undefined, right: Value | undefine
   throw new Error(`Cannot apply ${op} to ${typeof left} and ${typeof right}`);
 }
 
-export function evaluateExpression(expression: JSONValue, document: Record<string, Value>): Value | undefined {
+export function evaluateExpression(
+  expression: JSONValue,
+  document: Record<string, Value>,
+): Value | undefined {
   const expr = expression as Expr;
   const [op] = Object.keys(expr);
   const operand = expr[op];

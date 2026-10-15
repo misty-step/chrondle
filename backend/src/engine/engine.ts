@@ -35,7 +35,11 @@ import { KEY_MAX_SUFFIX } from "./keys";
 
 export type FunctionKind = "query" | "mutation" | "action";
 export type Visibility = "public" | "internal";
-export type Identity = Record<string, JSONValue> & { tokenIdentifier: string; subject: string; issuer: string };
+export type Identity = Record<string, JSONValue> & {
+  tokenIdentifier: string;
+  subject: string;
+  issuer: string;
+};
 
 type RegisteredFunction = {
   isQuery?: boolean;
@@ -118,7 +122,8 @@ function current(): ExecutionContext {
 function installSyscalls() {
   (globalThis as unknown as { Convex: unknown }).Convex = {
     syscall: (op: string, args: string) => current().engine.syscall(op, JSON.parse(args)),
-    asyncSyscall: async (op: string, args: string) => current().engine.asyncSyscall(op, JSON.parse(args)),
+    asyncSyscall: async (op: string, args: string) =>
+      current().engine.asyncSyscall(op, JSON.parse(args)),
     jsSyscall: (op: string) => {
       throw new Error(`Unsupported Convex syscall ${op}`);
     },
@@ -159,7 +164,10 @@ async function nestedErrors<T>(fn: () => Promise<T>): Promise<T> {
     return await fn();
   } catch (error) {
     if (isConvexError(error)) {
-      const data = typeof error.data === "string" ? JSON.parse(error.data) : convexToJson((error.data ?? null) as Value);
+      const data =
+        typeof error.data === "string"
+          ? JSON.parse(error.data)
+          : convexToJson((error.data ?? null) as Value);
       throw Object.assign(new Error(error.message), { data });
     }
     throw error;
@@ -224,16 +232,27 @@ export class Engine {
 
   // ---------------------------------------------------------------- functions
 
-  resolve(path: string, kind: FunctionKind | null, visibility: Visibility): { fn: RegisteredFunction; path: string; kind: FunctionKind } {
+  resolve(
+    path: string,
+    kind: FunctionKind | null,
+    visibility: Visibility,
+  ): { fn: RegisteredFunction; path: string; kind: FunctionKind } {
     const canonical = canonicalPath(path);
     const separator = canonical.lastIndexOf(":");
     const moduleName = canonical.slice(0, separator);
     const exportName = canonical.slice(separator + 1);
     const candidate = this.modules[moduleName]?.[exportName] as RegisteredFunction | undefined;
     const fnKind = candidate && typeof candidate === "function" ? kindOf(candidate) : null;
-    if (!candidate || !fnKind || (kind && fnKind !== kind) || (visibility === "public" && !candidate.isPublic)) {
+    if (
+      !candidate ||
+      !fnKind ||
+      (kind && fnKind !== kind) ||
+      (visibility === "public" && !candidate.isPublic)
+    ) {
       const label = kind ?? "function";
-      throw new Error(`Could not find public ${label} for '${canonical}'. Did you forget to run \`npx convex dev\` or \`npx convex deploy\`?`);
+      throw new Error(
+        `Could not find public ${label} for '${canonical}'. Did you forget to run \`npx convex dev\` or \`npx convex deploy\`?`,
+      );
     }
     return { fn: candidate, path: canonical, kind: fnKind };
   }
@@ -258,7 +277,8 @@ export class Engine {
     try {
       check(validator, value, (id, table) => this.store.isId(id, table));
     } catch (error) {
-      if (error instanceof ValidationError) throw new Error(`ReturnsValidationError: ${error.message} (function ${path})`);
+      if (error instanceof ValidationError)
+        throw new Error(`ReturnsValidationError: ${error.message} (function ${path})`);
       throw error;
     }
   }
@@ -274,7 +294,10 @@ export class Engine {
     console.error(`[Request ID: ${rid}] ${message}`);
     const detail = this.exposeErrors ? `\nUncaught ${message}` : "";
     if (isConvexError(error)) {
-      const data = typeof error.data === "string" ? (JSON.parse(error.data) as JSONValue) : convexToJson((error.data ?? null) as Value);
+      const data =
+        typeof error.data === "string"
+          ? (JSON.parse(error.data) as JSONValue)
+          : convexToJson((error.data ?? null) as Value);
       return { errorMessage: `[Request ID: ${rid}] Server Error${detail}`, errorData: data };
     }
     return { errorMessage: `[Request ID: ${rid}] Server Error${detail}`, errorData: undefined };
@@ -310,7 +333,15 @@ export class Engine {
   ): Promise<Value> {
     const { fn, path: canonical } = this.resolve(path, "query", options.visibility ?? "public");
     this.validateArgs(fn, canonical, args);
-    const ctx: ExecutionContext = { engine: this, kind: "query", identity, txn: null, readSet: options.readSet ?? null, streams: new Map(), nextStream: 0 };
+    const ctx: ExecutionContext = {
+      engine: this,
+      kind: "query",
+      identity,
+      txn: null,
+      readSet: options.readSet ?? null,
+      streams: new Map(),
+      nextStream: 0,
+    };
     const result = await als.run(ctx, () => fn.invokeQuery!(JSON.stringify(convexToJson([args]))));
     const value = jsonToConvex(JSON.parse(result));
     this.validateReturn(fn, canonical, value);
@@ -342,26 +373,64 @@ export class Engine {
           options.dedupe.session,
           options.dedupe.request,
         );
-        if (rows.length) return { value: jsonToConvex(JSON.parse(rows[0].result as string)), ts: BigInt(rows[0].ts as string) };
+        if (rows.length)
+          return {
+            value: jsonToConvex(JSON.parse(rows[0].result as string)),
+            ts: BigInt(rows[0].ts as string),
+          };
       }
-      const { fn, path: canonical } = this.resolve(path, "mutation", options.visibility ?? "public");
+      const { fn, path: canonical } = this.resolve(
+        path,
+        "mutation",
+        options.visibility ?? "public",
+      );
       this.validateArgs(fn, canonical, args);
       const txn = new Transaction();
-      const ctx: ExecutionContext = { engine: this, kind: "mutation", identity, txn, readSet: null, streams: new Map(), nextStream: 0 };
-      const result = await als.run(ctx, () => fn.invokeMutation!(JSON.stringify(convexToJson([args]))));
+      const ctx: ExecutionContext = {
+        engine: this,
+        kind: "mutation",
+        identity,
+        txn,
+        readSet: null,
+        streams: new Map(),
+        nextStream: 0,
+      };
+      const result = await als.run(ctx, () =>
+        fn.invokeMutation!(JSON.stringify(convexToJson([args]))),
+      );
       const value = jsonToConvex(JSON.parse(result));
       this.validateReturn(fn, canonical, value);
-      options.onSuccess?.((table, doc, id) => txn.set(id, table, doc, () => this.store.getCommitted(id)));
-      const ts = await this.commit(txn.writes(), options.dedupe ? { ...options.dedupe, result } : null);
+      options.onSuccess?.((table, doc, id) =>
+        txn.set(id, table, doc, () => this.store.getCommitted(id)),
+      );
+      const ts = await this.commit(
+        txn.writes(),
+        options.dedupe ? { ...options.dedupe, result } : null,
+      );
       return { value, ts };
     });
   }
 
-  async runAction(path: string, args: Record<string, Value>, identity: Identity | null, options: { visibility?: Visibility } = {}): Promise<Value> {
+  async runAction(
+    path: string,
+    args: Record<string, Value>,
+    identity: Identity | null,
+    options: { visibility?: Visibility } = {},
+  ): Promise<Value> {
     const { fn, path: canonical } = this.resolve(path, "action", options.visibility ?? "public");
     this.validateArgs(fn, canonical, args);
-    const ctx: ExecutionContext = { engine: this, kind: "action", identity, txn: null, readSet: null, streams: new Map(), nextStream: 0 };
-    const result = await als.run(ctx, () => fn.invokeAction!(requestId(), JSON.stringify(convexToJson([args]))));
+    const ctx: ExecutionContext = {
+      engine: this,
+      kind: "action",
+      identity,
+      txn: null,
+      readSet: null,
+      streams: new Map(),
+      nextStream: 0,
+    };
+    const result = await als.run(ctx, () =>
+      fn.invokeAction!(requestId(), JSON.stringify(convexToJson([args]))),
+    );
     const value = jsonToConvex(JSON.parse(result));
     this.validateReturn(fn, canonical, value);
     return value;
@@ -371,12 +440,15 @@ export class Engine {
   async runAny(path: string, args: Record<string, Value>): Promise<Value> {
     const { kind } = this.resolve(path, null, "internal");
     if (kind === "query") return this.runQuery(path, args, null, { visibility: "internal" });
-    if (kind === "mutation") return (await this.runMutation(path, args, null, { visibility: "internal" })).value;
+    if (kind === "mutation")
+      return (await this.runMutation(path, args, null, { visibility: "internal" })).value;
     return this.runAction(path, args, null, { visibility: "internal" });
   }
 
   /** Apply a write set outside a user function (imports, job bookkeeping). */
-  writeExclusive(fn: (write: (table: string, id: string, after: Doc | null) => void) => void): Promise<bigint> {
+  writeExclusive(
+    fn: (write: (table: string, id: string, after: Doc | null) => void) => void,
+  ): Promise<bigint> {
     return this.exclusive(async () => {
       const txn = new Transaction();
       fn((table, id, after) => txn.set(id, table, after, () => this.store.getCommitted(id)));
@@ -391,10 +463,14 @@ export class Engine {
   }
 
   /** Apply a write set atomically once no query is reading. Callers hold the exclusive lock. */
-  private async commit(writes: Map<string, Write>, log: { session: string; request: number; result: string } | null): Promise<bigint> {
+  private async commit(
+    writes: Map<string, Write>,
+    log: { session: string; request: number; result: string } | null,
+  ): Promise<bigint> {
     this.committing = true;
     try {
-      while (this.readers > 0) await new Promise<void>((resolve) => this.readersDrained.push(resolve));
+      while (this.readers > 0)
+        await new Promise<void>((resolve) => this.readersDrained.push(resolve));
       return this.apply(writes, log);
     } finally {
       this.committing = false;
@@ -402,10 +478,14 @@ export class Engine {
     }
   }
 
-  private apply(writes: Map<string, Write>, log: { session: string; request: number; result: string } | null): bigint {
+  private apply(
+    writes: Map<string, Write>,
+    log: { session: string; request: number; result: string } | null,
+  ): bigint {
     const ts = this.nextTs();
     this.store.sql.transaction(() => {
-      for (const write of writes.values()) this.store.applyWrite(write.table, write.before, write.after);
+      for (const write of writes.values())
+        this.store.applyWrite(write.table, write.before, write.after);
       if (log) {
         this.store.sql.exec(
           "INSERT INTO cvx_mutation_log (session, request, result, ts, at) VALUES (?, ?, ?, ?, ?)",
@@ -415,7 +495,10 @@ export class Engine {
           ts.toString(),
           this.now(),
         );
-        this.store.sql.exec("DELETE FROM cvx_mutation_log WHERE at < ?", this.now() - 24 * 60 * 60 * 1000);
+        this.store.sql.exec(
+          "DELETE FROM cvx_mutation_log WHERE at < ?",
+          this.now() - 24 * 60 * 60 * 1000,
+        );
       }
       this.store.setMeta("ts", ts.toString());
     });
@@ -438,7 +521,12 @@ export class Engine {
         return JSON.stringify({});
       case "1.0/db/normalizeId": {
         const id = args.idString as string;
-        return JSON.stringify({ id: this.store.isId(id, args.table as string) && this.store.tableOf(id) !== null ? id : null });
+        return JSON.stringify({
+          id:
+            this.store.isId(id, args.table as string) && this.store.tableOf(id) !== null
+              ? id
+              : null,
+        });
       }
       default:
         throw new Error(`Unsupported Convex syscall ${op}`);
@@ -449,15 +537,28 @@ export class Engine {
     const ctx = current();
     switch (op) {
       case "1.0/get":
-        return JSON.stringify(this.get(ctx, args.id as string, args.table as string | undefined, Boolean(args.isSystem)));
+        return JSON.stringify(
+          this.get(
+            ctx,
+            args.id as string,
+            args.table as string | undefined,
+            Boolean(args.isSystem),
+          ),
+        );
       case "1.0/queryStreamNext": {
         const stream = ctx.streams.get(args.queryId as number);
         if (!stream) throw new Error("Unknown query stream");
         const next = stream.next();
-        return JSON.stringify(next.done ? { value: null, done: true } : { value: convexToJson(next.value as Value), done: false });
+        return JSON.stringify(
+          next.done
+            ? { value: null, done: true }
+            : { value: convexToJson(next.value as Value), done: false },
+        );
       }
       case "1.0/queryPage":
-        throw new Error("Pagination (.paginate) is not supported by this backend; see backend/README.md");
+        throw new Error(
+          "Pagination (.paginate) is not supported by this backend; see docs/adr/0001-cloudflare-backend.md",
+        );
       case "1.0/count": {
         const table = args.table as string;
         ctx.readSet?.push({ kind: "table", table });
@@ -469,16 +570,39 @@ export class Engine {
         return JSON.stringify(count);
       }
       case "1.0/insert":
-        return JSON.stringify({ _id: this.insert(ctx, args.table as string, jsonToConvex(args.value as JSONValue) as Record<string, Value>) });
+        return JSON.stringify({
+          _id: this.insert(
+            ctx,
+            args.table as string,
+            jsonToConvex(args.value as JSONValue) as Record<string, Value>,
+          ),
+        });
       case "1.0/shallowMerge":
-        this.patch(ctx, args.id as string, args.table as string | undefined, args.value as Record<string, JSONValue>, false);
+        this.patch(
+          ctx,
+          args.id as string,
+          args.table as string | undefined,
+          args.value as Record<string, JSONValue>,
+          false,
+        );
         return JSON.stringify({});
       case "1.0/replace":
-        this.patch(ctx, args.id as string, args.table as string | undefined, args.value as Record<string, JSONValue>, true);
+        this.patch(
+          ctx,
+          args.id as string,
+          args.table as string | undefined,
+          args.value as Record<string, JSONValue>,
+          true,
+        );
         return JSON.stringify({});
       case "1.0/remove": {
         const txn = this.writable(ctx);
-        const { table, doc } = this.existing(ctx, args.id as string, args.table as string | undefined, "Delete");
+        const { table, doc } = this.existing(
+          ctx,
+          args.id as string,
+          args.table as string | undefined,
+          "Delete",
+        );
         txn.set(doc._id, table, null, () => this.store.getCommitted(doc._id));
         return JSON.stringify({});
       }
@@ -499,7 +623,8 @@ export class Engine {
       case "1.0/actions/cancel_job":
         await this.writeExclusive((write) => {
           const job = this.store.getCommitted(args.id as string);
-          if (job && (job.state as { kind: string }).kind === "pending") write(SCHEDULED_FUNCTIONS, job._id, { ...job, state: { kind: "canceled" } } as Doc);
+          if (job && (job.state as { kind: string }).kind === "pending")
+            write(SCHEDULED_FUNCTIONS, job._id, { ...job, state: { kind: "canceled" } } as Doc);
         });
         return JSON.stringify({});
       case "1.0/actions/query":
@@ -526,7 +651,8 @@ export class Engine {
   }
 
   private writable(ctx: ExecutionContext): Transaction {
-    if (ctx.kind !== "mutation" || !ctx.txn) throw new Error("Writes are only allowed in mutations");
+    if (ctx.kind !== "mutation" || !ctx.txn)
+      throw new Error("Writes are only allowed in mutations");
     return ctx.txn;
   }
 
@@ -536,24 +662,42 @@ export class Engine {
     return this.store.getCommitted(id);
   }
 
-  private get(ctx: ExecutionContext, id: string, table: string | undefined, isSystem: boolean): JSONValue {
-    if (!decodeDocumentId(id)) throw new Error(`Invalid argument \`id\` for \`db.get\`: "${id}" is not a valid ID`);
+  private get(
+    ctx: ExecutionContext,
+    id: string,
+    table: string | undefined,
+    isSystem: boolean,
+  ): JSONValue {
+    if (!decodeDocumentId(id))
+      throw new Error(`Invalid argument \`id\` for \`db.get\`: "${id}" is not a valid ID`);
     const owner = this.store.tableOf(id);
     if (table !== undefined && owner !== null && owner !== table) {
-      throw new Error(`Invalid argument \`id\` for \`db.get\`: ID belongs to table "${owner}", not "${table}"`);
+      throw new Error(
+        `Invalid argument \`id\` for \`db.get\`: ID belongs to table "${owner}", not "${table}"`,
+      );
     }
     ctx.readSet?.push({ kind: "get", id });
     if (owner === null) return null;
     if (owner.startsWith("_") !== isSystem) {
-      throw new Error(isSystem ? "db.system.get can only read system tables" : "System tables can only be read through db.system.get");
+      throw new Error(
+        isSystem
+          ? "db.system.get can only read system tables"
+          : "System tables can only be read through db.system.get",
+      );
     }
     const doc = this.read(ctx, id);
     return doc ? convexToJson(doc as Value) : null;
   }
 
-  private existing(ctx: ExecutionContext, id: string, table: string | undefined, verb: string): { table: string; doc: Doc } {
+  private existing(
+    ctx: ExecutionContext,
+    id: string,
+    table: string | undefined,
+    verb: string,
+  ): { table: string; doc: Doc } {
     const owner = this.store.tableOf(id);
-    if (owner === null || (table !== undefined && owner !== table)) throw new Error(`${verb} on invalid document ID "${id}"`);
+    if (owner === null || (table !== undefined && owner !== table))
+      throw new Error(`${verb} on invalid document ID "${id}"`);
     if (owner.startsWith("_")) throw new Error("System tables (prefixed with `_`) are read-only.");
     const doc = this.read(ctx, id);
     if (!doc) throw new Error(`${verb} on nonexistent document ID ${id}`);
@@ -563,15 +707,26 @@ export class Engine {
   private insert(ctx: ExecutionContext, table: string, value: Record<string, Value>): string {
     const txn = this.writable(ctx);
     if (table.startsWith("_")) throw new Error("System tables (prefixed with `_`) are read-only.");
-    if ("_id" in value || "_creationTime" in value) throw new Error("System fields `_id` and `_creationTime` cannot be set on insert");
+    if ("_id" in value || "_creationTime" in value)
+      throw new Error("System fields `_id` and `_creationTime` cannot be set on insert");
     const id = this.store.newId(table);
-    const doc = { ...value, _id: id, _creationTime: this.store.nextCreationTime(this.now()) } as Doc;
+    const doc = {
+      ...value,
+      _id: id,
+      _creationTime: this.store.nextCreationTime(this.now()),
+    } as Doc;
     this.store.validate(table, doc);
     txn.set(id, table, doc, () => null);
     return id;
   }
 
-  private patch(ctx: ExecutionContext, id: string, table: string | undefined, value: Record<string, JSONValue>, replace: boolean) {
+  private patch(
+    ctx: ExecutionContext,
+    id: string,
+    table: string | undefined,
+    value: Record<string, JSONValue>,
+    replace: boolean,
+  ) {
     const txn = this.writable(ctx);
     const { table: owner, doc } = this.existing(ctx, id, table, replace ? "Replace" : "Update");
     const next: Record<string, Value> = replace ? {} : { ...doc };
@@ -591,10 +746,14 @@ export class Engine {
     txn.set(id, owner, updated, () => this.store.getCommitted(id));
   }
 
-  private scheduleInto(write: (table: string, id: string, after: Doc | null) => void, args: Record<string, unknown>): string {
+  private scheduleInto(
+    write: (table: string, id: string, after: Doc | null) => void,
+    args: Record<string, unknown>,
+  ): string {
     const path = addressName(args as { name?: string });
     const { kind } = this.resolve(path, null, "internal");
-    if (kind === "query") throw new Error(`Cannot schedule query ${path}; schedule a mutation or action`);
+    if (kind === "query")
+      throw new Error(`Cannot schedule query ${path}; schedule a mutation or action`);
     const id = this.store.newId(SCHEDULED_FUNCTIONS);
     const job = {
       _id: id,
@@ -616,7 +775,9 @@ export class Engine {
     const pending = txn.lookup(id);
     const job = pending ? pending.after : this.store.getCommitted(id);
     if (job && (job.state as { kind: string }).kind === "pending") {
-      txn.set(id, SCHEDULED_FUNCTIONS, { ...job, state: { kind: "canceled" } } as Doc, () => this.store.getCommitted(id));
+      txn.set(id, SCHEDULED_FUNCTIONS, { ...job, state: { kind: "canceled" } } as Doc, () =>
+        this.store.getCommitted(id),
+      );
     }
   }
 
@@ -625,7 +786,8 @@ export class Engine {
     const fnArgs = jsonToConvex(args.args as JSONValue) as Record<string, Value>;
     const udfType = args.udfType as string;
     const kind = udfType === "mutation" ? "mutation" : "query";
-    if (kind === "mutation" && ctx.kind !== "mutation") throw new Error("runMutation is only available in mutations and actions");
+    if (kind === "mutation" && ctx.kind !== "mutation")
+      throw new Error("runMutation is only available in mutations and actions");
     const { fn, path: canonical } = this.resolve(path, kind, "internal");
     this.validateArgs(fn, canonical, fnArgs);
     const nested: ExecutionContext = { ...ctx, kind, streams: new Map(), nextStream: 0 };
@@ -635,7 +797,9 @@ export class Engine {
     }
     ctx.txn!.push();
     try {
-      const result = jsonToConvex(JSON.parse(await als.run(nested, () => fn.invokeMutation!(argsJson))));
+      const result = jsonToConvex(
+        JSON.parse(await als.run(nested, () => fn.invokeMutation!(argsJson))),
+      );
       ctx.txn!.pop(true);
       return result;
     } catch (error) {
@@ -657,9 +821,13 @@ export class Engine {
     }
     if (source.type === "IndexRange") {
       const [table, indexName] = source.indexName.split(".");
-      const index = indexesFor(this.store.schema, table).find((candidate) => candidate.name === `${table}.${indexName}`);
+      const index = indexesFor(this.store.schema, table).find(
+        (candidate) => candidate.name === `${table}.${indexName}`,
+      );
       if (!index) throw new Error(`Index ${source.indexName} not found.`);
-      const range = (source.range as Array<{ type: string; fieldPath: string; value: JSONValue }>).map((expr) => ({
+      const range = (
+        source.range as Array<{ type: string; fieldPath: string; value: JSONValue }>
+      ).map((expr) => ({
         type: expr.type,
         fieldPath: expr.fieldPath,
         value: jsonToConvexOrUndefined(expr.value),
@@ -670,8 +838,15 @@ export class Engine {
   }
 
   /** Index range scan merged with the transaction's own writes. */
-  private *scanWithWrites(ctx: ExecutionContext, index: IndexDef, range: Range, order: "asc" | "desc"): Generator<{ key: string; doc: Doc }> {
-    const writes = [...(ctx.txn?.writes() ?? new Map<string, Write>()).entries()].filter(([, write]) => write.table === index.table);
+  private *scanWithWrites(
+    ctx: ExecutionContext,
+    index: IndexDef,
+    range: Range,
+    order: "asc" | "desc",
+  ): Generator<{ key: string; doc: Doc }> {
+    const writes = [...(ctx.txn?.writes() ?? new Map<string, Write>()).entries()].filter(
+      ([, write]) => write.table === index.table,
+    );
     const shadowed = new Set(writes.map(([id]) => id));
     const pending = writes
       .filter(([, write]) => write.after !== null)
@@ -707,7 +882,6 @@ export class Engine {
       yield doc;
     }
   }
-
 }
 
 type SerializedQuery = {

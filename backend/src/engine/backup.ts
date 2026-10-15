@@ -28,7 +28,10 @@ export function canonicalJson(value: JSONValue): string {
 }
 
 /** Hash documents the same way on both sides of a migration. */
-export function summarizeDocuments(tableNumber: number | null, documents: Iterable<JSONValue>): TableSummary {
+export function summarizeDocuments(
+  tableNumber: number | null,
+  documents: Iterable<JSONValue>,
+): TableSummary {
   const lines = [...documents].map(canonicalJson).sort();
   const hash = createHash("sha256");
   for (const line of lines) hash.update(`${line}\n`);
@@ -38,7 +41,11 @@ export function summarizeDocuments(tableNumber: number | null, documents: Iterab
 /** Application tables: declared in the schema, numbered, or holding documents. */
 function userTables(engine: Engine): string[] {
   const store = engine.store;
-  const names = new Set<string>([...store.schema.tables.keys(), ...store.registeredTables().keys(), ...store.tables()]);
+  const names = new Set<string>([
+    ...store.schema.tables.keys(),
+    ...store.registeredTables().keys(),
+    ...store.tables(),
+  ]);
   return [...names].filter((name) => !name.startsWith("_")).sort();
 }
 
@@ -46,7 +53,9 @@ export function summarize(engine: Engine): Manifest {
   const numbers = engine.store.registeredTables();
   const manifest: Manifest = {};
   for (const table of userTables(engine)) {
-    const documents = [...engine.store.allDocuments(table)].map((doc) => convexToJson(doc as Value));
+    const documents = [...engine.store.allDocuments(table)].map((doc) =>
+      convexToJson(doc as Value),
+    );
     manifest[table] = summarizeDocuments(numbers.get(table) ?? null, documents);
   }
   return manifest;
@@ -61,7 +70,8 @@ export function* exportLines(engine: Engine): Generator<string> {
     if (tableNumber !== undefined) yield `${JSON.stringify({ table, tableNumber })}\n`;
   }
   for (const table of tables) {
-    for (const doc of engine.store.allDocuments(table)) yield `${JSON.stringify({ table, document: convexToJson(doc as Value) })}\n`;
+    for (const doc of engine.store.allDocuments(table))
+      yield `${JSON.stringify({ table, document: convexToJson(doc as Value) })}\n`;
   }
 }
 
@@ -72,23 +82,33 @@ function parse(lines: Iterable<string>): Parsed {
   const documents = new Map<string, Doc[]>();
   for (const line of lines) {
     if (!line.trim()) continue;
-    const record = JSON.parse(line) as { table?: unknown; tableNumber?: unknown; document?: JSONValue };
+    const record = JSON.parse(line) as {
+      table?: unknown;
+      tableNumber?: unknown;
+      document?: JSONValue;
+    };
     const table = record.table;
-    if (typeof table !== "string" || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(table)) throw new Error(`Refusing to restore table ${String(table)}`);
+    if (typeof table !== "string" || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(table))
+      throw new Error(`Refusing to restore table ${String(table)}`);
     if (record.document === undefined) {
-      if (typeof record.tableNumber !== "number") throw new Error(`Line for ${table} has neither tableNumber nor document`);
+      if (typeof record.tableNumber !== "number")
+        throw new Error(`Line for ${table} has neither tableNumber nor document`);
       const known = numbers.get(table);
-      if (known !== undefined && known !== record.tableNumber) throw new Error(`Table ${table} listed with numbers ${known} and ${record.tableNumber}`);
+      if (known !== undefined && known !== record.tableNumber)
+        throw new Error(`Table ${table} listed with numbers ${known} and ${record.tableNumber}`);
       numbers.set(table, record.tableNumber);
       continue;
     }
     const doc = jsonToConvex(record.document) as Doc;
     const decoded = decodeDocumentId(doc._id);
     if (!decoded) throw new Error(`Document in ${table} has an invalid Convex ID`);
-    if (typeof doc._creationTime !== "number") throw new Error(`Document ${doc._id} has no _creationTime`);
+    if (typeof doc._creationTime !== "number")
+      throw new Error(`Document ${doc._id} has no _creationTime`);
     const known = numbers.get(table);
     if (known !== undefined && known !== decoded.tableNumber) {
-      throw new Error(`Document ${doc._id} has table number ${decoded.tableNumber}, but ${table} is ${known}`);
+      throw new Error(
+        `Document ${doc._id} has table number ${decoded.tableNumber}, but ${table} is ${known}`,
+      );
     }
     numbers.set(table, decoded.tableNumber);
     if (!documents.has(table)) documents.set(table, []);
@@ -114,6 +134,7 @@ export async function restore(engine: Engine, lines: Iterable<string>): Promise<
     }
     for (const [table, docs] of documents) for (const doc of docs) write(table, doc._id, doc);
   });
-  for (const docs of documents.values()) for (const doc of docs) store.observeCreationTime(doc._creationTime);
+  for (const docs of documents.values())
+    for (const doc of docs) store.observeCreationTime(doc._creationTime);
   return summarize(engine);
 }

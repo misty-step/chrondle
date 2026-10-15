@@ -22,8 +22,14 @@ const modules = {
         await ctx.db.delete(await ctx.db.insert("emptied", { text: "gone" }));
       },
     }),
-    addEmptied: mutationGeneric({ args: {}, handler: (ctx) => ctx.db.insert("emptied", { text: "new" }) }),
-    addUser: mutationGeneric({ args: { name: v.string() }, handler: (ctx, { name }) => ctx.db.insert("users", { name }) }),
+    addEmptied: mutationGeneric({
+      args: {},
+      handler: (ctx) => ctx.db.insert("emptied", { text: "new" }),
+    }),
+    addUser: mutationGeneric({
+      args: { name: v.string() },
+      handler: (ctx, { name }) => ctx.db.insert("users", { name }),
+    }),
   },
 };
 
@@ -42,19 +48,29 @@ describe("backup and restore", () => {
 
     expect(manifest).toEqual(summarize(source));
     expect(manifest.users.count).toBe(2);
-    expect(manifest.emptied).toMatchObject({ count: 0, tableNumber: source.store.registeredTables().get("emptied") });
-    expect([...target.store.allDocuments("users")]).toEqual([...source.store.allDocuments("users")]);
+    expect(manifest.emptied).toMatchObject({
+      count: 0,
+      tableNumber: source.store.registeredTables().get("emptied"),
+    });
+    expect([...target.store.allDocuments("users")]).toEqual([
+      ...source.store.allDocuments("users"),
+    ]);
 
     // IDs minted after a restore still belong to the table number Convex assigned.
     const minted = (await target.runMutation("seed:addEmptied", {}, null)).value as string;
-    expect(decodeDocumentId(minted)?.tableNumber).toBe(source.store.registeredTables().get("emptied"));
+    expect(decodeDocumentId(minted)?.tableNumber).toBe(
+      source.store.registeredTables().get("emptied"),
+    );
   });
 
   it("replaces everything: documents and tables absent from the backup are removed", async () => {
     const source = await seeded();
     const target = await seeded();
     await target.runMutation("seed:addUser", { name: "Extra" }, null);
-    const manifest = await restore(target, [...exportLines(source)].filter((line) => !line.includes('"plays"')));
+    const manifest = await restore(
+      target,
+      [...exportLines(source)].filter((line) => !line.includes('"plays"')),
+    );
     expect(manifest.users).toEqual(summarize(source).users);
     expect(manifest.plays.count).toBe(0);
   });
@@ -63,7 +79,9 @@ describe("backup and restore", () => {
     const source = await seeded();
     const target = await seeded();
     const before = summarize(target);
-    const corrupted = [...exportLines(source)].map((line) => line.replace('"name":"Grace"', '"name":42'));
+    const corrupted = [...exportLines(source)].map((line) =>
+      line.replace('"name":"Grace"', '"name":42'),
+    );
     await expect(restore(target, corrupted)).rejects.toThrow(/does not match/);
     expect(summarize(target)).toEqual(before);
   });
@@ -72,6 +90,8 @@ describe("backup and restore", () => {
     const a = summarizeDocuments(1, [{ _id: "x", b: 1, a: [1, { d: 2, c: 3 }] }]);
     const b = summarizeDocuments(1, [{ a: [1, { c: 3, d: 2 }], _id: "x", b: 1 }]);
     expect(a).toEqual(b);
-    expect(a.sha256).not.toBe(summarizeDocuments(1, [{ _id: "x", b: 2, a: [1, { c: 3, d: 2 }] }]).sha256);
+    expect(a.sha256).not.toBe(
+      summarizeDocuments(1, [{ _id: "x", b: 2, a: [1, { c: 3, d: 2 }] }]).sha256,
+    );
   });
 });

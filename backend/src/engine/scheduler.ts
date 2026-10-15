@@ -18,7 +18,12 @@ export type CronSchedule =
   | { type: "hourly"; minuteUTC?: number }
   | { type: "interval"; seconds?: number; minutes?: number; hours?: number };
 
-export type CronSpec = { name: string; path: string; args: Record<string, Value>; schedule: CronSchedule };
+export type CronSpec = {
+  name: string;
+  path: string;
+  args: Record<string, Value>;
+  schedule: CronSchedule;
+};
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -27,14 +32,21 @@ const DAY = 24 * HOUR;
 const JOB_RETENTION_MS = 7 * DAY;
 
 /** Read the `cronJobs()` registry exported by convex/crons.ts. */
-export function parseCrons(cronsModule: { default?: { crons?: Record<string, { name: string; args: JSONValue[]; schedule: CronSchedule }> } }): CronSpec[] {
+export function parseCrons(cronsModule: {
+  default?: { crons?: Record<string, { name: string; args: JSONValue[]; schedule: CronSchedule }> };
+}): CronSpec[] {
   const registry = cronsModule.default?.crons ?? {};
   return Object.entries(registry).map(([name, job]) => {
     const schedule = job.schedule;
     if (!["daily", "hourly", "interval"].includes(schedule.type)) {
       throw new Error(`Cron "${name}" uses unsupported schedule type ${schedule.type}`);
     }
-    return { name, path: job.name, args: jsonToConvex(job.args[0] ?? {}) as Record<string, Value>, schedule };
+    return {
+      name,
+      path: job.name,
+      args: jsonToConvex(job.args[0] ?? {}) as Record<string, Value>,
+      schedule,
+    };
   });
 }
 
@@ -46,7 +58,10 @@ function period(schedule: CronSchedule): { every: number; offset: number } {
       return { every: HOUR, offset: (schedule.minuteUTC ?? 0) * MINUTE };
     case "interval":
       return {
-        every: (schedule.seconds ?? 0) * 1000 + (schedule.minutes ?? 0) * MINUTE + (schedule.hours ?? 0) * HOUR,
+        every:
+          (schedule.seconds ?? 0) * 1000 +
+          (schedule.minutes ?? 0) * MINUTE +
+          (schedule.hours ?? 0) * HOUR,
         offset: 0,
       };
   }
@@ -62,7 +77,10 @@ export function nextOccurrence(schedule: CronSchedule, now: number): number {
   return previousOccurrence(schedule, now) + period(schedule).every;
 }
 
-type JobState = { kind: "pending" | "inProgress" | "success" | "failed" | "canceled"; error?: string };
+type JobState = {
+  kind: "pending" | "inProgress" | "success" | "failed" | "canceled";
+  error?: string;
+};
 
 export class Scheduler {
   /** Job ids and `cron:<name>` keys currently executing in this instance. */
@@ -75,14 +93,18 @@ export class Scheduler {
   ) {}
 
   private get byStateTime() {
-    return indexesFor(this.engine.store.schema, SCHEDULED_FUNCTIONS).find((index) => index.name.endsWith(".by_state_time"))!;
+    return indexesFor(this.engine.store.schema, SCHEDULED_FUNCTIONS).find((index) =>
+      index.name.endsWith(".by_state_time"),
+    )!;
   }
 
   private jobsIn(state: JobState["kind"], until?: number): Doc[] {
     const index = this.byStateTime;
     const range = keyRange(index, [
       { type: "Eq", fieldPath: "state.kind", value: state },
-      ...(until === undefined ? [] : [{ type: "Lte" as const, fieldPath: "scheduledTime", value: until }]),
+      ...(until === undefined
+        ? []
+        : [{ type: "Lte" as const, fieldPath: "scheduledTime", value: until }]),
     ]);
     return [...this.engine.store.scan(index, range, "asc")].map(({ doc }) => doc);
   }
@@ -96,7 +118,8 @@ export class Scheduler {
     const store = this.engine.store;
     for (const cron of this.crons) {
       // A new cron first runs at its next occurrence, not retroactively.
-      if (store.getMeta(`cron:${cron.name}`) === null) store.setMeta(`cron:${cron.name}`, String(previousOccurrence(cron.schedule, this.now())));
+      if (store.getMeta(`cron:${cron.name}`) === null)
+        store.setMeta(`cron:${cron.name}`, String(previousOccurrence(cron.schedule, this.now())));
     }
     const interrupted = this.jobsIn("inProgress").filter((job) => !this.running.has(job._id));
     if (interrupted.length === 0) return;
@@ -139,13 +162,19 @@ export class Scheduler {
         });
         return;
       }
-      await this.engine.writeExclusive((write) => write(SCHEDULED_FUNCTIONS, job._id, { ...job, state: { kind: "inProgress" } } as Doc));
+      await this.engine.writeExclusive((write) =>
+        write(SCHEDULED_FUNCTIONS, job._id, { ...job, state: { kind: "inProgress" } } as Doc),
+      );
       await this.engine.runAction(path, args, null, { visibility: "internal" });
-      await this.engine.writeExclusive((write) => write(SCHEDULED_FUNCTIONS, job._id, finished({ kind: "success" })));
+      await this.engine.writeExclusive((write) =>
+        write(SCHEDULED_FUNCTIONS, job._id, finished({ kind: "success" })),
+      );
     } catch (error) {
       console.error(`[scheduler] ${path} (${job._id}) failed`, error);
       const message = error instanceof Error ? error.message : String(error);
-      await this.engine.writeExclusive((write) => write(SCHEDULED_FUNCTIONS, job._id, finished({ kind: "failed", error: message })));
+      await this.engine.writeExclusive((write) =>
+        write(SCHEDULED_FUNCTIONS, job._id, finished({ kind: "failed", error: message })),
+      );
     }
   }
 
@@ -156,11 +185,23 @@ export class Scheduler {
     const startedAt = this.now();
     try {
       await this.engine.runAny(cron.path, cron.args);
-      store.setMeta(`cronStatus:${cron.name}`, JSON.stringify({ occurrence, startedAt, finishedAt: this.now(), ok: true }));
+      store.setMeta(
+        `cronStatus:${cron.name}`,
+        JSON.stringify({ occurrence, startedAt, finishedAt: this.now(), ok: true }),
+      );
     } catch (error) {
       console.error(`[cron] ${cron.name} failed`, error);
       const message = error instanceof Error ? error.message : String(error);
-      store.setMeta(`cronStatus:${cron.name}`, JSON.stringify({ occurrence, startedAt, finishedAt: this.now(), ok: false, error: message }));
+      store.setMeta(
+        `cronStatus:${cron.name}`,
+        JSON.stringify({
+          occurrence,
+          startedAt,
+          finishedAt: this.now(),
+          ok: false,
+          error: message,
+        }),
+      );
     }
   }
 
@@ -182,7 +223,8 @@ export class Scheduler {
     for (const cron of this.crons) {
       const occurrence = previousOccurrence(cron.schedule, this.now());
       const key = `cron:${cron.name}`;
-      if (this.lastCronOccurrence(cron) < occurrence && !this.running.has(key)) started.push(this.track(key, () => this.runCron(cron, occurrence)));
+      if (this.lastCronOccurrence(cron) < occurrence && !this.running.has(key))
+        started.push(this.track(key, () => this.runCron(cron, occurrence)));
     }
     return Promise.allSettled(started).then(() => undefined);
   }
@@ -193,7 +235,10 @@ export class Scheduler {
     const expired = (["success", "failed", "canceled"] as const)
       .flatMap((state) => this.jobsIn(state))
       .filter((job) => typeof job.completedTime === "number" && job.completedTime < cutoff);
-    if (expired.length) await this.engine.writeExclusive((write) => expired.forEach((job) => write(SCHEDULED_FUNCTIONS, job._id, null)));
+    if (expired.length)
+      await this.engine.writeExclusive((write) =>
+        expired.forEach((job) => write(SCHEDULED_FUNCTIONS, job._id, null)),
+      );
     return expired.length;
   }
 
@@ -213,7 +258,13 @@ export class Scheduler {
       recentJobs: jobs
         .sort((a, b) => b._creationTime - a._creationTime)
         .slice(0, 20)
-        .map((job) => ({ id: job._id, name: job.name, scheduledTime: job.scheduledTime, completedTime: job.completedTime ?? null, state: job.state })),
+        .map((job) => ({
+          id: job._id,
+          name: job.name,
+          scheduledTime: job.scheduledTime,
+          completedTime: job.completedTime ?? null,
+          state: job.state,
+        })),
       crons: this.crons.map((cron) => ({
         name: cron.name,
         path: cron.path,

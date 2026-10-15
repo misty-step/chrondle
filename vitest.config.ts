@@ -145,8 +145,11 @@ export const baseVitestConfig = {
 } satisfies UserConfig;
 
 // Default config runs all tests, plus the Cloudflare backend host and its
-// Convex parity suites as their own project (see backend/README.md).
+// Convex parity suites as their own project (see docs/adr/0001-cloudflare-backend.md).
 export default defineConfig({
   ...baseVitestConfig,
-  test: { ...baseVitestConfig.test, projects: [...baseVitestConfig.test.projects, "backend/vitest.config.ts"] },
+  test: {
+    ...baseVitestConfig.test,
+    projects: [...baseVitestConfig.test.projects, "backend/vitest.config.ts"],
+  },
 });

@@ -35,15 +35,24 @@ afterEach(async () => {
 });
 
 function connect(): ConvexClient {
-  const client = new ConvexClient("https://backend.chrondle.test", { webSocketConstructor: server.WebSocket, unsavedChangesWarning: false });
+  const client = new ConvexClient("https://backend.chrondle.test", {
+    webSocketConstructor: server.WebSocket,
+    unsavedChangesWarning: false,
+  });
   clients.push(client);
   return client;
 }
 
 async function signIn(client: ConvexClient, claims: Record<string, unknown>): Promise<void> {
   const states: boolean[] = [];
-  client.setAuth(() => issuer.sign(claims), (authenticated) => states.push(authenticated));
-  await eventually(() => states, (seen) => seen.includes(true));
+  client.setAuth(
+    () => issuer.sign(claims),
+    (authenticated) => states.push(authenticated),
+  );
+  await eventually(
+    () => states,
+    (seen) => seen.includes(true),
+  );
 }
 
 function watch(client: ConvexClient, query: any, args: Record<string, unknown>) {
@@ -65,7 +74,9 @@ function watch(client: ConvexClient, query: any, args: Record<string, unknown>) 
 async function seedEvents() {
   for (const year of YEARS) {
     const events = Array.from({ length: 6 }, (_, i) => `Synthetic event ${i + 1} of ${year}`);
-    await engine.runMutation("events:importYearEvents", { year, events }, null, { visibility: "internal" });
+    await engine.runMutation("events:importYearEvents", { year, events }, null, {
+      visibility: "internal",
+    });
   }
 }
 
@@ -86,60 +97,108 @@ describe("ConvexClient over the sync protocol", () => {
     await seedEvents();
     const client = connect();
     const daily = watch(client, api.puzzles.getDailyPuzzle, {});
-    await eventually(() => daily.updates, (count) => count >= 1);
+    await eventually(
+      () => daily.updates,
+      (count) => count >= 1,
+    );
     expect(daily.value).toBeNull();
 
     await client.mutation(api.puzzles.ensureTodaysPuzzle, {});
 
-    const puzzle = await eventually(() => daily.value, (value) => value !== null);
+    const puzzle = await eventually(
+      () => daily.value,
+      (value) => value !== null,
+    );
     expect(puzzle.date).toBe(new Date().toISOString().slice(0, 10));
     expect(puzzle.puzzleNumber).toBe(1);
     expect(YEARS).toContain(puzzle.targetYear);
     expect(puzzle.events).toHaveLength(6);
     expect(puzzle._id).toMatch(/^[0-9a-z]{31,37}$/);
     // Generation schedules historical context exactly as on Convex.
-    expect(docs("_scheduled_functions").map((job) => job.name)).toContain("actions/historicalContext:generateHistoricalContext");
+    expect(docs("_scheduled_functions").map((job) => job.name)).toContain(
+      "actions/historicalContext:generateHistoricalContext",
+    );
   });
 
   it("signs a player in, persists guesses and completion, and updates streak stats live", async () => {
     const client = connect();
     const { user, puzzle, wrong } = await playerWithPuzzle(client, "user_synthetic_1");
-    expect(user).toMatchObject({ clerkId: "user_synthetic_1", email: "user_synthetic_1@example.test", currentStreak: 0, totalPlays: 0 });
+    expect(user).toMatchObject({
+      clerkId: "user_synthetic_1",
+      email: "user_synthetic_1@example.test",
+      currentStreak: 0,
+      totalPlays: 0,
+    });
 
     const me = watch(client, api.users.getCurrentUser, {});
     const play = watch(client, api.puzzles.getUserPlay, { puzzleId: puzzle._id, userId: user._id });
-    await eventually(() => me.value, (value) => value?._id === user._id);
+    await eventually(
+      () => me.value,
+      (value) => value?._id === user._id,
+    );
 
-    expect(await client.mutation(api.puzzles.submitGuess, { puzzleId: puzzle._id, guess: wrong })).toEqual({
+    expect(
+      await client.mutation(api.puzzles.submitGuess, { puzzleId: puzzle._id, guess: wrong }),
+    ).toEqual({
       correct: false,
       guesses: [wrong],
       targetYear: puzzle.targetYear,
     });
-    await eventually(() => play.value, (value) => value?.guesses?.length === 1);
+    await eventually(
+      () => play.value,
+      (value) => value?.guesses?.length === 1,
+    );
 
-    const winning = await client.mutation(api.puzzles.submitGuess, { puzzleId: puzzle._id, guess: puzzle.targetYear });
+    const winning = await client.mutation(api.puzzles.submitGuess, {
+      puzzleId: puzzle._id,
+      guess: puzzle.targetYear,
+    });
     expect(winning.correct).toBe(true);
-    const finished = await eventually(() => play.value, (value) => typeof value?.completedAt === "number");
+    const finished = await eventually(
+      () => play.value,
+      (value) => typeof value?.completedAt === "number",
+    );
     expect(finished.guesses).toEqual([wrong, puzzle.targetYear]);
-    const stats = await eventually(() => me.value, (value) => value?.currentStreak === 1);
-    expect(stats).toMatchObject({ currentStreak: 1, longestStreak: 1, lastCompletedDate: puzzle.date });
+    const stats = await eventually(
+      () => me.value,
+      (value) => value?.currentStreak === 1,
+    );
+    expect(stats).toMatchObject({
+      currentStreak: 1,
+      longestStreak: 1,
+      lastCompletedDate: puzzle.date,
+    });
 
-    await expect(client.mutation(api.puzzles.submitGuess, { puzzleId: puzzle._id, guess: wrong })).rejects.toThrow(/Server Error/);
+    await expect(
+      client.mutation(api.puzzles.submitGuess, { puzzleId: puzzle._id, guess: wrong }),
+    ).rejects.toThrow(/Server Error/);
     expect(docs("plays")).toHaveLength(1);
   });
 
   it("rejects internal functions, anonymous writes and non-admins like Convex production", async () => {
     const client = connect();
-    await expect(client.mutation(api.events.importYearEvents, { year: 1, events: [] })).rejects.toThrow(/^\[CONVEX M\(events:importYearEvents\)\] \[Request ID: [0-9a-f]{16}\] Server Error/);
-    await expect(client.mutation(api.users.getOrCreateCurrentUser, {})).rejects.toThrow(/Server Error/);
-    await expect(client.query(api.puzzles.getPuzzleById, { puzzleId: "not-an-id" })).rejects.toThrow(/Server Error/);
+    await expect(
+      client.mutation(api.events.importYearEvents, { year: 1, events: [] }),
+    ).rejects.toThrow(
+      /^\[CONVEX M\(events:importYearEvents\)\] \[Request ID: [0-9a-f]{16}\] Server Error/,
+    );
+    await expect(client.mutation(api.users.getOrCreateCurrentUser, {})).rejects.toThrow(
+      /Server Error/,
+    );
+    await expect(
+      client.query(api.puzzles.getPuzzleById, { puzzleId: "not-an-id" }),
+    ).rejects.toThrow(/Server Error/);
 
-    const anonymous = await client.query(api.admin.events.getEventStats, {}).catch((error) => error);
+    const anonymous = await client
+      .query(api.admin.events.getEventStats, {})
+      .catch((error) => error);
     expect(anonymous).toBeInstanceOf(ConvexError);
     expect(anonymous.data).toBe("Unauthorized");
 
     await signIn(client, { sub: "user_plain" });
-    const forbidden = await client.query(api.admin.events.getEventStats, {}).catch((error) => error);
+    const forbidden = await client
+      .query(api.admin.events.getEventStats, {})
+      .catch((error) => error);
     expect(forbidden).toBeInstanceOf(ConvexError);
     expect(forbidden.data).toBe("Forbidden: admin only");
 
@@ -149,16 +208,25 @@ describe("ConvexClient over the sync protocol", () => {
 
     const forged = connect();
     const states: boolean[] = [];
-    forged.setAuth(async () => "not.a.jwt", (authenticated) => states.push(authenticated));
-    await eventually(() => states, (seen) => seen.includes(false));
+    forged.setAuth(
+      async () => "not.a.jwt",
+      (authenticated) => states.push(authenticated),
+    );
+    await eventually(
+      () => states,
+      (seen) => seen.includes(false),
+    );
     expect(docs("users")).toHaveLength(0);
   });
 
   it("serializes concurrent sign-ins: fifteen parallel getOrCreateCurrentUser calls make one user", async () => {
     const sessions = [connect(), connect(), connect()];
-    for (const client of sessions) await signIn(client, { sub: "user_same", email: "same@example.test" });
+    for (const client of sessions)
+      await signIn(client, { sub: "user_same", email: "same@example.test" });
     const results = await Promise.all(
-      sessions.flatMap((client) => Array.from({ length: 5 }, () => client.mutation(api.users.getOrCreateCurrentUser, {}))),
+      sessions.flatMap((client) =>
+        Array.from({ length: 5 }, () => client.mutation(api.users.getOrCreateCurrentUser, {})),
+      ),
     );
     expect(new Set(results.map((user) => user._id)).size).toBe(1);
     expect(docs("users")).toHaveLength(1);
@@ -170,15 +238,30 @@ describe("ConvexClient over the sync protocol", () => {
     let lost = 0;
     server.dropOutgoing = (message) => message.type === "MutationResponse" && lost++ === 0;
 
-    const pending = client.mutation(api.puzzles.submitGuess, { puzzleId: puzzle._id, guess: wrong });
-    await eventually(() => lost, (count) => count === 1);
+    const pending = client.mutation(api.puzzles.submitGuess, {
+      puzzleId: puzzle._id,
+      guess: wrong,
+    });
+    await eventually(
+      () => lost,
+      (count) => count === 1,
+    );
     server.dropAll();
 
-    expect(await pending).toEqual({ correct: false, guesses: [wrong], targetYear: puzzle.targetYear });
-    const sent = server.fromClients.filter((message) => message.type === "Mutation" && message.udfPath === "puzzles:submitGuess");
+    expect(await pending).toEqual({
+      correct: false,
+      guesses: [wrong],
+      targetYear: puzzle.targetYear,
+    });
+    const sent = server.fromClients.filter(
+      (message) => message.type === "Mutation" && message.udfPath === "puzzles:submitGuess",
+    );
     expect(sent).toHaveLength(2);
     expect(sent[1].requestId).toBe(sent[0].requestId);
-    const play = await client.query(api.puzzles.getUserPlay, { puzzleId: puzzle._id, userId: user._id });
+    const play = await client.query(api.puzzles.getUserPlay, {
+      puzzleId: puzzle._id,
+      userId: user._id,
+    });
     expect(play.guesses).toEqual([wrong]);
   }, 20_000);
 
@@ -188,13 +271,21 @@ describe("ConvexClient over the sync protocol", () => {
     server.offline = true;
     server.dropAll();
 
-    const pending = client.mutation(api.puzzles.submitGuess, { puzzleId: puzzle._id, guess: wrong });
+    const pending = client.mutation(api.puzzles.submitGuess, {
+      puzzleId: puzzle._id,
+      guess: wrong,
+    });
     await new Promise((resolve) => setTimeout(resolve, 500));
-    expect(server.fromClients.filter((message) => message.udfPath === "puzzles:submitGuess")).toHaveLength(0);
+    expect(
+      server.fromClients.filter((message) => message.udfPath === "puzzles:submitGuess"),
+    ).toHaveLength(0);
 
     server.offline = false;
     expect((await pending).guesses).toEqual([wrong]);
-    const play = await client.query(api.puzzles.getUserPlay, { puzzleId: puzzle._id, userId: user._id });
+    const play = await client.query(api.puzzles.getUserPlay, {
+      puzzleId: puzzle._id,
+      userId: user._id,
+    });
     expect(play.guesses).toEqual([wrong]);
   }, 30_000);
 });
@@ -207,9 +298,13 @@ describe("ConvexHttpClient over the HTTP API", () => {
     await http.mutation(api.puzzles.ensureTodaysPuzzle, {});
     expect((await http.query(api.puzzles.getDailyPuzzle, {})).puzzleNumber).toBe(1);
 
-    await expect(http.mutation(api.users.getOrCreateCurrentUser, {})).rejects.toThrow(/Server Error/);
+    await expect(http.mutation(api.users.getOrCreateCurrentUser, {})).rejects.toThrow(
+      /Server Error/,
+    );
     http.setAuth(await issuer.sign({ sub: "user_http", email: "http@example.test" }));
-    expect(await http.mutation(api.users.getOrCreateCurrentUser, {})).toMatchObject({ clerkId: "user_http" });
+    expect(await http.mutation(api.users.getOrCreateCurrentUser, {})).toMatchObject({
+      clerkId: "user_http",
+    });
 
     const forbidden = await http.query(api.admin.events.getEventStats, {}).catch((error) => error);
     expect(forbidden).toBeInstanceOf(ConvexError);

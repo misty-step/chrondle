@@ -111,7 +111,11 @@ function rowToDoc(row: SqlRow): Doc {
 }
 
 export type Range = { lower: string; upper: string };
-export type SerializedRange = Array<{ type: "Eq" | "Gt" | "Gte" | "Lt" | "Lte"; fieldPath: string; value: Value | undefined }>;
+export type SerializedRange = Array<{
+  type: "Eq" | "Gt" | "Gte" | "Lt" | "Lte";
+  fieldPath: string;
+  value: Value | undefined;
+}>;
 
 /** Translate an index range expression into a half-open key interval. */
 export function keyRange(index: IndexDef, range: SerializedRange): Range {
@@ -162,7 +166,9 @@ export class Store {
     this.sql.exec(
       "CREATE TABLE IF NOT EXISTS cvx_tables (name TEXT PRIMARY KEY, number INTEGER NOT NULL UNIQUE) WITHOUT ROWID",
     );
-    this.sql.exec("CREATE TABLE IF NOT EXISTS cvx_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID");
+    this.sql.exec(
+      "CREATE TABLE IF NOT EXISTS cvx_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID",
+    );
     for (const row of this.sql.exec("SELECT name, number FROM cvx_tables")) {
       this.tableNumbers.set(row.name as string, row.number as number);
       this.tableNames.set(row.number as number, row.name as string);
@@ -175,13 +181,17 @@ export class Store {
   /** Rebuild index entries whose definition changed since the last deploy. */
   private syncIndexes(): void {
     const tables = new Set<string>(this.schema.tables.keys());
-    for (const row of this.sql.exec("SELECT DISTINCT tbl FROM cvx_documents")) tables.add(row.tbl as string);
+    for (const row of this.sql.exec("SELECT DISTINCT tbl FROM cvx_documents"))
+      tables.add(row.tbl as string);
     const wanted = new Map<string, IndexDef>();
-    for (const table of tables) for (const index of indexesFor(this.schema, table)) wanted.set(index.name, index);
+    for (const table of tables)
+      for (const index of indexesFor(this.schema, table)) wanted.set(index.name, index);
     const stored = new Map<string, string>(
       Object.entries(JSON.parse(this.getMeta("index_defs") ?? "{}") as Record<string, string>),
     );
-    const changed = [...wanted.values()].filter((index) => stored.get(index.name) !== JSON.stringify(index.fields));
+    const changed = [...wanted.values()].filter(
+      (index) => stored.get(index.name) !== JSON.stringify(index.fields),
+    );
     const removed = [...stored.keys()].filter((name) => !wanted.has(name));
     if (changed.length === 0 && removed.length === 0) return;
     this.sql.transaction(() => {
@@ -189,12 +199,22 @@ export class Store {
         this.sql.exec("DELETE FROM cvx_index WHERE ix = ?", name);
       }
       for (const index of changed) {
-        for (const row of this.sql.exec("SELECT id, ct, doc FROM cvx_documents WHERE tbl = ?", index.table)) {
+        for (const row of this.sql.exec(
+          "SELECT id, ct, doc FROM cvx_documents WHERE tbl = ?",
+          index.table,
+        )) {
           const document = rowToDoc(row);
-          this.sql.exec("INSERT INTO cvx_index (ix, k, id) VALUES (?, ?, ?)", index.name, documentKey(index, document), document._id);
+          this.sql.exec(
+            "INSERT INTO cvx_index (ix, k, id) VALUES (?, ?, ?)",
+            index.name,
+            documentKey(index, document),
+            document._id,
+          );
         }
       }
-      const definitions = Object.fromEntries([...wanted.values()].map((index) => [index.name, JSON.stringify(index.fields)]));
+      const definitions = Object.fromEntries(
+        [...wanted.values()].map((index) => [index.name, JSON.stringify(index.fields)]),
+      );
       this.setMeta("index_defs", JSON.stringify(definitions));
     });
   }
@@ -205,14 +225,19 @@ export class Store {
   }
 
   setMeta(key: string, value: string): void {
-    this.sql.exec("INSERT INTO cvx_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", key, value);
+    this.sql.exec(
+      "INSERT INTO cvx_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      key,
+      value,
+    );
   }
 
   /** Register a table number (from imported Convex IDs or a fresh assignment). */
   registerTable(name: string, number: number): void {
     const existing = this.tableNumbers.get(name);
     if (existing === number) return;
-    if (existing !== undefined) throw new Error(`Table ${name} already uses number ${existing}, not ${number}`);
+    if (existing !== undefined)
+      throw new Error(`Table ${name} already uses number ${existing}, not ${number}`);
     const owner = this.tableNames.get(number);
     if (owner !== undefined) throw new Error(`Table number ${number} already belongs to ${owner}`);
     this.sql.exec("INSERT INTO cvx_tables (name, number) VALUES (?, ?)", name, number);
@@ -225,7 +250,10 @@ export class Store {
     if (existing !== undefined) return existing;
     const number =
       SYSTEM_TABLE_NUMBERS[name] ??
-      Math.max(FIRST_USER_TABLE_NUMBER - 1, ...[...this.tableNumbers.values()].filter((n) => n >= FIRST_USER_TABLE_NUMBER)) + 1;
+      Math.max(
+        FIRST_USER_TABLE_NUMBER - 1,
+        ...[...this.tableNumbers.values()].filter((n) => n >= FIRST_USER_TABLE_NUMBER),
+      ) + 1;
     this.registerTable(name, number);
     return number;
   }
@@ -270,7 +298,11 @@ export class Store {
   }
 
   /** Iterate committed documents of an index range in key order. */
-  *scan(index: IndexDef, range: Range, order: "asc" | "desc"): Generator<{ key: string; doc: Doc }> {
+  *scan(
+    index: IndexDef,
+    range: Range,
+    order: "asc" | "desc",
+  ): Generator<{ key: string; doc: Doc }> {
     let lower = range.lower;
     let upper = range.upper;
     let lowerOp = ">=";
@@ -313,8 +345,15 @@ export class Store {
       const oldKey = before ? documentKey(index, before) : null;
       const newKey = after ? documentKey(index, after) : null;
       if (oldKey === newKey) continue;
-      if (oldKey !== null) this.sql.exec("DELETE FROM cvx_index WHERE ix = ? AND k = ?", index.name, oldKey);
-      if (newKey !== null) this.sql.exec("INSERT INTO cvx_index (ix, k, id) VALUES (?, ?, ?)", index.name, newKey, after!._id);
+      if (oldKey !== null)
+        this.sql.exec("DELETE FROM cvx_index WHERE ix = ? AND k = ?", index.name, oldKey);
+      if (newKey !== null)
+        this.sql.exec(
+          "INSERT INTO cvx_index (ix, k, id) VALUES (?, ?, ?)",
+          index.name,
+          newKey,
+          after!._id,
+        );
     }
     if (after) {
       this.sql.exec(
@@ -330,12 +369,18 @@ export class Store {
   }
 
   *allDocuments(table: string): Generator<Doc> {
-    for (const { doc } of this.scan(indexesFor(this.schema, table)[1], { lower: "", upper: KEY_MAX_SUFFIX }, "asc")) {
+    for (const { doc } of this.scan(
+      indexesFor(this.schema, table)[1],
+      { lower: "", upper: KEY_MAX_SUFFIX },
+      "asc",
+    )) {
       yield doc;
     }
   }
 
   tables(): string[] {
-    return this.sql.exec("SELECT DISTINCT tbl FROM cvx_documents ORDER BY tbl").map((row) => row.tbl as string);
+    return this.sql
+      .exec("SELECT DISTINCT tbl FROM cvx_documents ORDER BY tbl")
+      .map((row) => row.tbl as string);
   }
 }

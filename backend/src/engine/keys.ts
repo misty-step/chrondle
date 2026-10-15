@@ -120,7 +120,10 @@ export function encodeKey(values: ReadonlyArray<Value | undefined>): string {
 }
 
 /** Read a dotted field path the way Convex indexes and filters do. */
-export function fieldValue(document: Record<string, unknown>, fieldPath: string): Value | undefined {
+export function fieldValue(
+  document: Record<string, unknown>,
+  fieldPath: string,
+): Value | undefined {
   let current: unknown = document;
   for (const part of fieldPath.split(".")) {
     if (

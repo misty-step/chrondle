@@ -18,11 +18,29 @@ export function encodeTs(ts: bigint): string {
 }
 
 type StateVersion = { querySet: number; identity: number; ts: bigint };
-type Subscription = { udfPath: string; args: Record<string, Value>; reads: ReadEntry[]; sent: string | null };
+type Subscription = {
+  udfPath: string;
+  args: Record<string, Value>;
+  reads: ReadEntry[];
+  sent: string | null;
+};
 type ClientMessage =
   | { type: "Connect"; sessionId: string }
-  | { type: "ModifyQuerySet"; baseVersion: number; newVersion: number; modifications: Array<{ type: "Add"; queryId: number; udfPath: string; args: JSONValue[] } | { type: "Remove"; queryId: number }> }
-  | { type: "Authenticate"; tokenType: "User" | "Admin" | "None"; value?: string; baseVersion: number }
+  | {
+      type: "ModifyQuerySet";
+      baseVersion: number;
+      newVersion: number;
+      modifications: Array<
+        | { type: "Add"; queryId: number; udfPath: string; args: JSONValue[] }
+        | { type: "Remove"; queryId: number }
+      >;
+    }
+  | {
+      type: "Authenticate";
+      tokenType: "User" | "Admin" | "None";
+      value?: string;
+      baseVersion: number;
+    }
   | { type: "Mutation" | "Action"; requestId: number; udfPath: string; args: JSONValue[] }
   | { type: "Event" };
 
@@ -59,7 +77,10 @@ export class SyncSession {
   constructor(
     private readonly engine: Engine,
     private readonly verifier: AuthVerifier,
-    private readonly transport: { send(message: string): void; close(code: number, reason: string): void },
+    private readonly transport: {
+      send(message: string): void;
+      close(code: number, reason: string): void;
+    },
   ) {}
 
   /** Serialize all work on this socket so versions advance in order. */
@@ -86,7 +107,9 @@ export class SyncSession {
   /** Called after every commit; refresh only affected subscriptions. */
   invalidate(commit: CommitInfo) {
     if (this.closed) return;
-    const affected = [...this.subscriptions].filter(([, sub]) => readsIntersect(sub.reads, commit.writes));
+    const affected = [...this.subscriptions].filter(([, sub]) =>
+      readsIntersect(sub.reads, commit.writes),
+    );
     if (affected.length === 0) return;
     for (const [queryId] of affected) this.dirty.add(queryId);
     this.enqueue(() => this.flush());
@@ -134,7 +157,9 @@ export class SyncSession {
         return;
       case "ModifyQuerySet": {
         if (message.baseVersion !== this.querySetVersion) {
-          throw new Error(`Base version ${message.baseVersion} passed up doesn't match the current version ${this.querySetVersion}`);
+          throw new Error(
+            `Base version ${message.baseVersion} passed up doesn't match the current version ${this.querySetVersion}`,
+          );
         }
         for (const modification of message.modifications) {
           if (modification.type === "Add") {
@@ -158,7 +183,9 @@ export class SyncSession {
       case "Authenticate": {
         let identityChanged = true;
         if (message.baseVersion !== this.identityVersion) {
-          throw new Error(`Auth base version ${message.baseVersion} doesn't match the current version ${this.identityVersion}`);
+          throw new Error(
+            `Auth base version ${message.baseVersion} doesn't match the current version ${this.identityVersion}`,
+          );
         }
         if (message.tokenType === "User") {
           try {
@@ -168,19 +195,30 @@ export class SyncSession {
             this.identityExpiresAt = verified.expiresAt;
           } catch (error) {
             const reason = error instanceof AuthError ? error.message : "Could not verify token";
-            this.send({ type: "AuthError", error: reason, baseVersion: message.baseVersion, authUpdateAttempted: true });
+            this.send({
+              type: "AuthError",
+              error: reason,
+              baseVersion: message.baseVersion,
+              authUpdateAttempted: true,
+            });
             return;
           }
         } else if (message.tokenType === "None") {
           identityChanged = this.identity !== null;
           this.identity = null;
         } else {
-          this.send({ type: "AuthError", error: "Admin authentication is not supported", baseVersion: message.baseVersion, authUpdateAttempted: true });
+          this.send({
+            type: "AuthError",
+            error: "Admin authentication is not supported",
+            baseVersion: message.baseVersion,
+            authUpdateAttempted: true,
+          });
           return;
         }
         this.identityVersion = message.baseVersion + 1;
         // Token refreshes for the same user keep results; only re-run on a real change.
-        if (identityChanged) for (const queryId of this.subscriptions.keys()) this.dirty.add(queryId);
+        if (identityChanged)
+          for (const queryId of this.subscriptions.keys()) this.dirty.add(queryId);
         return this.flush();
       }
       case "Event":
@@ -197,7 +235,12 @@ export class SyncSession {
   private currentIdentity(): Identity | null {
     if (this.identity && this.verifier.expired(this.identityExpiresAt)) {
       this.identity = null;
-      this.send({ type: "AuthError", error: "Token expired", baseVersion: this.identityVersion - 1, authUpdateAttempted: false });
+      this.send({
+        type: "AuthError",
+        error: "Token expired",
+        baseVersion: this.identityVersion - 1,
+        authUpdateAttempted: false,
+      });
     }
     return this.identity;
   }
@@ -212,22 +255,49 @@ export class SyncSession {
         const { value, ts } = await this.engine.runMutation(message.udfPath, args, identity, {
           dedupe: { session: this.sessionId, request: message.requestId },
         });
-        this.send({ type: "MutationResponse", requestId: message.requestId, success: true, result: convexToJson(value), ts: encodeTs(ts), logLines: [] });
+        this.send({
+          type: "MutationResponse",
+          requestId: message.requestId,
+          success: true,
+          result: convexToJson(value),
+          ts: encodeTs(ts),
+          logLines: [],
+        });
         // The client resolves a mutation only on a Transition at or past `ts` that
         // arrives after this response (even a replayed one), so always send one.
         this.enqueue(() => this.flush(true));
       } catch (error) {
         const failure = this.engine.clientError(error);
-        this.send({ type: "MutationResponse", requestId: message.requestId, success: false, result: failure.errorMessage, errorData: failure.errorData, logLines: [] });
+        this.send({
+          type: "MutationResponse",
+          requestId: message.requestId,
+          success: false,
+          result: failure.errorMessage,
+          errorData: failure.errorData,
+          logLines: [],
+        });
       }
       return;
     }
     try {
       const value = await this.engine.runAction(message.udfPath, args, identity);
-      this.send({ type: "ActionResponse", requestId: message.requestId, success: true, result: convexToJson(value), logLines: [] });
+      this.send({
+        type: "ActionResponse",
+        requestId: message.requestId,
+        success: true,
+        result: convexToJson(value),
+        logLines: [],
+      });
     } catch (error) {
       const failure = this.engine.clientError(error);
-      this.send({ type: "ActionResponse", requestId: message.requestId, success: false, result: failure.errorMessage, errorData: failure.errorData, logLines: [] });
+      this.send({
+        type: "ActionResponse",
+        requestId: message.requestId,
+        success: false,
+        result: failure.errorMessage,
+        errorData: failure.errorData,
+        logLines: [],
+      });
     }
   }
 
@@ -247,28 +317,58 @@ export class SyncSession {
         if (!subscription) continue;
         const reads: ReadEntry[] = [];
         try {
-          const value = await this.engine.executeQuery(subscription.udfPath, subscription.args, this.currentIdentity(), { readSet: reads });
+          const value = await this.engine.executeQuery(
+            subscription.udfPath,
+            subscription.args,
+            this.currentIdentity(),
+            { readSet: reads },
+          );
           const json = convexToJson(value);
           const text = JSON.stringify(json);
           subscription.reads = reads;
           if (text === subscription.sent) continue;
           subscription.sent = text;
-          modifications.push({ type: "QueryUpdated", queryId, value: json, logLines: [], journal: null });
+          modifications.push({
+            type: "QueryUpdated",
+            queryId,
+            value: json,
+            logLines: [],
+            journal: null,
+          });
         } catch (error) {
           subscription.reads = reads;
           subscription.sent = null;
           const failure = this.engine.clientError(error);
-          modifications.push({ type: "QueryFailed", queryId, errorMessage: failure.errorMessage, errorData: failure.errorData, logLines: [], journal: null });
+          modifications.push({
+            type: "QueryFailed",
+            queryId,
+            errorMessage: failure.errorMessage,
+            errorData: failure.errorData,
+            logLines: [],
+            journal: null,
+          });
         }
       }
       return { modifications, ts: this.engine.ts };
     });
-    const end: StateVersion = { querySet: this.querySetVersion, identity: this.identityVersion, ts: ts > this.sent.ts ? ts : this.sent.ts };
-    const changed = modifications.length > 0 || end.querySet !== this.sent.querySet || end.identity !== this.sent.identity || end.ts !== this.sent.ts;
+    const end: StateVersion = {
+      querySet: this.querySetVersion,
+      identity: this.identityVersion,
+      ts: ts > this.sent.ts ? ts : this.sent.ts,
+    };
+    const changed =
+      modifications.length > 0 ||
+      end.querySet !== this.sent.querySet ||
+      end.identity !== this.sent.identity ||
+      end.ts !== this.sent.ts;
     if (!changed && !force) return;
     this.send({
       type: "Transition",
-      startVersion: { querySet: this.sent.querySet, identity: this.sent.identity, ts: encodeTs(this.sent.ts) },
+      startVersion: {
+        querySet: this.sent.querySet,
+        identity: this.sent.identity,
+        ts: encodeTs(this.sent.ts),
+      },
       endVersion: { querySet: end.querySet, identity: end.identity, ts: encodeTs(end.ts) },
       modifications,
       serverTs: Date.now(),

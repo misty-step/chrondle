@@ -20,15 +20,21 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const path = new URL(request.url).pathname;
     if (request.method === "OPTIONS") return preflight(request);
-    if (path.startsWith("/api/") || path.startsWith("/_backend/")) return backend(env).fetch(request);
-    return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+    if (path.startsWith("/api/") || path.startsWith("/_backend/"))
+      return backend(env).fetch(request);
+    return new Response(JSON.stringify({ error: "Not found" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
   },
 
   async scheduled(controller: ScheduledController, env: Env): Promise<void> {
     const stub = backend(env);
     if (new Date(controller.scheduledTime).getUTCHours() === BACKUP_HOUR_UTC && env.BACKUPS) {
       const result = await stub.backup();
-      const counts = Object.fromEntries(Object.entries(result.manifest).map(([table, summary]) => [table, summary.count]));
+      const counts = Object.fromEntries(
+        Object.entries(result.manifest).map(([table, summary]) => [table, summary.count]),
+      );
       console.log(`[backup] wrote ${result.key} at ts ${result.ts}`, JSON.stringify(counts));
     }
     const status = await stub.wake();

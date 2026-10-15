@@ -5,7 +5,8 @@ import { syntheticIssuer } from "./support";
 const failure = (promise: Promise<unknown>) =>
   promise.then(
     () => null,
-    (error: unknown) => (error instanceof AuthError ? `${error.code}: ${error.message}` : String(error)),
+    (error: unknown) =>
+      error instanceof AuthError ? `${error.code}: ${error.message}` : String(error),
   );
 
 describe("JWT verification (convex/auth.config.ts providers)", () => {
@@ -34,15 +35,32 @@ describe("JWT verification (convex/auth.config.ts providers)", () => {
     expect(expiresAt).toBeGreaterThan(Date.now());
 
     await verifier.verify(await issuer.sign({ sub: "user_456" }));
-    expect(issuer.requests).toEqual(["https://clerk.example.test/.well-known/openid-configuration", "https://clerk.example.test/.well-known/jwks.json"]);
+    expect(issuer.requests).toEqual([
+      "https://clerk.example.test/.well-known/openid-configuration",
+      "https://clerk.example.test/.well-known/jwks.json",
+    ]);
   });
 
   it("accepts a customJwt JWKS given as a data URI without fetching", async () => {
     const issuer = await syntheticIssuer();
     const jwks = `data:text/plain;charset=utf-8;base64,${Buffer.from(JSON.stringify(issuer.jwks)).toString("base64")}`;
-    const noNetwork = (() => Promise.reject(new Error("unexpected fetch"))) as unknown as typeof fetch;
-    const verifier = new AuthVerifier([{ type: "customJwt", issuer: issuer.issuer, jwks, algorithm: "RS256", applicationID: "convex" }], noNetwork);
-    expect((await verifier.verify(await issuer.sign({ sub: "user_inline" }))).identity.subject).toBe("user_inline");
+    const noNetwork = (() =>
+      Promise.reject(new Error("unexpected fetch"))) as unknown as typeof fetch;
+    const verifier = new AuthVerifier(
+      [
+        {
+          type: "customJwt",
+          issuer: issuer.issuer,
+          jwks,
+          algorithm: "RS256",
+          applicationID: "convex",
+        },
+      ],
+      noNetwork,
+    );
+    expect(
+      (await verifier.verify(await issuer.sign({ sub: "user_inline" }))).identity.subject,
+    ).toBe("user_inline");
   });
 
   it("rejects tokens Convex would reject", async () => {
@@ -54,12 +72,28 @@ describe("JWT verification (convex/auth.config.ts providers)", () => {
 
     expect(await failure(verifier.verify("not.a.jwt"))).toMatch(/^InvalidAuthHeader: /);
     expect(await failure(verifier.verify("abc"))).toMatch(/^InvalidAuthHeader: /);
-    expect(await failure(verifier.verify(await stranger.sign({ sub: "u" })))).toMatch(/^NoAuthProvider: /);
-    expect(await failure(verifier.verify(await issuer.sign({ sub: "u", aud: "someone-else" })))).toMatch(/audience/);
-    expect(await failure(verifier.verify(await issuer.sign({ sub: "u", exp: past })))).toMatch(/expired/);
-    expect(await failure(verifier.verify(await issuer.sign({ sub: "u", nbf: past + 7200 + 3600 })))).toMatch(/not yet valid/);
+    expect(await failure(verifier.verify(await stranger.sign({ sub: "u" })))).toMatch(
+      /^NoAuthProvider: /,
+    );
+    expect(
+      await failure(verifier.verify(await issuer.sign({ sub: "u", aud: "someone-else" }))),
+    ).toMatch(/audience/);
+    expect(await failure(verifier.verify(await issuer.sign({ sub: "u", exp: past })))).toMatch(
+      /expired/,
+    );
+    expect(
+      await failure(verifier.verify(await issuer.sign({ sub: "u", nbf: past + 7200 + 3600 }))),
+    ).toMatch(/not yet valid/);
     expect(await failure(verifier.verify(await issuer.sign({ sub: "" })))).toMatch(/subject/);
-    expect(await failure(verifier.verify(await otherKey.sign({ sub: "u", iss: issuer.issuer })))).toMatch(/signature/);
-    expect(await failure(verifier.verify(await issuer.sign({ sub: "u" }, { header: { alg: "none", kid: "synthetic-1" } })))).toMatch(/algorithm/);
+    expect(
+      await failure(verifier.verify(await otherKey.sign({ sub: "u", iss: issuer.issuer }))),
+    ).toMatch(/signature/);
+    expect(
+      await failure(
+        verifier.verify(
+          await issuer.sign({ sub: "u" }, { header: { alg: "none", kid: "synthetic-1" } }),
+        ),
+      ),
+    ).toMatch(/algorithm/);
   });
 });

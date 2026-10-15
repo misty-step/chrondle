@@ -11,12 +11,43 @@ function prng(seed: number) {
   };
 }
 
-const STRINGS = ["", "a", "ab", "b", "a\u0000", "a\u0000b", "\u0000", "é", "😀", "\uffff", "\ud7ff", "Z", "zz", "aé"];
-const NUMBERS = [0, -0, 1, -1, 0.5, -0.5, 5e-324, -5e-324, Number.MAX_VALUE, -Number.MAX_VALUE, Infinity, -Infinity, NaN, 1969, 2.5e10];
+const STRINGS = [
+  "",
+  "a",
+  "ab",
+  "b",
+  "a\u0000",
+  "a\u0000b",
+  "\u0000",
+  "é",
+  "😀",
+  "\uffff",
+  "\ud7ff",
+  "Z",
+  "zz",
+  "aé",
+];
+const NUMBERS = [
+  0,
+  -0,
+  1,
+  -1,
+  0.5,
+  -0.5,
+  5e-324,
+  -5e-324,
+  Number.MAX_VALUE,
+  -Number.MAX_VALUE,
+  Infinity,
+  -Infinity,
+  NaN,
+  1969,
+  2.5e10,
+];
 const BIGINTS = [0n, 1n, -1n, 255n, 256n, -256n, 2n ** 63n - 1n, -(2n ** 63n)];
 
 function randomValue(random: () => number, depth = 0): Value | undefined {
-  const choose = <T,>(items: T[]) => items[Math.floor(random() * items.length)];
+  const choose = <T>(items: T[]) => items[Math.floor(random() * items.length)];
   switch (Math.floor(random() * (depth > 1 ? 7 : 9))) {
     case 0:
       return depth === 0 ? undefined : null;
@@ -31,12 +62,18 @@ function randomValue(random: () => number, depth = 0): Value | undefined {
     case 5:
       return random() < 0.6 ? choose(STRINGS) : choose(STRINGS) + choose(STRINGS);
     case 6:
-      return new Uint8Array(Array.from({ length: Math.floor(random() * 4) }, () => choose([0, 1, 127, 255]))).buffer;
+      return new Uint8Array(
+        Array.from({ length: Math.floor(random() * 4) }, () => choose([0, 1, 127, 255])),
+      ).buffer;
     case 7:
-      return Array.from({ length: Math.floor(random() * 3) }, () => randomValue(random, depth + 1) ?? null);
+      return Array.from(
+        { length: Math.floor(random() * 3) },
+        () => randomValue(random, depth + 1) ?? null,
+      );
     default: {
       const object: Record<string, Value> = {};
-      for (const key of ["a", "b", "c"].filter(() => random() < 0.5)) object[key] = randomValue(random, depth + 1) ?? null;
+      for (const key of ["a", "b", "c"].filter(() => random() < 0.5))
+        object[key] = randomValue(random, depth + 1) ?? null;
       return object;
     }
   }
@@ -54,7 +91,9 @@ describe("index key encoding", () => {
       const b = values[Math.floor(random() * values.length)];
       const expected = sign(compareValues(a, b));
       if (sign(compareKeys(encodeKey([a]), encodeKey([b]))) !== expected) {
-        throw new Error(`Order mismatch for ${String(a)} vs ${String(b)}: compareValues says ${expected}`);
+        throw new Error(
+          `Order mismatch for ${String(a)} vs ${String(b)}: compareValues says ${expected}`,
+        );
       }
     }
   });
@@ -63,8 +102,12 @@ describe("index key encoding", () => {
     const random = prng(11);
     for (let i = 0; i < 5_000; i++) {
       const a = [randomValue(random), randomValue(random), randomValue(random)];
-      const b = random() < 0.5 ? [a[0], randomValue(random), randomValue(random)] : [randomValue(random), randomValue(random), randomValue(random)];
-      const firstDifference = a.map((value, index) => compareValues(value, b[index])).find((result) => result !== 0) ?? 0;
+      const b =
+        random() < 0.5
+          ? [a[0], randomValue(random), randomValue(random)]
+          : [randomValue(random), randomValue(random), randomValue(random)];
+      const firstDifference =
+        a.map((value, index) => compareValues(value, b[index])).find((result) => result !== 0) ?? 0;
       expect(sign(compareKeys(encodeKey(a), encodeKey(b)))).toBe(sign(firstDifference));
     }
   });
@@ -98,7 +141,9 @@ describe("Convex document IDs (v6)", () => {
     const id = "jd720y3exm9fcndvj8xh0j5fe58g91mj";
     for (let position = 0; position < id.length; position++) {
       const replacement = id[position] === "0" ? "1" : "0";
-      expect(decodeDocumentId(id.slice(0, position) + replacement + id.slice(position + 1))).toBeNull();
+      expect(
+        decodeDocumentId(id.slice(0, position) + replacement + id.slice(position + 1)),
+      ).toBeNull();
     }
     expect(decodeDocumentId(id.slice(0, -1))).toBeNull();
     expect(decodeDocumentId(id.toUpperCase())).toBeNull();

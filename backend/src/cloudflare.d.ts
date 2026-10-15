@@ -17,7 +17,12 @@ interface SqlStorageCursor<T> {
 
 interface DurableObjectState {
   storage: {
-    sql: { exec<T = Record<string, string | number | null>>(query: string, ...bindings: unknown[]): SqlStorageCursor<T> };
+    sql: {
+      exec<T = Record<string, string | number | null>>(
+        query: string,
+        ...bindings: unknown[]
+      ): SqlStorageCursor<T>;
+    };
     transactionSync<T>(fn: () => T): T;
     setAlarm(scheduledTime: number): Promise<void>;
   };

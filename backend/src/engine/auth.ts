@@ -10,7 +10,13 @@ import type { Identity } from "./engine";
 
 export type AuthProvider =
   | { domain: string; applicationID: string; type?: undefined }
-  | { type: "customJwt"; issuer: string; jwks: string; algorithm: "RS256" | "ES256"; applicationID?: string };
+  | {
+      type: "customJwt";
+      issuer: string;
+      jwks: string;
+      algorithm: "RS256" | "ES256";
+      applicationID?: string;
+    };
 
 /** `code` follows Convex's HTTP auth error codes (e.g. InvalidAuthHeader). */
 export class AuthError extends Error {
@@ -48,7 +54,10 @@ const KEY_TTL_MS = 10 * 60 * 1000;
 const CLOCK_SKEW_SECONDS = 5;
 
 function base64UrlDecode(segment: string): Uint8Array<ArrayBuffer> {
-  const padded = segment.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(segment.length / 4) * 4, "=");
+  const padded = segment
+    .replace(/-/g, "+")
+    .replace(/_/g, "/")
+    .padEnd(Math.ceil(segment.length / 4) * 4, "=");
   const binary = atob(padded);
   const bytes = new Uint8Array(new ArrayBuffer(binary.length));
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -66,7 +75,9 @@ function decodeDataUri(uri: string): string {
   const comma = uri.indexOf(",");
   const meta = uri.slice("data:".length, comma);
   const payload = uri.slice(comma + 1);
-  return meta.split(";").includes("base64") ? new TextDecoder().decode(base64Decode(payload)) : decodeURIComponent(payload);
+  return meta.split(";").includes("base64")
+    ? new TextDecoder().decode(base64Decode(payload))
+    : decodeURIComponent(payload);
 }
 
 function base64Decode(text: string): Uint8Array {
@@ -85,10 +96,20 @@ export class AuthVerifier {
 
   private async jwksUrl(provider: AuthProvider): Promise<string> {
     if (provider.type === "customJwt") return provider.jwks;
-    const response = await this.fetchFn(`${trimSlash(provider.domain)}/.well-known/openid-configuration`);
-    if (!response.ok) throw new AuthError("Unauthenticated", `OIDC discovery failed for ${provider.domain}: ${response.status}`);
+    const response = await this.fetchFn(
+      `${trimSlash(provider.domain)}/.well-known/openid-configuration`,
+    );
+    if (!response.ok)
+      throw new AuthError(
+        "Unauthenticated",
+        `OIDC discovery failed for ${provider.domain}: ${response.status}`,
+      );
     const config = (await response.json()) as { jwks_uri?: string };
-    if (!config.jwks_uri) throw new AuthError("Unauthenticated", `OIDC discovery for ${provider.domain} has no jwks_uri`);
+    if (!config.jwks_uri)
+      throw new AuthError(
+        "Unauthenticated",
+        `OIDC discovery for ${provider.domain} has no jwks_uri`,
+      );
     return config.jwks_uri;
   }
 
@@ -99,20 +120,27 @@ export class AuthVerifier {
     const hasKid = cached?.keys.some((key) => kid === undefined || key.kid === kid);
     if (cached && fresh && hasKid) return cached.keys;
     const url = await this.jwksUrl(provider);
-    const { keys } = (url.startsWith("data:") ? JSON.parse(decodeDataUri(url)) : await this.fetchJwks(url, cacheKey)) as { keys: Jwk[] };
+    const { keys } = (
+      url.startsWith("data:") ? JSON.parse(decodeDataUri(url)) : await this.fetchJwks(url, cacheKey)
+    ) as { keys: Jwk[] };
     this.keys.set(cacheKey, { fetchedAt: this.now(), keys });
     return keys;
   }
 
   private async fetchJwks(url: string, cacheKey: string): Promise<unknown> {
     const response = await this.fetchFn(url);
-    if (!response.ok) throw new AuthError("Unauthenticated", `Could not fetch JWKS for ${cacheKey}: ${response.status}`);
+    if (!response.ok)
+      throw new AuthError(
+        "Unauthenticated",
+        `Could not fetch JWKS for ${cacheKey}: ${response.status}`,
+      );
     return response.json();
   }
 
   async verify(token: string): Promise<VerifiedToken> {
     const parts = token.split(".");
-    const unparseable = "Could not parse JWT payload. Check that the token is a valid JWT format with three base64-encoded parts separated by dots.";
+    const unparseable =
+      "Could not parse JWT payload. Check that the token is a valid JWT format with three base64-encoded parts separated by dots.";
     if (parts.length !== 3) throw new AuthError("InvalidAuthHeader", unparseable);
     let header: { alg?: string; kid?: string };
     let claims: Record<string, JSONValue>;
@@ -124,29 +152,46 @@ export class AuthVerifier {
     }
     const issuer = typeof claims.iss === "string" ? claims.iss : "";
     const provider = this.providers.find((candidate) =>
-      candidate.type === "customJwt" ? candidate.issuer === issuer : trimSlash(candidate.domain) === trimSlash(issuer),
+      candidate.type === "customJwt"
+        ? candidate.issuer === issuer
+        : trimSlash(candidate.domain) === trimSlash(issuer),
     );
-    if (!provider) throw new AuthError("NoAuthProvider", `No auth provider found matching the given token (issuer ${issuer || "missing"})`);
+    if (!provider)
+      throw new AuthError(
+        "NoAuthProvider",
+        `No auth provider found matching the given token (issuer ${issuer || "missing"})`,
+      );
 
     const applicationID = provider.applicationID;
     if (applicationID !== undefined) {
       const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
-      if (!audience.includes(applicationID)) throw new AuthError("Unauthenticated", "Token audience does not match the provider applicationID");
+      if (!audience.includes(applicationID))
+        throw new AuthError(
+          "Unauthenticated",
+          "Token audience does not match the provider applicationID",
+        );
     }
     const algorithm = provider.type === "customJwt" ? provider.algorithm : "RS256";
-    if (header.alg !== algorithm) throw new AuthError("Unauthenticated", `Unsupported JWT algorithm ${header.alg}`);
+    if (header.alg !== algorithm)
+      throw new AuthError("Unauthenticated", `Unsupported JWT algorithm ${header.alg}`);
 
     const nowSeconds = this.now() / 1000;
-    if (typeof claims.exp !== "number" || claims.exp + CLOCK_SKEW_SECONDS < nowSeconds) throw new AuthError("Unauthenticated", "Token expired");
-    if (typeof claims.nbf === "number" && claims.nbf - CLOCK_SKEW_SECONDS > nowSeconds) throw new AuthError("Unauthenticated", "Token not yet valid");
-    if (typeof claims.sub !== "string" || claims.sub.length === 0) throw new AuthError("Unauthenticated", "Token has no subject");
+    if (typeof claims.exp !== "number" || claims.exp + CLOCK_SKEW_SECONDS < nowSeconds)
+      throw new AuthError("Unauthenticated", "Token expired");
+    if (typeof claims.nbf === "number" && claims.nbf - CLOCK_SKEW_SECONDS > nowSeconds)
+      throw new AuthError("Unauthenticated", "Token not yet valid");
+    if (typeof claims.sub !== "string" || claims.sub.length === 0)
+      throw new AuthError("Unauthenticated", "Token has no subject");
 
     const keys = await this.keysFor(provider, header.kid);
     const jwk = keys.find((key) => header.kid === undefined || key.kid === header.kid);
     if (!jwk) throw new AuthError("Unauthenticated", "No matching signing key");
     const importParams =
-      algorithm === "RS256" ? { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" } : { name: "ECDSA", namedCurve: "P-256" };
-    const verifyParams = algorithm === "RS256" ? { name: "RSASSA-PKCS1-v1_5" } : { name: "ECDSA", hash: "SHA-256" };
+      algorithm === "RS256"
+        ? { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }
+        : { name: "ECDSA", namedCurve: "P-256" };
+    const verifyParams =
+      algorithm === "RS256" ? { name: "RSASSA-PKCS1-v1_5" } : { name: "ECDSA", hash: "SHA-256" };
     const key = await crypto.subtle.importKey("jwk", jwk, importParams, false, ["verify"]);
     const valid = await crypto.subtle.verify(
       verifyParams,
@@ -164,8 +209,10 @@ export class AuthVerifier {
     for (const [claim, value] of Object.entries(claims)) {
       if (REGISTERED_CLAIMS.has(claim) || value === null) continue;
       const mapped = STANDARD_CLAIMS[claim];
-      if (mapped === "address" && typeof value === "object") identity.address = JSON.stringify(value);
-      else if (mapped === "updatedAt" && typeof value === "number") identity.updatedAt = new Date(value * 1000).toISOString();
+      if (mapped === "address" && typeof value === "object")
+        identity.address = JSON.stringify(value);
+      else if (mapped === "updatedAt" && typeof value === "number")
+        identity.updatedAt = new Date(value * 1000).toISOString();
       else identity[mapped ?? claim] = value;
     }
     return { identity: identity as Identity, expiresAt: claims.exp * 1000 };

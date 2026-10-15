@@ -22,7 +22,10 @@ export default defineConfig({
   },
   resolve: {
     alias: [
-      { find: /^convex-test$/, replacement: path.resolve(__dirname, "__tests__/convexTestCompat.ts") },
+      {
+        find: /^convex-test$/,
+        replacement: path.resolve(__dirname, "__tests__/convexTestCompat.ts"),
+      },
       {
         find: /^convex\/(values|server|react|browser|nextjs|react-clerk|react-auth0)$/,
         replacement: path.resolve(root, "node_modules/convex/$1"),

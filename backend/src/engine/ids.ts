@@ -93,7 +93,9 @@ export function encodeDocumentId(tableNumber: number, internalId: Uint8Array): s
   return base32Encode(Uint8Array.from([...body, footer & 0xff, footer >> 8]));
 }
 
-export function decodeDocumentId(id: string): { tableNumber: number; internalId: Uint8Array } | null {
+export function decodeDocumentId(
+  id: string,
+): { tableNumber: number; internalId: Uint8Array } | null {
   if (typeof id !== "string" || id.length < MIN_LENGTH || id.length > MAX_LENGTH) return null;
   const bytes = base32Decode(id);
   if (bytes === null) return null;

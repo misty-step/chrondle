@@ -33,7 +33,10 @@ const BACKUP_PREFIX = "backups/";
 const BACKUPS_KEPT = 30;
 
 function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 export function authProviders(env: Env): AuthProvider[] {
@@ -67,7 +70,8 @@ export class ChrondleBackend extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     const sql: Sql = {
-      exec: (query: string, ...params: SqlValue[]) => ctx.storage.sql.exec(query, ...params).toArray() as Record<string, SqlValue>[],
+      exec: (query: string, ...params: SqlValue[]) =>
+        ctx.storage.sql.exec(query, ...params).toArray() as Record<string, SqlValue>[],
       transaction: (fn) => ctx.storage.transactionSync(fn),
     };
     this.engine = new Engine({
@@ -127,9 +131,14 @@ export class ChrondleBackend extends DurableObject<Env> {
       httpMetadata: { contentType: "application/x-ndjson" },
       customMetadata: { ts, revision: this.env.REVISION ?? "unknown" },
     });
-    await this.env.BACKUPS.put(`${key}.manifest.json`, JSON.stringify({ ts, manifest }), { httpMetadata: { contentType: "application/json" } });
+    await this.env.BACKUPS.put(`${key}.manifest.json`, JSON.stringify({ ts, manifest }), {
+      httpMetadata: { contentType: "application/json" },
+    });
     const listed = await this.env.BACKUPS.list({ prefix: BACKUP_PREFIX });
-    const backups = listed.objects.map((object) => object.key).filter((name) => name.endsWith(".ndjson")).sort();
+    const backups = listed.objects
+      .map((object) => object.key)
+      .filter((name) => name.endsWith(".ndjson"))
+      .sort();
     for (const stale of backups.slice(0, Math.max(0, backups.length - BACKUPS_KEPT))) {
       await this.env.BACKUPS.delete([stale, `${stale}.manifest.json`]);
     }
@@ -139,14 +148,28 @@ export class ChrondleBackend extends DurableObject<Env> {
   /** Replace application data with a backup and check it against the backup's manifest. */
   private async restoreFrom(key: string): Promise<Response> {
     if (!this.env.BACKUPS) return json({ error: "BACKUPS bucket is not bound" }, 500);
-    const [object, manifestObject] = await Promise.all([this.env.BACKUPS.get(key), this.env.BACKUPS.get(`${key}.manifest.json`)]);
-    if (!object || !manifestObject) return json({ error: `Backup ${key} or its manifest is missing` }, 404);
+    const [object, manifestObject] = await Promise.all([
+      this.env.BACKUPS.get(key),
+      this.env.BACKUPS.get(`${key}.manifest.json`),
+    ]);
+    if (!object || !manifestObject)
+      return json({ error: `Backup ${key} or its manifest is missing` }, 404);
     const expected = (JSON.parse(await manifestObject.text()) as { manifest: Manifest }).manifest;
     const manifest = await restore(this.engine, (await object.text()).split("\n"));
     const mismatches = [...new Set([...Object.keys(expected), ...Object.keys(manifest)])].filter(
-      (table) => JSON.stringify(expected[table] ?? null) !== JSON.stringify(manifest[table] ?? null),
+      (table) =>
+        JSON.stringify(expected[table] ?? null) !== JSON.stringify(manifest[table] ?? null),
     );
-    return json({ key, verified: mismatches.length === 0, mismatches, manifest, ts: this.engine.ts.toString() }, mismatches.length ? 500 : 200);
+    return json(
+      {
+        key,
+        verified: mismatches.length === 0,
+        mismatches,
+        manifest,
+        ts: this.engine.ts.toString(),
+      },
+      mismatches.length ? 500 : 200,
+    );
   }
 
   /**
@@ -156,7 +179,8 @@ export class ChrondleBackend extends DurableObject<Env> {
   private async admin(request: Request, path: string): Promise<Response> {
     const expected = this.env.BACKEND_ADMIN_TOKEN;
     const given = request.headers.get("Authorization")?.replace(/^Bearer /, "") ?? "";
-    if (!expected || !given || !(await sameSecret(given, expected))) return json({ error: "Not found" }, 404);
+    if (!expected || !given || !(await sameSecret(given, expected)))
+      return json({ error: "Not found" }, 404);
     const route = `${request.method} ${path.slice("/_backend/admin".length)}`;
     switch (route) {
       case "GET /manifest":
@@ -168,13 +192,25 @@ export class ChrondleBackend extends DurableObject<Env> {
         return key ? this.restoreFrom(key) : json({ error: "Missing key" }, 400);
       }
       case "POST /run": {
-        const { path: fnPath, args } = (await request.json()) as { path?: string; args?: JSONValue };
+        const { path: fnPath, args } = (await request.json()) as {
+          path?: string;
+          args?: JSONValue;
+        };
         if (!fnPath) return json({ error: "Missing path" }, 400);
         try {
-          const value = await this.engine.runAny(fnPath, jsonToConvex(args ?? {}) as Record<string, Value>);
+          const value = await this.engine.runAny(
+            fnPath,
+            jsonToConvex(args ?? {}) as Record<string, Value>,
+          );
           return json({ status: "success", value: convexToJson(value) });
         } catch (error) {
-          return json({ status: "error", error: error instanceof Error ? `${error.name}: ${error.message}` : String(error) }, 500);
+          return json(
+            {
+              status: "error",
+              error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+            },
+            500,
+          );
         }
       }
       case "GET /scheduler":
@@ -185,7 +221,8 @@ export class ChrondleBackend extends DurableObject<Env> {
   }
 
   private connect(request: Request): Response {
-    if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") return json({ error: "Expected a WebSocket upgrade" }, 426);
+    if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket")
+      return json({ error: "Expected a WebSocket upgrade" }, 426);
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     server.accept();
@@ -218,7 +255,11 @@ export class ChrondleBackend extends DurableObject<Env> {
       }
     };
     server.addEventListener("message", (event: MessageEvent) => {
-      session.receive(typeof event.data === "string" ? event.data : new TextDecoder().decode(event.data as ArrayBuffer));
+      session.receive(
+        typeof event.data === "string"
+          ? event.data
+          : new TextDecoder().decode(event.data as ArrayBuffer),
+      );
     });
     server.addEventListener("close", drop);
     server.addEventListener("error", drop);
@@ -229,10 +270,15 @@ export class ChrondleBackend extends DurableObject<Env> {
     const path = new URL(request.url).pathname;
     if (/^\/api\/[^/]+\/sync$/.test(path)) return this.connect(request);
     if (path === "/api/query") return handleHttpApi(request, "query", this.engine, this.verifier);
-    if (path === "/api/mutation") return handleHttpApi(request, "mutation", this.engine, this.verifier);
+    if (path === "/api/mutation")
+      return handleHttpApi(request, "mutation", this.engine, this.verifier);
     if (path === "/api/action") return handleHttpApi(request, "action", this.engine, this.verifier);
     if (path === "/_backend/version") {
-      return json({ service: "chrondle-backend", revision: this.env.REVISION ?? "development", environment: this.env.ENVIRONMENT ?? "development" });
+      return json({
+        service: "chrondle-backend",
+        revision: this.env.REVISION ?? "development",
+        environment: this.env.ENVIRONMENT ?? "development",
+      });
     }
     if (path.startsWith("/_backend/admin/")) return this.admin(request, path);
     return json({ error: "Not found" }, 404);

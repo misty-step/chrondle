@@ -17,7 +17,11 @@ const ALLOWED_METHODS = "GET,POST,OPTIONS,PATCH,DELETE,PUT";
 export function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin");
   if (!origin) return {};
-  return { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Credentials": "true", Vary: "origin, access-control-request-method, access-control-request-headers" };
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Credentials": "true",
+    Vary: "origin, access-control-request-method, access-control-request-headers",
+  };
 }
 
 export function preflight(request: Request): Response {
@@ -33,18 +37,28 @@ export function preflight(request: Request): Response {
 }
 
 export function json(request: Request, body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...corsHeaders(request) } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders(request) },
+  });
 }
 
-export async function handleHttpApi(request: Request, kind: "query" | "mutation" | "action", engine: Engine, verifier: AuthVerifier): Promise<Response> {
-  if (request.method !== "POST") return json(request, { code: "MethodNotAllowed", message: "Use POST" }, 405);
+export async function handleHttpApi(
+  request: Request,
+  kind: "query" | "mutation" | "action",
+  engine: Engine,
+  verifier: AuthVerifier,
+): Promise<Response> {
+  if (request.method !== "POST")
+    return json(request, { code: "MethodNotAllowed", message: "Use POST" }, 405);
   let body: { path?: string; args?: JSONValue[]; format?: string };
   try {
     body = await request.json();
   } catch {
     return json(request, { code: "BadJsonBody", message: "Request body is not valid JSON" }, 400);
   }
-  if (typeof body.path !== "string") return json(request, { code: "BadRequest", message: "Missing function path" }, 400);
+  if (typeof body.path !== "string")
+    return json(request, { code: "BadRequest", message: "Missing function path" }, 400);
 
   let identity: Identity | null = null;
   const authorization = request.headers.get("Authorization");
@@ -53,7 +67,10 @@ export async function handleHttpApi(request: Request, kind: "query" | "mutation"
     try {
       identity = (await verifier.verify(token)).identity;
     } catch (error) {
-      const failure = error instanceof AuthError ? error : new AuthError("Unauthenticated", "Could not verify token");
+      const failure =
+        error instanceof AuthError
+          ? error
+          : new AuthError("Unauthenticated", "Could not verify token");
       return json(request, { code: failure.code, message: failure.message }, 401);
     }
   }
@@ -69,6 +86,10 @@ export async function handleHttpApi(request: Request, kind: "query" | "mutation"
     return json(request, { status: "success", value: convexToJson(value) });
   } catch (error) {
     const failure = engine.clientError(error);
-    return json(request, { status: "error", errorMessage: failure.errorMessage, errorData: failure.errorData });
+    return json(request, {
+      status: "error",
+      errorMessage: failure.errorMessage,
+      errorData: failure.errorData,
+    });
   }
 }

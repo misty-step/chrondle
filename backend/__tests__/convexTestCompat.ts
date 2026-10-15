@@ -30,22 +30,44 @@ export function convexTest(schema: Schema, loaders: ModuleLoaders) {
   const boot = () =>
     (ready ??= loadModules(loaders).then((modules) => ({
       modules,
-      engine: new Engine({ sql: memorySql(), schemaExport: schema.export(), modules, exposeErrors: true }),
+      engine: new Engine({
+        sql: memorySql(),
+        schemaExport: schema.export(),
+        modules,
+        exposeErrors: true,
+      }),
     })));
 
   const api = (identity: Identity | null) => ({
     query: async (ref: unknown, args: Record<string, Value> = {}) =>
-      (await boot()).engine.runQuery(getFunctionName(ref as never), args, identity, { visibility: "internal" }),
+      (await boot()).engine.runQuery(getFunctionName(ref as never), args, identity, {
+        visibility: "internal",
+      }),
     mutation: async (ref: unknown, args: Record<string, Value> = {}) =>
-      (await (await boot()).engine.runMutation(getFunctionName(ref as never), args, identity, { visibility: "internal" })).value,
+      (
+        await (
+          await boot()
+        ).engine.runMutation(getFunctionName(ref as never), args, identity, {
+          visibility: "internal",
+        })
+      ).value,
     action: async (ref: unknown, args: Record<string, Value> = {}) =>
-      (await boot()).engine.runAction(getFunctionName(ref as never), args, identity, { visibility: "internal" }),
+      (await boot()).engine.runAction(getFunctionName(ref as never), args, identity, {
+        visibility: "internal",
+      }),
     run: async <T>(handler: (ctx: never) => Promise<T>): Promise<T> => {
       const { engine, modules } = await boot();
       const name = `run${runCounter++}`;
-      modules["__convexTestRun"] = { ...(modules["__convexTestRun"] ?? {}), [name]: mutationGeneric({ handler: handler as never }) };
+      modules["__convexTestRun"] = {
+        ...(modules["__convexTestRun"] ?? {}),
+        [name]: mutationGeneric({ handler: handler as never }),
+      };
       try {
-        return (await engine.runMutation(`__convexTestRun:${name}`, {}, identity, { visibility: "internal" })).value as T;
+        return (
+          await engine.runMutation(`__convexTestRun:${name}`, {}, identity, {
+            visibility: "internal",
+          })
+        ).value as T;
       } finally {
         delete modules["__convexTestRun"][name];
       }
@@ -57,7 +79,12 @@ export function convexTest(schema: Schema, loaders: ModuleLoaders) {
     withIdentity(attributes: Record<string, Value>) {
       const issuer = (attributes.issuer as string) ?? "https://convex.test";
       const subject = (attributes.subject as string) ?? "test-subject";
-      return api({ ...attributes, issuer, subject, tokenIdentifier: `${issuer}|${subject}` } as Identity);
+      return api({
+        ...attributes,
+        issuer,
+        subject,
+        tokenIdentifier: `${issuer}|${subject}`,
+      } as Identity);
     },
   };
 }
