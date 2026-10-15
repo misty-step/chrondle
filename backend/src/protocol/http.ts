@@ -49,8 +49,10 @@ export async function handleHttpApi(
   engine: Engine,
   verifier: AuthVerifier,
 ): Promise<Response> {
-  if (request.method !== "POST")
+  if (request.method !== "POST") {
+    await request.body?.cancel();
     return json(request, { code: "MethodNotAllowed", message: "Use POST" }, 405);
+  }
   let body: { path?: string; args?: JSONValue[]; format?: string };
   try {
     body = await request.json();

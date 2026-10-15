@@ -22,6 +22,7 @@ export default {
     if (request.method === "OPTIONS") return preflight(request);
     if (path.startsWith("/api/") || path.startsWith("/_backend/"))
       return backend(env).fetch(request);
+    await request.body?.cancel();
     return new Response(JSON.stringify({ error: "Not found" }), {
       status: 404,
       headers: { "Content-Type": "application/json" },

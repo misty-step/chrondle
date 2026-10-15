@@ -111,6 +111,8 @@ type ExecutionContext = {
 };
 
 const als = new AsyncLocalStorage<ExecutionContext>();
+/** Meta key of the maintenance switch (see `Engine.writesPaused`). */
+const WRITES_PAUSED = "writesPaused";
 
 function current(): ExecutionContext {
   const ctx = als.getStore();
@@ -228,6 +230,28 @@ export class Engine {
   /** Latest committed timestamp (nanoseconds, monotonic). */
   get ts(): bigint {
     return this.lastTs;
+  }
+
+  /**
+   * Maintenance switch for one-writer migrations and rollbacks: while set,
+   * every mutation and action (client, scheduled or admin) is refused and the
+   * scheduler starts nothing. Queries keep working. Persisted across restarts.
+   */
+  get writesPaused(): boolean {
+    return this.store.getMeta(WRITES_PAUSED) === "1";
+  }
+
+  setWritesPaused(paused: boolean): void {
+    this.store.setMeta(WRITES_PAUSED, paused ? "1" : "0");
+  }
+
+  /** Pause a database that has never been paused or resumed (a new one). */
+  pauseIfNew(): void {
+    if (this.store.getMeta(WRITES_PAUSED) === null) this.setWritesPaused(true);
+  }
+
+  private assertWritable(path: string): void {
+    if (this.writesPaused) throw new Error(`Writes are paused for maintenance (${path})`);
   }
 
   // ---------------------------------------------------------------- functions
@@ -379,6 +403,7 @@ export class Engine {
             ts: BigInt(rows[0].ts as string),
           };
       }
+      this.assertWritable(path);
       const { fn, path: canonical } = this.resolve(
         path,
         "mutation",
@@ -417,6 +442,7 @@ export class Engine {
     identity: Identity | null,
     options: { visibility?: Visibility } = {},
   ): Promise<Value> {
+    this.assertWritable(path);
     const { fn, path: canonical } = this.resolve(path, "action", options.visibility ?? "public");
     this.validateArgs(fn, canonical, args);
     const ctx: ExecutionContext = {

@@ -135,6 +135,8 @@ export class Scheduler {
   }
 
   nextWakeTime(): number | null {
+    // Nothing runs while writes are paused; resuming re-arms the alarm.
+    if (this.engine.writesPaused) return null;
     let next: number | null = null;
     for (const job of this.jobsIn("pending")) {
       if (!this.running.has(job._id)) {
@@ -216,6 +218,7 @@ export class Scheduler {
 
   /** Start every due job and cron that is not already running; resolves when they finish. */
   runDue(): Promise<void> {
+    if (this.engine.writesPaused) return Promise.resolve();
     const started: Promise<void>[] = [];
     for (const job of this.jobsIn("pending", this.now())) {
       if (!this.running.has(job._id)) started.push(this.track(job._id, () => this.runJob(job)));

@@ -102,6 +102,32 @@ describe("scheduled functions", () => {
     ).toBe(true);
   });
 
+  it("starts nothing and arms no wake-up while writes are paused, then catches up", async () => {
+    const { clock, engine, scheduler, jobs, notes } = harness("2026-10-15T12:00:00Z");
+    await engine.runMutation("jobs:enqueue", { text: "job" }, null);
+    engine.setWritesPaused(true);
+    clock.now += 120_000;
+    await scheduler.runDue();
+    expect(notes()).toEqual([]);
+    // A due job must not re-arm the alarm for "now" over and over while paused.
+    expect(scheduler.nextWakeTime()).toBeNull();
+    expect(jobs().map((job) => job.state.kind)).toEqual(["pending", "pending"]);
+
+    engine.setWritesPaused(false);
+    expect(scheduler.nextWakeTime()).toBeLessThanOrEqual(clock.now);
+    await scheduler.runDue();
+    expect(notes()).toEqual(["job now", "job later"]);
+  });
+
+  it("pauses only a database that was never paused or resumed", () => {
+    const { engine } = harness("2026-10-15T12:00:00Z");
+    engine.pauseIfNew();
+    expect(engine.writesPaused).toBe(true);
+    engine.setWritesPaused(false);
+    engine.pauseIfNew();
+    expect(engine.writesPaused).toBe(false);
+  });
+
   it("schedules nothing when the scheduling mutation fails", async () => {
     const { engine, jobs } = harness("2026-10-15T12:00:00Z");
     await expect(engine.runMutation("jobs:enqueueThenFail", {}, null)).rejects.toThrow(

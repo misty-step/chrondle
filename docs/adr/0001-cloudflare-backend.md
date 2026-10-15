@@ -65,7 +65,7 @@ Keep the `convex/` functions and every client unchanged. Add `backend/`, a Worke
 
 ### Operator API
 
-`/_backend/admin/*` replaces the Convex dashboard and `npx convex run`: `manifest`, `backup`, `restore`, `run` and `scheduler`. It requires `BACKEND_ADMIN_TOKEN`, and callers without it get the same 404 as an unknown path.
+`/_backend/admin/*` replaces the Convex dashboard and `npx convex run`: `manifest`, `backup`, `restore`, `export`, `import`, `pause`, `resume`, `run` and `scheduler`. It requires `BACKEND_ADMIN_TOKEN`, and callers without it get the same 404 as an unknown path.
 
 ### Environments
 
@@ -97,21 +97,44 @@ Preview and production are served on their `workers.dev` hostnames, so no DNS re
 ## Verification
 
 - `bun run backend:test` runs the engine, ID codec, scheduler, backup and auth unit tests, the repository's Convex suites against this engine, and the real Convex clients against the protocol layer. The root `vitest.config.ts` runs it in CI as the `backend` project.
-- `node backend/scripts/verify-backend.mjs check --url <backend>` drives the real `convex@1.45.0` clients against a running backend. It checks authentication, live sync, play and streak, invalid access, concurrency, exactly-once replay, scheduler delivery, and backup to verified restore. Without `--full` it only reads, so it is safe against production.
+- `node backend/scripts/verify-backend.mjs check --url <backend>` drives the real `convex@1.45.0` clients against a running backend. It checks authentication, live sync, play and streak, invalid access, concurrency, exactly-once replay, scheduler delivery, paused writes, backup to verified restore, and export to import. Without `--full` it only reads, so it is safe against production.
 
 ## Cutover and rollback
 
 The cutover is a backend configuration change. The frontend's DNS and routes stay the same.
 
+A production database starts with writes paused: it serves queries but refuses every mutation, action, scheduled job and cron until an operator resumes it. Writes stay paused across restarts. The switch is `POST /_backend/admin/pause` and `POST /_backend/admin/resume`. `POST /_backend/admin/import` and `POST /_backend/admin/restore` work only while writes are paused, which keeps one writer at every step.
+
+`bun backend/scripts/convex-snapshot.ts` converts between a Convex snapshot ZIP (`npx convex export` and `npx convex import`) and the backend's NDJSON, keeping every `_id`, `_creationTime` and table number. It also tells int64 (`3`) from float64 (`3.0`). Each conversion writes a manifest with the same per-table counts and canonical-record SHA-256s the backend reports, and `compare` exits non-zero on any difference.
+
 1. Deploy `chrondle-backend` with `wrangler deploy -c backend/wrangler.jsonc --env production`. Set the secrets `BACKEND_ADMIN_TOKEN`, `CLERK_SYNC_SECRET` and `STRIPE_SYNC_SECRET`, plus the LLM, email and observability keys the functions read today.
-2. Make Convex the only writer: pause the `fleet-goldfish-183` deployment, export it, import into the Durable Object, and reconcile per-table counts and canonical-record SHA-256s.
-3. Point `NEXT_PUBLIC_CONVEX_URL` at the backend and redeploy the frontend. These files pin the Convex URL and change in the same commit:
+2. Make Convex the only writer, then move the data:
+   - Pause the `fleet-goldfish-183` deployment outside the puzzle and event-generation cron windows, so that no follow-up scheduled jobs are in flight. Neither side's export carries scheduled jobs.
+   - Run `npx convex export`, then `convex-snapshot.ts to-backup`.
+   - POST the NDJSON to `/_backend/admin/import`.
+   - Run `compare` on the conversion manifest and the import response.
+3. Point `NEXT_PUBLIC_CONVEX_URL` at the backend, redeploy the frontend, and resume writes on the backend. These files pin the Convex URL and change in the same commit:
    - `wrangler.jsonc` (frontend vars)
    - `scripts/host-cd.py`
    - `src/lib/env.schema.ts` and `scripts/verify-env-config.mjs`, which require `convex.cloud`
    - `scripts/verify-hosting-parity.mjs`
 4. Keep Convex paused but intact until the new backend has been proven with real user paths.
 
-Rollback before any write is accepted on Cloudflare: restore the previous `NEXT_PUBLIC_CONVEX_URL` and resume Convex.
+**Rollback before any write is accepted on Cloudflare:** restore the previous `NEXT_PUBLIC_CONVEX_URL` and resume Convex.
 
-Rollback after writes on Cloudflare: make the Durable Object read-only, export it, convert the export to a Convex snapshot (same IDs and table numbers), and run `npx convex import --replace` into Convex. Reconcile the same checksums, then switch the URL back. Accepted writes are kept.
+**Rollback after writes on Cloudflare, keeping those writes:**
+
+1. Pause writes on the backend.
+2. Save `GET /_backend/admin/export` and `GET /_backend/admin/manifest`.
+3. Run `convex-snapshot.ts to-convex`, then `compare` its manifest with the backend's.
+4. Run `npx convex import --replace-all` into Convex, and compare a fresh `npx convex export` the same way.
+5. Resume Convex and switch the URL back.
+
+This whole loop was rehearsed against the open-source Convex backend with synthetic data, and the manifests matched at every hop:
+
+1. Convex export, then import into the backend.
+2. A new player wrote on the backend.
+3. Export, then `npx convex import --replace-all`.
+4. Convex served that player under the same `_id`.
+
+Sizing: export, import and backup hold the whole dataset in memory. Production's public aggregates (October 2026) are 430 puzzles, 12,233 events and 83 completed signed-in plays, which is a few MB and far below the Durable Object's 128 MB. Revisit streaming if the NDJSON passes about 30 MB.

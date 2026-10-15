@@ -81,6 +81,10 @@ export class ChrondleBackend extends DurableObject<Env> {
       exposeErrors: env.EXPOSE_ERRORS === "1",
     });
     this.engine.setCommitListener((commit) => this.onCommit(commit));
+    // A new production database refuses writes until its data has been imported
+    // and an operator resumes it, so nothing (not even a cron) writes ahead of
+    // the migration (docs/adr/0001-cloudflare-backend.md, data migration).
+    if (env.ENVIRONMENT === "production") this.engine.pauseIfNew();
     this.verifier = new AuthVerifier(authProviders(env));
     this.scheduler = new Scheduler(this.engine, parseCrons(crons as never));
     void ctx.blockConcurrencyWhile(async () => {
@@ -179,24 +183,74 @@ export class ChrondleBackend extends DurableObject<Env> {
   private async admin(request: Request, path: string): Promise<Response> {
     const expected = this.env.BACKEND_ADMIN_TOKEN;
     const given = request.headers.get("Authorization")?.replace(/^Bearer /, "") ?? "";
-    if (!expected || !given || !(await sameSecret(given, expected)))
+    if (!expected || !given || !(await sameSecret(given, expected))) {
+      await request.body?.cancel();
       return json({ error: "Not found" }, 404);
+    }
+    // Read the whole body before answering: replying while it still streams
+    // breaks the connection that carries it.
+    const body = request.body ? await request.text() : "";
+    const input = (): Record<string, JSONValue | undefined> => {
+      try {
+        const parsed: unknown = JSON.parse(body || "{}");
+        return parsed !== null && typeof parsed === "object"
+          ? (parsed as Record<string, JSONValue>)
+          : {};
+      } catch {
+        return {};
+      }
+    };
     const route = `${request.method} ${path.slice("/_backend/admin".length)}`;
+    const writeState = () => ({
+      writesPaused: this.engine.writesPaused,
+      ts: this.engine.ts.toString(),
+    });
+    const requirePaused = () =>
+      this.engine.writesPaused
+        ? null
+        : json({ error: "Pause writes first: POST /_backend/admin/pause" }, 409);
     switch (route) {
       case "GET /manifest":
-        return json({ ts: this.engine.ts.toString(), manifest: summarize(this.engine) });
+        return json({ ...writeState(), manifest: summarize(this.engine) });
+      case "POST /pause":
+        this.engine.setWritesPaused(true);
+        return json(writeState());
+      case "POST /resume":
+        this.engine.setWritesPaused(false);
+        void this.scheduler.runDue();
+        await this.arm();
+        return json(writeState());
+      case "GET /export":
+        // One synchronous turn, so the export is one consistent state.
+        return new Response([...exportLines(this.engine)].join(""), {
+          headers: {
+            "Content-Type": "application/x-ndjson",
+            "X-Backend-Ts": this.engine.ts.toString(),
+          },
+        });
+      case "POST /import": {
+        const refused = requirePaused();
+        if (refused) return refused;
+        try {
+          const manifest = await restore(this.engine, body.split("\n"));
+          return json({ ...writeState(), manifest });
+        } catch (error) {
+          return json({ error: error instanceof Error ? error.message : String(error) }, 400);
+        }
+      }
       case "POST /backup":
         return json(await this.backup());
       case "POST /restore": {
-        const { key } = (await request.json()) as { key?: string };
-        return key ? this.restoreFrom(key) : json({ error: "Missing key" }, 400);
+        const refused = requirePaused();
+        if (refused) return refused;
+        const { key } = input();
+        return typeof key === "string"
+          ? this.restoreFrom(key)
+          : json({ error: "Missing key" }, 400);
       }
       case "POST /run": {
-        const { path: fnPath, args } = (await request.json()) as {
-          path?: string;
-          args?: JSONValue;
-        };
-        if (!fnPath) return json({ error: "Missing path" }, 400);
+        const { path: fnPath, args } = input();
+        if (typeof fnPath !== "string") return json({ error: "Missing path" }, 400);
         try {
           const value = await this.engine.runAny(
             fnPath,
@@ -281,6 +335,7 @@ export class ChrondleBackend extends DurableObject<Env> {
       });
     }
     if (path.startsWith("/_backend/admin/")) return this.admin(request, path);
+    await request.body?.cancel();
     return json({ error: "Not found" }, 404);
   }
 }

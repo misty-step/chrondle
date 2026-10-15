@@ -423,7 +423,7 @@ async function fullChecks(issuerDir) {
     };
   });
 
-  await check("backup to R2 and verified restore", async () => {
+  await check("paused writes: backup → restore and export → import are lossless", async () => {
     const backup = await admin("POST", "/backup");
     const client = connect();
     await signIn(client, sign, { sub: `user_after_backup_${nonce}` });
@@ -431,11 +431,42 @@ async function fullChecks(issuerDir) {
     const exists = async () =>
       (await run("users:userExists", { clerkId: `user_after_backup_${nonce}` })).exists;
     assert(await exists(), "post-backup user missing before restore");
+    const raw = (method, path, body) =>
+      fetch(`${url}/_backend/admin${path}`, {
+        method,
+        headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+        body,
+      });
+    const live = await raw("POST", "/restore", JSON.stringify({ key: backup.key }));
+    assert(live.status === 409, `restore with writes live got ${live.status}, want 409`);
+
+    assert((await admin("POST", "/pause")).writesPaused, "pause did not stick");
+    let refused = false;
+    try {
+      await client.mutation(api.users.getOrCreateCurrentUser, {});
+    } catch {
+      refused = true;
+    }
+    assert(refused, "a mutation was accepted while writes were paused");
     const restored = await admin("POST", "/restore", { key: backup.key });
     assert(restored.verified, `restore mismatches ${JSON.stringify(restored.mismatches)}`);
     assert(!(await exists()), "post-backup user survived restore");
+
+    const before = (await admin("GET", "/manifest")).manifest;
+    const exported = await (await raw("GET", "/export")).text();
+    const importResponse = await raw("POST", "/import", exported);
+    const imported = await importResponse.json();
+    assert(importResponse.ok, `import -> ${importResponse.status} ${JSON.stringify(imported)}`);
+    assert(
+      JSON.stringify(imported.manifest) === JSON.stringify(before),
+      "export → import changed the manifest",
+    );
+    assert(!(await admin("POST", "/resume")).writesPaused, "resume did not stick");
+    await client.mutation(api.users.getOrCreateCurrentUser, {});
+    assert(await exists(), "writes were not accepted after resume");
     return {
       key: backup.key,
+      exportBytes: exported.length,
       tables: Object.fromEntries(
         Object.entries(restored.manifest).map(([table, summary]) => [table, summary.count]),
       ),
