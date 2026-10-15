@@ -22,7 +22,9 @@
     // Isolated synthetic preview: its own script, Durable Object namespace and bucket.
     "preview": {
       "name": "chrondle-backend-preview",
-      "workers_dev": true,
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [{ "pattern": "chrondle-backend-preview.mistystep.io", "custom_domain": true }],
       "durable_objects": { "bindings": [{ "name": "BACKEND", "class_name": "ChrondleBackend" }] },
       "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChrondleBackend"] }],
       "r2_buckets": [{ "binding": "BACKUPS", "bucket_name": "chrondle-backend-preview-backups" }],

@@ -92,7 +92,14 @@ All three are defined in `backend/wrangler.jsonc`. Each has its own script, Dura
 | `preview`    | `chrondle-backend-preview` | `chrondle-backend-preview-backups` |
 | `production` | `chrondle-backend`         | `chrondle-backend-backups`         |
 
-Preview and production are served on their `workers.dev` hostnames, so no DNS records change.
+The isolated preview uses `chrondle-backend-preview.mistystep.io`, with Access
+covering `/_backend/admin` and its subpaths. Its `workers.dev` and immutable
+preview URLs are disabled; public game endpoints remain public. The preview
+workflow deploys only its own script, namespace and bucket, using the existing
+scoped CD credential and the `Preview` environment's operator configuration and
+synthetic public JWKS. The synthetic private signer and named machine credential
+never enter CI. This does not change any production frontend domain or backend
+binding. Production's hostname and cutover remain pending.
 
 ## Alternatives considered
 
