@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.7.0](https://github.com/misty-step/chrondle/compare/v1.6.0...v1.7.0) (2026-10-15)
+
+### Features
+
+- **backend:** add Cloudflare backend without cutover ([6a4797c](https://github.com/misty-step/chrondle/commit/6a4797c7fa67d663aa4025c08a214e0d9c9f00c8))
+
 ## Unreleased
 
 - Remove unused touch/tablet diagnostics and their tests; keep mobile detection and result-sharing behavior unchanged.
