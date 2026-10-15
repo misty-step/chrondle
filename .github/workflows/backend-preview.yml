@@ -43,13 +43,15 @@ jobs:
       - name: Install with the repository lockfile and no deployment credentials
         run: bun install --frozen-lockfile
       - name: Deploy only the isolated preview script and resources
-        run: bunx wrangler deploy -c backend/wrangler.jsonc --env preview --var "REVISION:$REVISION" --message "$REVISION"
+        working-directory: backend
+        run: bunx wrangler deploy --env preview --var "REVISION:$REVISION" --message "$REVISION"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Bind preview-only operator and synthetic game identities
+        working-directory: backend
         run: |
           bun --eval 'if (!process.env.OPERATOR_ACCESS || !process.env.GAME_PROVIDERS) throw new Error("Preview identity configuration is missing"); process.stdout.write(JSON.stringify({BACKEND_OPERATOR_ACCESS: process.env.OPERATOR_ACCESS, EXTRA_AUTH_PROVIDERS: process.env.GAME_PROVIDERS}))' \
-            | bunx wrangler secret bulk -c backend/wrangler.jsonc --env preview
+            | bunx wrangler secret bulk --env preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           OPERATOR_ACCESS: ${{ secrets.BACKEND_PREVIEW_OPERATOR_ACCESS }}
