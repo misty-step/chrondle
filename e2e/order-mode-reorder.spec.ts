@@ -49,7 +49,10 @@ test.describe("Order mode keyboard reordering @order-reorder", () => {
     const liveRegion = page.getByRole("status");
 
     await page.keyboard.press("Space"); // pick up
-    await expect(liveRegion).toContainText(/picked up|moved to position 1 of/i);
+    await expect(firstHandle).toHaveAttribute("aria-pressed", "true");
+    // Pickup is announced before dnd-kit measures the droppables and attaches
+    // its keyboard listener. The first drag-over announcement means it is ready.
+    await expect(liveRegion).toContainText(/moved to position 1 of \d+\.$/i);
 
     await page.keyboard.press("ArrowDown"); // move down one slot
     await expect(liveRegion).toContainText(/moved to position 2 of/i);
