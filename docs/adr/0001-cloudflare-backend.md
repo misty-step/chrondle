@@ -51,7 +51,8 @@ Keep the `convex/` functions and every client unchanged. Add `backend/`, a Worke
 
 - The providers come from `convex/auth.config.ts`: Clerk OIDC discovery and JWKS, with issuer and `applicationID` audience checks.
 - `customJwt` providers are supported, including data-URI JWKS.
-- `EXTRA_AUTH_PROVIDERS` lets a synthetic preview issuer run outside production. The production environment ignores it.
+- `EXTRA_AUTH_PROVIDERS` accepts a schema-validated synthetic issuer only when `ENVIRONMENT` is explicitly `preview` or `development`. Missing, misspelled and production environments ignore it; malformed configuration leaves the normal providers intact and logs no configuration contents.
+- Each provider has one JWKS refresh in flight. Unknown signing keys can trigger at most one refresh per 30 seconds, including failed attempts. OIDC discovery and JWKS `Cache-Control: max-age` and `Age` bound freshness (10 minutes if unspecified, capped at one day). `no-cache` revalidates and `no-store` retains no keys. A failed refresh keeps the last good, already-known keys for at most five minutes after expiry, or a shorter `stale-if-error`; `must-revalidate`, `no-cache` and `no-store` forbid stale use. That grace never extends on failure, and a successful rotation immediately removes old keys. Fetches time out after 10 seconds. HTTP and sync consumer tests cover cold/concurrent refresh, unknown kids, rotation, expiry, outage and recovery.
 
 ### Scheduler and crons
 
