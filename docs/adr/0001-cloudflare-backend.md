@@ -117,7 +117,7 @@ A Convex snapshot carries only the application tables. `to-backup --as-of <time>
 
 1. Deploy `chrondle-backend` with `wrangler deploy -c backend/wrangler.jsonc --env production`. Set the secrets `BACKEND_ADMIN_TOKEN`, `CLERK_SYNC_SECRET` and `STRIPE_SYNC_SECRET`, plus the LLM, email and observability keys the functions read today.
 2. Make Convex the only writer, then move the data:
-   - Pause the `fleet-goldfish-183` deployment outside the puzzle and event-generation cron windows, and note the time. Check that the dashboard's Schedules page shows no pending scheduled functions, since Convex's export does not carry them.
+   - Pause the `fleet-goldfish-183` deployment outside the puzzle and event-generation cron windows, and note the time. Check that the dashboard's Schedules page shows no pending scheduled functions, since Convex's export does not carry them. If it shows any, resume Convex until they have run, then pause again and note the new time.
    - Run `npx convex export`, then `convex-snapshot.ts to-backup --as-of <the pause time>`.
    - POST the NDJSON to `/_backend/admin/import`.
    - Run `compare` on the conversion manifest and the import response.
