@@ -58,6 +58,12 @@ const coverageExclude = [
 
   // Generated CI/module code and operational scripts are validated separately
   "dagger/**",
+  // Workerd-only entry points are exercised by the workerd integration suite
+  "backend/src/worker.ts",
+  "backend/src/durableObject.ts",
+  "backend/src/convexModules.gen.ts",
+  "backend/scripts/**",
+  "backend/__tests__/**",
   "scripts/**",
   "evals/**",
 ] as const;
@@ -90,7 +96,7 @@ export const baseVitestConfig = {
         extends: true as const,
         test: {
           name: "default",
-          exclude: ["convex/**/*.convex.test.ts"],
+          exclude: ["convex/**/*.convex.test.ts", "backend/**"],
         },
       },
       {
@@ -138,5 +144,9 @@ export const baseVitestConfig = {
   },
 } satisfies UserConfig;
 
-// Default config runs all tests
-export default defineConfig(baseVitestConfig);
+// Default config runs all tests, plus the Cloudflare backend host and its
+// Convex parity suites as their own project (see backend/README.md).
+export default defineConfig({
+  ...baseVitestConfig,
+  test: { ...baseVitestConfig.test, projects: [...baseVitestConfig.test.projects, "backend/vitest.config.ts"] },
+});
