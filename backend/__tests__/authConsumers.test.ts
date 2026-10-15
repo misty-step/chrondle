@@ -159,6 +159,17 @@ for (const kind of ["http", "sync"] as const) {
       expect(await consume(f, good, kind)).toBe(true);
       expect(await consume(f, good, kind)).toBe(true);
       expect(f.calls).toHaveLength(4);
+      const unknown = await first.sign(
+        { sub: "synthetic-user" },
+        {
+          header: { alg: "RS256", kid: "unknown-no-store" },
+        },
+      );
+      for (let i = 0; i < 10; i++) expect(await consume(f, unknown, kind)).toBe(false);
+      expect(
+        await Promise.all(Array.from({ length: 20 }, () => consume(f, unknown, kind))),
+      ).toEqual(Array(20).fill(false));
+      expect(f.calls).toHaveLength(4);
       f.unavailable(true);
       expect(await consume(f, good, kind)).toBe(false);
       expect(f.calls).toHaveLength(5);

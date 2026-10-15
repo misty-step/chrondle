@@ -35,6 +35,9 @@ export type AuthProvider = z.infer<typeof authProviderSchema>;
 
 type KeyCache = {
   keys: Jwk[];
+  // Public IDs only: no-store still revalidates real users without letting
+  // unknown IDs bypass the refresh cooldown. Never retain no-store key material.
+  knownKids: Set<string | undefined>;
   expiresAt: number;
   staleUntil: number;
   refreshAfter: number;
@@ -135,24 +138,32 @@ export class AuthVerifier {
   private async keysFor(provider: AuthProvider, kid: string | undefined): Promise<Jwk[]> {
     let cached = this.keys.get(provider);
     if (!cached) {
-      cached = { keys: [], expiresAt: 0, staleUntil: 0, refreshAfter: 0, retryAfter: 0 };
+      cached = {
+        keys: [],
+        knownKids: new Set(),
+        expiresAt: 0,
+        staleUntil: 0,
+        refreshAfter: 0,
+        retryAfter: 0,
+      };
       this.keys.set(provider, cached);
     }
     const hasKid = cached.keys.some((key) => kid === undefined || key.kid === kid);
+    const knownKid = kid === undefined ? cached.knownKids.size > 0 : cached.knownKids.has(kid);
     if (hasKid && this.now() < cached.expiresAt) return cached.keys;
     try {
       if (cached.pending) return await cached.pending;
-      if (this.now() < cached.retryAfter || (!hasKid && this.now() < cached.refreshAfter))
+      if (this.now() < cached.retryAfter || (!knownKid && this.now() < cached.refreshAfter))
         throw new AuthError("Unauthenticated", "Signing key refresh is cooling down");
       cached.refreshAfter = this.now() + REFRESH_COOLDOWN_MS;
       const entry = cached;
       entry.pending = this.refresh(provider)
         .then(({ keys, policy }) => {
           entry.keys = policy.store ? keys : [];
+          entry.knownKids = new Set(keys.map((key) => key.kid));
           entry.expiresAt = this.now() + policy.ttl;
           entry.staleUntil = entry.expiresAt + policy.stale;
           entry.retryAfter = 0;
-          if (!policy.store) entry.refreshAfter = 0;
           return keys;
         })
         .catch((error: unknown) => {
