@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.9.0](https://github.com/misty-step/chrondle/compare/v1.8.1...v1.9.0) (2026-10-15)
+
+### Features
+
+- **backend:** deploy the isolated migration frontend preview ([#335](https://github.com/misty-step/chrondle/issues/335)) ([b702aba](https://github.com/misty-step/chrondle/commit/b702aba356f95980e9b99f68e267b8442c362db2))
+
 ## [1.8.1](https://github.com/misty-step/chrondle/compare/v1.8.0...v1.8.1) (2026-10-15)
 
 ### Bug Fixes
