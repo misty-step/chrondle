@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.8.0](https://github.com/misty-step/chrondle/compare/v1.7.3...v1.8.0) (2026-10-15)
+
+### Features
+
+- **backend:** deploy an isolated synthetic Cloudflare preview ([#333](https://github.com/misty-step/chrondle/issues/333)) ([863a686](https://github.com/misty-step/chrondle/commit/863a68662440c82235d2afa3db153fb93dd3d3a2))
+
 ## [1.7.3](https://github.com/misty-step/chrondle/compare/v1.7.2...v1.7.3) (2026-10-15)
 
 ### Bug Fixes
