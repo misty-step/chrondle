@@ -1,10 +1,11 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
 import { readFileSync } from "fs";
+import { parseChangelog } from "./src/lib/releases/changelog";
 
-// Read version from package.json at build time
-const packageJson = JSON.parse(readFileSync("./package.json", "utf8"));
-const appVersion = packageJson.version;
+// Embed public notes in the bundle: Workers cannot read repository files at runtime.
+const changelog = readFileSync("CHANGELOG.md", "utf8");
+const appVersion = parseChangelog(changelog)[0].version;
 const artifactBuildOnly = process.env.DAGGER_ARTIFACT_BUILD === "1";
 const convexOrigin = resolveExternalOrigin(process.env.NEXT_PUBLIC_CONVEX_URL, "");
 const convexConnectSrc = convexOrigin
@@ -21,6 +22,7 @@ const nextConfig: NextConfig = {
   generateBuildId: async () => process.env.CHRONDLE_REVISION || null,
   // Expose version to client
   env: {
+    CHRONDLE_CHANGELOG: changelog,
     NEXT_PUBLIC_APP_VERSION: appVersion,
     CHRONDLE_REVISION: process.env.CHRONDLE_REVISION || "development",
   },

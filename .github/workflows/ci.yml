@@ -282,6 +282,31 @@ jobs:
           path: .next/
           include-hidden-files: true
 
+  worker-routes:
+    name: worker-routes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - run: bun install --frozen-lockfile
+      - name: Build Cloudflare artifact with public CI settings
+        run: bun run build:cf
+        env:
+          CHRONDLE_REVISION: ${{ github.sha }}
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_CONVEX_URL: ${{ env.CI_CONVEX_URL }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ env.CI_CLERK_PUBLISHABLE_KEY }}
+      - name: Exercise built Worker routes without network or credentials
+        run: bun run test:worker-routes
+
   e2e:
     runs-on: ubuntu-latest
     needs: build
@@ -335,7 +360,17 @@ jobs:
   merge-gate:
     runs-on: ubuntu-latest
     if: always()
-    needs: [quality-checks, validation, docs, build, e2e, verify-environment, deployment-contract]
+    needs:
+      [
+        quality-checks,
+        validation,
+        docs,
+        build,
+        e2e,
+        worker-routes,
+        verify-environment,
+        deployment-contract,
+      ]
     steps:
       - name: Check all jobs
         run: |

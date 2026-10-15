@@ -27,6 +27,7 @@
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test --project=chromium",
+    "test:worker-routes": "tsx scripts/qa/worker-routes.ts",
     "test:e2e:paywall": "playwright test --project=paywall",
     "test:e2e:subscription": "playwright test --project=subscription",
     "test:e2e:all": "playwright test",
