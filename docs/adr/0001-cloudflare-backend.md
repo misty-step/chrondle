@@ -101,6 +101,18 @@ synthetic public JWKS. The synthetic private signer and named machine credential
 never enter CI. This does not change any production frontend domain or backend
 binding. Production's hostname and cutover remain pending.
 
+The same workflow deploys `chrondle-preview.mistystep.io` as the separate
+`chrondle-preview` frontend Worker after the backend preview. Its public build
+inputs come from `env.preview.vars` in the frontend Wrangler configuration, the
+same values used at runtime. Thus browser sync, SSR/HTTP and the generated CSP
+all point at the isolated backend without browser interception. It uses the
+existing CI Clerk **test** publishable key; no production Clerk, payment, model,
+email or analytics credentials are bound. This slice supports anonymous game
+journeys, not authenticated account or successful payment/provider acceptance.
+Those paths still require their sandbox bindings and separate verification.
+The frontend's provider and immutable preview URLs are disabled. Neither this
+frontend nor its backend has production routes or a production data binding.
+
 ## Alternatives considered
 
 1. **Run the open-source Convex backend on a VM or container.** Rejected: the migration contract excludes VM-hosted Convex, and it would not use Cloudflare data services.

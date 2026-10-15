@@ -5,6 +5,13 @@ on:
     paths:
       - "backend/**"
       - "convex/**"
+      - "src/**"
+      - "public/**"
+      - "next.config.ts"
+      - "open-next.config.ts"
+      - "wrangler.jsonc"
+      - "package.json"
+      - "bun.lock"
       - ".github/workflows/backend-preview.yml"
   workflow_dispatch:
 
@@ -72,4 +79,64 @@ jobs:
               await Bun.sleep(2000);
             }
             throw new Error("Isolated preview did not serve this revision");
+          '
+
+  frontend:
+    name: Deploy isolated frontend preview
+    needs: preview
+    runs-on: ubuntu-latest
+    environment:
+      name: Preview
+      url: https://chrondle-preview.mistystep.io
+    env:
+      REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - name: Checkout the same preview revision
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.REVISION }}
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - name: Install without deployment or integration credentials
+        run: bun install --frozen-lockfile
+      - name: Build the frontend with its source-owned preview bindings
+        run: |
+          # Wrangler vars are also the build inputs: browser, SSR and CSP agree.
+          bun --eval '
+            const { unstable_readConfig } = await import("wrangler");
+            const config = unstable_readConfig({config: "wrangler.jsonc", env: "preview"});
+            const child = Bun.spawn(["bun", "run", "build:cf"], {
+              env: {...process.env, ...config.vars, CHRONDLE_REVISION: process.env.REVISION, NEXT_TELEMETRY_DISABLED: "1"},
+              stdout: "inherit", stderr: "inherit"
+            });
+            process.exit(await child.exited);
+          '
+      - name: Deploy only the isolated frontend
+        run: bunx wrangler deploy --env preview --message "$REVISION"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Read back the frontend and its real backend connection
+        run: |
+          bun --eval '
+            const url = "https://chrondle-preview.mistystep.io/api/health";
+            for (let attempt = 0; attempt < 30; attempt++) {
+              try {
+                const response = await fetch(url, {cache: "no-store", redirect: "error"});
+                const health = await response.json();
+                if (response.ok && health.service === "chrondle" && health.revision === process.env.REVISION && health.checks?.convex === "ok") {
+                  console.log(JSON.stringify(health));
+                  process.exit(0);
+                }
+              } catch {}
+              await Bun.sleep(2000);
+            }
+            throw new Error("Isolated frontend did not serve this revision with a healthy backend");
           '
