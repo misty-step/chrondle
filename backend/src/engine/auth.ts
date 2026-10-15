@@ -206,17 +206,15 @@ export class AuthVerifier {
       : await this.fetchKeys(url);
     const body = z
       .object({
-        keys: z
-          .array(
-            z
-              .object({
-                kty: z.string(),
-                kid: z.string().optional(),
-                alg: z.string().optional(),
-              })
-              .passthrough(),
-          )
-          .min(1),
+        keys: z.array(
+          z
+            .object({
+              kty: z.string(),
+              kid: z.string().optional(),
+              alg: z.string().optional(),
+            })
+            .passthrough(),
+        ),
       })
       .parse(await response.json());
     const ids = body.keys.flatMap((key) => (key.kid === undefined ? [] : [key.kid]));

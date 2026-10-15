@@ -52,6 +52,9 @@ function fixture() {
     advance: (ms: number) => {
       now += ms;
     },
+    revoke: () => {
+      keys = [];
+    },
     rotate: () => {
       keys = rotated.jwks.keys.map((key) => ({ ...key, kid: "rotated" }));
     },
@@ -100,6 +103,17 @@ async function consume(f: Fixture, token: string, kind: "http" | "sync") {
 
 for (const kind of ["http", "sync"] as const) {
   describe(`${kind} auth consumer`, () => {
+    it("honours a successful empty JWKS as revocation, not a refresh outage", async () => {
+      const f = fixture();
+      const good = await first.sign({ sub: "synthetic-user", exp: Math.floor(NOW / 1000) + 7200 });
+      expect(await consume(f, good, kind)).toBe(true);
+      f.revoke();
+      f.advance(3_600_001);
+      expect(await consume(f, good, kind)).toBe(false);
+      expect(await consume(f, good, kind)).toBe(false);
+      expect(f.calls).toHaveLength(4);
+    });
+
     it("coalesces cold/rotated refreshes and bounds serial and concurrent unknown kids", async () => {
       const f = fixture();
       const good = await first.sign({ sub: "synthetic-user" });
