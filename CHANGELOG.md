@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.7.2](https://github.com/misty-step/chrondle/compare/v1.7.1...v1.7.2) (2026-10-15)
+
+### Bug Fixes
+
+- **build:** bundle fonts for deterministic release builds ([#331](https://github.com/misty-step/chrondle/issues/331)) ([3608742](https://github.com/misty-step/chrondle/commit/36087426b7bbc41b7eb243802ff6c883e9b72ea6))
+
 ## [1.7.1](https://github.com/misty-step/chrondle/compare/v1.7.0...v1.7.1) (2026-10-15)
 
 ### Bug Fixes
