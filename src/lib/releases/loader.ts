@@ -1,9 +1,8 @@
-import { readFileSync } from "fs";
 import { parseChangelog } from "./changelog";
 
-/** Build-time only: notes and versions come from the same generated artifact. */
+/** Next replaces this public constant at build time; no filesystem or API at runtime. */
 export function loadAllReleases() {
-  return parseChangelog(readFileSync("CHANGELOG.md", "utf8"));
+  return parseChangelog(process.env.CHRONDLE_CHANGELOG ?? "");
 }
 
 export function loadRelease(version: string) {

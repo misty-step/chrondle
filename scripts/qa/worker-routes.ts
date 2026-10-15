@@ -1,0 +1,112 @@
+// Ported from Linejam PR577 (449f9eb6): exercise the built bytes, never rebuild.
+import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { unstable_readConfig, unstable_startWorker } from "wrangler";
+import { parseChangelog } from "../../src/lib/releases/changelog";
+import { assertHtml, assertRuntimeLogs } from "./worker-route-contracts";
+
+async function main() {
+  const config = unstable_readConfig({ config: "wrangler.jsonc", env: "production" });
+  assert(config.main && config.assets?.directory, "Build the configured OpenNext artifact first");
+  const releases = parseChangelog(readFileSync("CHANGELOG.md", "utf8"));
+  const directory = mkdtempSync(join(tmpdir(), "chrondle-worker-routes-"));
+  const logs: { level: string; message: string }[] = [];
+  const failures: string[] = [];
+  let blockedRequests = 0;
+  let worker: Awaited<ReturnType<typeof unstable_startWorker>> | undefined;
+  try {
+    // Fresh config location: never load repo .dev.vars, dotenv, bindings or credentials.
+    const configPath = join(directory, "wrangler.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        name: "chrondle-worker-routes",
+        main: resolve(config.main),
+        compatibility_date: config.compatibility_date,
+        compatibility_flags: config.compatibility_flags,
+        assets: { ...config.assets, directory: resolve(config.assets.directory) },
+        send_metrics: false,
+      }),
+    );
+    worker = await unstable_startWorker({
+      config: configPath,
+      // Clerk requires a syntactically present key even for anonymous public SSR.
+      // This inert local-only fixture is not a credential; every outbound fetch is denied.
+      bindings: { CLERK_SECRET_KEY: { type: "plain_text", value: "sk_test_worker-route-gate" } },
+      dev: {
+        remote: false,
+        persist: false,
+        watch: false,
+        server: { hostname: "127.0.0.1", port: 0 },
+        logLevel: "error",
+        outboundService: () => {
+          blockedRequests++;
+          return new Response("Worker route check: egress disabled", { status: 503 });
+        },
+        structuredLogsHandler: (log: { level: string; message: string }) => logs.push(log),
+      },
+    });
+    worker.raw.on("runtimeError", (error: { text: string }) => {
+      logs.push({ level: "error", message: error.text });
+    });
+    const probes = [
+      { path: "/legal/privacy", status: 200, markers: ["Privacy"] },
+      {
+        path: "/changelog",
+        status: 200,
+        markers: ["Changelog", `Release ${releases[0].version}`, releases[0].date, "<li"],
+      },
+      ...releases.map((release) => ({
+        path: `/releases/${release.version}`,
+        status: 200,
+        markers: [
+          `v${release.version}</h1>`,
+          release.date,
+          `https://github.com/misty-step/chrondle/releases/tag/v${release.version}`,
+        ],
+      })),
+      { path: "/releases/9999.0.0", status: 404, markers: [] },
+      { path: "/releases", status: 200, markers: ["Changelog", `Release ${releases[0].version}`] },
+    ];
+    for (const probe of probes) {
+      try {
+        const origin = await worker.url;
+        let response = await worker.fetch(new URL(probe.path, origin), {
+          redirect: "manual",
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (probe.path === "/releases") {
+          assert.equal(response.status, 308, "Legacy index must permanently redirect");
+          const target = new URL(response.headers.get("location") ?? "", origin);
+          assert.equal(target.origin, origin.origin);
+          assert.equal(target.pathname, "/changelog");
+          response = await worker.fetch(target, {
+            redirect: "manual",
+            signal: AbortSignal.timeout(15_000),
+          });
+        }
+        assertHtml(probe.path, response, await response.text(), probe.status, probe.markers);
+        console.log(`PASS ${probe.path}: ${response.status}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        failures.push(`${probe.path}: ${message}`);
+        console.error(`FAIL ${failures.at(-1)}`);
+      }
+    }
+  } finally {
+    await worker?.dispose();
+    rmSync(directory, { recursive: true, force: true });
+  }
+  assertRuntimeLogs(logs);
+  assert.equal(failures.length, 0, `Built Worker route failures:\n${failures.join("\n")}`);
+  console.log(
+    `Built Worker routes passed: ${releases.length} release details, changelog, alias, unknown 404 and privacy control; ${blockedRequests} outbound requests denied.`,
+  );
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

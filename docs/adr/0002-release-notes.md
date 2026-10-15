@@ -17,12 +17,23 @@ Keep semantic-release as the only version generator and follow the shared
 [release convention](https://github.com/misty-step/harness/blob/master/docs/release-convention.md)
 and [foundations](https://foundations.mistystep.io/).
 
-Render `/changelog` and the existing release-detail URLs at build time from
-CHANGELOG.md in the checked-out source. Remove the stale content snapshot and
-its parallel types. The footer and health response report the newest generated
+Read CHANGELOG.md only in next.config.ts at build time, embedding its public
+Markdown as CHRONDLE_CHANGELOG in the compiled bundle. `/changelog` and the existing
+release-detail URLs render from that constant, including on-demand rendering in
+the Worker; they never read repository files at runtime. No site-wide cache change
+is needed. Remove the stale content snapshot and its parallel types.
+The footer and health response report the newest generated
 version in that same artifact, not the private package manifest. The legacy
 `/releases` index redirects to `/changelog`. Unknown release details return 404.
 No GitHub request, credential or synthesis is needed to serve or build notes.
+
+`bun run test:worker-routes` ports the isolated native workerd check from
+[Linejam PR577](https://github.com/misty-step/linejam/pull/577). It exercises the
+already-built OpenNext artifact with deployed compatibility settings, no real
+credentials, and all outbound requests denied. It checks notes, every known
+release, the alias redirect and an unknown-version 404, rejecting streamed render
+errors and runtime error logs. PR CI runs it and production runs it between the
+existing frontend build and activation, without rebuilding the tested bytes.
 
 ## Scope and remaining work
 

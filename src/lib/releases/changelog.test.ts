@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseChangelog } from "./changelog";
 import { getAllVersions, loadAllReleases, loadRelease } from "./loader";
 
@@ -27,6 +27,8 @@ Move saved games before upgrading. Roll back the code, not player data.
 `;
 
 describe("generated changelog consumer", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   it("reads patch and major headings in generator order, preserving the notes", () => {
     const releases = parseChangelog(fixture);
     expect(releases.map(({ version, date }) => ({ version, date }))).toEqual([
@@ -52,12 +54,19 @@ describe("generated changelog consumer", () => {
   });
 
   it("uses the real source artifact for both the version list and detail lookup", () => {
-    const expected = parseChangelog(readFileSync("CHANGELOG.md", "utf8"));
+    const markdown = readFileSync("CHANGELOG.md", "utf8");
+    vi.stubEnv("CHRONDLE_CHANGELOG", markdown);
+    const expected = parseChangelog(markdown);
     expect(loadAllReleases()).toEqual(expected);
     expect(getAllVersions()).toEqual(expected.map(({ version }) => version));
     expect(loadRelease(`v${expected[0].version}`)).toEqual(expected[0]);
     expect(loadRelease(expected[0].version)).toEqual(expected[0]);
     expect(loadRelease("../../package.json")).toBeUndefined();
     expect(loadRelease("9999.0.0")).toBeUndefined();
+  });
+
+  it("refuses a missing build-time constant instead of reading repository files", () => {
+    vi.stubEnv("CHRONDLE_CHANGELOG", undefined);
+    expect(() => loadAllReleases()).toThrow("no generated releases");
   });
 });

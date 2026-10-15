@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
-import { loadAllReleases } from "../src/lib/releases/loader";
+import { readFileSync } from "node:fs";
+import { parseChangelog } from "../src/lib/releases/changelog";
 
-const [latest] = loadAllReleases();
+const [latest] = parseChangelog(readFileSync("CHANGELOG.md", "utf8"));
 
 for (const colorScheme of ["light", "dark"] as const) {
   test(`changelog navigation and published detail in ${colorScheme}`, async ({
@@ -12,6 +13,18 @@ for (const colorScheme of ["light", "dark"] as const) {
     await page.goto("/?all=1");
     const notesLink = page.getByRole("link", { name: `Changelog · v${latest.version}` });
     await expect(notesLink).toBeVisible();
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await notesLink.scrollIntoViewIfNeeded();
+      await page.evaluate(() => document.fonts.ready);
+      await testInfo.attach(`homepage-footer-${colorScheme}-${width}`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: "image/png",
+      });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+    }
     await notesLink.click();
     await expect(page).toHaveURL(/\/changelog$/);
     await expect(page.getByRole("heading", { name: "Changelog", exact: true })).toBeVisible();
