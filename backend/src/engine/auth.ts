@@ -232,7 +232,7 @@ export class AuthVerifier {
     return { keys: body.keys as Jwk[], policy };
   }
 
-  async verify(token: string): Promise<VerifiedToken> {
+  async verify(token: string, { allowEmptySubject = false } = {}): Promise<VerifiedToken> {
     const parts = token.split(".");
     const unparseable =
       "Could not parse JWT payload. Check that the token is a valid JWT format with three base64-encoded parts separated by dots.";
@@ -275,7 +275,7 @@ export class AuthVerifier {
       throw new AuthError("Unauthenticated", "Token expired");
     if (typeof claims.nbf === "number" && claims.nbf - CLOCK_SKEW_SECONDS > nowSeconds)
       throw new AuthError("Unauthenticated", "Token not yet valid");
-    if (typeof claims.sub !== "string" || claims.sub.length === 0)
+    if (typeof claims.sub !== "string" || (!allowEmptySubject && claims.sub.length === 0))
       throw new AuthError("Unauthenticated", "Token has no subject");
 
     const keys = await this.keysFor(provider, header.kid);

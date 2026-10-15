@@ -48,7 +48,7 @@ describe("end-to-end maintenance serialization", () => {
       blockConcurrencyWhile: (fn: () => Promise<unknown>) => (boot = fn()),
     };
     const env = {
-      ENVIRONMENT: "production",
+      ENVIRONMENT: "development",
       BACKEND_ADMIN_TOKEN: "synthetic-admin-boundary",
       BACKUPS: {
         get: async (key: string) => {
@@ -62,11 +62,12 @@ describe("end-to-end maintenance serialization", () => {
     };
     const backend = new ChrondleBackend(ctx as unknown as DurableObjectState, env as unknown as Env);
     await boot;
-    const call = (path: string, body = {}) => backend.fetch(new Request(`https://backend.invalid/_backend/admin/${path}`, {
+    const call = (path: string, body = {}) => backend.fetch(new Request(`http://127.0.0.1/_backend/admin/${path}`, {
       method: "POST",
       headers: { Authorization: "Bearer synthetic-admin-boundary" },
       body: JSON.stringify(body),
     }));
+    expect((await call("pause")).status).toBe(200);
     let resumed = false;
     const restoring = call("restore", { key: "synthetic.ndjson" });
     await Promise.race([entered.promise, restoring.then(() => { throw new Error("restore answered before reading R2"); })]);

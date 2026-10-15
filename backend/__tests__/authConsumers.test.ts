@@ -121,6 +121,24 @@ async function consume(f: Fixture, token: string, kind: "http" | "sync") {
 
 for (const kind of ["http", "sync"] as const) {
   describe(`${kind} auth consumer`, () => {
+    it("rejects a trusted empty-sub service-token shape for ordinary game auth", async () => {
+      const f = fixture();
+      const service = await first.sign({ sub: "", common_name: "operator.access", type: "app" });
+      if (kind === "http") {
+        const response = await handleHttpApi(new Request("https://backend.test/api/query", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${service}` },
+          body: JSON.stringify({ path: "account:who", args: [{}] }),
+        }), "query", f.engine, f.verifier);
+        expect(response.status).toBe(401);
+        expect(await response.json()).toMatchObject({ code: "Unauthenticated", message: "Token has no subject" });
+      } else {
+        expect(await consume(f, service, kind)).toBe(false);
+      }
+      const user = await first.sign({ sub: "synthetic-user" });
+      expect(await consume(f, user, kind)).toBe(true);
+    });
+
     it("honours a successful empty JWKS as revocation, not a refresh outage", async () => {
       const f = fixture();
       const good = await first.sign({ sub: "synthetic-user", exp: Math.floor(NOW / 1000) + 7200 });
