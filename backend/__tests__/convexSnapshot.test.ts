@@ -1,24 +1,30 @@
 import {
+  actionGeneric,
   defineSchema,
   defineTable,
+  internalMutationGeneric,
+  makeFunctionReference,
   mutationGeneric,
   queryGeneric,
-  actionGeneric,
 } from "convex/server";
 import { v, type Value } from "convex/values";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import chrondleSchema from "../../convex/schema";
-import { exportLines, restore, summarize } from "../src/engine/backup";
+import {
+  mismatches,
+  parse,
+  readState,
+  restore,
+  serialize,
+  summarize,
+  type Snapshot,
+} from "../src/engine/backup";
 import { decodeDocumentId } from "../src/engine/ids";
 import {
   formatExportJson,
-  fromBackup,
-  manifestMismatches,
   parseExportJson,
   readSnapshot,
-  snapshotManifest,
-  toBackup,
   writeSnapshot,
 } from "../src/migration/convexSnapshot";
 import { readZip, writeZip } from "../src/migration/zip";
@@ -61,6 +67,12 @@ const modules = {
       args: {},
       handler: async (ctx) => (await ctx.db.query("users").collect()).length,
     }),
+    later: mutationGeneric({
+      args: { delayMs: v.number() },
+      handler: (ctx, { delayMs }) =>
+        ctx.scheduler.runAfter(delayMs, makeFunctionReference<"mutation">("seed:touch"), {}),
+    }),
+    touch: internalMutationGeneric({ args: {}, handler: async () => null }),
     ping: actionGeneric({ args: {}, handler: async () => "pong" }),
   },
 };
@@ -71,9 +83,22 @@ async function seeded() {
   return engine;
 }
 
+/** The backend's own snapshot of an engine, as GET /export serves it, parsed back. */
+const backendSnapshot = (engine: ReturnType<typeof makeEngine>): Snapshot =>
+  parse([...serialize(readState(engine))].join("").split("\n"));
+
 /** Convex snapshot ZIP bytes for an engine, via the same path the CLI uses. */
 function snapshotZip(engine: ReturnType<typeof makeEngine>) {
-  return writeZip(writeSnapshot(fromBackup([...exportLines(engine)].join("").split("\n"))));
+  return writeZip(writeSnapshot(backendSnapshot(engine)).entries);
+}
+
+const NO_CRONS = new Map<string, number>();
+
+/** A fresh, paused backend, like a new production database. */
+function emptyTarget(...args: Parameters<typeof makeEngine>) {
+  const engine = makeEngine(...args);
+  engine.pauseIfNew();
+  return engine;
 }
 
 describe("export JSON (Convex ConvexExportJSON) values", () => {
@@ -136,18 +161,59 @@ describe("export JSON (Convex ConvexExportJSON) values", () => {
 describe("Convex snapshot ⇄ backup", () => {
   it("keeps ids, creation times, table numbers and the manifest through ZIP and back", async () => {
     const source = await seeded();
-    const before = summarize(source);
-    const snapshot = readSnapshot(readZip(snapshotZip(source)));
-    expect(manifestMismatches(before, snapshotManifest(snapshot))).toEqual([]);
-    expect(snapshot.tableNumbers.get("emptied")).toBe(before.emptied.tableNumber);
+    const before = summarize(readState(source));
+    const snapshot = readSnapshot(readZip(snapshotZip(source)), NO_CRONS);
+    expect(mismatches({ manifest: before.manifest }, summarize(snapshot))).toEqual([]);
+    expect(snapshot.tableNumbers.get("emptied")).toBe(before.manifest.emptied.tableNumber);
 
-    const target = makeEngine(schema, modules);
-    const restored = await restore(target, [...toBackup(snapshot)].join("").split("\n"));
-    expect(manifestMismatches(before, restored)).toEqual([]);
+    const target = emptyTarget(schema, modules);
+    const restored = await restore(target, parse([...serialize(snapshot)].join("").split("\n")));
+    expect(mismatches(before, restored)).toEqual([]);
+    await target.resume();
     expect(await target.runQuery("seed:count", {}, null)).toBe(2);
     // New documents keep minting IDs in the tables Convex numbered.
     const id = (await target.runMutation("seed:addUser", { name: "New" }, null)).value as string;
-    expect(decodeDocumentId(id)?.tableNumber).toBe(before.users.tableNumber);
+    expect(decodeDocumentId(id)?.tableNumber).toBe(before.manifest.users.tableNumber);
+  });
+
+  it("takes the cron cursors from the caller, since Convex cannot export them", async () => {
+    const cursors = new Map([["generate daily puzzle at UTC midnight", 1792022400000]]);
+    const snapshot = readSnapshot(readZip(snapshotZip(await seeded())), cursors);
+    expect(summarize(snapshot).runtime).toMatchObject({
+      cronCursors: { "generate daily puzzle at UTC midnight": 1792022400000 },
+      scheduledFunctions: { count: 0 },
+      mutationLog: { count: 0 },
+    });
+    const lines = [...serialize(snapshot)].join("");
+    expect(lines).toContain(
+      '{"cron":"generate daily puzzle at UTC midnight","lastOccurrence":1792022400000}',
+    );
+  });
+
+  it("refuses to hand Convex scheduled functions that have not run, and says what it left out", async () => {
+    const source = await seeded();
+    await source.runMutation("seed:later", { delayMs: 60_000 }, null);
+    source.fence();
+    expect(() => writeSnapshot(backendSnapshot(source))).toThrow(
+      /1 scheduled function\(s\) have not run \(seed:touch pending\)/,
+    );
+
+    // Once the job has run, only its history is left out.
+    const settled = await seeded();
+    await settled.runMutation("seed:later", { delayMs: 0 }, null, {
+      dedupe: { session: "s", request: 1 },
+    });
+    const finished = backendSnapshot(settled);
+    finished.scheduledFunctions = finished.scheduledFunctions.map((job) => ({
+      ...job,
+      state: { kind: "success" },
+    }));
+    finished.cronCursors.set("any", 1);
+    const { entries, dropped } = writeSnapshot(finished);
+    expect(dropped).toEqual({ finishedJobs: 1, cronCursors: 1, mutationLog: 1 });
+    expect([...entries.keys()].filter((path) => path.startsWith("_"))).toEqual([
+      "_tables/documents.jsonl",
+    ]);
   });
 
   it("writes the layout npx convex import reads", async () => {
@@ -180,18 +246,25 @@ describe("Convex snapshot ⇄ backup", () => {
     const encode = (text: string) => new TextEncoder().encode(text);
     const base = () =>
       new Map([["_tables/documents.jsonl", encode('{"name":"users","id":10001}\n')]]);
-    expect(() => readSnapshot(new Map())).toThrow(/_tables/);
+    expect(() => readSnapshot(new Map(), NO_CRONS)).toThrow(/_tables/);
     expect(() =>
-      readSnapshot(new Map([...base(), ["_storage/documents.jsonl", encode('{"_id":"x"}\n')]])),
+      readSnapshot(
+        new Map([...base(), ["_storage/documents.jsonl", encode('{"_id":"x"}\n')]]),
+        NO_CRONS,
+      ),
     ).toThrow(/file storage/);
     expect(() =>
-      readSnapshot(new Map([...base(), ["_components/x/users/documents.jsonl", encode("")]])),
+      readSnapshot(
+        new Map([...base(), ["_components/x/users/documents.jsonl", encode("")]]),
+        NO_CRONS,
+      ),
     ).toThrow(/components/);
     expect(() =>
-      readSnapshot(new Map([...base(), ["ghosts/documents.jsonl", encode("")]])),
+      readSnapshot(new Map([...base(), ["ghosts/documents.jsonl", encode("")]]), NO_CRONS),
     ).toThrow(/missing from/);
     expect(
-      readSnapshot(new Map([...base(), ["_storage/documents.jsonl", encode("")]])).documents.size,
+      readSnapshot(new Map([...base(), ["_storage/documents.jsonl", encode("")]]), NO_CRONS)
+        .documents.size,
     ).toBe(0);
   });
 
@@ -214,7 +287,7 @@ describe("Convex snapshot ⇄ backup", () => {
   );
 
   it("reads a real Convex export and restores it under Chrondle's schema", async () => {
-    const snapshot = readSnapshot(readZip(genuine));
+    const snapshot = readSnapshot(readZip(genuine), NO_CRONS);
     expect(Object.fromEntries(snapshot.tableNumbers)).toEqual({
       events: 10001,
       generation_logs: 10002,
@@ -231,21 +304,21 @@ describe("Convex snapshot ⇄ backup", () => {
     expect(user.currentStreak).toBe(0); // "0.0" is float64, not int64
     expect(user._creationTime % 1).not.toBe(0);
 
-    const engine = makeEngine(chrondleSchema, {});
-    const restored = await restore(engine, [...toBackup(snapshot)].join("").split("\n"));
-    expect(manifestMismatches(snapshotManifest(snapshot), restored)).toEqual([]);
-    expect(restored.events.count).toBe(6);
+    const engine = emptyTarget(chrondleSchema, {});
+    const restored = await restore(engine, parse([...serialize(snapshot)].join("").split("\n")));
+    expect(mismatches(summarize(snapshot), restored)).toEqual([]);
+    expect(restored.manifest.events.count).toBe(6);
 
     // And back out as the archive npx convex import reads, unchanged.
-    const again = readSnapshot(readZip(writeZip(writeSnapshot(snapshot))));
-    expect(manifestMismatches(snapshotManifest(snapshot), snapshotManifest(again))).toEqual([]);
+    const again = readSnapshot(readZip(writeZip(writeSnapshot(snapshot).entries)), NO_CRONS);
+    expect(mismatches(summarize(snapshot), summarize(again))).toEqual([]);
   });
 });
 
 describe("paused writes (one-writer maintenance)", () => {
-  it("refuses mutations and actions, keeps queries, and survives as stored state", async () => {
+  it("refuses mutations and actions, keeps queries, and survives a restart as stored state", async () => {
     const engine = await seeded();
-    engine.setWritesPaused(true);
+    engine.fence();
     await expect(engine.runMutation("seed:addUser", { name: "Late" }, null)).rejects.toThrow(
       /paused/,
     );
@@ -253,9 +326,9 @@ describe("paused writes (one-writer maintenance)", () => {
     expect(await engine.runQuery("seed:count", {}, null)).toBe(2);
     expect(engine.store.getMeta("writesPaused")).toBe("1");
     // Imports are how data arrives while paused.
-    const restored = await restore(engine, [...exportLines(engine)].join("").split("\n"));
-    expect(restored.users.count).toBe(2);
-    engine.setWritesPaused(false);
+    const restored = await restore(engine, backendSnapshot(engine));
+    expect(restored.manifest.users.count).toBe(2);
+    await engine.resume();
     await engine.runMutation("seed:addUser", { name: "Late" }, null);
     expect(await engine.runQuery("seed:count", {}, null)).toBe(3);
   });

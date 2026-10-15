@@ -10,8 +10,17 @@ import authConfig from "../../convex/auth.config";
 import * as crons from "../../convex/crons";
 import { convexModules } from "./convexModules.gen";
 import { AuthVerifier, type AuthProvider } from "./engine/auth";
-import { exportLines, restore, summarize, type Manifest } from "./engine/backup";
-import { Engine, type CommitInfo } from "./engine/engine";
+import {
+  mismatches,
+  parse,
+  readState,
+  restore,
+  serialize,
+  summarize,
+  type Snapshot,
+  type Summary,
+} from "./engine/backup";
+import { Engine, NotPausedError, SystemError, type CommitInfo } from "./engine/engine";
 import { parseCrons, Scheduler } from "./engine/scheduler";
 import { SCHEDULED_FUNCTIONS, type Sql, type SqlValue } from "./engine/store";
 import { handleHttpApi } from "./protocol/http";
@@ -31,6 +40,9 @@ export interface Env {
 const PING_MS = 15_000;
 const BACKUP_PREFIX = "backups/";
 const BACKUPS_KEPT = 30;
+/** How long a pause waits for admitted work and due jobs before it cuts them off. */
+const SETTLE_MS = 60_000;
+const SETTLE_MAX_MS = 15 * 60_000;
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -59,6 +71,8 @@ async function sameSecret(given: string, expected: string): Promise<boolean> {
   ]);
   return crypto.subtle.timingSafeEqual(a, b);
 }
+
+const logFailure = (label: string) => (error: unknown) => console.error(`[${label}]`, error);
 
 export class ChrondleBackend extends DurableObject<Env> {
   private engine: Engine;
@@ -97,8 +111,8 @@ export class ChrondleBackend extends DurableObject<Env> {
     for (const session of this.sessions) session.invalidate(commit);
     if ([...commit.writes.values()].some((write) => write.table === SCHEDULED_FUNCTIONS)) {
       // Start jobs due now without waiting for the alarm (which may be busy with a long action).
-      void this.scheduler.runDue();
-      void this.arm();
+      this.scheduler.runDue().catch(logFailure("scheduler"));
+      this.arm().catch(logFailure("alarm"));
     }
   }
 
@@ -107,11 +121,10 @@ export class ChrondleBackend extends DurableObject<Env> {
     if (next !== null) await this.ctx.storage.setAlarm(Math.max(next, Date.now()));
   }
 
+  /** A failure here throws, so Cloudflare retries the alarm with backoff. */
   async alarm() {
-    await this.scheduler.runDue();
-    const day = new Date().toISOString().slice(0, 10);
-    if (this.engine.store.getMeta("jobsPrunedOn") !== day) {
-      this.engine.store.setMeta("jobsPrunedOn", day);
+    if (this.engine.writeMode === "live") {
+      await this.scheduler.runDue();
       await this.scheduler.prune();
     }
     await this.arm();
@@ -123,19 +136,20 @@ export class ChrondleBackend extends DurableObject<Env> {
     return { nextWake: this.scheduler.nextWakeTime(), ts: this.engine.ts.toString() };
   }
 
-  /** Write a full NDJSON backup plus its manifest to the private R2 bucket. */
-  async backup(): Promise<{ key: string; ts: string; manifest: Manifest }> {
+  /** Write a full snapshot plus its summary to the private R2 bucket. */
+  async backup(): Promise<{ key: string; ts: string } & Summary> {
     if (!this.env.BACKUPS) throw new Error("BACKUPS bucket is not bound");
-    // One synchronous turn: no commit can land between the manifest and the body.
+    // One synchronous turn: no commit can land between the summary and the body.
     const ts = this.engine.ts.toString();
-    const manifest = summarize(this.engine);
-    const body = [...exportLines(this.engine)].join("");
+    const state = readState(this.engine);
+    const summary = summarize(state);
+    const body = [...serialize(state)].join("");
     const key = `${BACKUP_PREFIX}${new Date().toISOString().replace(/[:.]/g, "-")}.ndjson`;
     await this.env.BACKUPS.put(key, body, {
       httpMetadata: { contentType: "application/x-ndjson" },
       customMetadata: { ts, revision: this.env.REVISION ?? "unknown" },
     });
-    await this.env.BACKUPS.put(`${key}.manifest.json`, JSON.stringify({ ts, manifest }), {
+    await this.env.BACKUPS.put(`${key}.manifest.json`, JSON.stringify({ ts, ...summary }), {
       httpMetadata: { contentType: "application/json" },
     });
     const listed = await this.env.BACKUPS.list({ prefix: BACKUP_PREFIX });
@@ -146,33 +160,30 @@ export class ChrondleBackend extends DurableObject<Env> {
     for (const stale of backups.slice(0, Math.max(0, backups.length - BACKUPS_KEPT))) {
       await this.env.BACKUPS.delete([stale, `${stale}.manifest.json`]);
     }
-    return { key, ts, manifest };
+    return { key, ts, ...summary };
   }
 
-  /** Replace application data with a backup and check it against the backup's manifest. */
-  private async restoreFrom(key: string): Promise<Response> {
-    if (!this.env.BACKUPS) return json({ error: "BACKUPS bucket is not bound" }, 500);
-    const [object, manifestObject] = await Promise.all([
-      this.env.BACKUPS.get(key),
-      this.env.BACKUPS.get(`${key}.manifest.json`),
-    ]);
-    if (!object || !manifestObject)
-      return json({ error: `Backup ${key} or its manifest is missing` }, 404);
-    const expected = (JSON.parse(await manifestObject.text()) as { manifest: Manifest }).manifest;
-    const manifest = await restore(this.engine, (await object.text()).split("\n"));
-    const mismatches = [...new Set([...Object.keys(expected), ...Object.keys(manifest)])].filter(
-      (table) =>
-        JSON.stringify(expected[table] ?? null) !== JSON.stringify(manifest[table] ?? null),
-    );
+  /** Replace all state with a snapshot (writes must be paused) and verify it. */
+  private async replaceWith(snapshot: Snapshot, expected: Summary[]): Promise<Response> {
+    let stored: Summary;
+    try {
+      stored = await restore(this.engine, snapshot);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const status =
+        error instanceof NotPausedError ? 409 : error instanceof SystemError ? 500 : 400;
+      return json({ error: message }, status);
+    }
+    const differences = [...new Set(expected.flatMap((summary) => mismatches(summary, stored)))];
     return json(
       {
-        key,
-        verified: mismatches.length === 0,
-        mismatches,
-        manifest,
+        writes: this.engine.writeMode,
         ts: this.engine.ts.toString(),
+        verified: differences.length === 0,
+        mismatches: differences,
+        ...stored,
       },
-      mismatches.length ? 500 : 200,
+      differences.length ? 500 : 200,
     );
   }
 
@@ -201,42 +212,47 @@ export class ChrondleBackend extends DurableObject<Env> {
       }
     };
     const route = `${request.method} ${path.slice("/_backend/admin".length)}`;
-    const writeState = () => ({
-      writesPaused: this.engine.writesPaused,
-      ts: this.engine.ts.toString(),
-    });
+    const writeState = () => ({ writes: this.engine.writeMode, ts: this.engine.ts.toString() });
     const requirePaused = () =>
-      this.engine.writesPaused
+      this.engine.writeMode === "paused"
         ? null
         : json({ error: "Pause writes first: POST /_backend/admin/pause" }, 409);
     switch (route) {
       case "GET /manifest":
-        return json({ ...writeState(), manifest: summarize(this.engine) });
-      case "POST /pause":
-        this.engine.setWritesPaused(true);
-        return json(writeState());
+        return json({ ...writeState(), ...summarize(readState(this.engine)) });
+      case "POST /pause": {
+        // A barrier: when it answers, nothing but an import can write.
+        const { settleMs } = input();
+        const wait =
+          typeof settleMs === "number" ? Math.max(0, Math.min(settleMs, SETTLE_MAX_MS)) : SETTLE_MS;
+        const report = await this.scheduler.pause(Date.now() + wait);
+        return json({ ...writeState(), ...report });
+      }
       case "POST /resume":
-        this.engine.setWritesPaused(false);
-        void this.scheduler.runDue();
+        await this.engine.resume();
         await this.arm();
         return json(writeState());
-      case "GET /export":
-        // One synchronous turn, so the export is one consistent state.
-        return new Response([...exportLines(this.engine)].join(""), {
+      case "GET /export": {
+        // Only a paused backend exports for a migration: nothing lands after it.
+        const refused = requirePaused();
+        if (refused) return refused;
+        return new Response([...serialize(readState(this.engine))].join(""), {
           headers: {
             "Content-Type": "application/x-ndjson",
             "X-Backend-Ts": this.engine.ts.toString(),
           },
         });
+      }
       case "POST /import": {
         const refused = requirePaused();
         if (refused) return refused;
+        let snapshot: Snapshot;
         try {
-          const manifest = await restore(this.engine, body.split("\n"));
-          return json({ ...writeState(), manifest });
+          snapshot = parse(body.split("\n"));
         } catch (error) {
           return json({ error: error instanceof Error ? error.message : String(error) }, 400);
         }
+        return this.replaceWith(snapshot, [summarize(snapshot)]);
       }
       case "POST /backup":
         return json(await this.backup());
@@ -244,9 +260,23 @@ export class ChrondleBackend extends DurableObject<Env> {
         const refused = requirePaused();
         if (refused) return refused;
         const { key } = input();
-        return typeof key === "string"
-          ? this.restoreFrom(key)
-          : json({ error: "Missing key" }, 400);
+        if (typeof key !== "string") return json({ error: "Missing key" }, 400);
+        if (!this.env.BACKUPS) return json({ error: "BACKUPS bucket is not bound" }, 500);
+        const [object, manifestObject] = await Promise.all([
+          this.env.BACKUPS.get(key),
+          this.env.BACKUPS.get(`${key}.manifest.json`),
+        ]);
+        if (!object || !manifestObject)
+          return json({ error: `Backup ${key} or its manifest is missing` }, 404);
+        const recorded = JSON.parse(await manifestObject.text()) as Summary;
+        let snapshot: Snapshot;
+        try {
+          snapshot = parse((await object.text()).split("\n"));
+        } catch (error) {
+          return json({ error: error instanceof Error ? error.message : String(error) }, 400);
+        }
+        // The body must match what was recorded at backup time, and the store the body.
+        return this.replaceWith(snapshot, [recorded, summarize(snapshot)]);
       }
       case "POST /run": {
         const { path: fnPath, args } = input();

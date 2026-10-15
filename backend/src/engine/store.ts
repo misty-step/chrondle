@@ -10,7 +10,7 @@
 import { convexToJson, jsonToConvex, type Value } from "convex/values";
 import { decodeDocumentId, newDocumentId } from "./ids";
 import { encodeKey, fieldValue, KEY_MAX_SUFFIX } from "./keys";
-import { checkDocument, type ValidatorJSON } from "./validate";
+import { checkDocument, type IdChecker, type ValidatorJSON } from "./validate";
 
 export type SqlValue = string | number | null;
 export type SqlRow = Record<string, SqlValue>;
@@ -22,6 +22,24 @@ export interface Sql {
 }
 
 export type Doc = Record<string, Value> & { _id: string; _creationTime: number };
+
+/** A committed client mutation's result, kept so a replayed request gets it again. */
+export type MutationLogEntry = {
+  session: string;
+  request: number;
+  result: string;
+  ts: string;
+  at: number;
+};
+
+/** Replay records are kept a day; clients replay unacknowledged mutations on reconnect. */
+const MUTATION_LOG_RETENTION_MS = 24 * 60 * 60 * 1000;
+const CRON_CURSOR = "cron:";
+
+/** Metadata key holding a cron's last dispatched occurrence. */
+export function cronCursorKey(name: string): string {
+  return `${CRON_CURSOR}${name}`;
+}
 
 export interface IndexDef {
   /** `${table}.${indexName}` */
@@ -169,13 +187,25 @@ export class Store {
     this.sql.exec(
       "CREATE TABLE IF NOT EXISTS cvx_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID",
     );
+    this.sql.exec(
+      "CREATE TABLE IF NOT EXISTS cvx_mutation_log (session TEXT NOT NULL, request INTEGER NOT NULL, result TEXT NOT NULL, ts TEXT NOT NULL, at REAL NOT NULL, PRIMARY KEY (session, request)) WITHOUT ROWID",
+    );
+    this.reload();
+    for (const [name, number] of Object.entries(SYSTEM_TABLE_NUMBERS))
+      if (!this.tableNumbers.has(name)) this.registerTable(name, number);
+    this.syncIndexes();
+  }
+
+  /** Re-read the table registry and creation-time watermark (after an import). */
+  reload(): void {
+    this.tableNumbers.clear();
+    this.tableNames.clear();
     for (const row of this.sql.exec("SELECT name, number FROM cvx_tables")) {
       this.tableNumbers.set(row.name as string, row.number as number);
       this.tableNames.set(row.number as number, row.name as string);
     }
     const [{ maxCt }] = this.sql.exec("SELECT COALESCE(MAX(ct), 0) AS maxCt FROM cvx_documents");
-    this.lastCreationTime = maxCt as number;
-    this.syncIndexes();
+    this.observeCreationTime(maxCt as number);
   }
 
   /** Rebuild index entries whose definition changed since the last deploy. */
@@ -230,6 +260,85 @@ export class Store {
       key,
       value,
     );
+  }
+
+  /** Last dispatched occurrence of each cron (`cron:<name>` metadata). */
+  cronCursors(): Map<string, number> {
+    const rows = this.sql.exec(
+      "SELECT key, value FROM cvx_meta WHERE substr(key, 1, ?) = ? ORDER BY key",
+      CRON_CURSOR.length,
+      CRON_CURSOR,
+    );
+    return new Map(
+      rows.map((row) => [(row.key as string).slice(CRON_CURSOR.length), Number(row.value)]),
+    );
+  }
+
+  cronCursor(name: string): number | null {
+    const value = this.getMeta(cronCursorKey(name));
+    return value === null ? null : Number(value);
+  }
+
+  /** Inside a transaction: make the cron cursors exactly `cursors`. */
+  replaceCronCursors(cursors: Map<string, number>): void {
+    this.sql.exec(
+      "DELETE FROM cvx_meta WHERE substr(key, 1, ?) = ?",
+      CRON_CURSOR.length,
+      CRON_CURSOR,
+    );
+    for (const [name, occurrence] of cursors) this.setMeta(cronCursorKey(name), String(occurrence));
+  }
+
+  loggedMutation(session: string, request: number): MutationLogEntry | null {
+    const rows = this.sql.exec(
+      "SELECT session, request, result, ts, at FROM cvx_mutation_log WHERE session = ? AND request = ?",
+      session,
+      request,
+    );
+    return rows.length ? (rows[0] as unknown as MutationLogEntry) : null;
+  }
+
+  /** Inside a transaction: record a committed mutation's result and drop expired ones. */
+  logMutation(entry: MutationLogEntry, now: number): void {
+    this.sql.exec(
+      "INSERT INTO cvx_mutation_log (session, request, result, ts, at) VALUES (?, ?, ?, ?, ?)",
+      entry.session,
+      entry.request,
+      entry.result,
+      entry.ts,
+      entry.at,
+    );
+    this.sql.exec("DELETE FROM cvx_mutation_log WHERE at < ?", now - MUTATION_LOG_RETENTION_MS);
+  }
+
+  mutationLog(): MutationLogEntry[] {
+    return this.sql.exec(
+      "SELECT session, request, result, ts, at FROM cvx_mutation_log ORDER BY session, request",
+    ) as unknown as MutationLogEntry[];
+  }
+
+  /** Inside a transaction: make the replay records exactly `entries`. */
+  replaceMutationLog(entries: MutationLogEntry[]): void {
+    this.sql.exec("DELETE FROM cvx_mutation_log");
+    for (const entry of entries)
+      this.sql.exec(
+        "INSERT INTO cvx_mutation_log (session, request, result, ts, at) VALUES (?, ?, ?, ?, ?)",
+        entry.session,
+        entry.request,
+        entry.result,
+        entry.ts,
+        entry.at,
+      );
+  }
+
+  /**
+   * Inside a transaction: make the application tables' numbers exactly
+   * `numbers` (system tables keep theirs). Call `reload()` after it commits.
+   */
+  replaceRegistry(numbers: Map<string, number>): void {
+    this.sql.exec("DELETE FROM cvx_tables WHERE substr(name, 1, 1) != '_'");
+    for (const [name, number] of numbers)
+      this.sql.exec("INSERT INTO cvx_tables (name, number) VALUES (?, ?)", name, number);
   }
 
   /** Register a table number (from imported Convex IDs or a fresh assignment). */
@@ -332,11 +441,15 @@ export class Store {
     return n as number;
   }
 
-  validate(table: string, document: Doc): void {
+  validate(
+    table: string,
+    document: Doc,
+    isId: IdChecker = (id, name) => this.isId(id, name),
+  ): void {
     if (!this.schema.schemaValidation) return;
     const documentType = this.schema.tables.get(table)?.documentType;
     if (!documentType) return;
-    checkDocument(documentType, document, (id, tableName) => this.isId(id, tableName));
+    checkDocument(documentType, document, isId);
   }
 
   /** Apply committed writes. Must run inside `sql.transaction`. */
@@ -356,8 +469,10 @@ export class Store {
         );
     }
     if (after) {
+      // The whole row follows `after`, like its index keys: a restore may give
+      // an existing ID the creation time recorded in the snapshot.
       this.sql.exec(
-        "INSERT INTO cvx_documents (id, tbl, ct, doc) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET doc = excluded.doc",
+        "INSERT INTO cvx_documents (id, tbl, ct, doc) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET ct = excluded.ct, doc = excluded.doc",
         after._id,
         table,
         after._creationTime,

@@ -37,7 +37,8 @@ Keep the `convex/` functions and every client unchanged. Add `backend/`, a Worke
 - Mutations run one at a time.
 - Each query and each sync transition reads exactly one committed state: a commit waits for running readers, and new readers wait for a pending commit.
 - A subscription re-runs only when its read set intersects a commit.
-- Mutation results are recorded per session and request, so a client that replays a mutation after reconnecting gets the original result. Each mutation runs exactly once.
+- Mutation results are recorded per session and request, so a client that replays a mutation after reconnecting gets the original result. Each mutation runs exactly once. The records are kept for 24 hours.
+- Every write belongs to a unit of work admitted while writes are live: a client request, a scheduled job or a cron dispatch. Imports and restores are the only other writers, and they run only while writes are paused. Pausing stops admitting units, lets the admitted ones finish until a deadline, then fences them: a unit admitted before the pause can never write again, even after writes resume. When a pause is acknowledged, nothing can change the data except an import or restore.
 
 ### Protocols
 
@@ -54,18 +55,23 @@ Keep the `convex/` functions and every client unchanged. Add `backend/`, a Worke
 
 - Jobs live in `_scheduled_functions` and are committed in the same transaction as the mutation that scheduled them.
 - Due jobs start right after that commit. The Durable Object alarm covers future jobs, crons and restarts. An hourly Worker cron trigger (`17 * * * *`) re-arms the alarm as a watchdog.
-- A scheduled mutation runs exactly once. An action is marked `inProgress` first and runs at most once. If a restart interrupts it, it is marked failed. These are Convex's semantics.
+- A scheduled mutation runs exactly once. If the function throws, the job fails, as on Convex. If the engine or storage fails instead, the job stays pending and is retried: at once, then after 1 s, doubling up to 5 minutes. The attempt count is stored with the job, so a restart keeps the backoff.
+- An action is marked `inProgress` first and runs at most once. If a restart interrupts it, it is marked failed with Convex's `Transient error while executing action`, as on Convex. An action still running when a pause takes effect is failed the same way.
+- A cron occurrence is dispatched as a job in the same transaction that advances the cron's stored cursor, so a restart on either side of the dispatch neither loses nor repeats it. A cron with no cursor (new) starts at its next occurrence. Occurrences missed while writes were paused run once when writes resume.
 - Finished job records are pruned after 7 days.
 
 ### Backups
 
 - Every day at 03:17 UTC the Worker writes an NDJSON export to a private R2 bucket (`BACKUPS`) and keeps the last 30.
-- Each export has a manifest with per-table document counts and the SHA-256 of canonical records. Table numbers are included even for empty tables.
-- A restore checks the result against the manifest and reports any mismatching table.
+- An export is one committed state: the application tables plus the runtime state that goes with them, which is the scheduled functions, the cron cursors and the mutation replay records. Restoring it brings back that state's queued work and replay results, and drops any queued or recorded after it. An action that was running when the export was taken is restored as failed, never re-run.
+- Each export has a manifest with per-table document counts and the SHA-256 of canonical records. Table numbers are included even for empty tables. A runtime summary gives the jobs per state, the cron cursors and the number of replay records.
+- A restore or import checks the whole snapshot before storing anything: document IDs, table numbers and schema. It then replaces everything in one transaction, checks the result against the manifest and runtime summary, and reports any mismatch. A rejected snapshot changes nothing.
 
 ### Operator API
 
 `/_backend/admin/*` replaces the Convex dashboard and `npx convex run`: `manifest`, `backup`, `restore`, `export`, `import`, `pause`, `resume`, `run` and `scheduler`. It requires `BACKEND_ADMIN_TOKEN`, and callers without it get the same 404 as an unknown path.
+
+`POST /pause` is the barrier described under Consistency. It waits up to `settleMs` (default 60 s, at most 15 minutes) for running work and due jobs to finish, then fences writes and fails any action still running. It answers `{"writes": "paused", "settled", "interrupted"}`: `settled` is false when the deadline cut work off, and `interrupted` lists the failed jobs. `GET /export`, `POST /import` and `POST /restore` answer 409 unless writes are paused.
 
 ### Environments
 
@@ -97,20 +103,22 @@ Preview and production are served on their `workers.dev` hostnames, so no DNS re
 ## Verification
 
 - `bun run backend:test` runs the engine, ID codec, scheduler, backup and auth unit tests, the repository's Convex suites against this engine, and the real Convex clients against the protocol layer. The root `vitest.config.ts` runs it in CI as the `backend` project.
-- `node backend/scripts/verify-backend.mjs check --url <backend>` drives the real `convex@1.45.0` clients against a running backend. It checks authentication, live sync, play and streak, invalid access, concurrency, exactly-once replay, scheduler delivery, paused writes, backup to verified restore, and export to import. Without `--full` it only reads, so it is safe against production.
+- `node backend/scripts/verify-backend.mjs check --url <backend>` drives the real `convex@1.45.0` clients against a running backend. It checks authentication, live sync, play and streak, invalid access, concurrency, exactly-once replay, scheduler delivery, paused writes, backup to verified restore, and export to import. It also pauses while four players are mid-guess and checks that every acknowledged guess, and nothing else, is in the export. Finally it checks that a queued job travels through export and import, waits while paused and runs once after resuming. Without `--full` it only reads, so it is safe against production.
 
 ## Cutover and rollback
 
 The cutover is a backend configuration change. The frontend's DNS and routes stay the same.
 
-A production database starts with writes paused: it serves queries but refuses every mutation, action, scheduled job and cron until an operator resumes it. Writes stay paused across restarts. The switch is `POST /_backend/admin/pause` and `POST /_backend/admin/resume`. `POST /_backend/admin/import` and `POST /_backend/admin/restore` work only while writes are paused, which keeps one writer at every step.
+A production database starts with writes paused: it serves queries but refuses every mutation, action, scheduled job and cron until an operator resumes it. Writes stay paused across restarts. The switch is `POST /_backend/admin/pause` and `POST /_backend/admin/resume`. A pause answers only once the work already running has finished or been cut off, and `import`, `restore` and `export` work only while writes are paused. Together these keep one writer at every step.
 
 `bun backend/scripts/convex-snapshot.ts` converts between a Convex snapshot ZIP (`npx convex export` and `npx convex import`) and the backend's NDJSON, keeping every `_id`, `_creationTime` and table number. It also tells int64 (`3`) from float64 (`3.0`). Each conversion writes a manifest with the same per-table counts and canonical-record SHA-256s the backend reports, and `compare` exits non-zero on any difference.
 
+A Convex snapshot carries only the application tables. `to-backup --as-of <time>` takes the time Convex was paused and sets the cron cursors from it: every occurrence up to then counts as run on Convex, and later ones run on the backend. `to-convex` refuses a snapshot with pending or running scheduled functions, because Convex cannot import them. It reports the finished job records, cron cursors and replay records it leaves out.
+
 1. Deploy `chrondle-backend` with `wrangler deploy -c backend/wrangler.jsonc --env production`. Set the secrets `BACKEND_ADMIN_TOKEN`, `CLERK_SYNC_SECRET` and `STRIPE_SYNC_SECRET`, plus the LLM, email and observability keys the functions read today.
 2. Make Convex the only writer, then move the data:
-   - Pause the `fleet-goldfish-183` deployment outside the puzzle and event-generation cron windows, so that no follow-up scheduled jobs are in flight. Neither side's export carries scheduled jobs.
-   - Run `npx convex export`, then `convex-snapshot.ts to-backup`.
+   - Pause the `fleet-goldfish-183` deployment outside the puzzle and event-generation cron windows, and note the time. Check that the dashboard's Schedules page shows no pending scheduled functions, since Convex's export does not carry them.
+   - Run `npx convex export`, then `convex-snapshot.ts to-backup --as-of <the pause time>`.
    - POST the NDJSON to `/_backend/admin/import`.
    - Run `compare` on the conversion manifest and the import response.
 3. Point `NEXT_PUBLIC_CONVEX_URL` at the backend, redeploy the frontend, and resume writes on the backend. These files pin the Convex URL and change in the same commit:
@@ -126,7 +134,7 @@ A production database starts with writes paused: it serves queries but refuses e
 
 1. Pause writes on the backend.
 2. Save `GET /_backend/admin/export` and `GET /_backend/admin/manifest`.
-3. Run `convex-snapshot.ts to-convex`, then `compare` its manifest with the backend's.
+3. Run `convex-snapshot.ts to-convex`, then `compare` its manifest with the backend's. If it refuses because scheduled functions are still pending, resume writes until they have run, then start again from step 1.
 4. Run `npx convex import --replace-all` into Convex, and compare a fresh `npx convex export` the same way.
 5. Resume Convex and switch the URL back.
 

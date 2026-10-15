@@ -1,12 +1,17 @@
 /**
  * Convert between a Convex snapshot ZIP (`npx convex export` / `npx convex
- * import`) and this backend's backup NDJSON (see ../engine/backup.ts), keeping
+ * import`) and this backend's snapshot (see ../engine/backup.ts), keeping
  * every `_id`, `_creationTime` and table number.
  *
  * Snapshot layout, as written by Convex's export worker:
  *   _tables/documents.jsonl        {"name":"users","id":10002} per user table
  *   <table>/documents.jsonl        one document per line, "export JSON"
  *   <table>/generated_schema.jsonl "uniform" (marks the export JSON format)
+ *
+ * A Convex snapshot holds application tables only. Its scheduled jobs, cron
+ * state and replay records cannot be exported or imported, so:
+ * - reading one takes the cron cursors from the caller (when Convex stopped)
+ * - writing one refuses pending or running jobs: drain them first.
  *
  * Export JSON is Convex's `ConvexExportJSON` value format: int64 is a bare
  * integer, float64 always has a fraction or exponent ("3.0", "-0.0"),
@@ -15,12 +20,9 @@
  * parsing uses JSON.parse's `context.source`.
  */
 import { convexToJson, jsonToConvex, type JSONValue, type Value } from "convex/values";
-import type { Manifest } from "../engine/backup";
-import { summarizeDocuments } from "../engine/backup";
+import type { Snapshot } from "../engine/backup";
+import type { Doc } from "../engine/store";
 import type { ZipEntries } from "./zip";
-
-type Doc = Record<string, Value> & { _id: string; _creationTime: number };
-export type Snapshot = { tableNumbers: Map<string, number>; documents: Map<string, Doc[]> };
 
 const TABLES = "_tables/documents.jsonl";
 const TABLE_NAME = /^[a-zA-Z][a-zA-Z0-9_]*$/;
@@ -78,8 +80,11 @@ export function formatExportJson(value: Value): string {
 const text = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 const lines = (body: string) => body.split("\n").filter((line) => line.trim() !== "");
 
-/** Read a Convex snapshot export. Refuses anything this backend cannot hold. */
-export function readSnapshot(entries: ZipEntries): Snapshot {
+/**
+ * Read a Convex snapshot export. Refuses anything this backend cannot hold.
+ * `cronCursors` says which cron occurrences Convex already ran.
+ */
+export function readSnapshot(entries: ZipEntries, cronCursors: Map<string, number>): Snapshot {
   const tableNumbers = new Map<string, number>();
   const documents = new Map<string, Doc[]>();
   const tablesEntry = entries.get(TABLES);
@@ -111,11 +116,28 @@ export function readSnapshot(entries: ZipEntries): Snapshot {
       rows.map((row) => parseExportJson(row) as Doc),
     );
   }
-  return { tableNumbers, documents };
+  return { tableNumbers, documents, scheduledFunctions: [], cronCursors, mutationLog: [] };
 }
 
-/** Build the snapshot ZIP entries `npx convex import --replace-all` reads. */
-export function writeSnapshot(snapshot: Snapshot): ZipEntries {
+/** Runtime state a Convex snapshot cannot carry, which `writeSnapshot` leaves out. */
+export type Dropped = { finishedJobs: number; cronCursors: number; mutationLog: number };
+
+/**
+ * Build the snapshot ZIP entries `npx convex import --replace-all` reads.
+ * Refuses pending or running jobs: Convex cannot import them, so they would
+ * silently never run. Finished job records, cron cursors and replay records
+ * are left out and counted in `dropped`.
+ */
+export function writeSnapshot(snapshot: Snapshot): { entries: ZipEntries; dropped: Dropped } {
+  const unfinished = snapshot.scheduledFunctions.filter((job) =>
+    ["pending", "inProgress"].includes((job.state as { kind: string }).kind),
+  );
+  if (unfinished.length > 0)
+    throw new Error(
+      `${unfinished.length} scheduled function(s) have not run (${unfinished
+        .map((job) => `${job.name as string} ${(job.state as { kind: string }).kind}`)
+        .join(", ")}); Convex cannot import them. Resume writes, let them finish, pause again.`,
+    );
   const encoder = new TextEncoder();
   const entries: ZipEntries = new Map();
   const numbered = [...snapshot.tableNumbers].sort((a, b) => a[1] - b[1]);
@@ -131,60 +153,12 @@ export function writeSnapshot(snapshot: Snapshot): ZipEntries {
     );
     entries.set(`${table}/generated_schema.jsonl`, encoder.encode('"uniform"\n'));
   }
-  return entries;
-}
-
-/** Backup NDJSON (../engine/backup.ts format) → snapshot. */
-export function fromBackup(backupLines: Iterable<string>): Snapshot {
-  const tableNumbers = new Map<string, number>();
-  const documents = new Map<string, Doc[]>();
-  for (const line of backupLines) {
-    if (!line.trim()) continue;
-    const record = JSON.parse(line) as {
-      table: string;
-      tableNumber?: number;
-      document?: JSONValue;
-    };
-    if (record.document === undefined) {
-      tableNumbers.set(record.table, record.tableNumber as number);
-      continue;
-    }
-    if (!documents.has(record.table)) documents.set(record.table, []);
-    documents.get(record.table)!.push(jsonToConvex(record.document) as Doc);
-  }
-  for (const table of documents.keys()) {
-    if (!tableNumbers.has(table))
-      throw new Error(`Backup has documents for ${table} but no table number`);
-  }
-  return { tableNumbers, documents };
-}
-
-/** Snapshot → backup NDJSON lines (table numbers first, like exportLines). */
-export function* toBackup(snapshot: Snapshot): Generator<string> {
-  const tables = [...snapshot.tableNumbers.keys()].sort();
-  for (const table of tables)
-    yield `${JSON.stringify({ table, tableNumber: snapshot.tableNumbers.get(table) })}\n`;
-  for (const table of tables) {
-    for (const doc of snapshot.documents.get(table) ?? []) {
-      yield `${JSON.stringify({ table, document: convexToJson(doc as Value) })}\n`;
-    }
-  }
-}
-
-/** Per-table counts and canonical-record SHA-256, identical to the backend's manifest. */
-export function snapshotManifest(snapshot: Snapshot): Manifest {
-  const manifest: Manifest = {};
-  for (const table of [...snapshot.tableNumbers.keys()].sort()) {
-    const docs = (snapshot.documents.get(table) ?? []).map((doc) => convexToJson(doc as Value));
-    manifest[table] = summarizeDocuments(snapshot.tableNumbers.get(table) ?? null, docs);
-  }
-  return manifest;
-}
-
-/** Tables whose count, hash or table number differ between two manifests. */
-export function manifestMismatches(expected: Manifest, actual: Manifest): string[] {
-  const tables = [...new Set([...Object.keys(expected), ...Object.keys(actual)])].sort();
-  return tables.filter(
-    (table) => JSON.stringify(expected[table] ?? null) !== JSON.stringify(actual[table] ?? null),
-  );
+  return {
+    entries,
+    dropped: {
+      finishedJobs: snapshot.scheduledFunctions.length,
+      cronCursors: snapshot.cronCursors.size,
+      mutationLog: snapshot.mutationLog.length,
+    },
+  };
 }

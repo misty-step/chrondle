@@ -9,7 +9,8 @@
 //       Read-only checks are safe against production. --full also writes
 //       synthetic data (needs BACKEND_ADMIN_TOKEN): sign-in, play, streaks,
 //       invalid access, concurrency, exactly-once retry, scheduler delivery,
-//       backup/restore.
+//       backup/restore, export/import, the pause barrier under concurrent
+//       writes and a queued job carried through export/import.
 import { generateKeyPairSync, createSign, randomUUID } from "node:crypto";
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -423,6 +424,19 @@ async function fullChecks(issuerDir) {
     };
   });
 
+  const raw = (method, path, body) =>
+    fetch(`${url}/_backend/admin${path}`, {
+      method,
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body,
+    });
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const records = (ndjson) =>
+    ndjson
+      .split("\n")
+      .filter((line) => line.trim())
+      .map((line) => JSON.parse(line));
+
   await check("paused writes: backup → restore and export → import are lossless", async () => {
     const backup = await admin("POST", "/backup");
     const client = connect();
@@ -431,16 +445,13 @@ async function fullChecks(issuerDir) {
     const exists = async () =>
       (await run("users:userExists", { clerkId: `user_after_backup_${nonce}` })).exists;
     assert(await exists(), "post-backup user missing before restore");
-    const raw = (method, path, body) =>
-      fetch(`${url}/_backend/admin${path}`, {
-        method,
-        headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-        body,
-      });
     const live = await raw("POST", "/restore", JSON.stringify({ key: backup.key }));
     assert(live.status === 409, `restore with writes live got ${live.status}, want 409`);
+    const liveExport = await raw("GET", "/export");
+    assert(liveExport.status === 409, `export with writes live got ${liveExport.status}, want 409`);
 
-    assert((await admin("POST", "/pause")).writesPaused, "pause did not stick");
+    const paused = await admin("POST", "/pause", {});
+    assert(paused.writes === "paused" && paused.settled, `pause: ${JSON.stringify(paused)}`);
     let refused = false;
     try {
       await client.mutation(api.users.getOrCreateCurrentUser, {});
@@ -450,18 +461,23 @@ async function fullChecks(issuerDir) {
     assert(refused, "a mutation was accepted while writes were paused");
     const restored = await admin("POST", "/restore", { key: backup.key });
     assert(restored.verified, `restore mismatches ${JSON.stringify(restored.mismatches)}`);
-    assert(!(await exists()), "post-backup user survived restore");
-
-    const before = (await admin("GET", "/manifest")).manifest;
-    const exported = await (await raw("GET", "/export")).text();
+    const [before, exported] = [
+      await admin("GET", "/manifest"),
+      await (await raw("GET", "/export")).text(),
+    ];
     const importResponse = await raw("POST", "/import", exported);
     const imported = await importResponse.json();
-    assert(importResponse.ok, `import -> ${importResponse.status} ${JSON.stringify(imported)}`);
     assert(
-      JSON.stringify(imported.manifest) === JSON.stringify(before),
-      "export → import changed the manifest",
+      importResponse.ok && imported.verified,
+      `import -> ${importResponse.status} ${JSON.stringify(imported)}`,
     );
-    assert(!(await admin("POST", "/resume")).writesPaused, "resume did not stick");
+    assert(
+      JSON.stringify({ manifest: imported.manifest, runtime: imported.runtime }) ===
+        JSON.stringify({ manifest: before.manifest, runtime: before.runtime }),
+      "export → import changed the data or runtime state",
+    );
+    assert((await admin("POST", "/resume")).writes === "live", "resume did not stick");
+    assert(!(await exists()), "post-backup user survived restore");
     await client.mutation(api.users.getOrCreateCurrentUser, {});
     assert(await exists(), "writes were not accepted after resume");
     return {
@@ -470,8 +486,110 @@ async function fullChecks(issuerDir) {
       tables: Object.fromEntries(
         Object.entries(restored.manifest).map(([table, summary]) => [table, summary.count]),
       ),
+      jobs: restored.runtime.scheduledFunctions.states,
     };
   });
+
+  await check(
+    "pause is a barrier: every acknowledged write is exported, none lands after",
+    async () => {
+      const wrong = puzzle.targetYear === 1066 ? 1215 : 1066;
+      const players = await Promise.all(
+        [0, 1, 2, 3].map(async (i) => {
+          const client = connect();
+          await signIn(client, sign, { sub: `user_barrier_${nonce}_${i}` });
+          const user = await client.mutation(api.users.getOrCreateCurrentUser, {});
+          return { client, user, acknowledged: 0 };
+        }),
+      );
+      // Every player keeps guessing while the pause is requested; each answer is recorded.
+      let firstAcknowledged;
+      const acknowledgedOnce = new Promise((resolve) => (firstAcknowledged = resolve));
+      const playing = Promise.all(
+        players.map(async (player) => {
+          for (let k = 0; k < 5; k++) {
+            try {
+              await player.client.mutation(api.puzzles.submitGuess, {
+                puzzleId: puzzle._id,
+                guess: wrong,
+              });
+              player.acknowledged++;
+              firstAcknowledged();
+            } catch {
+              return;
+            }
+          }
+        }),
+      );
+      // Pause mid-stream: right after the first answer, with most guesses still to come.
+      await acknowledgedOnce;
+      const paused = await admin("POST", "/pause", {});
+      await playing;
+      const atPause = await (await raw("GET", "/export")).text();
+      const guesses = new Map(
+        records(atPause)
+          .filter((record) => record.table === "plays" && record.document?.puzzleId === puzzle._id)
+          .map((record) => [record.document.userId, (record.document.guesses ?? []).length]),
+      );
+      for (const { user, acknowledged } of players)
+        assert(
+          (guesses.get(user._id) ?? 0) === acknowledged,
+          `player ${user._id}: ${acknowledged} acknowledged, ${guesses.get(user._id) ?? 0} stored`,
+        );
+      await sleep(2000);
+      const later = await (await raw("GET", "/export")).text();
+      assert(later === atPause, "state changed after the pause was acknowledged");
+      return {
+        settled: paused.settled,
+        acknowledged: players.map((player) => player.acknowledged),
+        refusedAfterPause: players.filter((player) => player.acknowledged < 5).length,
+      };
+    },
+  );
+
+  await check(
+    "a queued job travels export → import, waits while paused, runs once after resume",
+    async () => {
+      // Writes are still paused from the barrier check.
+      const lines = (await (await raw("GET", "/export")).text())
+        .split("\n")
+        .filter((l) => l.trim());
+      const index = lines.findIndex((line) => line.startsWith('{"scheduledFunction":'));
+      assert(index !== -1, "no scheduled function record to queue");
+      // Re-queue an existing job record as a due-in-2s, idempotent puzzle generation.
+      const queued = {
+        ...JSON.parse(lines[index]).scheduledFunction,
+        _creationTime: Date.now(),
+        name: "puzzles:generateDailyPuzzle",
+        args: [{ date: puzzle.date }],
+        scheduledTime: Date.now() + 2000,
+        state: { kind: "pending" },
+      };
+      for (const field of ["completedTime", "attempts", "retryAfter"]) delete queued[field];
+      lines[index] = JSON.stringify({ scheduledFunction: queued });
+      const response = await raw("POST", "/import", `${lines.join("\n")}\n`);
+      const imported = await response.json();
+      assert(
+        response.ok && imported.verified,
+        `import -> ${response.status} ${JSON.stringify(imported)}`,
+      );
+      const stateOf = async () =>
+        (await admin("GET", "/scheduler")).recentJobs.find(
+          (candidate) => candidate.id === queued._id,
+        )?.state.kind;
+      await sleep(4000);
+      assert((await stateOf()) === "pending", `ran while paused: ${await stateOf()}`);
+      await admin("POST", "/resume");
+      const final = await eventually(stateOf, (state) => state === "success", "queued job to run");
+      const status = await admin("GET", "/scheduler");
+      return {
+        job: queued._id,
+        state: final,
+        records: status.recentJobs.filter((candidate) => candidate.id === queued._id).length,
+        writes: status.writes,
+      };
+    },
+  );
 }
 
 // ------------------------------------------------------------------ main

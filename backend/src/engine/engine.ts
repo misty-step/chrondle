@@ -12,6 +12,11 @@
  *   schema and commit atomically with any scheduled jobs they created
  * - actions run concurrently and reach the database only through
  *   `ctx.runQuery` / `ctx.runMutation` like on Convex
+ *
+ * Every write belongs to a unit of work (a client request, a scheduled job,
+ * a cron dispatch) or is a system write (imports, crash recovery). Pausing
+ * writes is a barrier (see `WriteMode`): once paused, no unit's write lands,
+ * including units admitted before the pause.
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 import { convexToJson, jsonToConvex, type JSONValue, type Value } from "convex/values";
@@ -67,6 +72,77 @@ export type CommitInfo = { ts: bigint; writes: Map<string, Write> };
 /** What a client sees for a failed function, shaped like Convex's wire errors. */
 export type ClientError = { errorMessage: string; errorData: JSONValue | undefined };
 
+/**
+ * Writes are `live` (normal), `draining` (no new client or cron work; work
+ * already admitted and scheduled jobs may finish) or `paused` (nothing but
+ * system writes lands). Draining and paused are both stored as paused, so a
+ * restart never resumes writes on its own.
+ */
+export type WriteMode = "live" | "draining" | "paused";
+
+/** One admitted unit of work. Its writes land only in the epoch it was admitted in. */
+export type Unit = { readonly epoch: number; readonly label: string };
+
+/** Writer of engine-internal commits that the pause does not stop: imports, crash recovery. */
+export const SYSTEM = Symbol("system write");
+export type Writer = Unit | typeof SYSTEM;
+
+/** Collects one atomic commit: document writes plus metadata. */
+export type WriteSet = {
+  write(table: string, id: string, after: Doc | null): void;
+  setMeta(key: string, value: string): void;
+};
+
+/** A write refused because writes are paused, or because the work predates the pause. */
+export class WritesPausedError extends Error {
+  constructor(what: string) {
+    super(`Writes are paused for maintenance (${what})`);
+    this.name = "WritesPausedError";
+  }
+}
+
+/** Import or restore attempted while writes are not paused. */
+export class NotPausedError extends Error {
+  constructor() {
+    super("Pause writes first: POST /_backend/admin/pause");
+    this.name = "NotPausedError";
+  }
+}
+
+/** A failure of the engine or its storage rather than of the function: retryable. */
+export class SystemError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "SystemError";
+  }
+}
+
+/** Storage failures surface as SystemError, whatever the SQLite binding throws. */
+function guarded(sql: Sql): Sql {
+  const fault = (error: unknown) =>
+    error instanceof SystemError
+      ? error
+      : new SystemError(`Storage failure: ${error instanceof Error ? error.message : error}`, {
+          cause: error,
+        });
+  return {
+    exec: (query, ...params) => {
+      try {
+        return sql.exec(query, ...params);
+      } catch (error) {
+        throw fault(error);
+      }
+    },
+    transaction: (fn) => {
+      try {
+        return sql.transaction(fn);
+      } catch (error) {
+        throw fault(error);
+      }
+    },
+  };
+}
+
 class Transaction {
   private layers: Map<string, Write>[] = [new Map()];
 
@@ -104,14 +180,18 @@ type ExecutionContext = {
   engine: Engine;
   kind: FunctionKind;
   identity: Identity | null;
+  /** The unit this execution writes for; null for queries. */
+  unit: Unit | null;
   txn: Transaction | null;
   readSet: ReadEntry[] | null;
   streams: Map<number, Iterator<Doc>>;
   nextStream: number;
+  /** First engine failure seen by any syscall of this execution (shared with nested calls). */
+  faults: { first?: SystemError };
 };
 
 const als = new AsyncLocalStorage<ExecutionContext>();
-/** Meta key of the maintenance switch (see `Engine.writesPaused`). */
+/** Meta key of the stored pause switch. */
 const WRITES_PAUSED = "writesPaused";
 
 function current(): ExecutionContext {
@@ -120,12 +200,32 @@ function current(): ExecutionContext {
   return ctx;
 }
 
+/** Remember engine failures: the function may turn them into its own error. */
+function noting<T>(ctx: ExecutionContext, run: () => T): T {
+  try {
+    return run();
+  } catch (error) {
+    if (error instanceof SystemError) ctx.faults.first ??= error;
+    throw error;
+  }
+}
+
 /** Route the `convex/server` runtime's syscalls to the engine running the current function. */
 function installSyscalls() {
   (globalThis as unknown as { Convex: unknown }).Convex = {
-    syscall: (op: string, args: string) => current().engine.syscall(op, JSON.parse(args)),
-    asyncSyscall: async (op: string, args: string) =>
-      current().engine.asyncSyscall(op, JSON.parse(args)),
+    syscall: (op: string, args: string) => {
+      const ctx = current();
+      return noting(ctx, () => ctx.engine.syscall(op, JSON.parse(args)));
+    },
+    asyncSyscall: async (op: string, args: string) => {
+      const ctx = current();
+      try {
+        return await ctx.engine.asyncSyscall(op, JSON.parse(args));
+      } catch (error) {
+        if (error instanceof SystemError) ctx.faults.first ??= error;
+        throw error;
+      }
+    },
     jsSyscall: (op: string) => {
       throw new Error(`Unsupported Convex syscall ${op}`);
     },
@@ -192,6 +292,16 @@ export type EngineOptions = {
   onCommit?: (commit: CommitInfo) => void;
 };
 
+type CommitOptions = {
+  writer: Writer;
+  log?: { session: string; request: number; result: string };
+  meta?: Map<string, string>;
+  /** More statements for the same SQL transaction (imports). */
+  extra?: () => void;
+  /** Runs once the transaction has committed, before commit listeners. */
+  after?: () => void;
+};
+
 export class Engine {
   readonly store: Store;
   private modules: Modules;
@@ -207,19 +317,23 @@ export class Engine {
   private committing = false;
   private readersDrained: Array<() => void> = [];
   private commitDone: Array<() => void> = [];
+  // The write barrier: the mode, the epoch units are admitted in (it advances
+  // every time writes pause) and the units of the current epoch still running.
+  private mode: WriteMode;
+  private epoch = 0;
+  private units = new Set<Unit>();
+  private idle: Array<() => void> = [];
 
   constructor(options: EngineOptions) {
     const schema = schemaInfoFromExport(options.schemaExport);
-    this.store = new Store(options.sql, schema);
+    this.store = new Store(guarded(options.sql), schema);
     this.store.init();
-    options.sql.exec(
-      "CREATE TABLE IF NOT EXISTS cvx_mutation_log (session TEXT NOT NULL, request INTEGER NOT NULL, result TEXT NOT NULL, ts TEXT NOT NULL, at REAL NOT NULL, PRIMARY KEY (session, request)) WITHOUT ROWID",
-    );
     this.modules = options.modules;
     this.exposeErrors = options.exposeErrors ?? false;
     this.now = options.now ?? Date.now;
     this.onCommit = options.onCommit;
     this.lastTs = BigInt(this.store.getMeta("ts") ?? "0");
+    this.mode = this.store.getMeta(WRITES_PAUSED) === "1" ? "paused" : "live";
     installSyscalls();
   }
 
@@ -232,26 +346,83 @@ export class Engine {
     return this.lastTs;
   }
 
-  /**
-   * Maintenance switch for one-writer migrations and rollbacks: while set,
-   * every mutation and action (client, scheduled or admin) is refused and the
-   * scheduler starts nothing. Queries keep working. Persisted across restarts.
-   */
-  get writesPaused(): boolean {
-    return this.store.getMeta(WRITES_PAUSED) === "1";
+  // ------------------------------------------------------------ write barrier
+
+  get writeMode(): WriteMode {
+    return this.mode;
   }
 
-  setWritesPaused(paused: boolean): void {
-    this.store.setMeta(WRITES_PAUSED, paused ? "1" : "0");
+  /** True while a unit admitted since the last pause is still running. */
+  get busy(): boolean {
+    return this.units.size > 0;
+  }
+
+  /**
+   * Admit one unit of work. Client and cron work needs `live`; scheduled jobs
+   * may also start while draining, so the pause can settle the queue.
+   */
+  admit(source: "external" | "scheduled", label: string): Unit {
+    if (this.mode === "paused" || (this.mode === "draining" && source === "external"))
+      throw new WritesPausedError(label);
+    const unit: Unit = { epoch: this.epoch, label };
+    this.units.add(unit);
+    return unit;
+  }
+
+  release(unit: Unit): void {
+    this.units.delete(unit);
+    if (this.units.size === 0) for (const resolve of this.idle.splice(0)) resolve();
+  }
+
+  /** Resolve once no admitted unit is running, or after `ms`. */
+  whenIdle(ms: number): Promise<void> {
+    if (this.units.size === 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      const timer = setTimeout(resolve, ms);
+      this.idle.push(() => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
   }
 
   /** Pause a database that has never been paused or resumed (a new one). */
   pauseIfNew(): void {
-    if (this.store.getMeta(WRITES_PAUSED) === null) this.setWritesPaused(true);
+    if (this.store.getMeta(WRITES_PAUSED) === null) this.fence();
   }
 
-  private assertWritable(path: string): void {
-    if (this.writesPaused) throw new Error(`Writes are paused for maintenance (${path})`);
+  /** Stop admitting client and cron work; admitted units and due jobs may finish. */
+  beginDrain(): void {
+    if (this.mode !== "live") return;
+    this.store.setMeta(WRITES_PAUSED, "1");
+    this.mode = "draining";
+  }
+
+  /**
+   * Pause now: from this call on, no unit's write lands, not even one admitted
+   * before it (its epoch is over). Only system writes still commit.
+   */
+  fence(): void {
+    this.store.setMeta(WRITES_PAUSED, "1");
+    if (this.mode === "paused") return;
+    this.mode = "paused";
+    this.epoch++;
+    this.units.clear();
+    for (const resolve of this.idle.splice(0)) resolve();
+  }
+
+  /** Accept writes again, after any import still holding the write lock. */
+  resume(): Promise<void> {
+    return this.exclusive(async () => {
+      this.store.setMeta(WRITES_PAUSED, "0");
+      this.mode = "live";
+    });
+  }
+
+  private authorize(writer: Writer): void {
+    if (writer === SYSTEM) return;
+    if (this.mode === "paused" || writer.epoch !== this.epoch)
+      throw new WritesPausedError(writer.label);
   }
 
   // ---------------------------------------------------------------- functions
@@ -348,6 +519,26 @@ export class Engine {
     return this.snapshot(() => this.executeQuery(path, args, identity, options));
   }
 
+  private context(
+    kind: FunctionKind,
+    identity: Identity | null,
+    unit: Unit | null,
+    extra: Partial<ExecutionContext> = {},
+  ): ExecutionContext {
+    return {
+      engine: this,
+      kind,
+      identity,
+      unit,
+      txn: null,
+      readSet: null,
+      streams: new Map(),
+      nextStream: 0,
+      faults: {},
+      ...extra,
+    };
+  }
+
   /** Run a query without taking the snapshot lock; the caller must hold it. */
   async executeQuery(
     path: string,
@@ -357,15 +548,7 @@ export class Engine {
   ): Promise<Value> {
     const { fn, path: canonical } = this.resolve(path, "query", options.visibility ?? "public");
     this.validateArgs(fn, canonical, args);
-    const ctx: ExecutionContext = {
-      engine: this,
-      kind: "query",
-      identity,
-      txn: null,
-      readSet: options.readSet ?? null,
-      streams: new Map(),
-      nextStream: 0,
-    };
+    const ctx = this.context("query", identity, null, { readSet: options.readSet ?? null });
     const result = await als.run(ctx, () => fn.invokeQuery!(JSON.stringify(convexToJson([args]))));
     const value = jsonToConvex(JSON.parse(result));
     this.validateReturn(fn, canonical, value);
@@ -379,6 +562,10 @@ export class Engine {
     return run;
   }
 
+  /**
+   * Run a mutation. Without `unit` it is a client request, admitted only while
+   * live; scheduled jobs and actions pass the unit they run for.
+   */
   async runMutation(
     path: string,
     args: Record<string, Value>,
@@ -386,83 +573,81 @@ export class Engine {
     options: {
       visibility?: Visibility;
       dedupe?: { session: string; request: number };
+      unit?: Unit;
       /** Extra writes committed atomically with the mutation (e.g. job state). */
-      onSuccess?: (write: (table: string, doc: Doc | null, id: string) => void) => void;
+      onSuccess?: (set: WriteSet) => void;
     } = {},
   ): Promise<{ value: Value; ts: bigint }> {
     return this.exclusive(async () => {
       if (options.dedupe) {
-        const rows = this.store.sql.exec(
-          "SELECT result, ts FROM cvx_mutation_log WHERE session = ? AND request = ?",
-          options.dedupe.session,
-          options.dedupe.request,
-        );
-        if (rows.length)
-          return {
-            value: jsonToConvex(JSON.parse(rows[0].result as string)),
-            ts: BigInt(rows[0].ts as string),
-          };
+        const logged = this.store.loggedMutation(options.dedupe.session, options.dedupe.request);
+        if (logged)
+          return { value: jsonToConvex(JSON.parse(logged.result)), ts: BigInt(logged.ts) };
       }
-      this.assertWritable(path);
-      const { fn, path: canonical } = this.resolve(
-        path,
-        "mutation",
-        options.visibility ?? "public",
-      );
-      this.validateArgs(fn, canonical, args);
-      const txn = new Transaction();
-      const ctx: ExecutionContext = {
-        engine: this,
-        kind: "mutation",
-        identity,
-        txn,
-        readSet: null,
-        streams: new Map(),
-        nextStream: 0,
-      };
-      const result = await als.run(ctx, () =>
-        fn.invokeMutation!(JSON.stringify(convexToJson([args]))),
-      );
-      const value = jsonToConvex(JSON.parse(result));
-      this.validateReturn(fn, canonical, value);
-      options.onSuccess?.((table, doc, id) =>
-        txn.set(id, table, doc, () => this.store.getCommitted(id)),
-      );
-      const ts = await this.commit(
-        txn.writes(),
-        options.dedupe ? { ...options.dedupe, result } : null,
-      );
-      return { value, ts };
+      const unit = options.unit ?? this.admit("external", path);
+      try {
+        this.authorize(unit);
+        const { fn, path: canonical } = this.resolve(
+          path,
+          "mutation",
+          options.visibility ?? "public",
+        );
+        this.validateArgs(fn, canonical, args);
+        const txn = new Transaction();
+        const ctx = this.context("mutation", identity, unit, { txn });
+        let result: string;
+        try {
+          result = await als.run(ctx, () =>
+            fn.invokeMutation!(JSON.stringify(convexToJson([args]))),
+          );
+        } catch (error) {
+          // A function that failed because the engine did is not a function error.
+          throw ctx.faults.first ?? error;
+        }
+        const value = jsonToConvex(JSON.parse(result));
+        this.validateReturn(fn, canonical, value);
+        const meta = new Map<string, string>();
+        options.onSuccess?.(this.writeSet(txn, meta));
+        const ts = await this.commit(txn.writes(), {
+          writer: unit,
+          log: options.dedupe ? { ...options.dedupe, result } : undefined,
+          meta,
+        });
+        return { value, ts };
+      } finally {
+        if (!options.unit) this.release(unit);
+      }
     });
   }
 
+  /**
+   * Run an action. Without `unit` it is a client request, admitted only while
+   * live; scheduled jobs and nested actions pass the unit they run for.
+   */
   async runAction(
     path: string,
     args: Record<string, Value>,
     identity: Identity | null,
-    options: { visibility?: Visibility } = {},
+    options: { visibility?: Visibility; unit?: Unit } = {},
   ): Promise<Value> {
-    this.assertWritable(path);
-    const { fn, path: canonical } = this.resolve(path, "action", options.visibility ?? "public");
-    this.validateArgs(fn, canonical, args);
-    const ctx: ExecutionContext = {
-      engine: this,
-      kind: "action",
-      identity,
-      txn: null,
-      readSet: null,
-      streams: new Map(),
-      nextStream: 0,
-    };
-    const result = await als.run(ctx, () =>
-      fn.invokeAction!(requestId(), JSON.stringify(convexToJson([args]))),
-    );
-    const value = jsonToConvex(JSON.parse(result));
-    this.validateReturn(fn, canonical, value);
-    return value;
+    const unit = options.unit ?? this.admit("external", path);
+    try {
+      this.authorize(unit);
+      const { fn, path: canonical } = this.resolve(path, "action", options.visibility ?? "public");
+      this.validateArgs(fn, canonical, args);
+      const ctx = this.context("action", identity, unit);
+      const result = await als.run(ctx, () =>
+        fn.invokeAction!(requestId(), JSON.stringify(convexToJson([args]))),
+      );
+      const value = jsonToConvex(JSON.parse(result));
+      this.validateReturn(fn, canonical, value);
+      return value;
+    } finally {
+      if (!options.unit) this.release(unit);
+    }
   }
 
-  /** Run a function of any kind by path (crons and scheduled jobs). */
+  /** Run a function of any kind by path as a client request (operator `run`). */
   async runAny(path: string, args: Record<string, Value>): Promise<Value> {
     const { kind } = this.resolve(path, null, "internal");
     if (kind === "query") return this.runQuery(path, args, null, { visibility: "internal" });
@@ -471,14 +656,40 @@ export class Engine {
     return this.runAction(path, args, null, { visibility: "internal" });
   }
 
-  /** Apply a write set outside a user function (imports, job bookkeeping). */
-  writeExclusive(
-    fn: (write: (table: string, id: string, after: Doc | null) => void) => void,
-  ): Promise<bigint> {
+  private writeSet(txn: Transaction, meta: Map<string, string>): WriteSet {
+    return {
+      write: (table, id, after) => txn.set(id, table, after, () => this.store.getCommitted(id)),
+      setMeta: (key, value) => meta.set(key, value),
+    };
+  }
+
+  /** Commit a write set outside a user function (job bookkeeping, crons, recovery). */
+  writeExclusive(writer: Writer, fn: (set: WriteSet) => void): Promise<bigint> {
     return this.exclusive(async () => {
       const txn = new Transaction();
-      fn((table, id, after) => txn.set(id, table, after, () => this.store.getCommitted(id)));
-      return this.commit(txn.writes(), null);
+      const meta = new Map<string, string>();
+      fn(this.writeSet(txn, meta));
+      return this.commit(txn.writes(), { writer, meta });
+    });
+  }
+
+  /**
+   * Replace stored state in one system commit, only while writes are paused
+   * (imports and restores). `build` stages document writes and returns the
+   * other statements of the same SQL transaction.
+   */
+  replaceState(build: (set: WriteSet) => () => void): Promise<bigint> {
+    return this.exclusive(async () => {
+      if (this.mode !== "paused") throw new NotPausedError();
+      const txn = new Transaction();
+      const meta = new Map<string, string>();
+      const extra = build(this.writeSet(txn, meta));
+      return this.commit(txn.writes(), {
+        writer: SYSTEM,
+        meta,
+        extra,
+        after: () => this.store.reload(),
+      });
     });
   }
 
@@ -489,45 +700,32 @@ export class Engine {
   }
 
   /** Apply a write set atomically once no query is reading. Callers hold the exclusive lock. */
-  private async commit(
-    writes: Map<string, Write>,
-    log: { session: string; request: number; result: string } | null,
-  ): Promise<bigint> {
+  private async commit(writes: Map<string, Write>, options: CommitOptions): Promise<bigint> {
     this.committing = true;
     try {
       while (this.readers > 0)
         await new Promise<void>((resolve) => this.readersDrained.push(resolve));
-      return this.apply(writes, log);
+      // Checked in the same synchronous turn as the write itself.
+      this.authorize(options.writer);
+      return this.apply(writes, options);
     } finally {
       this.committing = false;
       for (const resolve of this.commitDone.splice(0)) resolve();
     }
   }
 
-  private apply(
-    writes: Map<string, Write>,
-    log: { session: string; request: number; result: string } | null,
-  ): bigint {
+  private apply(writes: Map<string, Write>, options: CommitOptions): bigint {
     const ts = this.nextTs();
     this.store.sql.transaction(() => {
       for (const write of writes.values())
         this.store.applyWrite(write.table, write.before, write.after);
-      if (log) {
-        this.store.sql.exec(
-          "INSERT INTO cvx_mutation_log (session, request, result, ts, at) VALUES (?, ?, ?, ?, ?)",
-          log.session,
-          log.request,
-          log.result,
-          ts.toString(),
-          this.now(),
-        );
-        this.store.sql.exec(
-          "DELETE FROM cvx_mutation_log WHERE at < ?",
-          this.now() - 24 * 60 * 60 * 1000,
-        );
-      }
+      if (options.log)
+        this.store.logMutation({ ...options.log, ts: ts.toString(), at: this.now() }, this.now());
+      for (const [key, value] of options.meta ?? []) this.store.setMeta(key, value);
+      options.extra?.();
       this.store.setMeta("ts", ts.toString());
     });
+    options.after?.();
     if (writes.size > 0) this.onCommit?.({ ts, writes });
     return ts;
   }
@@ -641,13 +839,13 @@ export class Engine {
         return JSON.stringify({});
       case "1.0/actions/schedule": {
         let id = "";
-        await this.writeExclusive((write) => {
+        await this.writeExclusive(this.actionUnit(ctx, op), ({ write }) => {
           id = this.scheduleInto(write, args);
         });
         return JSON.stringify(id);
       }
       case "1.0/actions/cancel_job":
-        await this.writeExclusive((write) => {
+        await this.writeExclusive(this.actionUnit(ctx, op), ({ write }) => {
           const job = this.store.getCommitted(args.id as string);
           if (job && (job.state as { kind: string }).kind === "pending")
             write(SCHEDULED_FUNCTIONS, job._id, { ...job, state: { kind: "canceled" } } as Doc);
@@ -656,16 +854,18 @@ export class Engine {
       case "1.0/actions/query":
       case "1.0/actions/mutation":
       case "1.0/actions/action": {
-        if (ctx.kind !== "action") throw new Error(`${op} is only available in actions`);
+        const unit = this.actionUnit(ctx, op);
         const path = addressName(args as { name?: string });
         const fnArgs = jsonToConvex(args.args as JSONValue) as Record<string, Value>;
-        const options = { visibility: "internal" as const };
+        const visibility = "internal" as const;
         const value = await nestedErrors(() =>
           op === "1.0/actions/query"
-            ? this.runQuery(path, fnArgs, ctx.identity, options)
+            ? this.runQuery(path, fnArgs, ctx.identity, { visibility })
             : op === "1.0/actions/mutation"
-              ? this.runMutation(path, fnArgs, ctx.identity, options).then((result) => result.value)
-              : this.runAction(path, fnArgs, ctx.identity, options),
+              ? this.runMutation(path, fnArgs, ctx.identity, { visibility, unit }).then(
+                  (result) => result.value,
+                )
+              : this.runAction(path, fnArgs, ctx.identity, { visibility, unit }),
         );
         return JSON.stringify(convexToJson(value));
       }
@@ -674,6 +874,11 @@ export class Engine {
       default:
         throw new Error(`Unsupported Convex syscall ${op}`);
     }
+  }
+
+  private actionUnit(ctx: ExecutionContext, op: string): Unit {
+    if (ctx.kind !== "action" || !ctx.unit) throw new Error(`${op} is only available in actions`);
+    return ctx.unit;
   }
 
   private writable(ctx: ExecutionContext): Transaction {
@@ -772,25 +977,32 @@ export class Engine {
     txn.set(id, owner, updated, () => this.store.getCommitted(id));
   }
 
+  /** A new pending `_scheduled_functions` record for a mutation or action. */
+  newJob(path: string, args: Value, scheduledTime: number): Doc {
+    const { path: canonical, kind } = this.resolve(path, null, "internal");
+    if (kind === "query")
+      throw new Error(`Cannot schedule query ${canonical}; schedule a mutation or action`);
+    return {
+      _id: this.store.newId(SCHEDULED_FUNCTIONS),
+      _creationTime: this.store.nextCreationTime(this.now()),
+      name: canonical,
+      args: [args],
+      scheduledTime,
+      state: { kind: "pending" },
+    } as Doc;
+  }
+
   private scheduleInto(
     write: (table: string, id: string, after: Doc | null) => void,
     args: Record<string, unknown>,
   ): string {
-    const path = addressName(args as { name?: string });
-    const { kind } = this.resolve(path, null, "internal");
-    if (kind === "query")
-      throw new Error(`Cannot schedule query ${path}; schedule a mutation or action`);
-    const id = this.store.newId(SCHEDULED_FUNCTIONS);
-    const job = {
-      _id: id,
-      _creationTime: this.store.nextCreationTime(this.now()),
-      name: path,
-      args: [jsonToConvex(args.args as JSONValue)],
-      scheduledTime: (args.ts as number) * 1000,
-      state: { kind: "pending" },
-    } as Doc;
-    write(SCHEDULED_FUNCTIONS, id, job);
-    return id;
+    const job = this.newJob(
+      addressName(args as { name?: string }),
+      jsonToConvex(args.args as JSONValue),
+      (args.ts as number) * 1000,
+    );
+    write(SCHEDULED_FUNCTIONS, job._id, job);
+    return job._id;
   }
 
   private schedule(txn: Transaction, args: Record<string, unknown>): string {
