@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery as useConvexQuery } from "convex/react";
-import { FunctionReference, FunctionReturnType } from "convex/server";
-import { RetryConfig } from "@/lib/retryUtils";
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from "convex/server";
+import type { RetryConfig } from "@/lib/retryUtils";
 
 // Re-export RetryConfig for consumers
 export type { RetryConfig };
@@ -29,14 +29,14 @@ export type { RetryConfig };
  * );
  * ```
  */
-export function useQueryWithRetry<
-  Query extends FunctionReference<"query">,
-  Args = Query extends FunctionReference<"query", infer A> ? A : never,
+export function useQueryWithRetry<Query extends FunctionReference<"query">>(
+  query: Query,
+  args: FunctionArgs<Query> | "skip",
   // Note: config parameter preserved for API compatibility
->(query: Query, args: Args | "skip", _config?: RetryConfig): FunctionReturnType<Query> | undefined {
+  _config?: RetryConfig,
+): FunctionReturnType<Query> | undefined {
   // Use the standard Convex query hook
   // Convex handles reconnection and error recovery automatically
-  // @ts-expect-error - Type mismatch with Convex generics
   const queryResult = useConvexQuery(query, args);
 
   return queryResult;
@@ -58,9 +58,10 @@ export function createQueryHookWithRetry<Query extends FunctionReference<"query"
   query: Query,
   defaultConfig?: RetryConfig,
 ) {
-  return function useQueryHook<
-    Args = Query extends FunctionReference<"query", infer A> ? A : never,
-  >(args: Args | "skip", config?: RetryConfig): FunctionReturnType<Query> | undefined {
+  return function useQueryHook(
+    args: FunctionArgs<Query> | "skip",
+    config?: RetryConfig,
+  ): FunctionReturnType<Query> | undefined {
     return useQueryWithRetry(query, args, { ...defaultConfig, ...config });
   };
 }

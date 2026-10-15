@@ -1,9 +1,7 @@
-// @ts-nocheck
-
 import { api as generatedApi } from "../../convex/_generated/api";
 
 /**
- * Isolates Convex generated API type expansion from callsites that only need
- * opaque function references at runtime.
+ * Keeps the established client import name while preserving the generated
+ * Convex function references and their argument types.
  */
-export const anyPublicApi = generatedApi as any;
+export const anyPublicApi = generatedApi;

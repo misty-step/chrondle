@@ -1,11 +1,10 @@
 import { ConvexHttpClient } from "convex/browser";
-import { anyApi } from "convex/server";
 import type { Id } from "convex/_generated/dataModel";
 import type { OrderPuzzle } from "@/types/orderGameState";
 import type { Puzzle } from "@/types/puzzle";
+import { api as generatedApi } from "../../convex/_generated/api";
 
-const serverApi = anyApi as any;
-export const api = serverApi;
+export const api = generatedApi;
 
 /**
  * Get Convex client, returning null if not configured.
@@ -33,18 +32,18 @@ export function requireConvexClient(): ConvexHttpClient {
 }
 
 export async function fetchUserByClerkId(client: ConvexHttpClient, clerkId: string) {
-  return await client.query(serverApi.users.getUserByClerkId, { clerkId });
+  return await client.query(api.users.getUserByClerkId, { clerkId });
 }
 
 export async function fetchHasArchiveAccess(client: ConvexHttpClient, clerkId: string) {
-  return await client.query(serverApi.users.hasArchiveAccess, { clerkId });
+  return await client.query(api.users.hasArchiveAccess, { clerkId });
 }
 
 export async function fetchOrderPuzzleByNumber(
   client: ConvexHttpClient,
   puzzleNumber: number,
 ): Promise<OrderPuzzle | null> {
-  const convexPuzzle = await client.query(serverApi.orderPuzzles.getOrderPuzzleByNumber, {
+  const convexPuzzle = await client.query(api.orderPuzzles.getOrderPuzzleByNumber, {
     puzzleNumber,
   });
   if (!convexPuzzle) return null;
@@ -55,7 +54,7 @@ export async function fetchOrderPuzzleByNumber(
     puzzleNumber: convexPuzzle.puzzleNumber,
     seed: convexPuzzle.seed,
 
-    events: convexPuzzle.events.map((event: any) => ({
+    events: convexPuzzle.events.map((event) => ({
       id: event.id,
       year: event.year,
       text: event.text,
@@ -67,7 +66,7 @@ export async function fetchClassicPuzzleByNumber(
   client: ConvexHttpClient,
   puzzleNumber: number,
 ): Promise<Puzzle | null> {
-  const puzzle = await client.query(serverApi.puzzles.getPuzzleByNumber, { puzzleNumber });
+  const puzzle = await client.query(api.puzzles.getPuzzleByNumber, { puzzleNumber });
   if (!puzzle) return null;
 
   return {
