@@ -1,0 +1,75 @@
+name: Isolated backend preview
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "convex/**"
+      - ".github/workflows/backend-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chrondle-backend-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    # Forks never receive the scoped deployment credential or operator configuration.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment:
+      name: Preview
+      url: https://chrondle-backend-preview.mistystep.io
+    env:
+      REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - name: Checkout exact preview revision
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.REVISION }}
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - name: Install with the repository lockfile and no deployment credentials
+        run: bun install --frozen-lockfile
+      - name: Deploy only the isolated preview script and resources
+        working-directory: backend
+        run: bunx wrangler deploy --env preview --var "REVISION:$REVISION" --message "$REVISION"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Bind preview-only operator and synthetic game identities
+        working-directory: backend
+        run: |
+          bun --eval 'if (!process.env.OPERATOR_ACCESS || !process.env.GAME_PROVIDERS) throw new Error("Preview identity configuration is missing"); process.stdout.write(JSON.stringify({BACKEND_OPERATOR_ACCESS: process.env.OPERATOR_ACCESS, EXTRA_AUTH_PROVIDERS: process.env.GAME_PROVIDERS}))' \
+            | bunx wrangler secret bulk --env preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          OPERATOR_ACCESS: ${{ secrets.BACKEND_PREVIEW_OPERATOR_ACCESS }}
+          GAME_PROVIDERS: ${{ secrets.BACKEND_PREVIEW_AUTH_PROVIDERS }}
+      - name: Read back the exact hosted backend revision
+        run: |
+          bun --eval '
+            const url = "https://chrondle-backend-preview.mistystep.io/_backend/version";
+            for (let attempt = 0; attempt < 30; attempt++) {
+              try {
+                const response = await fetch(url, {cache: "no-store", redirect: "error"});
+                const identity = await response.json();
+                if (response.ok && identity.service === "chrondle-backend" && identity.environment === "preview" && identity.revision === process.env.REVISION) {
+                  console.log(JSON.stringify(identity));
+                  process.exit(0);
+                }
+              } catch {}
+              await Bun.sleep(2000);
+            }
+            throw new Error("Isolated preview did not serve this revision");
+          '
