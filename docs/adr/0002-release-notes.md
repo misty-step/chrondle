@@ -22,6 +22,10 @@ Markdown as CHRONDLE_CHANGELOG in the compiled bundle. `/changelog` and the exis
 release-detail URLs render from that constant, including on-demand rendering in
 the Worker; they never read repository files at runtime. No site-wide cache change
 is needed. Remove the stale content snapshot and its parallel types.
+Release details use route-local dynamic rendering: OpenNext without an incremental
+cache returns NoFallbackError/404 for SSG `dynamicParams = false`, even for known
+versions. Bundled lookup plus `notFound()` preserves the unknown-version 404 without
+depending on an unavailable prerender cache.
 The footer and health response report the newest generated
 version in that same artifact, not the private package manifest. The legacy
 `/releases` index redirects to `/changelog`. Unknown release details return 404.
@@ -34,6 +38,9 @@ credentials, and all outbound requests denied. It checks notes, every known
 release, the alias redirect and an unknown-version 404, rejecting streamed render
 errors and runtime error logs. PR CI runs it and production runs it between the
 existing frontend build and activation, without rebuilding the tested bytes.
+The health control must report an unreachable backend and the check must observe
+its outbound request being denied; no live backend or authenticated journey is
+claimed by this isolated route exercise.
 
 ## Scope and remaining work
 

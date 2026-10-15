@@ -13,8 +13,10 @@ export function assertHtml(
     "text/html",
     `${path}: unexpected content type`,
   );
+  // React inserts empty separator comments between adjacent text nodes.
+  const markup = html.replaceAll("<!-- -->", "");
   for (const marker of ["</html>", ...markers]) {
-    assert(html.includes(marker), `${path}: missing ${marker}`);
+    assert(markup.includes(marker), `${path}: missing ${marker}`);
   }
   // RSC can stream an exception after sending HTTP 200 headers.
   for (const match of html.replaceAll('\\"', '"').matchAll(/"digest"\s*:\s*"([^"]*)"/g)) {

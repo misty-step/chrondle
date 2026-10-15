@@ -51,6 +51,10 @@ async function main() {
     worker.raw.on("runtimeError", (error: { text: string }) => {
       logs.push({ level: "error", message: error.text });
     });
+    // Next normalizes loopback hostnames to localhost; use that host on ingress
+    // so its middleware does not mistake normalization for an external rewrite.
+    const origin = new URL(await worker.url);
+    origin.hostname = "localhost";
     const probes = [
       { path: "/legal/privacy", status: 200, markers: ["Privacy"] },
       {
@@ -72,7 +76,6 @@ async function main() {
     ];
     for (const probe of probes) {
       try {
-        const origin = await worker.url;
         let response = await worker.fetch(new URL(probe.path, origin), {
           redirect: "manual",
           signal: AbortSignal.timeout(15_000),
@@ -95,6 +98,18 @@ async function main() {
         console.error(`FAIL ${failures.at(-1)}`);
       }
     }
+    const blockedBefore = blockedRequests;
+    const health = await worker.fetch(new URL("/api/health", origin), {
+      redirect: "manual",
+      signal: AbortSignal.timeout(15_000),
+    });
+    assert.equal(health.status, 503, "Isolated backend must be unreachable");
+    const body = await health.json();
+    assert.equal(body.error, "Convex connectivity failed");
+    assert.equal(body.checks.convex, "unhealthy");
+    assert.equal(body.version, releases[0].version);
+    assert(blockedRequests > blockedBefore, "Backend egress denial must be exercised");
+    console.log(`PASS /api/health: 503, version ${body.version}, backend request denied`);
   } finally {
     await worker?.dispose();
     rmSync(directory, { recursive: true, force: true });

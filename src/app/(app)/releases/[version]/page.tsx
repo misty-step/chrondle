@@ -5,15 +5,13 @@ import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { ReleaseNotes } from "@/components/ReleaseNotes";
-import { loadRelease, getAllVersions } from "@/lib/releases/loader";
+import { loadRelease } from "@/lib/releases/loader";
 
 type PageProps = { params: Promise<{ version: string }> };
 
-export const dynamicParams = false;
-
-export function generateStaticParams() {
-  return getAllVersions().map((version) => ({ version }));
-}
+// OpenNext has no incremental cache here: SSG fallback:false returns 404 on a
+// cache miss even for known versions. Render from bundled notes, then notFound().
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { version } = await params;

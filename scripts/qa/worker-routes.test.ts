@@ -26,6 +26,11 @@ describe("built Worker release route check", () => {
     ).toThrow();
     expect(() => assertHtml("/changelog", response(), "</html>", 200, ["Release 1.7.3"])).toThrow();
     expect(() => assertHtml("/changelog", response(), "", 200, [])).toThrow();
+    expect(() =>
+      assertHtml("/releases/1.2.3", response(), "<h1>v<!-- -->1.2.3</h1></html>", 200, [
+        "v1.2.3</h1>",
+      ]),
+    ).not.toThrow();
   });
 
   it("rejects streamed failures after 200, permitting only the intended 404 control flow", () => {
