@@ -72,7 +72,11 @@ Keep the `convex/` functions and every client unchanged. Add `backend/`, a Worke
 
 ### Operator API
 
-`/_backend/admin/*` replaces the Convex dashboard and `npx convex run`: `manifest`, `backup`, `restore`, `export`, `import`, `pause`, `resume`, `run` and `scheduler`. It requires `BACKEND_ADMIN_TOKEN`, and callers without it get the same 404 as an unknown path.
+`/_backend/admin/*` replaces the Convex dashboard and `npx convex run`: `manifest`, `backup`, `restore`, `export`, `import`, `pause`, `resume`, `run` and `scheduler`. Hosted environments require a signed Cloudflare Access application assertion; unauthorized callers get the same 404 as an unknown path. The app's public game paths retain their Clerk/anonymous contract, with no Access requirement.
+
+`BACKEND_OPERATOR_ACCESS` contains one JSON configuration: exact HTTPS Access issuer, application `audience`, and `identities`, a list of `{ "kind": "human", "email": "<exact owner email>" }` or `{ "kind": "machine", "clientId": "<named service-token ClientID>" }`. Human identities require a nonempty subject and the exact configured email, not a provider subject that can change. Per [Cloudflare's documented service-token shape](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/#service-token-authentication), machines require `sub=""` and `common_name` exactly equal to a pinned machine ClientID. Both require `type="app"`, issuer/audience/signature/time validation through the shared verifier, and an unexpired token. Every other empty-sub token is refused; ordinary game auth still refuses all empty subjects.
+
+Missing or invalid configuration fails closed without logging its contents. `BACKEND_ADMIN_TOKEN` is accepted only with explicit `ENVIRONMENT=development` on a loopback request, never as a hosted fallback. Before deployment, provision/read back the Access application and policies for the exact admin path and every alternate origin, pin the actual named machine identity and exact owner email, then prove a real service-token allow and anonymous refusal. Human-policy readback is the proof; no access to the owner's email is needed. Local RSA/SQLite consumer tests are not that hosted proof.
 
 `POST /pause` is the barrier described under Consistency. It waits up to `settleMs` (default 60 s, at most 15 minutes) for running work and due jobs to finish, then fences writes and fails any action still running. It answers `{"writes": "paused", "settled", "interrupted"}`: `settled` is false when the deadline cut work off, and `interrupted` lists the failed jobs. `GET /export`, `POST /import` and `POST /restore` answer 409 unless writes are paused.
 
@@ -121,7 +125,7 @@ A production database starts with writes paused: it serves queries but refuses e
 
 A Convex snapshot carries only the application tables. `to-backup --as-of <time>` takes the time Convex was paused and sets the cron cursors from it: every occurrence up to then counts as run on Convex, and later ones run on the backend. `to-convex` refuses a snapshot with pending or running scheduled functions, because Convex cannot import them. It reports the finished job records, cron cursors and replay records it leaves out.
 
-1. Deploy `chrondle-backend` with `wrangler deploy -c backend/wrangler.jsonc --env production`. Set the secrets `BACKEND_ADMIN_TOKEN`, `CLERK_SYNC_SECRET` and `STRIPE_SYNC_SECRET`, plus the LLM, email and observability keys the functions read today.
+1. Deploy `chrondle-backend` through repository CI with `wrangler deploy -c backend/wrangler.jsonc --env production`, after the operator Access proof above. Set `BACKEND_OPERATOR_ACCESS`, `CLERK_SYNC_SECRET` and `STRIPE_SYNC_SECRET`, plus the LLM, email and observability settings the functions read today. Do not set a hosted bearer fallback.
 2. Make Convex the only writer, then move the data:
    - Pause the `fleet-goldfish-183` deployment outside the puzzle and event-generation cron windows, and note the time. Check that the dashboard's Schedules page shows no pending scheduled functions, since Convex's export does not carry them. If it shows any, resume Convex until they have run, then pause again and note the new time.
    - Run `npx convex export`, then `convex-snapshot.ts to-backup --as-of <the pause time>`.

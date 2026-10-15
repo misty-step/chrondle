@@ -28,6 +28,7 @@ import { parseCrons, Scheduler } from "./engine/scheduler";
 import { SCHEDULED_FUNCTIONS, type Sql, type SqlValue } from "./engine/store";
 import { handleHttpApi } from "./protocol/http";
 import { SyncSession } from "./protocol/sync";
+import { OperatorAccess } from "./operatorAccess";
 
 export interface Env {
   BACKEND: DurableObjectNamespace<ChrondleBackend>;
@@ -38,6 +39,7 @@ export interface Env {
   /** JSON array of extra auth providers; honoured outside production only (synthetic previews). */
   EXTRA_AUTH_PROVIDERS?: string;
   BACKEND_ADMIN_TOKEN?: string;
+  BACKEND_OPERATOR_ACCESS?: string;
 }
 
 const PING_MS = 15_000;
@@ -67,20 +69,12 @@ export function authProviders(env: Env): AuthProvider[] {
   return providers;
 }
 
-async function sameSecret(given: string, expected: string): Promise<boolean> {
-  const encoder = new TextEncoder();
-  const [a, b] = await Promise.all([
-    crypto.subtle.digest("SHA-256", encoder.encode(given)),
-    crypto.subtle.digest("SHA-256", encoder.encode(expected)),
-  ]);
-  return crypto.subtle.timingSafeEqual(a, b);
-}
-
 const logFailure = (label: string) => (error: unknown) => console.error(`[${label}]`, error);
 
 export class ChrondleBackend extends DurableObject<Env> {
   private engine: Engine;
   private verifier: AuthVerifier;
+  private operatorAccess: OperatorAccess;
   private scheduler: Scheduler;
   private sessions = new Set<SyncSession>();
   private pingTimer: ReturnType<typeof setInterval> | null = null;
@@ -107,6 +101,7 @@ export class ChrondleBackend extends DurableObject<Env> {
     // the migration (docs/adr/0001-cloudflare-backend.md, data migration).
     if (env.ENVIRONMENT === "production") this.engine.pauseIfNew();
     this.verifier = new AuthVerifier(authProviders(env));
+    this.operatorAccess = new OperatorAccess(env);
     this.scheduler = new Scheduler(this.engine, parseCrons(crons as never));
     void ctx.blockConcurrencyWhile(async () => {
       await this.scheduler.start();
@@ -195,13 +190,11 @@ export class ChrondleBackend extends DurableObject<Env> {
   }
 
   /**
-   * Operator API behind BACKEND_ADMIN_TOKEN (the `npx convex run` / dashboard
+   * Operator API behind Access (the `npx convex run` / dashboard
    * equivalent). Unauthenticated callers get the same 404 as unknown paths.
    */
   private async admin(request: Request, path: string): Promise<Response> {
-    const expected = this.env.BACKEND_ADMIN_TOKEN;
-    const given = request.headers.get("Authorization")?.replace(/^Bearer /, "") ?? "";
-    if (!expected || !given || !(await sameSecret(given, expected))) {
+    if (!(await this.operatorAccess.allows(request))) {
       await request.body?.cancel();
       return json({ error: "Not found" }, 404);
     }
