@@ -16,6 +16,7 @@
  */
 import { createHash } from "node:crypto";
 import { convexToJson, jsonToConvex, type JSONValue, type Value } from "convex/values";
+import { z } from "zod";
 import type { Engine } from "./engine";
 import { decodeDocumentId } from "./ids";
 import { SCHEDULED_FUNCTIONS, type Doc, type MutationLogEntry } from "./store";
@@ -42,6 +43,31 @@ export type RuntimeSummary = {
   mutationLog: { count: number; sha256: string };
 };
 export type Summary = { manifest: Manifest; runtime: RuntimeSummary };
+
+const count = z.number().int().nonnegative();
+const checksum = z.string().regex(/^[a-f0-9]{64}$/);
+const digestSchema = z.object({ count, sha256: checksum });
+/** R2 metadata is untrusted too: runtime checksums are mandatory for our backups. */
+export const summarySchema = z.object({
+  manifest: z.record(z.string(), digestSchema.extend({ tableNumber: z.number().int().nullable() })),
+  runtime: z.object({
+    scheduledFunctions: digestSchema.extend({ states: z.record(z.string(), count) }),
+    cronCursors: z.record(z.string(), z.number().finite()),
+    mutationLog: digestSchema,
+  }),
+});
+
+export class SnapshotMismatchError extends Error {
+  constructor(readonly mismatches: string[]) {
+    super(`Snapshot checksum mismatch: ${mismatches.join(", ")}`);
+    this.name = "SnapshotMismatchError";
+  }
+}
+
+function verify(expected: Summary, actual: Summary): void {
+  const differences = mismatches(expected, actual);
+  if (differences.length) throw new SnapshotMismatchError(differences);
+}
 
 const TABLE_NAME = /^[a-zA-Z][a-zA-Z0-9_]*$/;
 const FIRST_USER_TABLE_NUMBER = 10001;
@@ -270,7 +296,13 @@ function stagedIsId(tableNumbers: Map<string, number>): IdChecker {
  * are paused. Everything is validated first, so a refused restore changes
  * nothing. Returns the summary of the state now stored.
  */
-export async function restore(engine: Engine, snapshot: Snapshot): Promise<Summary> {
+export async function restore(
+  engine: Engine,
+  snapshot: Snapshot,
+  recorded: Summary = summarize(snapshot),
+): Promise<Summary> {
+  const expected = summarize(snapshot);
+  verify(summarySchema.parse(recorded), expected);
   const store = engine.store;
   const isId = stagedIsId(snapshot.tableNumbers);
   for (const [table, docs] of snapshot.documents)
@@ -285,6 +317,9 @@ export async function restore(engine: Engine, snapshot: Snapshot): Promise<Summa
       store.replaceRegistry(snapshot.tableNumbers);
       store.replaceCronCursors(snapshot.cronCursors);
       store.replaceMutationLog(snapshot.mutationLog);
+      // Still inside SQLite's transaction: even a mid-restore discrepancy rolls back
+      // documents, registry, jobs, cursors and replay results together.
+      verify(expected, summarize(readState(engine)));
     };
   });
   return summarize(readState(engine));

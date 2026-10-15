@@ -11,7 +11,7 @@
 //       invalid access, concurrency, exactly-once retry, scheduler delivery,
 //       backup/restore, export/import, the pause barrier under concurrent
 //       writes and a queued job carried through export/import.
-import { generateKeyPairSync, createSign, randomUUID } from "node:crypto";
+import { generateKeyPairSync, createSign, createHash, randomUUID } from "node:crypto";
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ConvexClient, ConvexHttpClient } from "convex/browser";
@@ -427,7 +427,11 @@ async function fullChecks(issuerDir) {
   const raw = (method, path, body) =>
     fetch(`${url}/_backend/admin${path}`, {
       method,
-      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      headers: {
+        Authorization: "Bearer " + token,
+        "Content-Type": "application/json",
+        ...(path === "/import" ? { "X-Backend-Sha256": createHash("sha256").update(body).digest("hex") } : {}),
+      },
       body,
     });
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -164,8 +164,6 @@ export function keyRange(index: IndexDef, range: SerializedRange): Range {
 }
 
 export class Store {
-  private tableNumbers = new Map<string, number>();
-  private tableNames = new Map<number, string>();
   private lastCreationTime = 0;
 
   constructor(
@@ -191,19 +189,12 @@ export class Store {
       "CREATE TABLE IF NOT EXISTS cvx_mutation_log (session TEXT NOT NULL, request INTEGER NOT NULL, result TEXT NOT NULL, ts TEXT NOT NULL, at REAL NOT NULL, PRIMARY KEY (session, request)) WITHOUT ROWID",
     );
     this.reload();
-    for (const [name, number] of Object.entries(SYSTEM_TABLE_NUMBERS))
-      if (!this.tableNumbers.has(name)) this.registerTable(name, number);
+    this.sql.transaction(() => this.commitRegistry(new Map(Object.entries(SYSTEM_TABLE_NUMBERS))));
     this.syncIndexes();
   }
 
-  /** Re-read the table registry and creation-time watermark (after an import). */
-  reload(): void {
-    this.tableNumbers.clear();
-    this.tableNames.clear();
-    for (const row of this.sql.exec("SELECT name, number FROM cvx_tables")) {
-      this.tableNumbers.set(row.name as string, row.number as number);
-      this.tableNames.set(row.number as number, row.name as string);
-    }
+  /** Load the creation-time watermark at boot. The registry has no mutable cache. */
+  private reload(): void {
     const [{ maxCt }] = this.sql.exec("SELECT COALESCE(MAX(ct), 0) AS maxCt FROM cvx_documents");
     this.observeCreationTime(maxCt as number);
   }
@@ -341,53 +332,56 @@ export class Store {
       this.sql.exec("INSERT INTO cvx_tables (name, number) VALUES (?, ?)", name, number);
   }
 
-  /** Register a table number (from imported Convex IDs or a fresh assignment). */
-  registerTable(name: string, number: number): void {
-    const existing = this.tableNumbers.get(name);
-    if (existing === number) return;
-    if (existing !== undefined)
-      throw new Error(`Table ${name} already uses number ${existing}, not ${number}`);
-    const owner = this.tableNames.get(number);
-    if (owner !== undefined) throw new Error(`Table number ${number} already belongs to ${owner}`);
-    this.sql.exec("INSERT INTO cvx_tables (name, number) VALUES (?, ?)", name, number);
-    this.tableNumbers.set(name, number);
-    this.tableNames.set(number, name);
-  }
 
-  tableNumber(name: string): number {
-    const existing = this.tableNumbers.get(name);
+  /** Stage an assignment without changing storage or the committed registry. */
+  private tableNumber(name: string, numbers: Map<string, number>): number {
+    const existing = numbers.get(name);
     if (existing !== undefined) return existing;
     const number =
       SYSTEM_TABLE_NUMBERS[name] ??
       Math.max(
         FIRST_USER_TABLE_NUMBER - 1,
-        ...[...this.tableNumbers.values()].filter((n) => n >= FIRST_USER_TABLE_NUMBER),
+        ...[...numbers.values()].filter((n) => n >= FIRST_USER_TABLE_NUMBER),
       ) + 1;
-    this.registerTable(name, number);
+    numbers.set(name, number);
     return number;
+  }
+
+  /** Inside the document transaction. SQLite is the only committed registry. */
+  commitRegistry(numbers: Map<string, number>): void {
+    const stored = this.registeredTables();
+    for (const [name, number] of numbers) {
+      const committed = stored.get(name);
+      if (committed === number) continue;
+      if (committed !== undefined)
+        throw new Error(`Table ${name} already uses number ${committed}, not ${number}`);
+      this.sql.exec("INSERT INTO cvx_tables (name, number) VALUES (?, ?)", name, number);
+    }
   }
 
   /** Table name → Convex table number for every table that has one. */
   registeredTables(): Map<string, number> {
-    return new Map(this.tableNumbers);
+    return new Map(
+      this.sql.exec("SELECT name, number FROM cvx_tables").map((row) => [row.name as string, row.number as number]),
+    );
   }
 
-  tableOf(id: string): string | null {
+  tableOf(id: string, numbers = this.registeredTables()): string | null {
     const decoded = decodeDocumentId(id);
     if (!decoded) return null;
-    return this.tableNames.get(decoded.tableNumber) ?? null;
+    return [...numbers].find(([, number]) => number === decoded.tableNumber)?.[0] ?? null;
   }
 
-  isId(id: string, table: string): boolean {
+  isId(id: string, table: string, numbers = this.registeredTables()): boolean {
     const decoded = decodeDocumentId(id);
     if (!decoded) return false;
-    const owner = this.tableNames.get(decoded.tableNumber);
+    const owner = [...numbers].find(([, number]) => number === decoded.tableNumber)?.[0];
     // A table that has never been written has no number yet; accept well-formed IDs for it.
-    return owner === undefined ? !this.tableNumbers.has(table) : owner === table;
+    return owner === undefined ? !numbers.has(table) : owner === table;
   }
 
-  newId(table: string): string {
-    return newDocumentId(this.tableNumber(table));
+  newId(table: string, numbers = this.registeredTables()): string {
+    return newDocumentId(this.tableNumber(table, numbers));
   }
 
   nextCreationTime(now: number): number {

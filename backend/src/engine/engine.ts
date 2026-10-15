@@ -81,7 +81,7 @@ export type ClientError = { errorMessage: string; errorData: JSONValue | undefin
 export type WriteMode = "live" | "draining" | "paused";
 
 /** One admitted unit of work. Its writes land only in the epoch it was admitted in. */
-export type Unit = { readonly epoch: number; readonly label: string };
+export type Unit = { readonly epoch: number; readonly label: string; readonly signal: AbortSignal };
 
 /** Writer of engine-internal commits that the pause does not stop: imports, crash recovery. */
 export const SYSTEM = Symbol("system write");
@@ -134,9 +134,18 @@ function guarded(sql: Sql): Sql {
       }
     },
     transaction: (fn) => {
+      let callbackError: { error: unknown } | undefined;
       try {
-        return sql.transaction(fn);
+        return sql.transaction(() => {
+          try {
+            return fn();
+          } catch (error) {
+            callbackError = { error };
+            throw error;
+          }
+        });
       } catch (error) {
+        if (callbackError && error === callbackError.error) throw error;
         throw fault(error);
       }
     },
@@ -145,6 +154,15 @@ function guarded(sql: Sql): Sql {
 
 class Transaction {
   private layers: Map<string, Write>[] = [new Map()];
+  private registries: Map<string, number>[];
+
+  constructor(numbers: Map<string, number>) {
+    this.registries = [numbers];
+  }
+
+  get tables(): Map<string, number> {
+    return this.registries[this.registries.length - 1];
+  }
 
   lookup(id: string): Write | undefined {
     for (let i = this.layers.length - 1; i >= 0; i--) {
@@ -162,11 +180,16 @@ class Transaction {
 
   push(): void {
     this.layers.push(new Map());
+    this.registries.push(new Map(this.tables));
   }
 
   pop(keep: boolean): void {
     const top = this.layers.pop()!;
-    if (keep) for (const [id, write] of top) this.layers[this.layers.length - 1].set(id, write);
+    const tables = this.registries.pop()!;
+    if (keep) {
+      for (const [id, write] of top) this.layers[this.layers.length - 1].set(id, write);
+      this.registries[this.registries.length - 1] = tables;
+    }
   }
 
   writes(): Map<string, Write> {
@@ -178,6 +201,7 @@ class Transaction {
 
 type ExecutionContext = {
   engine: Engine;
+  signal: AbortSignal;
   kind: FunctionKind;
   identity: Identity | null;
   /** The unit this execution writes for; null for queries. */
@@ -193,6 +217,21 @@ type ExecutionContext = {
 const als = new AsyncLocalStorage<ExecutionContext>();
 /** Meta key of the stored pause switch. */
 const WRITES_PAUSED = "writesPaused";
+
+/** Detach a fenced handler, not its safety checks. Late results/rejections are consumed. */
+async function untilFenced<T>(signal: AbortSignal, run: () => Promise<T>): Promise<T> {
+  signal.throwIfAborted();
+  let abort!: () => void;
+  const canceled = new Promise<never>((_, reject) => {
+    abort = () => reject(signal.reason);
+    signal.addEventListener("abort", abort, { once: true });
+  });
+  try {
+    return await Promise.race([run(), canceled]);
+  } finally {
+    signal.removeEventListener("abort", abort);
+  }
+}
 
 function current(): ExecutionContext {
   const ctx = als.getStore();
@@ -294,12 +333,11 @@ export type EngineOptions = {
 
 type CommitOptions = {
   writer: Writer;
+  tables?: Map<string, number>;
   log?: { session: string; request: number; result: string };
   meta?: Map<string, string>;
   /** More statements for the same SQL transaction (imports). */
   extra?: () => void;
-  /** Runs once the transaction has committed, before commit listeners. */
-  after?: () => void;
 };
 
 export class Engine {
@@ -321,6 +359,7 @@ export class Engine {
   // every time writes pause) and the units of the current epoch still running.
   private mode: WriteMode;
   private epoch = 0;
+  private epochFence = new AbortController();
   private units = new Set<Unit>();
   private idle: Array<() => void> = [];
 
@@ -364,7 +403,7 @@ export class Engine {
   admit(source: "external" | "scheduled", label: string): Unit {
     if (this.mode === "paused" || (this.mode === "draining" && source === "external"))
       throw new WritesPausedError(label);
-    const unit: Unit = { epoch: this.epoch, label };
+    const unit: Unit = { epoch: this.epoch, label, signal: this.epochFence.signal };
     this.units.add(unit);
     return unit;
   }
@@ -394,8 +433,13 @@ export class Engine {
   /** Stop admitting client and cron work; admitted units and due jobs may finish. */
   beginDrain(): void {
     if (this.mode !== "live") return;
-    this.store.setMeta(WRITES_PAUSED, "1");
     this.mode = "draining";
+    try {
+      this.store.setMeta(WRITES_PAUSED, "1");
+    } catch (error) {
+      this.fenceMemory();
+      throw error; // Never acknowledge a pause whose persistence failed.
+    }
   }
 
   /**
@@ -403,10 +447,17 @@ export class Engine {
    * before it (its epoch is over). Only system writes still commit.
    */
   fence(): void {
+    this.fenceMemory();
     this.store.setMeta(WRITES_PAUSED, "1");
+  }
+
+  private fenceMemory(): void {
     if (this.mode === "paused") return;
     this.mode = "paused";
     this.epoch++;
+    const old = this.epochFence;
+    this.epochFence = new AbortController();
+    old.abort(new WritesPausedError("execution fenced"));
     this.units.clear();
     for (const resolve of this.idle.splice(0)) resolve();
   }
@@ -452,10 +503,10 @@ export class Engine {
     return { fn: candidate, path: canonical, kind: fnKind };
   }
 
-  private validateArgs(fn: RegisteredFunction, path: string, args: Record<string, Value>) {
+  private validateArgs(fn: RegisteredFunction, path: string, args: Record<string, Value>, tables?: Map<string, number>) {
     const validator = JSON.parse(fn.exportArgs()) as ValidatorJSON;
     try {
-      check(validator, args, (id, table) => this.store.isId(id, table));
+      check(validator, args, (id, table) => this.store.isId(id, table, tables));
     } catch (error) {
       if (error instanceof ValidationError) {
         throw new Error(`ArgumentValidationError: ${error.message} (function ${path})`);
@@ -464,13 +515,13 @@ export class Engine {
     }
   }
 
-  private validateReturn(fn: RegisteredFunction, path: string, value: Value) {
+  private validateReturn(fn: RegisteredFunction, path: string, value: Value, tables?: Map<string, number>) {
     const exported = fn.exportReturns?.();
     if (!exported) return;
     const validator = JSON.parse(exported) as ValidatorJSON | null;
     if (!validator) return;
     try {
-      check(validator, value, (id, table) => this.store.isId(id, table));
+      check(validator, value, (id, table) => this.store.isId(id, table, tables));
     } catch (error) {
       if (error instanceof ValidationError)
         throw new Error(`ReturnsValidationError: ${error.message} (function ${path})`);
@@ -503,7 +554,7 @@ export class Engine {
     while (this.committing) await new Promise<void>((resolve) => this.commitDone.push(resolve));
     this.readers++;
     try {
-      return await fn();
+      return await untilFenced(this.epochFence.signal, fn);
     } finally {
       this.readers--;
       if (this.readers === 0) for (const resolve of this.readersDrained.splice(0)) resolve();
@@ -527,6 +578,7 @@ export class Engine {
   ): ExecutionContext {
     return {
       engine: this,
+      signal: this.epochFence.signal,
       kind,
       identity,
       unit,
@@ -578,46 +630,49 @@ export class Engine {
       onSuccess?: (set: WriteSet) => void;
     } = {},
   ): Promise<{ value: Value; ts: bigint }> {
-    return this.exclusive(async () => {
-      if (options.dedupe) {
-        const logged = this.store.loggedMutation(options.dedupe.session, options.dedupe.request);
-        if (logged)
-          return { value: jsonToConvex(JSON.parse(logged.result)), ts: BigInt(logged.ts) };
-      }
-      const unit = options.unit ?? this.admit("external", path);
-      try {
+    // Admit before queuing: old queued requests cannot enter a new live epoch.
+    const unit = options.unit ?? this.admit("external", path);
+    try {
+      return await this.exclusive(async () => {
         this.authorize(unit);
+        if (options.dedupe) {
+          const logged = this.store.loggedMutation(options.dedupe.session, options.dedupe.request);
+          if (logged)
+            return { value: jsonToConvex(JSON.parse(logged.result)), ts: BigInt(logged.ts) };
+        }
         const { fn, path: canonical } = this.resolve(
           path,
           "mutation",
           options.visibility ?? "public",
         );
         this.validateArgs(fn, canonical, args);
-        const txn = new Transaction();
+        const txn = new Transaction(this.store.registeredTables());
         const ctx = this.context("mutation", identity, unit, { txn });
         let result: string;
         try {
-          result = await als.run(ctx, () =>
-            fn.invokeMutation!(JSON.stringify(convexToJson([args]))),
+          result = await untilFenced(unit.signal, () =>
+            als.run(ctx, () => fn.invokeMutation!(JSON.stringify(convexToJson([args])))),
           );
         } catch (error) {
           // A function that failed because the engine did is not a function error.
           throw ctx.faults.first ?? error;
         }
         const value = jsonToConvex(JSON.parse(result));
-        this.validateReturn(fn, canonical, value);
+        this.authorize(unit);
+        this.validateReturn(fn, canonical, value, txn.tables);
         const meta = new Map<string, string>();
         options.onSuccess?.(this.writeSet(txn, meta));
         const ts = await this.commit(txn.writes(), {
           writer: unit,
+          tables: txn.tables,
           log: options.dedupe ? { ...options.dedupe, result } : undefined,
           meta,
         });
         return { value, ts };
-      } finally {
-        if (!options.unit) this.release(unit);
-      }
-    });
+      });
+    } finally {
+      if (!options.unit) this.release(unit);
+    }
   }
 
   /**
@@ -636,8 +691,8 @@ export class Engine {
       const { fn, path: canonical } = this.resolve(path, "action", options.visibility ?? "public");
       this.validateArgs(fn, canonical, args);
       const ctx = this.context("action", identity, unit);
-      const result = await als.run(ctx, () =>
-        fn.invokeAction!(requestId(), JSON.stringify(convexToJson([args]))),
+      const result = await untilFenced(unit.signal, () =>
+        als.run(ctx, () => fn.invokeAction!(requestId(), JSON.stringify(convexToJson([args])))),
       );
       const value = jsonToConvex(JSON.parse(result));
       this.validateReturn(fn, canonical, value);
@@ -666,7 +721,8 @@ export class Engine {
   /** Commit a write set outside a user function (job bookkeeping, crons, recovery). */
   writeExclusive(writer: Writer, fn: (set: WriteSet) => void): Promise<bigint> {
     return this.exclusive(async () => {
-      const txn = new Transaction();
+      this.authorize(writer);
+      const txn = new Transaction(this.store.registeredTables());
       const meta = new Map<string, string>();
       fn(this.writeSet(txn, meta));
       return this.commit(txn.writes(), { writer, meta });
@@ -681,30 +737,39 @@ export class Engine {
   replaceState(build: (set: WriteSet) => () => void): Promise<bigint> {
     return this.exclusive(async () => {
       if (this.mode !== "paused") throw new NotPausedError();
-      const txn = new Transaction();
+      const txn = new Transaction(this.store.registeredTables());
       const meta = new Map<string, string>();
       const extra = build(this.writeSet(txn, meta));
       return this.commit(txn.writes(), {
         writer: SYSTEM,
         meta,
         extra,
-        after: () => this.store.reload(),
       });
     });
   }
 
   private nextTs(): bigint {
     const wall = BigInt(Math.floor(this.now())) * 1_000_000n;
-    this.lastTs = wall > this.lastTs ? wall : this.lastTs + 1n;
-    return this.lastTs;
+    return wall > this.lastTs ? wall : this.lastTs + 1n;
   }
 
   /** Apply a write set atomically once no query is reading. Callers hold the exclusive lock. */
   private async commit(writes: Map<string, Write>, options: CommitOptions): Promise<bigint> {
     this.committing = true;
     try {
-      while (this.readers > 0)
-        await new Promise<void>((resolve) => this.readersDrained.push(resolve));
+      while (this.readers > 0) {
+        let wake!: () => void;
+        const wait = () => new Promise<void>((resolve) => {
+          wake = resolve;
+          this.readersDrained.push(wake);
+        });
+        try {
+          if (options.writer === SYSTEM) await wait();
+          else await untilFenced(options.writer.signal, wait);
+        } finally {
+          this.readersDrained = this.readersDrained.filter((resolve) => resolve !== wake);
+        }
+      }
       // Checked in the same synchronous turn as the write itself.
       this.authorize(options.writer);
       return this.apply(writes, options);
@@ -717,6 +782,7 @@ export class Engine {
   private apply(writes: Map<string, Write>, options: CommitOptions): bigint {
     const ts = this.nextTs();
     this.store.sql.transaction(() => {
+      if (options.tables) this.store.commitRegistry(options.tables);
       for (const write of writes.values())
         this.store.applyWrite(write.table, write.before, write.after);
       if (options.log)
@@ -725,7 +791,9 @@ export class Engine {
       options.extra?.();
       this.store.setMeta("ts", ts.toString());
     });
-    options.after?.();
+    this.lastTs = ts;
+    for (const { after } of writes.values())
+      if (after) this.store.observeCreationTime(after._creationTime);
     if (writes.size > 0) this.onCommit?.({ ts, writes });
     return ts;
   }
@@ -734,6 +802,7 @@ export class Engine {
 
   syscall(op: string, args: Record<string, unknown>): string {
     const ctx = current();
+    ctx.signal.throwIfAborted();
     switch (op) {
       case "1.0/queryStream": {
         const id = ctx.nextStream++;
@@ -747,7 +816,7 @@ export class Engine {
         const id = args.idString as string;
         return JSON.stringify({
           id:
-            this.store.isId(id, args.table as string) && this.store.tableOf(id) !== null
+            this.store.isId(id, args.table as string, ctx.txn?.tables) && this.store.tableOf(id, ctx.txn?.tables) !== null
               ? id
               : null,
         });
@@ -759,6 +828,7 @@ export class Engine {
 
   async asyncSyscall(op: string, args: Record<string, unknown>): Promise<string> {
     const ctx = current();
+    ctx.signal.throwIfAborted();
     switch (op) {
       case "1.0/get":
         return JSON.stringify(
@@ -878,12 +948,14 @@ export class Engine {
 
   private actionUnit(ctx: ExecutionContext, op: string): Unit {
     if (ctx.kind !== "action" || !ctx.unit) throw new Error(`${op} is only available in actions`);
+    this.authorize(ctx.unit);
     return ctx.unit;
   }
 
   private writable(ctx: ExecutionContext): Transaction {
     if (ctx.kind !== "mutation" || !ctx.txn)
       throw new Error("Writes are only allowed in mutations");
+    this.authorize(ctx.unit!);
     return ctx.txn;
   }
 
@@ -901,7 +973,7 @@ export class Engine {
   ): JSONValue {
     if (!decodeDocumentId(id))
       throw new Error(`Invalid argument \`id\` for \`db.get\`: "${id}" is not a valid ID`);
-    const owner = this.store.tableOf(id);
+    const owner = this.store.tableOf(id, ctx.txn?.tables);
     if (table !== undefined && owner !== null && owner !== table) {
       throw new Error(
         `Invalid argument \`id\` for \`db.get\`: ID belongs to table "${owner}", not "${table}"`,
@@ -926,7 +998,7 @@ export class Engine {
     table: string | undefined,
     verb: string,
   ): { table: string; doc: Doc } {
-    const owner = this.store.tableOf(id);
+    const owner = this.store.tableOf(id, ctx.txn?.tables);
     if (owner === null || (table !== undefined && owner !== table))
       throw new Error(`${verb} on invalid document ID "${id}"`);
     if (owner.startsWith("_")) throw new Error("System tables (prefixed with `_`) are read-only.");
@@ -940,13 +1012,13 @@ export class Engine {
     if (table.startsWith("_")) throw new Error("System tables (prefixed with `_`) are read-only.");
     if ("_id" in value || "_creationTime" in value)
       throw new Error("System fields `_id` and `_creationTime` cannot be set on insert");
-    const id = this.store.newId(table);
+    const id = this.store.newId(table, txn.tables);
     const doc = {
       ...value,
       _id: id,
       _creationTime: this.store.nextCreationTime(this.now()),
     } as Doc;
-    this.store.validate(table, doc);
+    this.store.validate(table, doc, (id, name) => this.store.isId(id, name, txn.tables));
     txn.set(id, table, doc, () => null);
     return id;
   }
@@ -973,7 +1045,7 @@ export class Engine {
       else next[field] = fieldValue;
     }
     const updated = { ...next, _id: doc._id, _creationTime: doc._creationTime } as Doc;
-    this.store.validate(owner, updated);
+    this.store.validate(owner, updated, (id, name) => this.store.isId(id, name, txn.tables));
     txn.set(id, owner, updated, () => this.store.getCommitted(id));
   }
 
@@ -1027,7 +1099,7 @@ export class Engine {
     if (kind === "mutation" && ctx.kind !== "mutation")
       throw new Error("runMutation is only available in mutations and actions");
     const { fn, path: canonical } = this.resolve(path, kind, "internal");
-    this.validateArgs(fn, canonical, fnArgs);
+    this.validateArgs(fn, canonical, fnArgs, ctx.txn?.tables);
     const nested: ExecutionContext = { ...ctx, kind, streams: new Map(), nextStream: 0 };
     const argsJson = JSON.stringify(convexToJson([fnArgs]));
     if (kind === "query") {

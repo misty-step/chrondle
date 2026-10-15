@@ -413,7 +413,10 @@ export class Scheduler {
    */
   private async settle(deadline: number): Promise<boolean> {
     for (;;) {
-      if (this.engine.writeMode === "paused") return true;
+      if (this.engine.writeMode === "paused") {
+        this.engine.fence(); // Retry persistence too, after a failed drain/fence call.
+        return true;
+      }
       const startable = this.startable(this.now());
       // Checked and paused in one synchronous step: nothing can start in between.
       if (startable.length === 0 && !this.engine.busy) {
@@ -425,9 +428,17 @@ export class Scheduler {
         this.engine.fence();
         return false;
       }
-      if (startable.length > 0)
-        await this.runDue().catch((error) => console.error("[scheduler] settle", error));
-      else await this.engine.whenIdle(Math.min(remaining, 1000));
+      if (startable.length > 0) {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([
+            this.runDue().catch((error) => console.error("[scheduler] settle", error)),
+            new Promise<void>((resolve) => { timer = setTimeout(resolve, remaining); }),
+          ]);
+        } finally {
+          clearTimeout(timer);
+        }
+      } else await this.engine.whenIdle(Math.min(remaining, 1000));
     }
   }
 
