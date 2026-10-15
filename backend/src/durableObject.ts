@@ -10,7 +10,7 @@ import schema from "../../convex/schema";
 import authConfig from "../../convex/auth.config";
 import * as crons from "../../convex/crons";
 import { convexModules } from "./convexModules.gen";
-import { AuthVerifier, type AuthProvider } from "./engine/auth";
+import { AuthVerifier, authProviderSchema, type AuthProvider } from "./engine/auth";
 import {
   mismatches,
   parse,
@@ -56,11 +56,12 @@ function json(body: unknown, status = 200): Response {
 
 export function authProviders(env: Env): AuthProvider[] {
   const providers = [...(authConfig.providers as AuthProvider[])];
-  if (env.EXTRA_AUTH_PROVIDERS) {
-    if (env.ENVIRONMENT === "production") {
-      console.error("EXTRA_AUTH_PROVIDERS is ignored in production");
-    } else {
-      providers.push(...(JSON.parse(env.EXTRA_AUTH_PROVIDERS) as AuthProvider[]));
+  if (env.EXTRA_AUTH_PROVIDERS && ["preview", "development"].includes(env.ENVIRONMENT ?? "")) {
+    try {
+      providers.push(...authProviderSchema.array().parse(JSON.parse(env.EXTRA_AUTH_PROVIDERS)));
+    } catch {
+      // Configuration contents can include signing material; never log them.
+      console.error("Invalid EXTRA_AUTH_PROVIDERS; using configured providers only");
     }
   }
   return providers;
