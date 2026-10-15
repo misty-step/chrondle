@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.8.1](https://github.com/misty-step/chrondle/compare/v1.8.0...v1.8.1) (2026-10-15)
+
+### Bug Fixes
+
+- show generated release notes and version in the app ([#334](https://github.com/misty-step/chrondle/issues/334)) ([b63065d](https://github.com/misty-step/chrondle/commit/b63065d86334236930555ee56b45e011d87b768c))
+
 # [1.8.0](https://github.com/misty-step/chrondle/compare/v1.7.3...v1.8.0) (2026-10-15)
 
 ### Features
