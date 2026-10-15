@@ -51,7 +51,7 @@
     "backend:modules": "node backend/scripts/generate-modules.mjs",
     "backend:type-check": "node backend/scripts/generate-modules.mjs && tsc --noEmit -p backend/tsconfig.json",
     "backend:test": "vitest run -c backend/vitest.config.ts",
-    "backend:dev": "wrangler dev -c backend/wrangler.jsonc",
+    "backend:dev": "wrangler --cwd backend dev",
     "doctor:hosting": "node scripts/verify-hosting-parity.mjs",
     "verify:provider-retirement": "node scripts/check-provider-retirement.mjs",
     "validate-puzzles": "node scripts/check-convex-state.mjs",

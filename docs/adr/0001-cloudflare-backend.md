@@ -92,7 +92,14 @@ All three are defined in `backend/wrangler.jsonc`. Each has its own script, Dura
 | `preview`    | `chrondle-backend-preview` | `chrondle-backend-preview-backups` |
 | `production` | `chrondle-backend`         | `chrondle-backend-backups`         |
 
-Preview and production are served on their `workers.dev` hostnames, so no DNS records change.
+The isolated preview uses `chrondle-backend-preview.mistystep.io`, with Access
+covering `/_backend/admin` and its subpaths. Its `workers.dev` and immutable
+preview URLs are disabled; public game endpoints remain public. The preview
+workflow deploys only its own script, namespace and bucket, using the existing
+scoped CD credential and the `Preview` environment's operator configuration and
+synthetic public JWKS. The synthetic private signer and named machine credential
+never enter CI. This does not change any production frontend domain or backend
+binding. Production's hostname and cutover remain pending.
 
 ## Alternatives considered
 
@@ -125,7 +132,7 @@ A production database starts with writes paused: it serves queries but refuses e
 
 A Convex snapshot carries only the application tables. `to-backup --as-of <time>` takes the time Convex was paused and sets the cron cursors from it: every occurrence up to then counts as run on Convex, and later ones run on the backend. `to-convex` refuses a snapshot with pending or running scheduled functions, because Convex cannot import them. It reports the finished job records, cron cursors and replay records it leaves out.
 
-1. Deploy `chrondle-backend` through repository CI with `wrangler deploy -c backend/wrangler.jsonc --env production`, after the operator Access proof above. Set `BACKEND_OPERATOR_ACCESS`, `CLERK_SYNC_SECRET` and `STRIPE_SYNC_SECRET`, plus the LLM, email and observability settings the functions read today. Do not set a hosted bearer fallback.
+1. Deploy `chrondle-backend` through repository CI with `wrangler --cwd backend deploy --env production`, after the operator Access proof above. Wrangler's custom build runs in the invoking directory, so use `backend/` for both local and deployed backend commands. Set `BACKEND_OPERATOR_ACCESS`, `CLERK_SYNC_SECRET` and `STRIPE_SYNC_SECRET`, plus the LLM, email and observability settings the functions read today. Do not set a hosted bearer fallback.
 2. Make Convex the only writer, then move the data:
    - Pause the `fleet-goldfish-183` deployment outside the puzzle and event-generation cron windows, and note the time. Check that the dashboard's Schedules page shows no pending scheduled functions, since Convex's export does not carry them. If it shows any, resume Convex until they have run, then pause again and note the new time.
    - Run `npx convex export`, then `convex-snapshot.ts to-backup --as-of <the pause time>`.

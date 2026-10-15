@@ -7,7 +7,8 @@
 //       JWKS as a data URI). Preview/local only; production ignores it.
 //   node backend/scripts/verify-backend.mjs check --url <backend> [--full <issuer dir>] [--out report.json]
 //       Read-only checks are safe against production. --full also writes
-//       synthetic data (needs BACKEND_ADMIN_TOKEN): sign-in, play, streaks,
+//       synthetic data (local BACKEND_ADMIN_TOKEN, or the isolated preview's
+//       CF_ACCESS_CLIENT_ID + CF_ACCESS_CLIENT_SECRET): sign-in, play, streaks,
 //       invalid access, concurrency, exactly-once retry, scheduler delivery,
 //       backup/restore, export/import, the pause barrier under concurrent
 //       writes and a queued job carried through export/import.
@@ -206,19 +207,41 @@ async function readOnlyChecks() {
     return daily.value ? { puzzleNumber: daily.value.puzzleNumber } : null;
   });
   await check("admin API is invisible without the admin token", async () => {
-    const response = await fetch(`${url}/_backend/admin/manifest`);
-    assert(response.status === 404, `got ${response.status}`);
+    const response = await fetch(`${url}/_backend/admin/manifest`, { redirect: "manual" });
+    const location = response.headers.get("location");
+    const accessDenied =
+      response.status === 302 &&
+      location &&
+      new URL(location).hostname.endsWith(".cloudflareaccess.com");
+    assert(response.status === 404 || accessDenied, `got ${response.status}`);
   });
 }
 
 async function fullChecks(issuerDir) {
-  const token = process.env.BACKEND_ADMIN_TOKEN;
-  assert(token, "BACKEND_ADMIN_TOKEN is required for --full");
+  const hostname = new URL(url).hostname;
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(hostname);
+  assert(
+    local || url === "https://chrondle-backend-preview.mistystep.io",
+    "--full writes synthetic data only to loopback or the isolated hosted preview",
+  );
+  const operatorHeaders = local
+    ? { Authorization: `Bearer ${process.env.BACKEND_ADMIN_TOKEN ?? ""}` }
+    : {
+        "CF-Access-Client-ID": process.env.CF_ACCESS_CLIENT_ID ?? "",
+        "CF-Access-Client-Secret": process.env.CF_ACCESS_CLIENT_SECRET ?? "",
+      };
+  assert(
+    local
+      ? process.env.BACKEND_ADMIN_TOKEN
+      : process.env.CF_ACCESS_CLIENT_ID && process.env.CF_ACCESS_CLIENT_SECRET,
+    "--full requires the local bearer or the isolated preview's named Access credentials",
+  );
   const sign = signer(issuerDir);
   const admin = async (method, path, body) => {
     const response = await fetch(`${url}/_backend/admin${path}`, {
       method,
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: { ...operatorHeaders, "Content-Type": "application/json" },
+      redirect: "error",
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const json = await response.json();
@@ -234,8 +257,12 @@ async function fullChecks(issuerDir) {
   await check("admin token is required and checked", async () => {
     const wrong = await fetch(`${url}/_backend/admin/manifest`, {
       headers: { Authorization: "Bearer wrong" },
+      redirect: "manual",
     });
-    assert(wrong.status === 404, `wrong token got ${wrong.status}`);
+    assert(
+      wrong.status === 404 || (!local && wrong.status === 302),
+      `wrong token got ${wrong.status}`,
+    );
     return { tables: Object.keys((await admin("GET", "/manifest")).manifest).length };
   });
 
@@ -428,11 +455,14 @@ async function fullChecks(issuerDir) {
     fetch(`${url}/_backend/admin${path}`, {
       method,
       headers: {
-        Authorization: "Bearer " + token,
+        ...operatorHeaders,
         "Content-Type": "application/json",
-        ...(path === "/import" ? { "X-Backend-Sha256": createHash("sha256").update(body).digest("hex") } : {}),
+        ...(path === "/import"
+          ? { "X-Backend-Sha256": createHash("sha256").update(body).digest("hex") }
+          : {}),
       },
       body,
+      redirect: "error",
     });
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const records = (ndjson) =>
