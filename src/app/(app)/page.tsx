@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { GamesGallery } from "@/components/GamesGallery";
+import { Footer } from "@/components/Footer";
 import { MODE_COOKIE, resolveHomeRedirect } from "@/lib/modePreference";
 
 interface HomepageProps {
@@ -30,5 +31,10 @@ export default async function Homepage({ searchParams }: HomepageProps) {
     redirect(destination);
   }
 
-  return <GamesGallery />;
+  return (
+    <>
+      <GamesGallery />
+      <Footer />
+    </>
+  );
 }

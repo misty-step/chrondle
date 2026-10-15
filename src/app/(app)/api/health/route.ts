@@ -49,19 +49,23 @@ async function performHealthCheck(): Promise<HealthResult> {
 
 export async function GET() {
   const result = await performHealthCheck();
+  const identity = {
+    service: "chrondle",
+    revision: process.env.CHRONDLE_REVISION || "development",
+    version: process.env.NEXT_PUBLIC_APP_VERSION || "development",
+  };
 
   if (!result.ok) {
     return NextResponse.json(
-      { status: "error", error: result.error, checks: result.checks },
+      { ...identity, status: "error", error: result.error, checks: result.checks },
       { status: result.status },
     );
   }
 
   return NextResponse.json(
     {
+      ...identity,
       status: "ok",
-      service: "chrondle",
-      revision: process.env.CHRONDLE_REVISION || "development",
       checks: result.checks,
     },
     { status: 200 },
