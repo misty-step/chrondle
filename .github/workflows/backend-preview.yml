@@ -123,6 +123,17 @@ jobs:
         run: bunx wrangler deploy --env preview --message "$REVISION"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Bind only a test-mode Clerk server key to the isolated frontend
+        run: |
+          set -euo pipefail
+          bun --eval '
+            const key = process.env.CLERK_RUNTIME_KEY?.trim();
+            if (!key?.startsWith("sk_test_")) throw new Error("The existing repository CLERK_SECRET_KEY is not a sandbox key; do not bind a production key to the synthetic preview");
+            process.stdout.write(JSON.stringify({CLERK_SECRET_KEY: key}));
+          ' | bunx wrangler secret bulk --env preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLERK_RUNTIME_KEY: ${{ secrets.CLERK_SECRET_KEY }}
       - name: Read back the frontend and its real backend connection
         run: |
           bun --eval '
