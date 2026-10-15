@@ -41,7 +41,7 @@ const config = {
   ],
 };
 const human = { sub: "stable-human-id", email, type: "app" };
-const machine = { sub: "", common_name: clientId, type: "app" };
+const machine = { sub: "", common_name: clientId, type: "app", email: undefined };
 
 async function backend(settings: Record<string, string | undefined> = {}) {
   const issuer = await syntheticIssuer(issuerUrl);
