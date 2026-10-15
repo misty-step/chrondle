@@ -71,7 +71,7 @@ const STALE_IF_ERROR_MS = 5 * 60_000;
 const CLOCK_SKEW_SECONDS = 5;
 
 /** Respect origin freshness (including Age); never extend an explicit expiry. */
-function cachePolicy(response: Response) {
+function cachePolicy(response: Response, now: number) {
   const control = response.headers.get("Cache-Control")?.toLowerCase() ?? "";
   const seconds = (name: string) => {
     const match = control.match(new RegExp(`(?:^|,)\\s*${name}\\s*=\\s*"?(\\d+)"?(?:\\s*,|$)`));
@@ -80,15 +80,18 @@ function cachePolicy(response: Response) {
   const noStore = /(?:^|,)\s*no-store\s*(?:,|$)/.test(control);
   const revalidate = noStore || /(?:^|,)\s*(?:no-cache|must-revalidate)\s*(?:,|$)/.test(control);
   const age = Math.max(0, Number(response.headers.get("Age")) || 0) * 1000;
+  // Keep past expiry intact: Age may already have consumed some or all grace.
   const ttl =
     /(?:^|,)\s*no-cache\s*(?:,|$)/.test(control) || noStore
       ? 0
-      : Math.max(0, Math.min((seconds("max-age") ?? KEY_TTL_MS / 1000) * 1000, 86_400_000) - age);
+      : Math.min((seconds("max-age") ?? KEY_TTL_MS / 1000) * 1000, 86_400_000) - age;
+  const expiresAt = now + ttl;
+  const stale = revalidate
+    ? 0
+    : Math.min((seconds("stale-if-error") ?? STALE_IF_ERROR_MS / 1000) * 1000, STALE_IF_ERROR_MS);
   return {
-    ttl,
-    stale: revalidate
-      ? 0
-      : Math.min((seconds("stale-if-error") ?? STALE_IF_ERROR_MS / 1000) * 1000, STALE_IF_ERROR_MS),
+    expiresAt,
+    staleUntil: expiresAt + stale,
     store: !noStore,
   };
 }
@@ -161,8 +164,8 @@ export class AuthVerifier {
         .then(({ keys, policy }) => {
           entry.keys = policy.store ? keys : [];
           entry.knownKids = new Set(keys.map((key) => key.kid));
-          entry.expiresAt = this.now() + policy.ttl;
-          entry.staleUntil = entry.expiresAt + policy.stale;
+          entry.expiresAt = policy.expiresAt;
+          entry.staleUntil = policy.staleUntil;
           entry.retryAfter = 0;
           return keys;
         })
@@ -197,13 +200,14 @@ export class AuthVerifier {
       const discovery = await this.fetchKeys(
         `${trimSlash(provider.domain)}/.well-known/openid-configuration`,
       );
+      discoveryPolicy = cachePolicy(discovery, this.now());
       const config = z.object({ jwks_uri: z.url() }).parse(await discovery.json());
       url = config.jwks_uri;
-      discoveryPolicy = cachePolicy(discovery);
     }
     const response = url.startsWith("data:")
       ? new Response(decodeDataUri(url))
       : await this.fetchKeys(url);
+    const policy = cachePolicy(response, this.now());
     const body = z
       .object({
         keys: z.array(
@@ -220,10 +224,9 @@ export class AuthVerifier {
     const ids = body.keys.flatMap((key) => (key.kid === undefined ? [] : [key.kid]));
     if (new Set(ids).size !== ids.length)
       throw new AuthError("Unauthenticated", "Ambiguous signing keys");
-    const policy = cachePolicy(response);
     if (discoveryPolicy) {
-      policy.ttl = Math.min(policy.ttl, discoveryPolicy.ttl);
-      policy.stale = Math.min(policy.stale, discoveryPolicy.stale);
+      policy.expiresAt = Math.min(policy.expiresAt, discoveryPolicy.expiresAt);
+      policy.staleUntil = Math.min(policy.staleUntil, discoveryPolicy.staleUntil);
       policy.store &&= discoveryPolicy.store;
     }
     return { keys: body.keys as Jwk[], policy };

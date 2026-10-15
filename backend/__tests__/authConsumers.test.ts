@@ -21,8 +21,12 @@ function fixture() {
   let now = NOW;
   let keys = first.jwks.keys;
   let unavailable = false;
-  let cacheControl = "public, max-age=3600";
-  let age = "0";
+  const policies = {
+    discovery: { control: "public, max-age=3600", age: "0" },
+    jwks: { control: "public, max-age=3600", age: "0" },
+  };
+  let keyFetchMs = 0;
+  const bodyMs = { discovery: 0, jwks: 0 };
   const calls: string[] = [];
   const fetcher = (async (input: RequestInfo | URL) => {
     const url = String(input);
@@ -30,12 +34,19 @@ function fixture() {
     // Yield so concurrent requests overlap the refresh.
     await Promise.resolve();
     if (unavailable) return new Response(null, { status: 429 });
-    return Response.json(
-      url.endsWith("openid-configuration") ? { jwks_uri: `${first.issuer}/keys` } : { keys },
-      {
-        headers: { "Cache-Control": cacheControl, Age: age },
-      },
-    );
+    const boundary = url.endsWith("openid-configuration") ? "discovery" : "jwks";
+    if (boundary === "jwks") now += keyFetchMs;
+    const policy = policies[boundary];
+    const body = boundary === "discovery" ? { jwks_uri: `${first.issuer}/keys` } : { keys };
+    const response = Response.json(body, {
+      headers: { "Cache-Control": policy.control, Age: policy.age },
+    });
+    const json = response.json.bind(response);
+    response.json = async () => {
+      now += bodyMs[boundary];
+      return json();
+    };
+    return response;
   }) as typeof fetch;
   const verifier = new AuthVerifier([first.provider], fetcher, () => now);
   const engine = makeEngine(defineSchema({}), {
@@ -61,9 +72,16 @@ function fixture() {
     unavailable: (value: boolean) => {
       unavailable = value;
     },
-    cache: (control: string, ageSeconds = "0") => {
-      cacheControl = control;
-      age = ageSeconds;
+    cache: (control: string, age = "0", boundary?: "discovery" | "jwks") => {
+      for (const target of boundary ? [boundary] : (["discovery", "jwks"] as const)) {
+        policies[target] = { control, age };
+      }
+    },
+    delayKeys: (ms: number) => {
+      keyFetchMs = ms;
+    },
+    delayBody: (boundary: "discovery" | "jwks", ms: number) => {
+      bodyMs[boundary] = ms;
     },
   };
 }
@@ -211,6 +229,59 @@ for (const kind of ["http", "sync"] as const) {
       f.advance(30_001);
       expect(await consume(f, good, kind)).toBe(true);
       expect(f.calls).toHaveLength(6);
+    });
+
+    for (const boundary of ["discovery", "jwks"] as const) {
+      it.each([
+        { control: "public, max-age=60, stale-if-error=30", age: "89" },
+        { control: "public, max-age=60", age: "359" },
+      ])(
+        `does not reset consumed ${boundary} grace ($control, Age $age)`,
+        async ({ control, age }) => {
+          const f = fixture();
+          f.cache(control, age, boundary);
+          const good = await first.sign({ sub: "synthetic-user" });
+          expect(await consume(f, good, kind)).toBe(true);
+          f.unavailable(true);
+          f.advance(999);
+          expect(await consume(f, good, kind)).toBe(true);
+          expect(f.calls).toHaveLength(3);
+          // The failure cooldown must not extend the last millisecond of grace.
+          f.advance(1);
+          expect(await consume(f, good, kind)).toBe(false);
+          expect(f.calls).toHaveLength(3);
+          f.unavailable(false);
+          f.advance(30_001);
+          expect(await consume(f, good, kind)).toBe(true);
+          expect(f.calls).toHaveLength(5);
+        },
+      );
+
+      it(`counts ${boundary} body time against the original deadline`, async () => {
+        const f = fixture();
+        f.cache("public, max-age=60, stale-if-error=30", "59", boundary);
+        f.delayBody(boundary, 2_000);
+        const good = await first.sign({ sub: "synthetic-user" });
+        expect(await consume(f, good, kind)).toBe(true);
+        f.unavailable(true);
+        f.advance(28_999);
+        expect(await consume(f, good, kind)).toBe(true);
+        f.advance(1);
+        expect(await consume(f, good, kind)).toBe(false);
+      });
+    }
+
+    it("does not rebase discovery expiry after fetching the signing keys", async () => {
+      const f = fixture();
+      f.cache("public, max-age=60, stale-if-error=30", "59", "discovery");
+      f.delayKeys(2_000);
+      const good = await first.sign({ sub: "synthetic-user" });
+      expect(await consume(f, good, kind)).toBe(true);
+      f.unavailable(true);
+      f.advance(28_999);
+      expect(await consume(f, good, kind)).toBe(true);
+      f.advance(1);
+      expect(await consume(f, good, kind)).toBe(false);
     });
 
     it("never uses stale keys when Cache-Control forbids it", async () => {
