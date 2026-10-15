@@ -13,11 +13,14 @@ vi.mock("@/lib/convexServer", () => ({
 describe("/api/health", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
     mockQuery.mockResolvedValue("ok");
     mockGetConvexClient.mockReturnValue({ query: mockQuery });
   });
 
   it("reports backend readiness", async () => {
+    vi.stubEnv("CHRONDLE_REVISION", "1234567890123456789012345678901234567890");
+    vi.stubEnv("NEXT_PUBLIC_APP_VERSION", "1.2.3");
     const { GET } = await import("./route");
 
     const response = await GET();
@@ -27,6 +30,8 @@ describe("/api/health", () => {
     expect(body).toMatchObject({
       status: "ok",
       service: "chrondle",
+      revision: "1234567890123456789012345678901234567890",
+      version: "1.2.3",
       checks: {
         convex: "ok",
       },

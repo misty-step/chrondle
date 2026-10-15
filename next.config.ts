@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
 import { readFileSync } from "fs";
+import { parseChangelog } from "./src/lib/releases/changelog";
 
-// Read version from package.json at build time
-const packageJson = JSON.parse(readFileSync("./package.json", "utf8"));
-const appVersion = packageJson.version;
+// The private package manifest is not a release authority.
+const appVersion = parseChangelog(readFileSync("CHANGELOG.md", "utf8"))[0].version;
 const artifactBuildOnly = process.env.DAGGER_ARTIFACT_BUILD === "1";
 const convexOrigin = resolveExternalOrigin(process.env.NEXT_PUBLIC_CONVEX_URL, "");
 const convexConnectSrc = convexOrigin
