@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.7.3](https://github.com/misty-step/chrondle/compare/v1.7.2...v1.7.3) (2026-10-15)
+
+### Bug Fixes
+
+- **backend:** bind operator access to verified named identities ([#332](https://github.com/misty-step/chrondle/issues/332)) ([f476d41](https://github.com/misty-step/chrondle/commit/f476d417a3cf05def57186f7bcd16d5ec695f10e))
+
 ## [1.7.2](https://github.com/misty-step/chrondle/compare/v1.7.1...v1.7.2) (2026-10-15)
 
 ### Bug Fixes
