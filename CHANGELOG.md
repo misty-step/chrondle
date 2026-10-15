@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.7.1](https://github.com/misty-step/chrondle/compare/v1.7.0...v1.7.1) (2026-10-15)
+
+### Bug Fixes
+
+- **backend:** bound signing-key refresh and preview auth ([#329](https://github.com/misty-step/chrondle/issues/329)) ([4118ae7](https://github.com/misty-step/chrondle/commit/4118ae752d69994b6390ac3abb6bd9df7a8933c0))
+
 # [1.7.0](https://github.com/misty-step/chrondle/compare/v1.6.0...v1.7.0) (2026-10-15)
 
 ### Features
