@@ -254,6 +254,12 @@ describe("restoring runtime state with the data", () => {
     expect([...target.store.allDocuments(SCHEDULED_FUNCTIONS)].map((job) => job.state)).toEqual([
       { kind: "success" },
     ]);
+
+    // The finished job travels on unchanged: a second export restores exactly elsewhere.
+    target.fence();
+    const finished = parse(exported(target));
+    expect(summarize(finished).runtime.scheduledFunctions.states).toEqual({ success: 1 });
+    expect(mismatches(summarize(finished), await restore(emptyTarget(), finished))).toEqual([]);
   });
 
   it("restoring an older snapshot drops later jobs and replay records", async () => {

@@ -57,7 +57,7 @@ Keep the `convex/` functions and every client unchanged. Add `backend/`, a Worke
 - Due jobs start right after that commit. The Durable Object alarm covers future jobs, crons and restarts. An hourly Worker cron trigger (`17 * * * *`) re-arms the alarm as a watchdog.
 - A scheduled mutation runs exactly once. If the function throws, the job fails, as on Convex. If the engine or storage fails instead, the job stays pending and is retried: at once, then after 1 s, doubling up to 5 minutes. The attempt count is stored with the job, so a restart keeps the backoff.
 - An action is marked `inProgress` first and runs at most once. If a restart interrupts it, it is marked failed with Convex's `Transient error while executing action`, as on Convex. An action still running when a pause takes effect is failed the same way.
-- A cron occurrence is dispatched as a job in the same transaction that advances the cron's stored cursor, so a restart on either side of the dispatch neither loses nor repeats it. A cron with no cursor (new) starts at its next occurrence. Occurrences missed while writes were paused run once when writes resume.
+- A cron occurrence is dispatched as a job in the same transaction that advances the cron's stored cursor, so a restart on either side of the dispatch neither loses nor repeats it. A cron with no cursor (new) starts at its next occurrence. Occurrences missed while writes were paused run once when writes resume, as on Convex, which schedules a cron's next run from the current time rather than replaying each missed period.
 - Finished job records are pruned after 7 days.
 
 ### Backups
