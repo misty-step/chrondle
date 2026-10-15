@@ -61,6 +61,19 @@ function trimSlash(url: string): string {
   return url.endsWith("/") ? url.slice(0, -1) : url;
 }
 
+/** `jwks` may be a data URI, as Convex allows for customJwt providers. */
+function decodeDataUri(uri: string): string {
+  const comma = uri.indexOf(",");
+  const meta = uri.slice("data:".length, comma);
+  const payload = uri.slice(comma + 1);
+  return meta.split(";").includes("base64") ? new TextDecoder().decode(base64Decode(payload)) : decodeURIComponent(payload);
+}
+
+function base64Decode(text: string): Uint8Array {
+  const binary = atob(text);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
 export class AuthVerifier {
   private keys = new Map<string, { fetchedAt: number; keys: Jwk[] }>();
 
@@ -85,11 +98,16 @@ export class AuthVerifier {
     const fresh = cached && this.now() - cached.fetchedAt < KEY_TTL_MS;
     const hasKid = cached?.keys.some((key) => kid === undefined || key.kid === kid);
     if (cached && fresh && hasKid) return cached.keys;
-    const response = await this.fetchFn(await this.jwksUrl(provider));
-    if (!response.ok) throw new AuthError("Unauthenticated", `Could not fetch JWKS for ${cacheKey}: ${response.status}`);
-    const { keys } = (await response.json()) as { keys: Jwk[] };
+    const url = await this.jwksUrl(provider);
+    const { keys } = (url.startsWith("data:") ? JSON.parse(decodeDataUri(url)) : await this.fetchJwks(url, cacheKey)) as { keys: Jwk[] };
     this.keys.set(cacheKey, { fetchedAt: this.now(), keys });
     return keys;
+  }
+
+  private async fetchJwks(url: string, cacheKey: string): Promise<unknown> {
+    const response = await this.fetchFn(url);
+    if (!response.ok) throw new AuthError("Unauthenticated", `Could not fetch JWKS for ${cacheKey}: ${response.status}`);
+    return response.json();
   }
 
   async verify(token: string): Promise<VerifiedToken> {

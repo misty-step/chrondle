@@ -50,6 +50,7 @@ export async function syntheticIssuer(issuer = "https://issuer.chrondle.test", k
   return {
     issuer,
     provider,
+    jwks: { keys: [jwk] },
     fetchFn,
     requests,
     sign,

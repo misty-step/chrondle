@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AuthError } from "../src/engine/auth";
+import { AuthError, AuthVerifier } from "../src/engine/auth";
 import { syntheticIssuer } from "./support";
 
 const failure = (promise: Promise<unknown>) =>
@@ -35,6 +35,14 @@ describe("JWT verification (convex/auth.config.ts providers)", () => {
 
     await verifier.verify(await issuer.sign({ sub: "user_456" }));
     expect(issuer.requests).toEqual(["https://clerk.example.test/.well-known/openid-configuration", "https://clerk.example.test/.well-known/jwks.json"]);
+  });
+
+  it("accepts a customJwt JWKS given as a data URI without fetching", async () => {
+    const issuer = await syntheticIssuer();
+    const jwks = `data:text/plain;charset=utf-8;base64,${Buffer.from(JSON.stringify(issuer.jwks)).toString("base64")}`;
+    const noNetwork = (() => Promise.reject(new Error("unexpected fetch"))) as unknown as typeof fetch;
+    const verifier = new AuthVerifier([{ type: "customJwt", issuer: issuer.issuer, jwks, algorithm: "RS256", applicationID: "convex" }], noNetwork);
+    expect((await verifier.verify(await issuer.sign({ sub: "user_inline" }))).identity.subject).toBe("user_inline");
   });
 
   it("rejects tokens Convex would reject", async () => {
