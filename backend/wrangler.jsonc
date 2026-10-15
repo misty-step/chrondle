@@ -1,0 +1,42 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  // Cloudflare host for the convex/ functions. See docs/adr/0001-cloudflare-backend.md.
+  // Local development only; deploy with --env preview or --env production.
+  "name": "chrondle-backend-dev",
+  "account_id": "b069014f6a46558ea9146fb6c4ff8f6c",
+  "main": "src/worker.ts",
+  "build": { "command": "node scripts/generate-modules.mjs" },
+  "compatibility_date": "2026-09-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "send_metrics": false,
+  "observability": { "enabled": true },
+  "limits": { "cpu_ms": 300000 },
+  "durable_objects": { "bindings": [{ "name": "BACKEND", "class_name": "ChrondleBackend" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChrondleBackend"] }],
+  "triggers": { "crons": ["17 * * * *"] },
+  "r2_buckets": [{ "binding": "BACKUPS", "bucket_name": "chrondle-backend-dev-backups" }],
+  "vars": { "ENVIRONMENT": "development", "EXPOSE_ERRORS": "1" },
+  "env": {
+    // Isolated synthetic preview: its own script, Durable Object namespace and bucket.
+    "preview": {
+      "name": "chrondle-backend-preview",
+      "workers_dev": true,
+      "durable_objects": { "bindings": [{ "name": "BACKEND", "class_name": "ChrondleBackend" }] },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChrondleBackend"] }],
+      "r2_buckets": [{ "binding": "BACKUPS", "bucket_name": "chrondle-backend-preview-backups" }],
+      "triggers": { "crons": ["17 * * * *"] },
+      "vars": { "ENVIRONMENT": "preview", "EXPOSE_ERRORS": "0" },
+    },
+    "production": {
+      "name": "chrondle-backend",
+      "workers_dev": true,
+      "durable_objects": { "bindings": [{ "name": "BACKEND", "class_name": "ChrondleBackend" }] },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChrondleBackend"] }],
+      "r2_buckets": [{ "binding": "BACKUPS", "bucket_name": "chrondle-backend-backups" }],
+      "triggers": { "crons": ["17 * * * *"] },
+      "vars": { "ENVIRONMENT": "production", "EXPOSE_ERRORS": "0" },
+    },
+  },
+}

@@ -148,3 +148,6 @@ test-results/
 .dev.vars
 .dev.vars.*
 
+# Cloudflare backend: generated Convex module map (backend/scripts/generate-modules.mjs), local workerd state
+backend/src/convexModules.gen.ts
+backend/.wrangler/
