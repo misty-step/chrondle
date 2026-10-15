@@ -1,8 +1,7 @@
 /**
  * Backup, restore and reconciliation for the Convex document store.
  *
- * Backup format (NDJSON), also produced from a Convex snapshot export by
- * backend/scripts/convex-snapshot.mjs so data moves both ways losslessly:
+ * Backup format (NDJSON):
  *   {"table":"users","tableNumber":10002}                  one per table, first
  *   {"table":"users","document":{"_id":"…","_creationTime":…,…}}
  * Table numbers are kept for empty tables too, so IDs minted later still
