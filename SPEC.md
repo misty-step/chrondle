@@ -34,6 +34,40 @@
   the server's shared backfill pipeline, not a separate client-side paid path.
 - Scheduled internal generation and backfill continue without a player identity.
 
-This initial contract covers account privacy and event operations. The existing
-game's complete observable behavior still needs specification; absence here does
-not establish new gameplay, billing or persistence intent.
+## Classic player journey
+
+- US-001: As a player, I can open today's classic puzzle without signing in,
+  see its first historical clue and independent start/end year inputs. Today is
+  my local calendar day. A ready puzzle emits `game_loaded` once per puzzle visit,
+  including readiness after loading, not on every render.
+- US-002: I can deliberately reveal the next available clue before submitting.
+  The UI shows revealed clues and their scoring cost without suggesting the
+  target year or era. Each reveal emits `hint_viewed` with its ordinal only.
+- US-003: I can type both range endpoints and independently select BC/AD. Invalid
+  input cannot be committed. Deliberately locking a valid range accepts one
+  classic attempt and emits `guess_submitted`; rejected commits do not. Anonymous
+  play stays local; signed-in play uses authenticated persistence.
+- US-004: After an accepted commit I see the result, score and earned answer,
+  with focus on the result. `game_completed` fires once for that commit, not on
+  restoring an already completed puzzle or merely revisiting its result.
+- US-005: After daily completion I see the local-midnight countdown and can
+  request an all-day calendar reminder. Clicking it emits `reminder_optin` with
+  game mode, never calendar content or account details.
+
+## Privacy-safe measurement
+
+Page visits and these five story events use one anonymous, host-scoped browser
+identifier and SDK sessions. They include `app=chrondle`, source revision,
+environment and a synthetic-traffic flag. Isolated builds and detected automation
+are synthetic; usage consumers exclude synthetic/non-production events.
+
+Only route templates, bounded counts, booleans and enumerated modes are sent.
+Never send account IDs, emails, input/clue text, guessed/target years, raw private
+paths, URL queries/fragments, referrers, identifying IPs or user-agent strings.
+No person profiles, autocapture, session recording, surveys or exception capture.
+Respect Do Not Track. The anonymous cookie expires after 30 days. Missing keys,
+failed SDK loads and analytics outages never block gameplay. The official SDK
+owns transport, batching and retries, not a second event collector.
+
+The game's remaining observable behavior still needs specification; absence here
+does not establish new gameplay, billing or persistence intent.

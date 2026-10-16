@@ -12,6 +12,7 @@ import type { RangeGuess } from "@/types/range";
 import { playSound } from "@/lib/sound/soundEngine";
 import { ReturnTomorrowCard } from "@/components/game/ReturnTomorrowCard";
 import { HistoricalContextCard } from "@/components/HistoricalContextCard";
+import { analytics, AnalyticsEvent } from "@/lib/analytics";
 
 // The classic range input is rendered by three routes (home, /classic,
 // /archive/puzzle/[id]). Pulling it through one dynamic boundary keeps it in a
@@ -122,6 +123,7 @@ export function GameLayout(props: GameLayoutProps) {
 
   // Handler for revealing hints
   const handleRevealHint = (hintIndex: number) => {
+    analytics.track(AnalyticsEvent.HINT_VIEWED, { mode: "classic", hintNumber: hintIndex + 1 });
     // hintIndex is 0-based (0-5 for hints 2-6)
     // hintsRevealed should become hintIndex + 1
     setSessionState({
@@ -137,9 +139,18 @@ export function GameLayout(props: GameLayoutProps) {
   const resultsRef = useRef<HTMLDivElement>(null);
   const wasGameComplete = useRef(isGameComplete);
   const submittedHere = useRef(false);
-  const handleRangeCommit: GameLayoutProps["onRangeCommit"] = (range) => {
+  const handleRangeCommit: GameLayoutProps["onRangeCommit"] = async (range) => {
     submittedHere.current = true;
-    return onRangeCommit(range);
+    const accepted = await onRangeCommit(range);
+    if (accepted === true) {
+      analytics.track(AnalyticsEvent.GUESS_SUBMITTED, { mode: "classic" });
+      analytics.track(AnalyticsEvent.GAME_COMPLETED, {
+        mode: "classic",
+        guessCount: 1,
+        won: targetYear >= range.start && targetYear <= range.end,
+      });
+    }
+    return accepted === true;
   };
   useEffect(() => {
     if (isGameComplete && !wasGameComplete.current) {

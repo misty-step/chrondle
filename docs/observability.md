@@ -33,13 +33,13 @@ the shared recognizable-token sanitizer and their existing argument exclusions.
 
 ## Game Analytics Verification
 
-- `GameAnalytics` uses `NEXT_PUBLIC_ANALYTICS_ENDPOINT` to flush event batches from the client.
-- Set this to `/ingest/batch` for PostHog (batches are transformed in `src/lib/analytics.ts`).
-- Optional fallback/custom backends should accept:
-
-  ```json
-  { "events": [ ...AnalyticsEventData... ] }
-  ```
+- `src/lib/posthog.ts` initializes the official SDK before early events and owns
+  the final event/property allowlist. The SDK alone owns identity and transport.
+- CI binds the approved public `NEXT_PUBLIC_POSTHOG_KEY` and explicitly labels
+  production via `NEXT_PUBLIC_POSTHOG_ENVIRONMENT=production`. The personal API
+  credential is for server-side reads only, never a browser/build input.
+- All traffic uses the existing `/ingest` proxy, which forwards only content type
+  and accept headers. No custom analytics endpoint or batch format is needed.
 
 ### Launch validation checklist
 
@@ -47,11 +47,15 @@ the shared recognizable-token sanitizer and their existing argument exclusions.
   - `game_loaded`
   - `game_completed`
   - `guess_submitted`
-  - `state_divergence`
+  - `hint_viewed`
+  - `reminder_optin`
 - Confirm these dashboard metrics can be calculated:
-  - Daily active users from `game_loaded` deduped by `distinct_id`
+  - Weekly active users: unique anonymous `distinct_id` over the last seven days,
+    filtered to `app=chrondle`, `environment=production`, `is_synthetic=false`.
+    This measures browsers, not identified people. Missing coverage is unknown,
+    not zero. See SPEC.md for the story and privacy contract.
   - Completion rate: `count(game_completed where won=true) / count(game_completed)`
-  - Average guesses to solve from `guess_submitted` grouped by puzzle
+  - Story counts grouped by event name in the same production/non-synthetic window.
 
 ## Usage
 

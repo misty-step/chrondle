@@ -26,6 +26,10 @@ describe("PostHog ingest proxy route", () => {
         cookie: "__session=abc",
         "content-type": "application/json",
         "x-client": "chrondle",
+        "cf-connecting-ip": "203.0.113.20",
+        "x-forwarded-for": "203.0.113.20",
+        referer: "https://www.chrondle.app/?private=canary",
+        "user-agent": "private-device-canary",
       },
       body: JSON.stringify({ event: "test" }),
     });
@@ -39,7 +43,7 @@ describe("PostHog ingest proxy route", () => {
     expect(String(url)).toBe("https://us.i.posthog.com/batch?ip=1");
     expect(headers.get("authorization")).toBeNull();
     expect(headers.get("cookie")).toBeNull();
-    expect(headers.get("x-client")).toBe("chrondle");
+    expect([...headers.keys()]).toEqual(["content-type"]);
   });
 
   it("routes static assets to the PostHog assets host", async () => {
