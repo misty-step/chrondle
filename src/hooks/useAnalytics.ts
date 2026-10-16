@@ -66,6 +66,7 @@ export function useAnalytics({
   const prevStateRef = useRef<GameState | null>(null);
   const startTimeRef = useRef<number>(0);
   const lastDivergenceCheckRef = useRef<number>(0);
+  const loadedPuzzleRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (startTimeRef.current === 0) {
@@ -89,7 +90,8 @@ export function useAnalytics({
     }
 
     // Track game loaded
-    if (!prevState && gameState.status === "ready") {
+    if (isReady(gameState) && loadedPuzzleRef.current !== gameState.puzzle.id) {
+      loadedPuzzleRef.current = gameState.puzzle.id;
       analytics.track(
         AnalyticsEvent.GAME_LOADED,
         {
@@ -98,22 +100,6 @@ export function useAnalytics({
         },
         userId,
         puzzleNumber,
-      );
-    }
-
-    // Track game completion
-    if (
-      isReady(gameState) &&
-      gameState.isComplete &&
-      (!prevState || !isReady(prevState) || !prevState.isComplete)
-    ) {
-      const timeSpent = Date.now() - startTimeRef.current;
-      analytics.trackCompletion(
-        gameState.hasWon,
-        gameState.guesses.length,
-        timeSpent,
-        puzzleNumber || 0,
-        userId,
       );
     }
 

@@ -9,7 +9,7 @@ export default function PrivacyPage() {
   return (
     <>
       <h1>Privacy Policy</h1>
-      <p className="text-muted-foreground text-sm">Last updated: November 23, 2025</p>
+      <p className="text-muted-foreground text-sm">Last updated: October 16, 2026</p>
 
       <p>
         This Privacy Policy explains how Misty Step (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or
@@ -48,6 +48,13 @@ export default function PrivacyPage() {
       </p>
 
       <h2>4. Third-Party Services</h2>
+      <p>
+        We use PostHog for anonymous page visits and gameplay actions to understand which features
+        players use. A browser-scoped analytics cookie expires after 30 days. We respect Do Not
+        Track and do not attach your account, email, guesses, clue text, identifying IP address or
+        URL query strings to these events. We do not record sessions or capture arbitrary clicks.
+        Analytics failures do not prevent play.
+      </p>
       <p>
         We use trusted third-party infrastructure to host the game and database. These providers
         adhere to strict security standards. We do not sell, trade, or rent your personal

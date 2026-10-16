@@ -2,6 +2,12 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { GameLayout, type GameLayoutProps } from "../GameLayout";
+import { analytics } from "@/lib/analytics";
+
+vi.mock("@/lib/analytics", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/lib/analytics")>();
+  return { ...original, analytics: { track: vi.fn() } };
+});
 
 vi.mock("@/components/GameInstructions", () => ({
   GameInstructions: () => <div data-testid="game-instructions">Game Instructions</div>,
@@ -134,6 +140,28 @@ describe("GameLayout", () => {
   });
 
   describe("range input behavior", () => {
+    it.each([true, false])(
+      "emits successful story events only for accepted=%s",
+      async (accepted) => {
+        mockOnRangeCommit.mockResolvedValueOnce(accepted);
+        render(<GameLayout {...createDefaultProps()} />);
+        fireEvent.click(await screen.findByTestId("range-input"));
+        await waitFor(() => expect(mockOnRangeCommit).toHaveBeenCalled());
+        if (accepted) {
+          await waitFor(() =>
+            expect(analytics.track).toHaveBeenCalledWith("guess_submitted", { mode: "classic" }),
+          );
+          expect(analytics.track).toHaveBeenCalledWith("game_completed", {
+            mode: "classic",
+            guessCount: 1,
+            won: false,
+          });
+        } else {
+          expect(analytics.track).not.toHaveBeenCalled();
+        }
+      },
+    );
+
     it("hides range input when game complete", () => {
       const props = createDefaultProps();
       props.isGameComplete = true;
