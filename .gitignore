@@ -152,6 +152,7 @@ test-results/
 # workers-rs generated runtime and native build cache
 /web/build/
 /web/target/
+__pycache__/
 
 # Cloudflare backend: generated Convex module map (backend/scripts/generate-modules.mjs), local workerd state
 backend/src/convexModules.gen.ts
