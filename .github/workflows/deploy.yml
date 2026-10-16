@@ -64,6 +64,8 @@ jobs:
   backend:
     name: Deploy compatible backend
     needs: gate
+    env:
+      NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -105,29 +107,25 @@ jobs:
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
       # Expand/contract only: the old web release stays live during this step.
       - name: Deploy Convex production
-        if: inputs.prepare_cloudflare_backend != true
+        if: inputs.prepare_cloudflare_backend != true && endsWith(env.NEXT_PUBLIC_CONVEX_URL, '.convex.cloud')
         run: bun run deploy:backend
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-      - name: Verify backend before Worker activation
-        if: inputs.prepare_cloudflare_backend != true
-        run: bun run deploy:verify
-        env:
-          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+
       - name: Validate runtime-only Cloudflare backend bindings
-        if: inputs.prepare_cloudflare_backend == true
+        if: inputs.prepare_cloudflare_backend == true || !endsWith(env.NEXT_PUBLIC_CONVEX_URL, '.convex.cloud')
         run: node backend/scripts/production-bindings.mjs --check
         env:
           BACKEND_PRODUCTION_OPERATOR_ACCESS: ${{ secrets.BACKEND_PRODUCTION_OPERATOR_ACCESS }}
           BACKEND_PRODUCTION_ENV: ${{ secrets.BACKEND_PRODUCTION_ENV }}
       - name: Prepare the separate Cloudflare backend without changing the serving frontend
-        if: inputs.prepare_cloudflare_backend == true
+        if: inputs.prepare_cloudflare_backend == true || !endsWith(env.NEXT_PUBLIC_CONVEX_URL, '.convex.cloud')
         working-directory: backend
         run: bunx wrangler deploy --env production --var "REVISION:$GITHUB_SHA" --message "$GITHUB_SHA"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Bind production integrations only after compilation
-        if: inputs.prepare_cloudflare_backend == true
+        if: inputs.prepare_cloudflare_backend == true || !endsWith(env.NEXT_PUBLIC_CONVEX_URL, '.convex.cloud')
         working-directory: backend
         run: |
           set -euo pipefail
@@ -137,7 +135,7 @@ jobs:
           BACKEND_PRODUCTION_OPERATOR_ACCESS: ${{ secrets.BACKEND_PRODUCTION_OPERATOR_ACCESS }}
           BACKEND_PRODUCTION_ENV: ${{ secrets.BACKEND_PRODUCTION_ENV }}
       - name: Read back the prepared Cloudflare backend revision
-        if: inputs.prepare_cloudflare_backend == true
+        if: inputs.prepare_cloudflare_backend == true || !endsWith(env.NEXT_PUBLIC_CONVEX_URL, '.convex.cloud')
         run: |
           bun --eval '
             const response = await fetch("https://chrondle-backend.mistystep.io/_backend/version", {cache: "no-store", redirect: "error"});
@@ -146,11 +144,16 @@ jobs:
             console.log(JSON.stringify(identity));
           '
           bun backend/scripts/verify-backend.mjs check --url https://chrondle-backend.mistystep.io
+      - name: Verify backend before Worker activation
+        if: inputs.prepare_cloudflare_backend != true
+        run: bun run deploy:verify
 
   cloudflare:
     name: Deploy Cloudflare Worker
     if: inputs.prepare_cloudflare_backend != true
     needs: backend
+    env:
+      NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
     runs-on: ubuntu-latest
     timeout-minutes: 22
     environment:
@@ -198,11 +201,24 @@ jobs:
           version=$(bunx wrangler deployments list --env production --json \
             | bun --eval 'console.log(JSON.parse(await Bun.stdin.text()).at(-1).versions[0].version_id)')
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          # A frontend rollback must not silently return clients to a different
+          # data writer. Read the prior runtime binding, not a source default.
+          bun --eval '
+            const { unstable_readConfig } = await import("wrangler");
+            const config = unstable_readConfig({config: "wrangler.jsonc", env: "production"});
+            const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${config.account_id}/workers/scripts/${config.name}/settings`, {
+              headers: {Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`}
+            });
+            const body = await response.json();
+            if (!response.ok || body.success !== true) throw new Error("Unable to read previous backend identity");
+            const previous = body.result.bindings.find(binding => binding.name === "NEXT_PUBLIC_CONVEX_URL");
+            console.log(`backend_compatible=${previous?.text === process.env.NEXT_PUBLIC_CONVEX_URL}`);
+          ' >> "$GITHUB_OUTPUT"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Deploy production Worker and source-owned domains
         id: activate
-        run: bunx wrangler deploy --env production --message "$GITHUB_SHA"
+        run: bunx wrangler deploy --env production --var "NEXT_PUBLIC_CONVEX_URL:$NEXT_PUBLIC_CONVEX_URL" --message "$GITHUB_SHA"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Verify direct Worker readiness
@@ -215,6 +231,11 @@ jobs:
         run: node scripts/verify-webhook-redirect.mjs
       - name: Roll back Worker on failed activation or smoke
         if: failure() && steps.activate.outcome != 'skipped' && steps.previous.outcome == 'success'
-        run: bunx wrangler rollback "${{ steps.previous.outputs.version }}" --env production --yes --message "Failed release $GITHUB_SHA"
+        run: |
+          if [[ "${{ steps.previous.outputs.backend_compatible }}" != "true" ]]; then
+            echo "::error::Backend origin changed; automatic web rollback is incompatible. Preserve both stores and use ADR0001 accepted-write-preserving recovery."
+            exit 1
+          fi
+          bunx wrangler rollback "${{ steps.previous.outputs.version }}" --env production --yes --message "Failed release $GITHUB_SHA"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

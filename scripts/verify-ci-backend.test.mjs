@@ -59,14 +59,17 @@ test("CI accepts only its explicit development target, without deployment creden
   );
 });
 
-test("CI refuses a production-bound artifact even when its runtime points to development", () => {
-  verifyCiBackend({ NEXT_PUBLIC_CONVEX_URL: devUrl });
-  const directory = buildWith({
-    "app.js": `const url = ${JSON.stringify(devUrl)}`,
-    "lazy-client.js": `const url = ${JSON.stringify(prodUrl)}`,
-  });
-  assert.throws(() => verifyCiBuild(directory), /Production Convex URL/);
-});
+test.each([prodUrl, "https://chrondle-backend.mistystep.io"])(
+  "CI refuses a production-bound artifact even when its runtime points to development: %s",
+  (productionUrl) => {
+    verifyCiBackend({ NEXT_PUBLIC_CONVEX_URL: devUrl });
+    const directory = buildWith({
+      "app.js": `const url = ${JSON.stringify(devUrl)}`,
+      "lazy-client.js": `const url = ${JSON.stringify(productionUrl)}`,
+    });
+    assert.throws(() => verifyCiBuild(directory), /Production Convex URL/);
+  },
+);
 
 test("CI requires a development endpoint in the compiled client, not merely runtime env", () => {
   assert.throws(
@@ -82,7 +85,7 @@ test("CI requires a development endpoint in the compiled client, not merely runt
   );
 });
 
-test.each([devUrl, prodUrl])(
+test.each([devUrl, prodUrl, "https://chrondle-backend.mistystep.io"])(
   "security headers allow only the configured Convex origin: %s",
   async (url) => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", url);

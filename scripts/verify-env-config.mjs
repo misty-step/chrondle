@@ -20,134 +20,11 @@
  */
 
 import { verifyCiBackend } from "./verify-ci-backend.mjs";
+import { getRequiredVars, validateEnvironment } from "../src/lib/env.schema.ts";
 
 // =============================================================================
-// CONFIGURATION (mirrors src/lib/env.schema.ts)
+// Validation has one home: src/lib/env.schema.ts. Never print runtime values.
 // =============================================================================
-
-const PATTERNS = {
-  NEXT_PUBLIC_CONVEX_URL: {
-    pattern: /^https:\/\/.*\.convex\.cloud/,
-    description: "Must be a valid Convex URL (https://*.convex.cloud)",
-  },
-  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: {
-    pattern: /^pk_/,
-    description: "Must start with pk_",
-  },
-  CLERK_SECRET_KEY: {
-    pattern: /^sk_/,
-    description: "Must start with sk_",
-  },
-  STRIPE_SECRET_KEY: {
-    pattern: /^sk_(test|live)_/,
-    description: "Must start with sk_test_ or sk_live_",
-  },
-  STRIPE_WEBHOOK_SECRET: {
-    pattern: /^whsec_/,
-    description: "Must start with whsec_",
-  },
-  STRIPE_SYNC_SECRET: {
-    minLength: 20,
-    description: "Must be at least 20 characters",
-  },
-  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: {
-    pattern: /^pk_(test|live)_/,
-    description: "Must start with pk_test_ or pk_live_",
-  },
-  STRIPE_PRICE_MONTHLY: {
-    pattern: /^price_/,
-    description: "Must start with price_",
-  },
-  STRIPE_PRICE_ANNUAL: {
-    pattern: /^price_/,
-    description: "Must start with price_",
-  },
-};
-
-const REQUIRED_VARS = {
-  all: ["NEXT_PUBLIC_CONVEX_URL", "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "CLERK_SECRET_KEY"],
-  production: [
-    "STRIPE_SECRET_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-    "STRIPE_SYNC_SECRET",
-    "STRIPE_PRICE_MONTHLY",
-    "STRIPE_PRICE_ANNUAL",
-    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
-  ],
-  preview: [
-    "STRIPE_SECRET_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-    "STRIPE_SYNC_SECRET",
-    "STRIPE_PRICE_MONTHLY",
-    "STRIPE_PRICE_ANNUAL",
-    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
-  ],
-};
-
-// =============================================================================
-// VALIDATION LOGIC
-// =============================================================================
-
-function getRequiredVars(env) {
-  const base = [...REQUIRED_VARS.all];
-  switch (env) {
-    case "production":
-      return [...base, ...REQUIRED_VARS.production];
-    case "preview":
-      return [...base, ...REQUIRED_VARS.preview];
-    default:
-      return base;
-  }
-}
-
-function validateVar(key, value) {
-  const config = PATTERNS[key];
-  if (!config) return { valid: true };
-
-  if (!value) {
-    return { valid: false, error: "Missing or empty" };
-  }
-
-  if (config.pattern && !config.pattern.test(value)) {
-    return { valid: false, error: config.description };
-  }
-
-  if (config.minLength && value.length < config.minLength) {
-    return { valid: false, error: config.description };
-  }
-
-  return { valid: true };
-}
-
-function checkLiveMode(env, vars) {
-  if (env !== "production") return [];
-
-  const errors = [];
-
-  const stripeSecret = vars["STRIPE_SECRET_KEY"];
-  if (stripeSecret?.startsWith("sk_test_")) {
-    errors.push({
-      key: "STRIPE_SECRET_KEY",
-      error: "Test key (sk_test_*) in production - requires live key (sk_live_*)",
-    });
-  }
-
-  const stripePk = vars["NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"];
-  if (stripePk?.startsWith("pk_test_")) {
-    errors.push({
-      key: "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
-      error: "Test key (pk_test_*) in production - requires live key (pk_live_*)",
-    });
-  }
-
-  return errors;
-}
-
-function maskValue(value) {
-  if (!value) return "(empty)";
-  if (value.length <= 8) return "***";
-  return value.slice(0, 4) + "***" + value.slice(-4);
-}
 
 // =============================================================================
 // MAIN
@@ -165,31 +42,16 @@ function main() {
 
   console.log(`\n🔍 Validating environment: ${env.toUpperCase()}\n`);
 
-  const required = getRequiredVars(env);
-  const missing = [];
-  const invalid = [];
-  const valid = [];
-
-  // Check each required variable
-  for (const key of required) {
-    const value = process.env[key];
-
-    if (!value) {
-      missing.push(key);
-      continue;
-    }
-
-    const result = validateVar(key, value);
-    if (!result.valid) {
-      invalid.push({ key, error: result.error, value: maskValue(value) });
-    } else {
-      valid.push({ key, value: maskValue(value) });
-    }
-  }
-
-  // Check live mode for production
-  const liveModeErrors = checkLiveMode(env, process.env);
-  invalid.push(...liveModeErrors);
+  // CI intentionally has no deployment credential; keep its existing public
+  // requirements and enforce development isolation separately below.
+  const schemaEnvironment = env === "ci" ? "development" : env;
+  const required = getRequiredVars(schemaEnvironment);
+  const { missing, invalid } = validateEnvironment(schemaEnvironment, process.env, {
+    checkLiveMode: true,
+  });
+  const valid = required.filter(
+    (key) => !missing.includes(key) && !invalid.some((item) => item.key === key),
+  );
 
   if (env === "ci") {
     try {
@@ -202,8 +64,8 @@ function main() {
   // Report results
   if (valid.length > 0) {
     console.log("✅ Valid variables:");
-    for (const { key, value } of valid) {
-      console.log(`   ${key}: ${value}`);
+    for (const key of valid) {
+      console.log(`   ${key}`);
     }
     console.log();
   }
@@ -218,9 +80,8 @@ function main() {
 
   if (invalid.length > 0) {
     console.log("❌ Invalid format:");
-    for (const { key, error, value } of invalid) {
+    for (const { key, error } of invalid) {
       console.log(`   - ${key}: ${error}`);
-      if (value) console.log(`     Current value: ${value}`);
     }
     console.log();
   }
