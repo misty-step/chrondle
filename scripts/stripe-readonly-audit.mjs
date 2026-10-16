@@ -3,21 +3,18 @@
 // Stripe's v1 Events API has pending_webhooks, NOT endpoint HTTP delivery codes.
 // Zero pending is not proof of a particular endpoint's 2xx delivery.
 import { pathToFileURL } from "node:url";
+import { readFileSync } from "node:fs";
 
 const paths = new Set(["/v1/webhook_endpoints", "/v1/events", "/v1/subscriptions"]);
-const eventTypes = [
-  "checkout.session.completed",
-  "customer.subscription.updated",
-  "customer.subscription.deleted",
-  "invoice.paid",
-];
+// Audit the actual handler's cases, including both invoice outcomes. Do not keep
+// a second billing contract here (invoice.paid is NOT a case in this handler).
+const handler = readFileSync(new URL("../src/app/(app)/api/webhooks/stripe/route.ts", import.meta.url), "utf8");
+const eventTypes = [...handler.matchAll(/case "([a-z_.]+)":/g)].map((match) => match[1]);
 const canonicalWebhook = "https://www.chrondle.app/api/webhooks/stripe";
 
-export async function auditStripe({ key, prices, since = "0", fetchImpl = fetch, now = Date.now() }) {
+export async function auditStripe({ key, since = "0", fetchImpl = fetch, now = Date.now() }) {
   if (!/^sk_live_[A-Za-z0-9]+$/.test(key ?? "")) throw new Error("Existing live Stripe key required");
-  if (prices.length !== 2 || prices.some((p) => !/^price_[A-Za-z0-9]+$/.test(p))) {
-    throw new Error("Existing monthly and annual prices required");
-  }
+  if (!eventTypes.length || eventTypes.length > 20) throw new Error("Handler event cases require audit update");
   const until = Math.floor(now / 1000);
   if (!/^\d+$/.test(since)) throw new Error("Invalid audit start");
   const start = since === "0" ? until - 86400 : Number(since);
@@ -67,14 +64,11 @@ export async function auditStripe({ key, prices, since = "0", fetchImpl = fetch,
   const events = await list("/v1/events", { ...types, "created[gte]": String(start), "created[lte]": String(until) }, "evt");
   const subscriptions = {};
   for (const status of ["active", "trialing"]) {
-    const ids = new Set();
-    for (const price of new Set(prices)) {
-      for (const row of await list("/v1/subscriptions", { status, price, "created[lte]": String(until) }, "sub")) {
-        if (row.status !== status) throw new Error("Subscription status mismatch");
-        ids.add(row.id);
-      }
-    }
-    subscriptions[status] = [...ids].sort();
+    // Complete account list: current-price filters would silently miss legacy
+    // subscriptions. Only subscription IDs/counts leave this process.
+    const rows = await list("/v1/subscriptions", { status, "created[lte]": String(until) }, "sub");
+    if (rows.some((row) => row.status !== status)) throw new Error("Subscription status mismatch");
+    subscriptions[status] = rows.map((row) => row.id).sort();
   }
   const pending = events.map((e) => {
     if (!Number.isSafeInteger(e.pending_webhooks) || e.pending_webhooks < 0) throw new Error("Invalid pending webhook count");
@@ -95,7 +89,6 @@ export async function auditStripe({ key, prices, since = "0", fetchImpl = fetch,
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const report = await auditStripe({ key: process.env.STRIPE_SECRET_KEY,
-      prices: [process.env.STRIPE_PRICE_MONTHLY, process.env.STRIPE_PRICE_ANNUAL],
       since: process.env.AUDIT_SINCE ?? "0" });
     console.log(JSON.stringify(report, null, 2));
     if (report.counts.canonical_enabled_endpoints !== 1 || report.counts.canonical_endpoints_covering_handled_events !== 1) {

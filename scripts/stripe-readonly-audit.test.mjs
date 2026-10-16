@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { auditStripe } from "./stripe-readonly-audit.mjs";
 
 const key = "sk_live_SyntheticAuditOnly";
-const prices = ["price_Monthly", "price_Annual"];
+
 const canary = "private-name-email-card-and-key-canary";
 const endpoint = { id: "we_Canonical", livemode: true,
   url: "https://www.chrondle.app/api/webhooks/stripe", status: "enabled", enabled_events: ["*"] };
@@ -21,7 +21,7 @@ function transport(transform = (rows) => rows) {
     else if (url.pathname === "/v1/events") rows = [{ id: "evt_One", livemode: true, pending_webhooks: 0 }];
     else {
       assert.equal(url.pathname, "/v1/subscriptions");
-      assert.ok(prices.includes(url.searchParams.get("price")));
+      assert.equal(url.searchParams.has("price"), false);
       const status = url.searchParams.get("status");
       rows = [{ id: `sub_${status}`, livemode: true, status }];
     }
@@ -30,12 +30,17 @@ function transport(transform = (rows) => rows) {
   };
   return { fetchImpl, calls };
 }
-const run = (fetchImpl, extra = {}) => auditStripe({ key, prices, fetchImpl, ...extra });
+const run = (fetchImpl, extra = {}) => auditStripe({ key, fetchImpl, ...extra });
 
 test("all calls are bounded fixed-origin GETs; output only projects counts/IDs and never invents delivery codes", async () => {
   const { fetchImpl, calls } = transport((data) => ({ data, has_more: false }));
   const report = await run(fetchImpl);
-  assert.equal(calls.length, 6);
+  assert.equal(calls.length, 4);
+  const eventRequest = new URL(calls.find((url) => new URL(url).pathname === "/v1/events"));
+  const requestedTypes = [...eventRequest.searchParams.entries()].filter(([key]) => key.startsWith("types[")).map(([, value]) => value);
+  assert.ok(requestedTypes.includes("invoice.payment_succeeded"));
+  assert.ok(requestedTypes.includes("invoice.payment_failed"));
+  assert.ok(!requestedTypes.includes("invoice.paid"));
   assert.equal(report.counts.active_subscriptions, 1);
   assert.deepEqual(report.subscription_ids.active, ["sub_active"]);
   assert.equal(report.counts.events, 1);
@@ -55,7 +60,7 @@ test("paginates before declaring complete totals and forwards the exact cursor",
     return { data, has_more: true };
   });
   const result = await run(fetchImpl);
-  assert.equal(calls.length, 7);
+  assert.equal(calls.length, 5);
   assert.equal(result.counts.events, 2);
   assert.equal(result.counts.events_with_pending_webhooks, 1);
 });
@@ -89,10 +94,10 @@ test("raw errors, redirect bodies and malformed JSON never reach the error messa
   }
 });
 
-test("invalid key, prices and window fail before any provider call", async () => {
+test("invalid key and window fail before any provider call", async () => {
   let calls = 0;
   const fetchImpl = async () => { calls++; throw new Error("must not run"); };
-  for (const extra of [{ key: "sk_test_NotLive" }, { prices: [] }, { since: "-1" }, { since: "1" }, { since: "99999999999999" }]) {
+  for (const extra of [{ key: "sk_test_NotLive" }, { since: "-1" }, { since: "1" }, { since: "99999999999999" }]) {
     await assert.rejects(run(fetchImpl, extra));
   }
   assert.equal(calls, 0);

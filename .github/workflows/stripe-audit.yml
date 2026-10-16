@@ -27,8 +27,6 @@ jobs:
         run: node scripts/stripe-readonly-audit.mjs > stripe-audit.json
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-          STRIPE_PRICE_MONTHLY: ${{ secrets.STRIPE_PRICE_MONTHLY }}
-          STRIPE_PRICE_ANNUAL: ${{ secrets.STRIPE_PRICE_ANNUAL }}
           AUDIT_SINCE: ${{ inputs.since }}
       - name: Preserve only the projected counts and identifiers
         if: always()
