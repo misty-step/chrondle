@@ -6,7 +6,7 @@ let browserClient: BrowserClient | undefined;
 
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 const SENSITIVE_KEY_PATTERN =
-  /(?:authorization|cookie|password|token|secret|api[_-]?key|private[_-]?key|(?:user|player|clerk|account)[_-]?id)/i;
+  /(?:authorization|cookie|password|token|secret|api[_-]?key|private[_-]?key|(?:user|player|clerk|account)[_-]?id|^(?:user|player|clerk|account)$)/i;
 
 export interface ErrorReportContext {
   tags?: Record<string, string | number | boolean>;
@@ -152,7 +152,7 @@ function normalizeError(error: unknown): {
 }
 
 function sanitizeString(value: string): string {
-  const withoutPrivateUrls = value.replace(/https?:\/\/[^\s)]+/g, (raw) => {
+  const withoutPrivateUrls = value.replace(/https?:\/\/[^\s]+/g, (raw) => {
     try {
       const url = new URL(raw);
       url.username = "";

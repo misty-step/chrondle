@@ -31,8 +31,10 @@ The app-facing reporter redacts emails and compound credential fields such as
 `sessionToken`, `privateKey`, and `x-api-key` before encoding structured context.
 URL credentials, query strings and fragments, and account-ID context fields are
 also redacted. The final event allowlist excludes users, requests, breadcrumbs
-and ambient contexts. Native data collection disables IP inference, cookies,
-headers and bodies. There is no tracing, replay, remote log or metric capture.
+and ambient contexts. Native data collection requests no IP inference and disables
+cookies, headers and bodies. Retrieved events have no stored IP/account identity;
+Sentry still enriches them with coarse ingest-network geography. There is no
+tracing, replay, remote log or metric capture.
 Keep context minimal; do not forward raw request headers. Convex sinks retain
 the shared recognizable-token sanitizer and their existing argument exclusions.
 
@@ -45,7 +47,7 @@ Global errors/rejections retain `handled: false`; explicit reports are handled.
 
 Verify a deployed revision in an isolated browser context: trigger a disposable
 uncaught error/rejection, retrieve its event from Sentry and compare its release
-with `/deployment.json`. Check the existing intake receipt for that issue. In
+with `/api/health`. Check the existing intake receipt for that issue. In
 isolation, refuse the ingest request, continue gameplay, restore the sink and
 retrieve a subsequent event. Do not add a public test-error endpoint or send
 private player data. Native uptime and cron monitors are a separate slice.

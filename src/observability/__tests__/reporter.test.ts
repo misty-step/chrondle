@@ -41,7 +41,7 @@ describe("error reporter", () => {
     expect(payload.stack_trace).toBe(
       "boom from [EMAIL_REDACTED] with Bearer ***REDACTED***\n  at run (/app.ts:1:1)",
     );
-    expect(payload.context.tags).toEqual({ account: "[EMAIL_REDACTED]" });
+    expect(payload.context.tags).toEqual({ account: "[REDACTED]" });
     expect(payload.context.extras).toEqual({
       email: "[EMAIL_REDACTED]",
       password: "[REDACTED]",
@@ -96,7 +96,7 @@ describe("error reporter", () => {
   it("removes account identifiers and URL credentials, query and fragment", () => {
     const output = vi.spyOn(console, "error").mockImplementation(() => {});
     captureClientException(
-      new Error("https://example.com/game?session=private-canary#fragment-canary"),
+      new Error("https://example.com/game?session=(prefix)private-canary#fragment-canary"),
       {
         extras: {
           userId: "private-player",
@@ -128,8 +128,8 @@ describe("error reporter", () => {
     expect(reporter.captureClientException(new Error("offline error"))).toBeUndefined();
     await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
     reporter.captureClientException(new Error("recovered pat@example.com"), {
-      tags: { source: "window.unhandledrejection" },
-      extras: { sessionToken: "private-canary" },
+      tags: { source: "window.unhandledrejection", account: "private-account-canary" },
+      extras: { sessionToken: "private-canary", user: "private-user-canary" },
     });
     await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
     const options = fetch.mock.calls[1][1];
@@ -140,11 +140,15 @@ describe("error reporter", () => {
     expect(event.exception.values[0].mechanism.handled).toBe(false);
     expect(event.exception.values[0].value).toBe("recovered [EMAIL_REDACTED]");
     expect(event.extra.sessionToken).toBe("[REDACTED]");
+    expect(event.extra.user).toBe("[REDACTED]");
+    expect(event.tags.account).toBe("[REDACTED]");
     expect(event).not.toHaveProperty("user");
     expect(event).not.toHaveProperty("request");
     expect(event).not.toHaveProperty("breadcrumbs");
     expect(options.credentials).toBe("omit");
     expect(envelope).not.toContain("private-canary");
     expect(envelope).not.toContain("pat@example.com");
+    expect(envelope).not.toContain("private-user-canary");
+    expect(envelope).not.toContain("private-account-canary");
   });
 });
