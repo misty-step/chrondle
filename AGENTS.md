@@ -145,19 +145,17 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 - `bun build` then `bun start` — For production preview.
 - `bun test`, `bun lint`, `bun type-check` — To verify the integrity of the scroll.
 - `bun quality` — The high-level audit of our dependencies and cache.
-- **Run the `.claude/skills/chrondle-verify` skill** before claiming a change
-  is done — it runs both gates below in the right order.
+- `bun run check --mode fast` is the one native branch check; `--mode full`
+  adds coverage, backend and built-workerd verification. Run on Mirrodin.
+  [Native release](docs/native-release.md) owns the release invocation.
 
-There are two gates, not one, and they are not interchangeable:
+Retained standalone commands (not a second merge gate):
 
 ```bash
 # 1. Fast local gate — tight edit/test loop, matches the raw bun scripts
 bun run lint && bun run type-check && bun run test
 
-# 2. CI-equivalent gate — the ACTUAL gate .github/workflows/ci.yml enforces
-#    on every PR, wrapped in Dagger (requires the dagger CLI + Docker/Colima).
-#    Run this before opening/merging a PR; the raw `bun run` commands above
-#    can pass while this fails (e.g. coverage thresholds).
+# Legacy Dagger adapters, available for reproducing historical receipts.
 bun run ci:dagger:lint          # dagger call quality --check=lint
 bun run ci:dagger:type-check    # dagger call quality --check=type-check
 bun run ci:dagger:coverage      # dagger call test-coverage-artifacts --output=coverage
@@ -211,10 +209,9 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 
 ### 3. Vigilance in the Cloud
 
-The Cloudflare web Worker and hosted Convex ship together through
-`.github/workflows/deploy.yml` after exact-revision CI and secret scanning.
-Keep Convex changes compatible with the prior web release and a web rollback;
-server/deployment secrets never reach the web compiler.
+The native train deploys the Cloudflare web artifact; backend changes require
+their own compatible native release before promotion. Server/deployment secrets
+never reach the web compiler. See `docs/native-release.md`.
 
 ## TODO-Debt Convention
 

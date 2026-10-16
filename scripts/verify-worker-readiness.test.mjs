@@ -99,28 +99,7 @@ test("a stalled health request cannot exceed the overall deadline", async () => 
   assert.ok(performance.now() - start < 1000);
 });
 
-test("production uses the same bounded verifier on all hosts and retains native rollback", () => {
-  const workflow = parse(
-    readFileSync(new URL("../.github/workflows/deploy.yml", import.meta.url), "utf8"),
-  );
-  const steps = workflow.jobs.cloudflare.steps;
-  assert.equal(
-    steps.find(({ name }) => name === "Verify direct Worker readiness").run.trim(),
-    "bun scripts/verify-worker-readiness.mjs https://chrondle.mistystep.io",
-  );
-  assert.match(
-    steps.find(({ name }) => name === "Verify public release after DNS cutover").run,
-    /bun scripts\/verify-worker-readiness\.mjs https:\/\/chrondle\.app https:\/\/www\.chrondle\.app/,
-  );
-  const rollback = steps.find(
-    ({ name }) => name === "Roll back Worker on failed activation or smoke",
-  );
-  assert.equal(
-    rollback.if,
-    "failure() && steps.activate.outcome != 'skipped' && steps.previous.outcome == 'success'",
-  );
-  assert.match(rollback.run, /wrangler rollback/);
-});
+
 
 const backend = { service: "chrondle-backend", environment: "preview", revision };
 const isBackendHealthy = (identity) =>
@@ -178,12 +157,12 @@ for (const [status, body] of [
   });
 }
 
-test("both hosted backend paths reuse bounded healthy-old-only readiness, not a silent catch-and-retry loop", () => {
-  for (const filename of ["deploy.yml", "backend-preview.yml"]) {
+test("retained backend preview reuses bounded healthy-old-only readiness", () => {
+  for (const filename of ["backend-preview.yml"]) {
     const workflow = parse(
       readFileSync(new URL("../.github/workflows/" + filename, import.meta.url), "utf8"),
     );
-    const job = filename === "deploy.yml" ? workflow.jobs.backend : workflow.jobs.preview;
+    const job = workflow.jobs.preview;
     const step = job.steps.find(({ name }) => /Read back the.*backend revision/.test(name));
     assert.match(step.run, /verifyWorkerReadiness/);
     assert.match(step.run, /healthPath: "\/_backend\/version"/);

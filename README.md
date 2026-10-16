@@ -230,11 +230,11 @@ No Clerk webhook or sync secret is required; see [authentication](docs/AUTHENTIC
 
 ### Deploying the web service
 
-Merge a reviewed, green commit to `master`. Every merge ships automatically:
-the [production workflow](.github/workflows/deploy.yml) waits for exact-revision
-CI and secret scanning, deploys the backward-compatible Convex backend,
-builds OpenNext with public settings only, and deploys the source-bound
-Cloudflare Worker and its apex/www/alias custom domains.
+Merge a reviewed commit after `bun run check --mode fast` passes on Mirrodin.
+The no-agent native train runs `scripts/train.py` every 30 minutes for moved
+`master`, using slim checks plus build/artifact verification. A separate full
+check runs twice daily, including unchanged trunk, without gating later releases.
+Both use the existing `gha-runners.slice`; neither runs on GitHub Actions.
 
 Production server secrets remain Worker secrets; the compiler never receives
 server or deployment keys. `/api/health` reads back the exact Git SHA and
@@ -242,7 +242,15 @@ queries the real Convex database. Every production domain must pass the
 revision and live-backend smoke, and the canonical Stripe webhook must not
 redirect. A failed rollout restores the captured Worker version without
 rolling back Convex or accepted writes. Failed runs reach Kaylee's existing
-agent intake.
+agent intake through the cron's `failure_deliver=bot-chat:kaylee`.
+
+`web/production.json` is the public compiler configuration, observed from the
+existing live browser bundle and Worker bindings. It contains no server keys.
+The first train is deliberately web-only: a changed backend tree or actual
+backend origin fails before activation, rather than omitting a backend deploy or
+changing the accepted-data writer. Add the compatible backend native release
+when that rewrite family is reached. See [native release](docs/native-release.md)
+for the exact invocation, cutover and recovery contract.
 
 See the [deployment guide](docs/deployment-guide.md#2-production-web-deployment-cloudflare)
 for the first registrar cutover, exact DNS/Worker rollback, retained native

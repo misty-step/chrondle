@@ -8,6 +8,7 @@ import { parseChangelog } from "../../src/lib/releases/changelog";
 import { assertHtml, assertRuntimeLogs } from "./worker-route-contracts";
 
 async function main() {
+  const configRoot = process.env.CHRONDLE_ARTIFACT ?? ".";
   const config = unstable_readConfig(process.env.CHRONDLE_ARTIFACT
     ? { config: resolve(process.env.CHRONDLE_ARTIFACT, "wrangler.json") }
     : { config: "wrangler.jsonc", env: "production" });
@@ -28,7 +29,7 @@ async function main() {
         main: resolve(config.main),
         compatibility_date: config.compatibility_date,
         compatibility_flags: config.compatibility_flags,
-        assets: { ...config.assets, directory: resolve(config.assets.directory) },
+        assets: { ...config.assets, directory: resolve(configRoot, config.assets.directory) },
         send_metrics: false,
       }),
     );

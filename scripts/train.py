@@ -112,6 +112,9 @@ def stage(source, target, config, public):
         raise RuntimeError("Artifact config differs from trusted source contract")
     if any(p.parts[0] not in ("worker", "assets", "wrangler.json") for p in map(Path, hashes(source))):
         raise RuntimeError("Unexpected deploy input")
+    for path in map(Path, hashes(source)):
+        if path.parts[0] == "worker" and any(p.startswith(".") or p in ("node_modules", "package.json") for p in path.parts):
+            raise RuntimeError("No deployment tool/config discovery inside Worker modules")
     if target.exists():
         shutil.rmtree(target)
     shutil.copytree(source, target, ignore=shutil.ignore_patterns(".wrangler"))
