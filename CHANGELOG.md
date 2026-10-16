@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.10.0](https://github.com/misty-step/chrondle/compare/v1.9.1...v1.10.0) (2026-10-16)
+
+### Features
+
+- **backend:** isolate the private restore rehearsal ([#340](https://github.com/misty-step/chrondle/issues/340)) ([7f85b58](https://github.com/misty-step/chrondle/commit/7f85b58a5f0fa72e5602fa893648eed1c48a6ede))
+
 ## [1.9.1](https://github.com/misty-step/chrondle/compare/v1.9.0...v1.9.1) (2026-10-16)
 
 ### Bug Fixes
