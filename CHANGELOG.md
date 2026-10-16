@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.13.1](https://github.com/misty-step/chrondle/compare/v1.13.0...v1.13.1) (2026-10-16)
+
+### Bug Fixes
+
+- reject unsupported generation dry-run flags ([#347](https://github.com/misty-step/chrondle/issues/347)) ([531ecee](https://github.com/misty-step/chrondle/commit/531ecee76f77bfb015d87f663abbb25ba4e4f915))
+
 # [1.13.0](https://github.com/misty-step/chrondle/compare/v1.12.4...v1.13.0) (2026-10-16)
 
 ### Features
