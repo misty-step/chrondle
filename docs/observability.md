@@ -1,17 +1,19 @@
 # Observability & Error Tracking
 
-Chrondle reports sanitized structured errors through its existing browser/native console and Convex logging owners. Native server records are retained by journald; Convex preserves error classification, metrics, and alert rules.
+Chrondle sends sanitized browser exceptions to its existing Sentry project,
+`misty-step/chrondle`, alongside the structured console record. Backend error
+capture is unchanged: Convex/Cloudflare platform logs retain server errors.
 
 ## Architecture
 
-- **Structured error logs**: Browser console, native `chrondle.service` journal, and Convex platform logs. Canary was decommissioned; centralized remote browser error aggregation is not configured.
+- **Browser errors**: Existing reporter and global observer use the native Sentry browser transport. No second global listener, tunnel, relay, replay or retry service.
 - **Convex Metrics**: Custom metrics for tracking business-critical events (e.g., `order.submit.failure`).
 - **Slack Alerts**: Critical failure notifications (optional) via webhook.
 
 ### Key Modules
 
 - `src/components/ClientErrorObserver.tsx`: Captures global browser errors and unhandled rejections without a testing-only window API.
-- `src/observability/reporter.ts`: Stable app-facing facade that emits sanitized structured exception records through the existing logger.
+- `src/observability/reporter.ts`: Stable app-facing facade, sanitizer and lazy browser-only Sentry client. Server callers remain console-only.
 - `src/observability/mutationErrorAdapter.ts`: Normalizes Convex mutation errors for the UI and structured reporting.
 - `convex/lib/observability.ts`: Backend wrapper for Convex functions to capture errors and metrics.
 - `convex/lib/observability/logNotifier.ts`: Emits sanitized alert records to Convex platform logs. The action producer retrieves the existing registered metrics query through `runQuery`, not nonexistent action database access.
@@ -19,13 +21,34 @@ Chrondle reports sanitized structured errors through its existing browser/native
 
 ## Configuration
 
-Structured error reporting requires no retired-provider key or endpoint. Private
-server/deploy credentials must never be browser-public or compiler inputs.
+The existing project's public DSN has one home in `next.config.ts`, which exposes
+it to the browser and admits only its exact ingest origin in CSP. No private
+Sentry API/upload token is needed by the build or runtime. The release is the
+existing compiled `CHRONDLE_REVISION` (full Git SHA in CI); environment is the
+build's `NODE_ENV`. Never substitute a semantic version for the source revision.
 
 The app-facing reporter redacts emails and compound credential fields such as
 `sessionToken`, `privateKey`, and `x-api-key` before encoding structured context.
+URL credentials, query strings and fragments, and account-ID context fields are
+also redacted. The final event allowlist excludes users, requests, breadcrumbs
+and ambient contexts. Native data collection disables IP inference, cookies,
+headers and bodies. There is no tracing, replay, remote log or metric capture.
 Keep context minimal; do not forward raw request headers. Convex sinks retain
 the shared recognizable-token sanitizer and their existing argument exclusions.
+
+The native transport keeps at most ten in-flight envelopes, drops failed sends,
+and honors Sentry rate limits. It stores no offline queue. Neither loading the
+SDK nor waiting for the sink blocks a game operation; a later error can succeed
+after an outage. Existing Sentry workflows `3028371` (new error) and `3028386`
+(new unhandled error) deliver to the existing `kaylee-alert-intake-2edba9` webhook.
+Global errors/rejections retain `handled: false`; explicit reports are handled.
+
+Verify a deployed revision in an isolated browser context: trigger a disposable
+uncaught error/rejection, retrieve its event from Sentry and compare its release
+with `/deployment.json`. Check the existing intake receipt for that issue. In
+isolation, refuse the ingest request, continue gameplay, restore the sink and
+retrieve a subsequent event. Do not add a public test-error endpoint or send
+private player data. Native uptime and cron monitors are a separate slice.
 
 | Variable                      | Description                                    | Required |
 | :---------------------------- | :--------------------------------------------- | :------- |
@@ -94,8 +117,8 @@ The deployment workflow (`.github/workflows/deploy.yml`) automatically:
 1. Waits for exact-revision CI and secret scanning before mutation.
 2. Validates production credentials/configuration and live Stripe prices.
 3. Deploys compatible Convex and verifies live backend puzzle/event integrity.
-4. Observes the native host build/install/activation.
-5. Requires revision-bound host smoke before the public deployment receipt becomes healthy.
+4. Builds and exercises the exact-revision Cloudflare Worker before activation.
+5. Requires revision-bound direct/public Worker smoke and canonical webhook ingress.
 
 Deployment failures, including a host that never completes activation, fail the
 default-branch Actions run and reach Kaylee's signed GitHub agent intake. An

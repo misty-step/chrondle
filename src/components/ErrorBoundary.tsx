@@ -73,24 +73,12 @@ export class ErrorBoundary extends Component<Props, State> {
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
           url: safeUrl,
-          userId: this.getAnonymousUserId(),
         },
       });
     } catch (reportingError) {
       // Don't let error reporting crash the app
       logger.error("Failed to report error:", reportingError);
     }
-  }
-
-  private getAnonymousUserId(): string {
-    // Create an anonymous user ID for error tracking
-    // This helps correlate errors without storing personal data
-    let userId = localStorage.getItem("chrondle-anonymous-id");
-    if (!userId) {
-      userId = "anon_" + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem("chrondle-anonymous-id", userId);
-    }
-    return userId;
   }
 
   private handleReload = () => {

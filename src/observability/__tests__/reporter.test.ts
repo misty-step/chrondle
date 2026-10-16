@@ -4,6 +4,8 @@ import { captureClientException } from "../reporter";
 describe("error reporter", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   it("sanitizes values while preserving reusable structured context", () => {
@@ -89,5 +91,60 @@ describe("error reporter", () => {
       expect(report).not.toContain(value);
     }
     expect(credentials.sessionToken).toBe("opaque-session-fixture");
+  });
+
+  it("removes account identifiers and URL credentials, query and fragment", () => {
+    const output = vi.spyOn(console, "error").mockImplementation(() => {});
+    captureClientException(
+      new Error("https://example.com/game?session=private-canary#fragment-canary"),
+      {
+        extras: {
+          userId: "private-player",
+          url: "https://name:password@example.com/game?x=private-canary#fragment-canary",
+        },
+      },
+    );
+    const report = String(output.mock.calls[0][1]);
+    expect(JSON.parse(report).context.extras).toEqual({
+      userId: "[REDACTED]",
+      url: "https://example.com/game",
+    });
+    for (const canary of ["private-player", "password", "private-canary", "fragment-canary"]) {
+      expect(report).not.toContain(canary);
+    }
+  });
+
+  it("uses the native envelope transport with exact identity and survives sink rejection", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@o1.ingest.sentry.io/1");
+    vi.stubEnv("CHRONDLE_REVISION", "0123456789012345678901234567890123456789");
+    const fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("sink offline"))
+      .mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetch);
+    vi.resetModules();
+    const reporter = await import("../reporter");
+    expect(reporter.captureClientException(new Error("offline error"))).toBeUndefined();
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    reporter.captureClientException(new Error("recovered pat@example.com"), {
+      tags: { source: "window.unhandledrejection" },
+      extras: { sessionToken: "private-canary" },
+    });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    const options = fetch.mock.calls[1][1];
+    const envelope = String(options.body);
+    const event = JSON.parse(envelope.split("\n")[2]);
+    expect(event.release).toBe("0123456789012345678901234567890123456789");
+    expect(event.environment).toBe("test");
+    expect(event.exception.values[0].mechanism.handled).toBe(false);
+    expect(event.exception.values[0].value).toBe("recovered [EMAIL_REDACTED]");
+    expect(event.extra.sessionToken).toBe("[REDACTED]");
+    expect(event).not.toHaveProperty("user");
+    expect(event).not.toHaveProperty("request");
+    expect(event).not.toHaveProperty("breadcrumbs");
+    expect(options.credentials).toBe("omit");
+    expect(envelope).not.toContain("private-canary");
+    expect(envelope).not.toContain("pat@example.com");
   });
 });
