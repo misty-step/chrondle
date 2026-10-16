@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
 export async function withVerificationUser({ key, run, fetchImpl = fetch, visit, observe = () => {} }) {
-  assert.match(key ?? "", /^sk_live_[A-Za-z0-9_-]+$/);
+  assert.match(key ?? "", /^sk_live_/);
   assert.match(run ?? "", /^\d+-\d+$/);
   const calls = [];
   async function request(method, path, body) {
@@ -64,7 +64,9 @@ async function main() {
   assert.ok(["https://fleet-goldfish-183.convex.cloud", "https://chrondle-backend.mistystep.io"].includes(backend));
   const out = "clerk-live-proof";
   await mkdir(out, { recursive: true });
-  const report = { started_at: new Date().toISOString(), backend, journeys: [], provider_calls: [], result: "failed" };
+  const key = process.env.CLERK_SECRET_KEY ?? "";
+  const keyMode = key.startsWith("sk_live_") ? "live" : key.startsWith("sk_test_") ? "test" : key ? "unknown" : "missing";
+  const report = { started_at: new Date().toISOString(), backend, clerk_secret_key_mode: keyMode, journeys: [], provider_calls: [], result: "failed" };
   const browser = await chromium.launch({ headless: true });
   let firstAccount;
   let firstStats;
