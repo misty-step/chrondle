@@ -59,6 +59,9 @@ const coverageExclude = [
   // Generated CI/module code and operational scripts are validated separately
   "dagger/**",
   // Workerd-only entry points are exercised by the workerd integration suite
+  "web/entry.mjs",
+  "web/build/**",
+  "web/target/**",
   "backend/src/worker.ts",
   "backend/src/durableObject.ts",
   "backend/src/convexModules.gen.ts",
