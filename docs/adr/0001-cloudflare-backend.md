@@ -1,6 +1,6 @@
 # ADR 0001: Run the Convex functions on a Cloudflare Worker and SQLite Durable Object
 
-- Status: Accepted. The backend is built and verified locally. Preview, data migration and cutover are pending.
+- Status: Accepted. Isolated synthetic preview and private restore are verified. Production preparation, final data migration and cutover are pending.
 - Date: 2026-10-15
 - Scope: the Chrondle application backend (`convex/`), not the frontend Worker or release/CD policy.
 
@@ -99,7 +99,8 @@ workflow deploys only its own script, namespace and bucket, using the existing
 scoped CD credential and the `Preview` environment's operator configuration and
 synthetic public JWKS. The synthetic private signer and named machine credential
 never enter CI. This does not change any production frontend domain or backend
-binding. Production's hostname and cutover remain pending.
+binding. Production preparation uses `chrondle-backend.mistystep.io`; its provider and
+immutable origins are disabled too. The serving frontend still uses Convex.
 
 The same workflow deploys `chrondle-preview.mistystep.io` as the separate
 `chrondle-preview` frontend Worker after the backend preview. Its public build
@@ -180,13 +181,51 @@ the authorized encrypted snapshot and its pass identity.
 
 The cutover is a backend configuration change. The frontend's DNS and routes stay the same.
 
+### Prepare without cutting over
+
+The existing `deploy.yml` has an explicit `prepare_cloudflare_backend` dispatch
+(default false), using the same exact-revision CI/secret-scan gate, production
+concurrency group, protected `Production` environment and scoped deploy token.
+Dispatch a ref at the independently reviewed merge with green push checks, not
+a later generated changelog commit that has no checks:
+
+`gh workflow run deploy.yml --ref <reviewed-green-ref> -f prepare_cloudflare_backend=true`
+
+This path deploys only the separate backend. It skips Convex deployment, Stripe
+provider reads and every frontend build, activation, domain and rollback step.
+Normal push releases retain their existing behavior. A new production database
+starts paused; preparation never pauses or resumes either existing writer,
+imports data or changes a frontend backend URL. Repeating the dispatch preserves
+existing data and pause state rather than resetting them.
+
+Before dispatch, provision Access only for this hostname's `/_backend/admin`
+surface with the current Glass human policy and one separately named production
+machine. Do not reuse preview or recovery-drill identities. Store its exact
+operator JSON as `BACKEND_PRODUCTION_OPERATOR_ACCESS` in GitHub `Production`.
+Transfer the existing Convex runtime settings, unchanged, into the single
+`BACKEND_PRODUCTION_ENV` JSON secret there using the chief-only authorized
+credential path, with values only in process memory. This is a configuration
+migration, not new provider keys or calls; no test key replaces a live one.
+
+`backend/scripts/production-bindings.mjs` validates the runtime binding payload
+without printing it during preflight, then emits it only to Wrangler's secret
+bulk stdin after compilation. It refuses malformed maps, non-string values and
+overrides of runtime/control/auth bindings, including synthetic auth or a bearer
+fallback. Installation and compilation receive no provider/operator credentials.
+CI reads back the exact public backend revision and exercises read-only clients.
+Outside CI, prove the named operator allow, anonymous and foreign-machine
+denials, distinct resources and paused state before any import. Neither a green
+preparation run nor an empty database proves final migration or cutover.
+
+### Move the single writer
+
 A production database starts with writes paused: it serves queries but refuses every mutation, action, scheduled job and cron until an operator resumes it. Writes stay paused across restarts. The switch is `POST /_backend/admin/pause` and `POST /_backend/admin/resume`. A pause answers only once the work already running has finished or been cut off, and `import`, `restore` and `export` work only while writes are paused. Together these keep one writer at every step.
 
 `bun backend/scripts/convex-snapshot.ts` converts between a Convex snapshot ZIP (`npx convex export` and `npx convex import`) and the backend's NDJSON, keeping every `_id`, `_creationTime` and table number. It also tells int64 (`3`) from float64 (`3.0`). Each conversion writes a manifest with the same per-table counts and canonical-record SHA-256s the backend reports, and `compare` exits non-zero on any difference.
 
 A Convex snapshot carries only the application tables. `to-backup --as-of <time>` takes the time Convex was paused and sets the cron cursors from it: every occurrence up to then counts as run on Convex, and later ones run on the backend. `to-convex` refuses a snapshot with pending or running scheduled functions, because Convex cannot import them. It reports the finished job records, cron cursors and replay records it leaves out.
 
-1. Deploy `chrondle-backend` through repository CI with `wrangler --cwd backend deploy --env production`, after the operator Access proof above. Wrangler's custom build runs in the invoking directory, so use `backend/` for both local and deployed backend commands. Set `BACKEND_OPERATOR_ACCESS`, `CLERK_SYNC_SECRET` and `STRIPE_SYNC_SECRET`, plus the LLM, email and observability settings the functions read today. Do not set a hosted bearer fallback.
+1. Prepare `chrondle-backend` through the existing CI dispatch above, prove its operator Access and paused state, and read back its production integration bindings. Keep the existing Convex writer and frontend configuration unchanged until the final consistent data move.
 2. Make Convex the only writer, then move the data:
    - Pause the `fleet-goldfish-183` deployment outside the puzzle and event-generation cron windows, and note the time. Check that the dashboard's Schedules page shows no pending scheduled functions, since Convex's export does not carry them. If it shows any, resume Convex until they have run, then pause again and note the new time.
    - Run `npx convex export`, then `convex-snapshot.ts to-backup --as-of <the pause time>`.
