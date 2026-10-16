@@ -1,5 +1,7 @@
 # AGENTS.md — chrondle
 
+For every change, load Hermes repo skill `verify-chrondle`; `features/README.md` is the shared navigation map. Retain actual proof in card top-level artifacts and PR How to review. New Hermes profiles enable project skills with `hermes skills trust` after reviewing the checkout.
+
 New code follows the [Misty Step Stack standard](https://foundations.mistystep.io/way-of-working); existing-stack guidance below applies only to retained code.
 
 Read `VISION.md` before changing puzzle direction, habit-loop scope, generation
