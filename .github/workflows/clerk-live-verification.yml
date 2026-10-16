@@ -1,0 +1,38 @@
+name: Live Clerk migration verification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: Production
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - name: Self-check identity scope, ticket lifetime and cleanup without credentials
+        run: node --test scripts/clerk-live-verification.test.mjs
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - name: Exercise first-time and returning sign-in and delete the verification identity
+        run: node scripts/clerk-live-verification.mjs
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+      - name: Keep projected results and synthetic-user screenshots only
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: clerk-live-verification-${{ github.run_id }}
+          path: clerk-live-proof/
+          if-no-files-found: ignore
+          retention-days: 7
