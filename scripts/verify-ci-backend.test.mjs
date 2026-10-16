@@ -99,6 +99,8 @@ test.each([devUrl, prodUrl, "https://chrondle-backend.mistystep.io"])(
     assert.ok(connect.includes(url));
     assert.ok(connect.includes(url.replace("https:", "wss:")));
     assert.ok(!connect.includes(url === devUrl ? prodUrl : devUrl));
+    assert.ok(connect.includes(new URL(config.env.NEXT_PUBLIC_SENTRY_DSN).origin));
+    assert.ok(!connect.includes("*.sentry.io"));
   },
 );
 

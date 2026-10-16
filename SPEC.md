@@ -38,6 +38,19 @@
   the server's shared backfill pipeline, not a separate client-side paid path.
 - Scheduled internal generation and backfill continue without a player identity.
 
-This initial contract covers account privacy and event operations. The existing
+## Browser failure reporting
+
+- As a player, handled application errors, uncaught browser errors and unhandled
+  promise rejections reach the existing remote error service with the build's
+  exact source revision and environment, so an operator can identify the release.
+- Reports redact emails and credentials before leaving the browser. They do not
+  collect account identity, cookies, request headers, page query strings, replay,
+  analytics or interaction breadcrumbs.
+- The existing owned alert intake receives new errors and unhandled failures.
+  An unavailable or rejecting error service never blocks gameplay; later errors
+  can be reported once the service recovers. No persistent retry queue is kept.
+
+This initial contract covers account privacy, event operations and browser
+failure reporting. The existing
 game's complete observable behavior still needs specification; absence here does
 not establish new gameplay, billing or persistence intent.
