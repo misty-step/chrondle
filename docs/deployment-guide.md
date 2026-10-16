@@ -93,23 +93,22 @@ Cloudflare owns their proxied DNS records. Staging remains a separate Worker
 with no production custom domains. Do not replace source config with a
 generated OpenNext or dashboard-only config.
 
-Reviewed, green `master` merges run `.github/workflows/deploy.yml`. Exact-SHA
-CI, secret scanning, production configuration and live Stripe price checks
-remain blocking. The existing `Production` environment's `NEXT_PUBLIC_CONVEX_URL`
-chooses the compatible backend: Convex while it names Convex, otherwise the
-prepared Cloudflare backend with its runtime-only integration bindings. Both
-pass `bun run deploy:verify` before web activation. Backend changes must remain compatible with the prior
-web release and a web rollback; an ordinary release never restores or
-destructively migrates data.
+The [native train](native-release.md) replaces `ci.yml` and `deploy.yml`.
+`web/production.json` owns the public compiler settings and runtime backend
+origin. The serving backend is now `chrondle-backend.mistystep.io`; this first
+web-only train does not deploy backend code. It refuses changed backend source
+or a different actual backend origin before web activation. Backend changes
+need compatible native deployment when that family is reached; an ordinary
+web release never restores or destructively migrates data.
 
 The OpenNext build receives only public application settings and
-`CHRONDLE_REVISION=$GITHUB_SHA`. Server keys, the Convex deploy key and the
-Cloudflare deployment token are not compiler inputs. The Production environment
-provides `CLOUDFLARE_API_TOKEN`; existing Worker secrets retain the live
+`CHRONDLE_REVISION=<selected exact SHA>`. Server keys, the Convex deploy key and the
+Cloudflare deployment token are not compiler inputs. The native train resolves
+the canonical narrow CD token after verification; existing Worker secrets retain the live
 Clerk/Stripe/sync configuration. `NEXT_PUBLIC_POSTHOG_KEY` must match the
 existing production public setting at build time.
-The backend URL is passed from that same environment setting to both the public
-compiler and `wrangler deploy --var`, not copied into production Wrangler vars.
+The backend URL comes from that same public file for both compilation and the
+packaged runtime binding; it is not duplicated in production Wrangler vars.
 `bun run doctor:hosting` likewise requires `NEXT_PUBLIC_CONVEX_URL`; it has no
 fallback to the retired provider. Changing the setting alone does not import or
 resume either data store. Follow ADR0001 before changing it.
@@ -202,8 +201,9 @@ or delete DO resources as part of this web/DNS cutover. Deletion belongs to
 the parent controller after the global dependency and off-DO Postgres export
 gates pass.
 
-Signed GitHub workflow/deployment failure hooks still reach Kaylee's existing
-agent intake. A failed release remains failed even after a successful rollback.
+Native cron failures reach `bot-chat:kaylee`. A failed release remains failed
+even after a successful rollback. Scheduled execution and recovery receipts
+must be read back before claiming the cutover is live.
 
 ## Environment Configuration Patterns
 

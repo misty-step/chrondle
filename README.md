@@ -38,6 +38,8 @@ generation and maintenance — see [chrondle.app/pricing](https://chrondle.app/p
 
 This project is built with:
 
+- **Rust / workers-rs:** public discovery and legacy redirects on Cloudflare;
+  the remaining routes still use the stack below.
 - **Next.js 16:** React framework for production.
 - **React 19:** for building interactive user interfaces.
 - **Convex:** real-time backend and database.
@@ -154,6 +156,32 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to play.
 
 ### Local CI
 
+Install the Rust `wasm32-unknown-unknown` target and `worker-build` 0.8.7
+(`cargo install worker-build --version 0.8.7 --locked`), plus the pinned Bun
+version in `.bun-version` and Node 24. Then run the native entry on Mirrodin:
+
+```bash
+bun run check --mode fast
+NEXT_PUBLIC_CONVEX_URL=https://handsome-raccoon-955.convex.cloud \
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_aGVhbHRoeS1kb2UtMjMuY2xlcmsuYWNjb3VudHMuZGV2JA \
+bun run check --mode full
+```
+
+Fast runs Rust formatting/tests plus the retained lint/type/test commands. Full
+also runs backend tests, coverage, builds the combined Cloudflare artifact once,
+and exercises its routes in local workerd with outbound traffic denied. No
+production credential or `.env` copy is needed. To additionally exercise the
+built Rust artifact against a chosen public backend's anonymous count queries:
+
+```bash
+CHRONDLE_DISCOVERY_BACKEND=https://chrondle-backend.mistystep.io bun run test:discovery
+```
+
+That explicit read-only check verifies success, injected outage and real recovery;
+it does not generate puzzles or write player state. Use `bun run preview:cf` for
+the whole local web runtime, including Rust discovery/redirect routes. `bun dev`
+still runs only the retained Next/Convex development surfaces.
+
 Local Dagger runs are wrapped through Colima:
 
 ```bash
@@ -202,11 +230,11 @@ No Clerk webhook or sync secret is required; see [authentication](docs/AUTHENTIC
 
 ### Deploying the web service
 
-Merge a reviewed, green commit to `master`. Every merge ships automatically:
-the [production workflow](.github/workflows/deploy.yml) waits for exact-revision
-CI and secret scanning, deploys the backward-compatible Convex backend,
-builds OpenNext with public settings only, and deploys the source-bound
-Cloudflare Worker and its apex/www/alias custom domains.
+Merge a reviewed commit after `bun run check --mode fast` passes on Mirrodin.
+The no-agent native train runs `scripts/train.py` every 30 minutes for moved
+`master`, using slim checks plus build/artifact verification. A separate full
+check runs twice daily, including unchanged trunk, without gating later releases.
+Both use the existing `gha-runners.slice`; neither runs on GitHub Actions.
 
 Production server secrets remain Worker secrets; the compiler never receives
 server or deployment keys. `/api/health` reads back the exact Git SHA and
@@ -214,7 +242,15 @@ queries the real Convex database. Every production domain must pass the
 revision and live-backend smoke, and the canonical Stripe webhook must not
 redirect. A failed rollout restores the captured Worker version without
 rolling back Convex or accepted writes. Failed runs reach Kaylee's existing
-agent intake.
+agent intake through the cron's `failure_deliver=bot-chat:kaylee`.
+
+`web/production.json` is the public compiler configuration, observed from the
+existing live browser bundle and Worker bindings. It contains no server keys.
+The first train is deliberately web-only: a changed backend tree or actual
+backend origin fails before activation, rather than omitting a backend deploy or
+changing the accepted-data writer. Add the compatible backend native release
+when that rewrite family is reached. See [native release](docs/native-release.md)
+for the exact invocation, cutover and recovery contract.
 
 See the [deployment guide](docs/deployment-guide.md#2-production-web-deployment-cloudflare)
 for the first registrar cutover, exact DNS/Worker rollback, retained native

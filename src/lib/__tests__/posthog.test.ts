@@ -32,7 +32,10 @@ function event(name = "guess_submitted"): CaptureResult {
 }
 
 describe("privacy-safe official SDK transport", () => {
-  beforeEach(() => window.history.replaceState({}, "", "/classic?privatecanary=1#privatecanary"));
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_ENVIRONMENT", "development");
+    window.history.replaceState({}, "", "/classic?privatecanary=1#privatecanary");
+  });
   afterEach(() => vi.unstubAllEnvs());
 
   it.each([
@@ -56,6 +59,14 @@ describe("privacy-safe official SDK transport", () => {
     expect(safe?.properties).not.toHaveProperty("targetYear");
     expect(safe?.properties).not.toHaveProperty("start");
     expect(safe).not.toHaveProperty("$set_once");
+  });
+
+  it("keeps real production usage separate from automated traffic", () => {
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_ENVIRONMENT", "production");
+    expect(sanitizeAnalyticsEvent(event())?.properties.is_synthetic).toBe(false);
+    const bot = event();
+    bot.properties.$browser_type = "bot";
+    expect(sanitizeAnalyticsEvent(bot)?.properties.is_synthetic).toBe(true);
   });
 
   it.each(["$autocapture", "$identify", "$snapshot", "exception", "state_divergence"])(

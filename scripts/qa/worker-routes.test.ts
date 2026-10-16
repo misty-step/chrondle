@@ -1,7 +1,5 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { parse } from "yaml";
 import { assertHtml, assertRuntimeLogs } from "./worker-route-contracts";
 
 const response = (status = 200, contentType = "text/html; charset=utf-8") => ({
@@ -64,39 +62,5 @@ describe("built Worker release route check", () => {
     ).not.toThrow();
   });
 
-  it("runs on PR CI and the same built bytes before production activation, preserving backend and Stripe checks", () => {
-    const ci = parse(readFileSync(".github/workflows/ci.yml", "utf8"));
-    const steps = ci.jobs["worker-routes"].steps;
-    const commands = steps.map((step: { run?: string }) => step.run);
-    expect(commands.indexOf("bun run test:worker-routes")).toBeGreaterThan(
-      commands.indexOf("bun run build:cf"),
-    );
-    expect(commands).toContain("bun run test:worker-routes");
-    expect(ci.jobs["worker-routes"]["continue-on-error"]).not.toBe(true);
-    expect(ci.jobs["merge-gate"].needs).toContain("worker-routes");
-    const deploy = parse(readFileSync(".github/workflows/deploy.yml", "utf8"));
-    const production = deploy.jobs.cloudflare.steps.map((step: { run?: string }) => step.run);
-    const check = production.indexOf("bun run test:worker-routes");
-    expect(check).toBeGreaterThan(production.indexOf("bun run build:cf"));
-    expect(check).toBeLessThan(
-      production.findIndex((command: string | undefined) =>
-        command?.startsWith("bunx wrangler deploy --env production "),
-      ),
-    );
-    expect(
-      production.find((command: string | undefined) =>
-        command?.startsWith("bunx wrangler deploy --env production "),
-      ),
-    ).toContain('--var "NEXT_PUBLIC_CONVEX_URL:$NEXT_PUBLIC_CONVEX_URL"');
-    expect(deploy.jobs.cloudflare.env.NEXT_PUBLIC_CONVEX_URL).toBe(
-      "${{ secrets.NEXT_PUBLIC_CONVEX_URL }}",
-    );
-    expect(deploy.jobs.cloudflare.needs).toBe("backend");
-    expect(production).toContain("node scripts/verify-webhook-redirect.mjs");
-    const runner = readFileSync("scripts/qa/worker-routes.ts", "utf8");
-    expect(runner).toContain("...releases.map");
-    expect(runner).toContain('"/releases/9999.0.0"');
-    expect(runner).toContain("outboundService:");
-    expect(runner).toContain('env: "production"');
-  });
+
 });

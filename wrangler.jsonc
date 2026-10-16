@@ -2,7 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "chrondle",
   "account_id": "b069014f6a46558ea9146fb6c4ff8f6c",
-  "main": ".open-next/worker.js",
+  "main": "web/entry.mjs",
   "compatibility_date": "2026-09-17",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": false,
