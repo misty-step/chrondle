@@ -29,7 +29,7 @@ Chrondle's autonomous event pipeline produces 12–18 fresh events each day to k
 | Orchestrator     | `convex/actions/eventGeneration/orchestrator.ts`                            | Coordinates MAX_TOTAL_ATTEMPTS/CRITIC_CYCLES, selects best events, persists/logs, triggers alerts.                   |
 | Logging & Alerts | `convex/lib/logging.ts`, `convex/lib/alerts.ts`, `convex/generationLogs.ts` | Sanitized structured logging, alert checks (zero events, cost spikes, pass-rate), monitoring queries.                |
 | Cron             | `convex/crons.ts`                                                           | Schedules daily puzzle generation (00:00 UTC) and event replenishment batch (02:00 UTC).                             |
-| Manual Tooling   | `scripts/test-event-generation.ts`                                          | CLI for dry-run testing of specific years or selector output.                                                        |
+| Manual Tooling   | `scripts/test-event-generation.ts`                                          | Operator CLI for paid generation of specific years or selector output.                                              |
 
 ## Prompts & Validation
 
@@ -56,7 +56,7 @@ Chrondle's autonomous event pipeline produces 12–18 fresh events each day to k
 | Tool                                                                | Purpose                                                                |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `pnpm vitest run convex/lib/__tests__/eventValidation.unit.test.ts` | Golden regression coverage for leakage/proper-noun rules.              |
-| `scripts/test-event-generation.ts --year 1969 --verbose`            | Manual end-to-end run without waiting for cron (supports `--dry-run`). |
+| `scripts/test-event-generation.ts --year 1969 --verbose`            | Authorized paid end-to-end run without waiting for cron; see [operator setup](../README.md#operator-event-scripts). |
 | `scripts/manage-events.ts audit`                                    | Spot-check event pool quality and availability.                        |
 
 > ⚠️ Local Vitest is currently blocked by the missing `@rollup/rollup-darwin-x64` optional dependency; install it (or reinstall under Node 20/x64) before running the suite.
