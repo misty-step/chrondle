@@ -117,6 +117,17 @@ Those paths still require their sandbox bindings and separate verification.
 The frontend's provider and immutable preview URLs are disabled. Neither this
 frontend nor its backend has production routes or a production data binding.
 
+Preview webhook signing and gateway secrets are generated only for this preview,
+kept in the operator's encrypted password store and the GitHub `Preview`
+environment, and bound at runtime by the existing preview workflow. Stripe
+signature verification uses the SDK's static verifier, not an API-key-bearing
+client. Successful synthetic signed deliveries prove the real HTTP verification,
+gateway and persistence paths; they do not prove a real checkout or provider
+delivery. Subscription updates still retrieve Stripe's current state, rather
+than trusting an older event payload. Without sandbox API access, that upstream
+read is a labeled fixture in consumer tests, never a live key on the preview.
+The production Stripe webhook host and signing secret are unchanged.
+
 ## Alternatives considered
 
 1. **Run the open-source Convex backend on a VM or container.** Rejected: the migration contract excludes VM-hosted Convex, and it would not use Cloudflare data services.

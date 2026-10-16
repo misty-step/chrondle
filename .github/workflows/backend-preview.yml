@@ -54,15 +54,18 @@ jobs:
         run: bunx wrangler deploy --env preview --var "REVISION:$REVISION" --message "$REVISION"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      - name: Bind preview-only operator and synthetic game identities
+      - name: Bind preview-only identities and webhook gateways
         working-directory: backend
         run: |
-          bun --eval 'if (!process.env.OPERATOR_ACCESS || !process.env.GAME_PROVIDERS) throw new Error("Preview identity configuration is missing"); process.stdout.write(JSON.stringify({BACKEND_OPERATOR_ACCESS: process.env.OPERATOR_ACCESS, EXTRA_AUTH_PROVIDERS: process.env.GAME_PROVIDERS}))' \
+          set -euo pipefail
+          bun --eval 'if (!process.env.OPERATOR_ACCESS || !process.env.GAME_PROVIDERS || !process.env.CLERK_SYNC_SECRET || !process.env.STRIPE_SYNC_SECRET) throw new Error("Preview identity or webhook configuration is missing"); process.stdout.write(JSON.stringify({BACKEND_OPERATOR_ACCESS: process.env.OPERATOR_ACCESS, EXTRA_AUTH_PROVIDERS: process.env.GAME_PROVIDERS, CLERK_SYNC_SECRET: process.env.CLERK_SYNC_SECRET, STRIPE_SYNC_SECRET: process.env.STRIPE_SYNC_SECRET}))' \
             | bunx wrangler secret bulk --env preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           OPERATOR_ACCESS: ${{ secrets.BACKEND_PREVIEW_OPERATOR_ACCESS }}
           GAME_PROVIDERS: ${{ secrets.BACKEND_PREVIEW_AUTH_PROVIDERS }}
+          CLERK_SYNC_SECRET: ${{ secrets.CLERK_SYNC_SECRET }}
+          STRIPE_SYNC_SECRET: ${{ secrets.STRIPE_SYNC_SECRET }}
       - name: Read back the exact hosted backend revision
         run: |
           bun --eval '
@@ -123,17 +126,27 @@ jobs:
         run: bunx wrangler deploy --env preview --message "$REVISION"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      - name: Bind only a test-mode Clerk server key to the isolated frontend
+      - name: Bind sandbox Clerk and synthetic webhook secrets to the isolated frontend
         run: |
           set -euo pipefail
           bun --eval '
             const key = process.env.CLERK_RUNTIME_KEY?.trim();
             if (!key?.startsWith("sk_test_")) throw new Error("The existing repository CLERK_SECRET_KEY is not a sandbox key; do not bind a production key to the synthetic preview");
-            process.stdout.write(JSON.stringify({CLERK_SECRET_KEY: key}));
+            const names = ["CLERK_WEBHOOK_SECRET", "CLERK_SYNC_SECRET", "STRIPE_WEBHOOK_SECRET", "STRIPE_SYNC_SECRET"];
+            const hooks = Object.fromEntries(names.map(name => {
+              const value = process.env[name];
+              if (!value) throw new Error("Missing Preview webhook secret: " + name);
+              return [name, value];
+            }));
+            process.stdout.write(JSON.stringify({CLERK_SECRET_KEY: key, ...hooks}));
           ' | bunx wrangler secret bulk --env preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLERK_RUNTIME_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          CLERK_WEBHOOK_SECRET: ${{ secrets.CLERK_WEBHOOK_SECRET }}
+          CLERK_SYNC_SECRET: ${{ secrets.CLERK_SYNC_SECRET }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_SYNC_SECRET: ${{ secrets.STRIPE_SYNC_SECRET }}
       - name: Read back the frontend and its real backend connection
         run: |
           bun --eval '
