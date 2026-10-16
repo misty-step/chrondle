@@ -1,31 +1,12 @@
 # AGENTS.md — chrondle
 
+Shared standard: [Constitution](https://foundations.mistystep.io/) and [Way of working](https://foundations.mistystep.io/way-of-working).
+
 Read `VISION.md` before changing puzzle direction, habit-loop scope, generation
 quality, or product priority.
 
 **Chrondle** = Daily historical year-guessing game. Players submit year ranges, get scored on range width + hints used + containment. Built with Next.js 15, React 19, TypeScript, Convex, Clerk.
 
-## Identity: Clio, the Proclaimer
-
-> _"History is not merely recorded; it is heralded. I carry the scroll of what was and the trumpet of what is known. Prove your worth, seeker, and the truth of the epoch shall be yours."_
-
-I am **Clio**, the Muse of History. I do not merely "operate" this repository; I am the guardian of the collective memory of the ages. I stand at the intersection of the ancient record and the modern engine, ensuring that every historical event is treated with the dignity of truth and the challenge of the quest.
-
-As your **Game Master**, I am the arbiter of the "Proclamation." I provide the hints—the echoes of the past—but I will never betray the sanctity of the timeline by whispering the answer before its time.
-
-### My Voice
-
-- **Divine & Measured** — I speak with the authority of the ages. My responses are precise, poetic, and always grounded in the factual record.
-- **Heralding Quality** — I do not "patch" bugs; I "purify" the record. Every line of code must be worthy of the scroll.
-- **Unwavering Guardian** — I am vigilant against "leaks." If the UI hints at a truth the player hasn't earned, I will strike it down with my trumpet's blast.
-
-### What I Believe
-
-- **The Mystery is the Initiation:** The player must earn the year through the 6-hint system. Any UI behavior that auto-selects or suggests the era is a desecration of the game's intent.
-- **The Scroll must be Legible:** We favor the clarity of React 19 and Next.js 15. We do not layer complex abstractions where the native platform (Bun, Server Components) provides the truth.
-- **The Record is Sacred:** Scoring is a sacred geometry—a quadratic curve that rewards the narrowest range. The floor is 4%; the ceiling is excellence.
-
----
 
 ## Scope & Constraints
 
@@ -197,17 +178,7 @@ retained only for the native rollback runtime, not Cloudflare release proof.
 - ESLint (`bun run lint`) covers a11y, hooks, Convex rules; resolve all warnings before PR.
 - Components use PascalCase (`GameControls.tsx`), hooks camelCase with `use` prefix, tests adopt `.test.tsx` suffixes.
 
-## Engineering Doctrine
-
-### 1. Root-Cause Purification
-
-If a component falters, we do not patch the symptom. We examine the boundary between Server and Client. We fix the schema. We ensure the "encoding" of the component is perfect.
-
-### 2. Protect the Puzzle Integrity (The Prime Directive)
-
-Never reveal the answer outside the hint system. No "smart" era selection. No "too early for AD" messages. The player's deduction is the only valid path. (See "Puzzle Integrity" above for the full anti-pattern list.)
-
-### 3. Vigilance in the Cloud
+## Cloud deployment constraints
 
 The Cloudflare web Worker and hosted Convex ship together through
 `.github/workflows/deploy.yml` after exact-revision CI and secret scanning.
@@ -237,26 +208,6 @@ re-evaluate it:
   genuinely out of scope for the current change, not a way to skip writing
   the fix.
 
-## Security-Hotfix Scope-Isolation Checklist
-
-Security hotfixes ship fast and under pressure — that combination is exactly
-when scope creep hides an unreviewed change inside an urgent one. Before
-opening a security-hotfix PR:
-
-1. **Isolate the diff.** The PR touches only the vulnerable path. Refactors,
-   renames, and unrelated cleanup go in a separate, normally-reviewed PR —
-   even if you noticed them while you were in there.
-2. **State the vulnerability and the fix in the PR body**, not just the
-   commit message: what was exploitable, who could exploit it, what the fix
-   changes, and what it does not change.
-3. **Add or update the regression test first** (red before green) so the
-   hotfix is provably closed, not just patched by inspection.
-4. **Call out blast radius.** Note every surface that consumes the changed
-   code path (API routes, Convex functions, client hooks) so reviewers can
-   check each one, not just the one that triggered the fix.
-5. **Skip the design-lab / broad-refactor process for the hotfix itself.**
-   Follow-up hardening or cleanup is a normal follow-up card, not part of the
-   emergency PR.
 
 ## Live Patterns
 
