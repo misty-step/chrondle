@@ -11,6 +11,17 @@ const makeCtx = (identity: AuthIdentity): AuthCtx => ({
 });
 
 describe("requireAdmin", () => {
+  it.each(["public_metadata.role", "publicMetadata.role", "metadata.role"])(
+    "supports Convex's verified flattened %s claim and rejects a non-admin",
+    async (claim) => {
+      const identity = { subject: "operator", [claim]: "admin" };
+      await expect(requireAdmin(makeCtx(identity))).resolves.toEqual(identity);
+      await expect(requireAdmin(makeCtx({ ...identity, [claim]: "player" }))).rejects.toThrow(
+        /admin only/,
+      );
+    },
+  );
+
   it("throws when unauthenticated", async () => {
     const ctx = makeCtx(null);
     await expect(requireAdmin(ctx)).rejects.toThrow(ConvexError);

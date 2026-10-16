@@ -1,31 +1,10 @@
 #!/usr/bin/env tsx
 
 import { Command } from "commander";
-import { ConvexHttpClient } from "convex/browser";
 import { anyApi } from "convex/server";
-import dotenv from "dotenv";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import fs from "fs/promises";
+import { getOperatorClient } from "./lib/operator-client";
 
 const apiRef = anyApi;
-
-async function loadEnv(): Promise<void> {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
-  const envPath = join(__dirname, "../.env.local");
-  const envContent = await fs.readFile(envPath, "utf-8");
-  Object.assign(process.env, dotenv.parse(envContent));
-}
-
-async function getClient(): Promise<ConvexHttpClient> {
-  await loadEnv();
-  const url = process.env.NEXT_PUBLIC_CONVEX_URL;
-  if (!url) {
-    throw new Error("NEXT_PUBLIC_CONVEX_URL is not set");
-  }
-  return new ConvexHttpClient(url);
-}
 
 const program = new Command();
 program
@@ -37,7 +16,7 @@ program
   .option("--verbose", "Print full event lists for each year", false);
 
 program.action(async (options) => {
-  const client = await getClient();
+  const client = getOperatorClient();
   let years: number[] = [];
 
   if (options.years) {

@@ -1,34 +1,9 @@
 #!/usr/bin/env tsx
 
-import { ConvexHttpClient } from "convex/browser";
 import { anyApi } from "convex/server";
-import dotenv from "dotenv";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import fs from "fs/promises";
+import { getOperatorClient } from "./lib/operator-client";
 
 const apiRef = anyApi;
-
-async function loadEnv(): Promise<void> {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
-  const envPath = join(__dirname, "../.env.local");
-  try {
-    const envContent = await fs.readFile(envPath, "utf-8");
-    Object.assign(process.env, dotenv.parse(envContent));
-  } catch {
-    console.warn("Could not load .env.local, relying on process.env");
-  }
-}
-
-async function getClient(): Promise<ConvexHttpClient> {
-  await loadEnv();
-  const url = process.env.NEXT_PUBLIC_CONVEX_URL;
-  if (!url) {
-    throw new Error("NEXT_PUBLIC_CONVEX_URL is not set");
-  }
-  return new ConvexHttpClient(url);
-}
 
 const DEFAULT_TOTAL_YEARS = 50;
 const DEFAULT_CONCURRENCY = 50;
@@ -63,7 +38,7 @@ async function runLoadTest() {
   console.log(
     `Starting Batch Processing Load Test (targetYears=${totalYears}, concurrency=${concurrency})...`,
   );
-  const client = await getClient();
+  const client = getOperatorClient();
 
   // Generate a contiguous block of years for the load test.
   const years = Array.from({ length: totalYears }, (_, i) => startYear + i);
@@ -123,6 +98,7 @@ async function runLoadTest() {
   console.log(`Throughput: ${(totalYears / Math.max(1, elapsedSeconds)).toFixed(2)} years/sec`);
   console.log(`Success: ${completed}`);
   console.log(`Failed: ${failed}`);
+  if (failed > 0) process.exitCode = 1;
   console.log(`Rate-limited (HTTP 429 style): ${rateLimited}`);
   console.log("\nApproximate Node process memory usage (RSS):");
   console.log(`  Start: ${rssStartMb.toFixed(2)} MB`);
