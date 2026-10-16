@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.12.2](https://github.com/misty-step/chrondle/compare/v1.12.1...v1.12.2) (2026-10-16)
+
+### Bug Fixes
+
+- **ops:** audit actual webhook cases and all subscriber IDs ([36001f6](https://github.com/misty-step/chrondle/commit/36001f63aa4103eb1055caa78b53fa80413b9d62))
+
 ## [1.12.1](https://github.com/misty-step/chrondle/compare/v1.12.0...v1.12.1) (2026-10-16)
 
 ### Bug Fixes
