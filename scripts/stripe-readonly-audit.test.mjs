@@ -1,9 +1,11 @@
+// @vitest-environment node
 import assert from "node:assert/strict";
-import { test } from "node:test";
 import { auditStripe } from "./stripe-readonly-audit.mjs";
+// The credential-free dispatch self-check needs no install. The normal repo
+// suite discovers this same file, so register with its existing runner there.
+const { test } = process.env.VITEST ? await import("vitest") : await import("node:test");
 
 const key = "sk_live_SyntheticAuditOnly";
-
 const canary = "private-name-email-card-and-key-canary";
 const endpoint = { id: "we_Canonical", livemode: true,
   url: "https://www.chrondle.app/api/webhooks/stripe", status: "enabled", enabled_events: ["*"] };
