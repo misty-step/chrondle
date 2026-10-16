@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.9.1](https://github.com/misty-step/chrondle/compare/v1.9.0...v1.9.1) (2026-10-16)
+
+### Bug Fixes
+
+- **backend:** enable synthetic signed webhook verification ([#337](https://github.com/misty-step/chrondle/issues/337)) ([535d0df](https://github.com/misty-step/chrondle/commit/535d0df779be074af1b4706875d3522ccd695ef9))
+
 # [1.9.0](https://github.com/misty-step/chrondle/compare/v1.8.1...v1.9.0) (2026-10-15)
 
 ### Features
