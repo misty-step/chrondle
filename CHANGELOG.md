@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.12.1](https://github.com/misty-step/chrondle/compare/v1.12.0...v1.12.1) (2026-10-16)
+
+### Bug Fixes
+
+- **auth:** restrict event operations to authenticated admins ([#344](https://github.com/misty-step/chrondle/issues/344)) ([524417c](https://github.com/misty-step/chrondle/commit/524417c90ca8e615e46121beba84767e0c2971af))
+
 # [1.12.0](https://github.com/misty-step/chrondle/compare/v1.11.1...v1.12.0) (2026-10-16)
 
 ### Features
