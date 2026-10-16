@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.11.0](https://github.com/misty-step/chrondle/compare/v1.10.0...v1.11.0) (2026-10-16)
+
+### Features
+
+- **backend:** prepare Cloudflare production without cutover ([#341](https://github.com/misty-step/chrondle/issues/341)) ([dc64f09](https://github.com/misty-step/chrondle/commit/dc64f09e100254d4cc39b5690f9b9a8ba562708b))
+
 # [1.10.0](https://github.com/misty-step/chrondle/compare/v1.9.1...v1.10.0) (2026-10-16)
 
 ### Features
