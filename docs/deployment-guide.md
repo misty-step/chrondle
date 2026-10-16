@@ -36,7 +36,9 @@ Both deployments contain the same data structure:
 | ----------------------------------- | -------- | ---------------------------- | ------------------------------ |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | ✅       | Clerk public key             | `pk_live_...` or `pk_test_...` |
 | `CLERK_SECRET_KEY`                  | ✅       | Clerk secret key             | `sk_live_...` or `sk_test_...` |
-| `CLERK_WEBHOOK_SECRET`              | ⚠️       | Webhook secret for user sync | `whsec_...`                    |
+
+Account provisioning uses verified Clerk JWTs on authenticated requests, not a
+Clerk webhook. See [authentication](AUTHENTICATION.md).
 
 ### Optional Services
 
@@ -268,9 +270,8 @@ CLERK_SECRET_KEY=sk_live_...
 **Causes & Solutions:**
 
 - **Mismatched Clerk keys**: Ensure using correct environment keys (test vs live)
-- **Webhook not configured**: Set up Clerk webhook for user sync
+- **Account not provisioned**: Verify the Clerk JWT reaches `getOrCreateCurrentUser`
 - **CORS issues**: Check allowed origins in Clerk dashboard
-- **Missing webhook secret**: Ensure `CLERK_WEBHOOK_SECRET` is set
 
 #### 4. Mixed Environment Keys
 

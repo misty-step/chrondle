@@ -191,9 +191,9 @@ Chrondle requires several environment variables for production deployment. Copy 
 
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - From Clerk Dashboard → API Keys
 - `CLERK_SECRET_KEY` - From Clerk Dashboard → API Keys (keep secure!)
-- `CLERK_WEBHOOK_SECRET` - Create webhook at Clerk Dashboard → Webhooks
-  - Endpoint URL: `https://your-domain.com/api/webhooks/clerk`
-  - Subscribe to events: `user.created`, `user.updated`
+
+Accounts are provisioned from verified Clerk identities on authenticated requests.
+No Clerk webhook or sync secret is required; see [authentication](docs/AUTHENTICATION.md).
 
 #### Optional Variables
 
@@ -223,11 +223,7 @@ the separate Rust rebuild is not part of the DigitalOcean exit.
 
 ### Post-Deployment
 
-1. **Configure Clerk Webhook (if using authentication):**
-   - In Clerk Dashboard, update the webhook endpoint to your production URL:
-     `https://chrondle.app/api/webhooks/clerk`
-
-2. **Verify Deployment:**
+1. **Verify Deployment:**
    - Visit your deployed URL
    - Check that daily puzzles load correctly
    - Test user authentication (if configured)
@@ -238,7 +234,7 @@ the separate Rust rebuild is not part of the DigitalOcean exit.
 - [ ] Convex project created and deployed
 - [ ] Public build settings, Worker runtime secrets and Production deployment token configured
 - [ ] Clerk authentication configured (optional)
-- [ ] Webhook endpoints use the production URL
+- [ ] Stripe webhook uses the unchanged canonical production URL
 - [ ] `bun run build:cf` succeeds without server/deployment secrets
 - [ ] Apex/www/alias `/api/health` report the exact Worker release SHA
 - [ ] Daily puzzle loads correctly
@@ -271,8 +267,8 @@ bun run verify:convex
 **Authentication not working:**
 
 - Verify Clerk keys are correct (use `bun run verify:auth:prod`)
-- Check webhook configuration
-- Ensure `CLERK_WEBHOOK_SECRET` matches the webhook settings
+- Verify the signed-in player's Clerk JWT reaches the configured backend
+- Check first-time account provisioning and returning-account persistence
 
 **Build failures:**
 

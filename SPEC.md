@@ -2,6 +2,10 @@
 
 ## Player account privacy
 
+- As a first-time signed-in player, my account is created on demand from my
+  verified Clerk identity. Returning authenticated requests reuse that account
+  and preserve its progress and entitlement. Anonymous requests cannot create an
+  account. Account provisioning does not require a Clerk webhook or sync secret.
 - As a signed-in player, I can read my own profile, account-existence result,
   subscription entitlement, Classic progress and completed puzzles, and Order
   progress and completed plays. Ownership comes from my verified sign-in, never
@@ -19,7 +23,7 @@
 - Verified identity and billing webhooks can continue their existing trusted
   internal account operations without exposing those operations as public
   account/history reads. Ordinary callers cannot invoke internal operations or
-  bypass the webhook's existing verification boundary.
+  bypass billing webhook verification. There is no Clerk webhook endpoint.
 
 ## Event operations
 
