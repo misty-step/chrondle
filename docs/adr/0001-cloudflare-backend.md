@@ -128,6 +128,33 @@ than trusting an older event payload. Without sandbox API access, that upstream
 read is a labeled fixture in consumer tests, never a live key on the preview.
 The production Stripe webhook host and signing secret are unchanged.
 
+### Private restore rehearsal
+
+Before final migration, an encrypted production snapshot is restored to the
+separate `restore` environment: `chrondle-backend-restore.mistystep.io`, its own
+Worker and Durable Object namespace, and `chrondle-backend-restore-backups`.
+The entire hostname is protected by its own Access application, carrying the
+existing Glass human policy and one specifically named recovery-drill machine.
+Provider and immutable preview URLs are disabled. The public synthetic preview
+never receives private records or a binding to this target.
+
+The existing isolated-preview workflow's explicit `private_restore` dispatch
+selects only this backend and the GitHub `Restore` environment. It binds only
+`BACKEND_RESTORE_OPERATOR_ACCESS`; no frontend, synthetic game identity, provider
+key, webhook gateway or cron is deployed. Runtime `ENVIRONMENT=production`
+keeps a new database paused and ignores extra synthetic auth providers. The
+operator verifies the whole-host denial, named-machine allow, exact revision,
+paused state and physically distinct bindings before any private import.
+
+On Mirrodin only, decrypt the hash-verified age object into process memory,
+convert it to canonical NDJSON, import with the exact byte checksum, then export
+and compare every table's count, number and canonical-record checksum. Keep
+records, credentials and raw error bodies out of evidence and CI. Never resume
+this target or invoke provider actions; a drill is not a final one-writer snapshot
+or a production cutover. No automatic plaintext product backup is created here.
+Retire only these named drill resources after durable recovery evidence, keeping
+the authorized encrypted snapshot and its pass identity.
+
 ## Alternatives considered
 
 1. **Run the open-source Convex backend on a VM or container.** Rejected: the migration contract excludes VM-hosted Convex, and it would not use Cloudflare data services.
