@@ -107,6 +107,9 @@ async function main() {
     const robots = await worker.fetch(new URL("/robots.txt", origin));
     assert.equal(robots.status, 200);
     assert.equal(robots.headers.get("x-chrondle-runtime"), "rust");
+    if (process.env.CHRONDLE_REVISION) {
+      assert.equal(robots.headers.get("x-chrondle-revision"), process.env.CHRONDLE_REVISION);
+    }
     assert.equal(await robots.text(), readFileSync("web/robots.txt", "utf8"));
     const sitemap = await worker.fetch(new URL("/sitemap.xml", origin));
     assert.equal(sitemap.status, 200);
@@ -148,6 +151,7 @@ async function main() {
     });
     assert.equal(health.status, 503, "Isolated backend must be unreachable");
     const body = await health.json();
+    if (process.env.CHRONDLE_REVISION) assert.equal(body.revision, process.env.CHRONDLE_REVISION);
     assert.equal(body.error, "Convex connectivity failed");
     assert.equal(body.checks.convex, "unhealthy");
     assert.equal(body.version, releases[0].version);

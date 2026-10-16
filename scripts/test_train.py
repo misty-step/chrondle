@@ -65,7 +65,7 @@ class TrainTests(unittest.TestCase):
             source.mkdir()
             (source / "worker").mkdir()
             (source / "worker/entry.js").write_text("export default {}")
-            config = dict(name="test", account_id="test", compatibility_date="2026-09-17",
+            config: dict = dict(name="test", account_id="test", compatibility_date="2026-09-17",
                           compatibility_flags=[], workers_dev=False, preview_urls=False,
                           routes=[], observability={"enabled": True}, assets={"binding": "ASSETS"})
             packaged = {**config, "assets": {**config["assets"], "directory": "assets"},
@@ -82,7 +82,7 @@ class TrainTests(unittest.TestCase):
 
     def test_real_http_redirects_are_not_followed(self):
         class Handler(BaseHTTPRequestHandler):
-            def log_message(self, *args):
+            def log_message(self, format, *args):
                 pass
 
             def do_GET(self):
@@ -100,6 +100,50 @@ class TrainTests(unittest.TestCase):
             url = "http://127.0.0.1:" + str(server.server_port)
             self.assertEqual(train.request(url)[0], 302)
             self.assertEqual(train.request(url, data=b"{}")[0], 401)
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()
+
+    def test_smoke_real_http_success_unhealthy_rejection_and_recovery(self):
+        sha = "a" * 40
+        mode = ["healthy"]
+
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, format, *args):
+                pass
+
+            def do_GET(self):
+                if self.path.startswith("/api/health"):
+                    self.send_response(503 if mode[0] == "unhealthy" else 200)
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"status": "ok", "revision": sha, "checks": {"convex": "ok"}}).encode())
+                elif self.path == "/robots.txt":
+                    self.send_response(200)
+                    self.send_header("X-Chrondle-Runtime", "rust")
+                    self.send_header("X-Chrondle-Revision", sha)
+                    self.end_headers()
+                    self.wfile.write(b"Sitemap: https://chrondle.app/sitemap.xml")
+                else:
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b"Chrondle</html>")
+
+            def do_POST(self):
+                self.send_response(401 if self.path.endswith("checkout") else 400)
+                self.end_headers()
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever)
+        thread.start()
+        origins = ("http://127.0.0.1:" + str(server.server_port),)
+        try:
+            train.settled_smoke(sha, origins=origins)
+            mode[0] = "unhealthy"
+            with self.assertRaisesRegex(RuntimeError, "health failed"):
+                train.settled_smoke(sha, origins=origins)
+            mode[0] = "healthy"
+            train.settled_smoke(sha, origins=origins)
         finally:
             server.shutdown()
             server.server_close()

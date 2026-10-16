@@ -6,6 +6,8 @@ import { join, resolve } from "node:path";
 import { unstable_startWorker } from "wrangler";
 
 const backend = process.env.CHRONDLE_DISCOVERY_BACKEND;
+const artifact = process.env.CHRONDLE_ARTIFACT;
+const packaged = artifact ? JSON.parse(readFileSync(join(artifact, "wrangler.json"), "utf8")) : undefined;
 const directory = mkdtempSync(join(tmpdir(), "chrondle-discovery-"));
 let mode: "refuse" | "live" = "refuse";
 let queries = 0;
@@ -20,8 +22,12 @@ try {
     config,
     JSON.stringify({
       name: "chrondle-discovery-check",
-      main: resolve("web/build/worker/shim.mjs"),
+      main: packaged ? resolve(artifact!, packaged.main) : resolve("web/build/worker/shim.mjs"),
       compatibility_date: "2026-09-17",
+      ...(packaged ? {
+        compatibility_flags: packaged.compatibility_flags,
+        assets: { ...packaged.assets, directory: resolve(artifact!, packaged.assets.directory) },
+      } : {}),
       send_metrics: false,
       vars: { NEXT_PUBLIC_CONVEX_URL: backend ?? "https://unavailable.invalid" },
     }),
@@ -87,6 +93,9 @@ try {
     assert.equal(response.status, status);
     assert.equal(response.headers.get("x-chrondle-runtime"), "rust");
     assert(response.headers.get("x-chrondle-revision"));
+    if (process.env.CHRONDLE_REVISION) {
+      assert.equal(response.headers.get("x-chrondle-revision"), process.env.CHRONDLE_REVISION);
+    }
     assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   };
   for (const [path, location] of [
@@ -100,7 +109,7 @@ try {
     assert.equal(response.headers.get("location"), location);
     results.push({ name: path, status: response.status });
   }
-  for (const path of [
+  for (const path of artifact ? [] : [
     "/classic",
     "/api/stripe/checkout",
     "/releases/1.13.1",

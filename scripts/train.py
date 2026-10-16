@@ -187,18 +187,24 @@ def deployment_tool(repo, sha, wrangler):
         raise RuntimeError("Trusted deployment tool must match the candidate lockfile")
 
 
-def smoke(sha, rust=True):
-    for origin in HOSTS:
+class PendingPropagation(RuntimeError):
+    pass
+
+
+def smoke(sha, rust=True, origins=HOSTS):
+    for origin in origins:
         status, _, body = request(origin + "/api/health?native_readback=" + str(time.time_ns()))
         health = json.loads(body)
-        if status != 200 or health.get("status") != "ok" or health.get("checks", {}).get("convex") != "ok" or health.get("revision") != sha:
-            raise RuntimeError("Serving health/revision mismatch: " + origin)
+        if status != 200 or health.get("status") != "ok" or health.get("checks", {}).get("convex") != "ok" or not re.fullmatch(r"[a-f0-9]{40}", health.get("revision", "")):
+            raise RuntimeError("Serving health failed: " + origin)
+        if health["revision"] != sha:
+            raise PendingPropagation("Serving revision mismatch: " + origin)
         status, headers, body = request(origin + "/robots.txt")
         if status != 200 or b"Sitemap: https://chrondle.app/sitemap.xml" not in body:
             raise RuntimeError("Discovery smoke failed")
         if rust and (headers.get("X-Chrondle-Runtime") != "rust" or headers.get("X-Chrondle-Revision") != sha):
-            raise RuntimeError("Rust source identity mismatch")
-    origin = HOSTS[-1]
+            raise PendingPropagation("Rust source identity mismatch")
+    origin = origins[-1]
     status, _, body = request(origin + "/classic")
     if status != 200 or b"</html>" not in body or b"Chrondle" not in body or b'\\"digest\\"' in body:
         raise RuntimeError("Classic entry failed")
@@ -207,12 +213,12 @@ def smoke(sha, rust=True):
             raise RuntimeError("Anonymous billing rejection failed")
 
 
-def settled_smoke(sha, rust=True):
+def settled_smoke(sha, rust=True, origins=HOSTS):
     deadline = time.monotonic() + 60
     while True:
         try:
-            return smoke(sha, rust)
-        except Exception:
+            return smoke(sha, rust, origins)
+        except PendingPropagation:
             if time.monotonic() >= deadline:
                 raise
             time.sleep(2)  # Bounded safe GET/unsigned rejection readback, never promotion polling.
@@ -223,6 +229,33 @@ def run_wrangler(args, artifact, token, *action, log):
     env.update(CLOUDFLARE_API_TOKEN=token, WRANGLER_SEND_METRICS="false", CI="true")
     subprocess.run([str(args.node / "bin/node"), str(args.wrangler), *action, "--config", str(artifact / "wrangler.json")],
                    cwd=artifact, env=env, stdout=log, stderr=log, check=True)
+
+
+def activate(args, artifact, sha, config, token, previous, prior_sha, log, origins=HOSTS):
+    """Same promotion/recovery implementation for production and isolated rehearsal."""
+    manifest = hashes(artifact)
+    state, effect = step(State.VERIFIED, Event.RELEASE)
+    assert effect == "promote"
+    try:
+        run_wrangler(args, artifact, token, "deploy", "--message", "git:" + sha, log=log)
+        current = deployed(config, token)
+        if current == previous or serving_source(config, token, current) != sha:
+            raise RuntimeError("Provider promotion identity mismatch")
+        settled_smoke(sha, origins=origins)
+        if hashes(artifact) != manifest:
+            raise RuntimeError("Promotion changed tested bytes")
+        state, _ = step(state, Event.SMOKE_OK)
+        return state
+    except Exception:
+        state, effect = step(state, Event.SMOKE_FAILED)
+        assert effect == "rollback"
+        run_wrangler(args, artifact, token, "rollback", previous, "--yes", log=log)
+        if deployed(config, token) != previous:
+            raise RuntimeError("ROLLBACK INCOMPLETE; preserve accepted data")
+        settled_smoke(prior_sha, rust=False, origins=origins)
+        state, _ = step(state, Event.RECOVERED)
+        assert state == State.FAILED
+        raise RuntimeError("Release failed; previous compatible version and journey recovered")
 
 
 def build(args, source, public, sha, log):
@@ -252,6 +285,7 @@ def build(args, source, public, sha, log):
     if args.mode == "fast":
         checks += " && bun run build:cf && bun run test:worker-routes && bun run test:discovery"
     checks += " && bun scripts/package-worker.mjs && CHRONDLE_ARTIFACT=.release bun run test:worker-routes"
+    checks += " && CHRONDLE_ARTIFACT=.release CHRONDLE_DISCOVERY_BACKEND=$NEXT_PUBLIC_CONVEX_URL bun run test:discovery"
     docker += ["--workdir", "/workspace", args.image, "-c", checks]
     try:
         subprocess.run(docker, stdout=log, stderr=log, check=True)
@@ -326,26 +360,7 @@ def main():
                     deployment_tool(args.repo, sha, args.wrangler)
                     token = command("pass", "show", "workstation/MISTY_STEP_CD_CLOUDFLARE_TOKEN").splitlines()[0]
                     previous, prior_sha = preflight(args.repo, sha, config, public, token)
-                    state, effect = step(state, Event.RELEASE)
-                    assert effect == "promote"
-                    try:
-                        run_wrangler(args, artifact, token, "deploy", "--message", "git:" + sha, log=log)
-                        current = deployed(config, token)
-                        if current == previous or serving_source(config, token, current) != sha:
-                            raise RuntimeError("Provider promotion identity mismatch")
-                        settled_smoke(sha)
-                        if hashes(artifact) != manifest:
-                            raise RuntimeError("Promotion changed tested bytes")
-                        state, _ = step(state, Event.SMOKE_OK)
-                    except Exception:
-                        state, effect = step(state, Event.SMOKE_FAILED)
-                        assert effect == "rollback"
-                        run_wrangler(args, artifact, token, "rollback", previous, "--yes", log=log)
-                        if deployed(config, token) != previous:
-                            raise RuntimeError("ROLLBACK INCOMPLETE; preserve accepted data")
-                        settled_smoke(prior_sha, rust=False)
-                        state, _ = step(state, Event.RECOVERED)
-                        raise RuntimeError("Release failed; previous compatible version and journey recovered")
+                    state = activate(args, artifact, sha, config, token, previous, prior_sha, log)
                 else:
                     state, _ = step(state, Event.VERIFY_ONLY)
                 receipt(events, sha=sha, state=state.name, mode=args.mode, promoted=args.promote,
