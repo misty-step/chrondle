@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.12.0](https://github.com/misty-step/chrondle/compare/v1.11.1...v1.12.0) (2026-10-16)
+
+### Features
+
+- **backend:** make serving backend a single config cutover ([#342](https://github.com/misty-step/chrondle/issues/342)) ([7c8bd3d](https://github.com/misty-step/chrondle/commit/7c8bd3d9b9fdf189a18b5e6c0eeb4503f8478fa3))
+
 ## [1.11.1](https://github.com/misty-step/chrondle/compare/v1.11.0...v1.11.1) (2026-10-16)
 
 ### Bug Fixes
