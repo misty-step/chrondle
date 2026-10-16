@@ -20,6 +20,7 @@ const eslintConfig = [
       "convex/_generated/**",
       "coverage/**",
       ".open-next/**",
+      ".release/**",
       "web/build/**",
       "web/target/**",
       ".wrangler/**",

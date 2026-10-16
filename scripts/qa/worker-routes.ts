@@ -8,7 +8,9 @@ import { parseChangelog } from "../../src/lib/releases/changelog";
 import { assertHtml, assertRuntimeLogs } from "./worker-route-contracts";
 
 async function main() {
-  const config = unstable_readConfig({ config: "wrangler.jsonc", env: "production" });
+  const config = unstable_readConfig(process.env.CHRONDLE_ARTIFACT
+    ? { config: resolve(process.env.CHRONDLE_ARTIFACT, "wrangler.json") }
+    : { config: "wrangler.jsonc", env: "production" });
   assert(config.main && config.assets?.directory, "Build the configured OpenNext artifact first");
   const releases = parseChangelog(readFileSync("CHANGELOG.md", "utf8"));
   const directory = mkdtempSync(join(tmpdir(), "chrondle-worker-routes-"));

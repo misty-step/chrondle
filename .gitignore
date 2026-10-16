@@ -144,6 +144,7 @@ test-results/
 
 # OpenNext / Cloudflare Workers
 /.open-next/
+/.release/
 /.wrangler/
 .dev.vars
 .dev.vars.*

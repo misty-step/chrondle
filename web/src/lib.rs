@@ -4,6 +4,47 @@
 pub const ROBOTS: &str = include_str!("../robots.txt");
 const BASE: &str = "https://chrondle.app";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum State {
+    Initial,
+    AwaitingClassic,
+    AwaitingOrder(u64),
+    Complete,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Event {
+    Start,
+    Classic(Result<u64, ()>),
+    Order(Result<u64, ()>),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Effect {
+    ReadClassic,
+    ReadOrder,
+    Render(Option<(u64, u64)>),
+}
+
+/// One per-request machine; no shared cache, credentials or I/O in transitions.
+pub fn step(state: State, event: Event) -> (State, Option<Effect>) {
+    match (state, event) {
+        (State::Initial, Event::Start) => (State::AwaitingClassic, Some(Effect::ReadClassic)),
+        (State::AwaitingClassic, Event::Classic(Ok(classic))) => {
+            (State::AwaitingOrder(classic), Some(Effect::ReadOrder))
+        }
+        (State::AwaitingOrder(classic), Event::Order(Ok(order))) => (
+            State::Complete,
+            Some(Effect::Render(Some((classic, order)))),
+        ),
+        (State::AwaitingClassic, Event::Classic(Err(())))
+        | (State::AwaitingOrder(_), Event::Order(Err(()))) => {
+            (State::Complete, Some(Effect::Render(None)))
+        }
+        _ => (state, None),
+    }
+}
+
 pub fn redirect(path: &str, query: Option<&str>) -> Option<String> {
     let target = match path {
         "/releases" => return Some("/changelog".into()),
@@ -91,16 +132,29 @@ mod edge {
             .ok_or_else(|| worker::Error::RustError("sitemap count invalid".into()))
     }
 
-    async fn counts(env: &Env) -> Result<(u64, u64)> {
-        let classic = count(env, "puzzles:getTotalPuzzles", json!({}), "count").await?;
-        let order = count(
-            env,
-            "orderPuzzles:getArchiveOrderPuzzles",
-            json!({"page": 1, "pageSize": 1}),
-            "totalCount",
-        )
-        .await?;
-        Ok((classic, order))
+    async fn counts(env: &Env) -> Option<(u64, u64)> {
+        let (mut state, mut effect) = step(State::Initial, Event::Start);
+        loop {
+            let event = match effect.expect("counts machine always returns an effect") {
+                Effect::ReadClassic => Event::Classic(
+                    count(env, "puzzles:getTotalPuzzles", json!({}), "count")
+                        .await
+                        .map_err(|_| ()),
+                ),
+                Effect::ReadOrder => Event::Order(
+                    count(
+                        env,
+                        "orderPuzzles:getArchiveOrderPuzzles",
+                        json!({"page": 1, "pageSize": 1}),
+                        "totalCount",
+                    )
+                    .await
+                    .map_err(|_| ()),
+                ),
+                Effect::Render(counts) => return counts,
+            };
+            (state, effect) = step(state, event);
+        }
     }
 
     #[event(fetch)]
@@ -120,7 +174,7 @@ mod edge {
                     (ROBOTS.to_string(), "text/plain; charset=utf-8")
                 } else {
                     let counts = counts(&env).await;
-                    if counts.is_err() {
+                    if counts.is_none() {
                         // Do not log provider bodies, puzzle data or request headers.
                         worker::console_warn!(
                             "sitemap archive counts unavailable; serving static routes"
@@ -128,7 +182,7 @@ mod edge {
                     }
                     let now = js_sys::Date::new_0().to_iso_string();
                     (
-                        sitemap(counts.ok(), &String::from(now)),
+                        sitemap(counts, &String::from(now)),
                         "application/xml; charset=utf-8",
                     )
                 };
@@ -163,6 +217,61 @@ mod edge {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn count_transition_table() {
+        assert_eq!(
+            step(State::Initial, Event::Start),
+            (State::AwaitingClassic, Some(Effect::ReadClassic))
+        );
+        assert_eq!(
+            step(State::AwaitingClassic, Event::Classic(Ok(2))),
+            (State::AwaitingOrder(2), Some(Effect::ReadOrder))
+        );
+        assert_eq!(
+            step(State::AwaitingOrder(2), Event::Order(Ok(3))),
+            (State::Complete, Some(Effect::Render(Some((2, 3)))))
+        );
+        for (state, event) in [
+            (State::AwaitingClassic, Event::Classic(Err(()))),
+            (State::AwaitingOrder(2), Event::Order(Err(()))),
+        ] {
+            assert_eq!(
+                step(state, event),
+                (State::Complete, Some(Effect::Render(None)))
+            );
+        }
+    }
+
+    #[test]
+    fn random_event_sequences_cannot_render_twice_or_read_after_completion() {
+        let mut random = 7034_u64;
+        for _ in 0..512 {
+            let mut state = State::Initial;
+            let mut renders = 0;
+            for _ in 0..128 {
+                random ^= random << 13;
+                random ^= random >> 7;
+                random ^= random << 17;
+                let event = match random % 5 {
+                    0 => Event::Start,
+                    1 => Event::Classic(Ok(random % 1000)),
+                    2 => Event::Classic(Err(())),
+                    3 => Event::Order(Ok(random % 1000)),
+                    _ => Event::Order(Err(())),
+                };
+                let (next, effect) = step(state, event);
+                if state == State::Complete {
+                    assert_eq!((next, effect), (State::Complete, None));
+                }
+                if matches!(effect, Some(Effect::Render(_))) {
+                    renders += 1;
+                }
+                assert!(renders <= 1);
+                state = next;
+            }
+        }
+    }
 
     #[test]
     fn legacy_links_keep_their_existing_query_semantics() {

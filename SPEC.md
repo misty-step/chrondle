@@ -19,6 +19,21 @@
   progress, change game preferences or emit browser gameplay events. Other
   routes retain their existing authorization and browser measurement behavior.
 
+## Native release behavior
+
+- Reviewed trunk changes are checked on the project's own native executor, not
+  GitHub-hosted compute. A moved-trunk tick selects one immutable source revision,
+  runs slim checks, builds once with public production settings, exercises that
+  artifact locally, and promotes those same bytes. Full checks run twice daily
+  even when trunk has not changed; a full failure does not hold later slim releases.
+- A release reads back the serving revision on all three production hosts and
+  exercises discovery, Classic entry and denied billing requests. Failed release
+  smoke restores the prior Worker only when its actual backend origin matches;
+  recovery is checked and the release still reports failure to the owned intake.
+- A web-only release never deploys, migrates or restores the accepted backend.
+  Backend-source changes require their own compatible deployment implementation,
+  not silent omission by the web train.
+
 ## Player account privacy
 
 - As a first-time signed-in player, my account is created on demand from my

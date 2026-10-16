@@ -24,6 +24,7 @@ const coverageExclude = [
   "**/*.d.ts",
   ".next/**",
   ".open-next/**",
+  ".release/**",
   "convex/_generated/**",
   "convex/migrations/**",
   "convex/test.setup.ts",

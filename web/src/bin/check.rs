@@ -29,13 +29,22 @@ fn main() -> ExitCode {
             "web/Cargo.toml",
         ],
         vec!["bun", "run", "lint"],
+        vec![
+            "python3",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "scripts",
+            "-p",
+            "test_train.py",
+        ],
         vec!["bun", "run", "type-check"],
         vec!["bun", "run", if full { "test:coverage" } else { "test" }],
     ];
     if full {
         commands.extend([
             vec!["bun", "run", "backend:test"],
-            vec!["bun", "scripts/verify-ci-backend.mjs"],
             vec!["bun", "run", "build:cf"],
             vec!["bun", "run", "test:worker-routes"],
             vec!["bun", "run", "test:discovery"],
