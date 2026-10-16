@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.13.0](https://github.com/misty-step/chrondle/compare/v1.12.4...v1.13.0) (2026-10-16)
+
+### Features
+
+- **analytics:** measure anonymous Chrondle story usage ([#346](https://github.com/misty-step/chrondle/issues/346)) ([61d3819](https://github.com/misty-step/chrondle/commit/61d3819adf4016d55373ac778405597f89e7d12e))
+
 ## [1.12.4](https://github.com/misty-step/chrondle/compare/v1.12.3...v1.12.4) (2026-10-16)
 
 ### Bug Fixes
