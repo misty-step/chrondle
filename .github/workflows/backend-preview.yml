@@ -71,7 +71,7 @@ jobs:
             if (!operator) throw new Error("Isolated operator configuration is missing");
             const bindings = {BACKEND_OPERATOR_ACCESS: operator};
             if (process.env.BACKEND_TARGET === "preview") {
-              for (const [name, value] of Object.entries({EXTRA_AUTH_PROVIDERS: process.env.GAME_PROVIDERS, CLERK_SYNC_SECRET: process.env.CLERK_SYNC_SECRET, STRIPE_SYNC_SECRET: process.env.STRIPE_SYNC_SECRET})) {
+              for (const [name, value] of Object.entries({EXTRA_AUTH_PROVIDERS: process.env.GAME_PROVIDERS, STRIPE_SYNC_SECRET: process.env.STRIPE_SYNC_SECRET})) {
                 if (!value) throw new Error("Preview identity or webhook configuration is missing");
                 bindings[name] = value;
               }
@@ -83,7 +83,6 @@ jobs:
           PREVIEW_OPERATOR_ACCESS: ${{ secrets.BACKEND_PREVIEW_OPERATOR_ACCESS }}
           RESTORE_OPERATOR_ACCESS: ${{ secrets.BACKEND_RESTORE_OPERATOR_ACCESS }}
           GAME_PROVIDERS: ${{ secrets.BACKEND_PREVIEW_AUTH_PROVIDERS }}
-          CLERK_SYNC_SECRET: ${{ secrets.CLERK_SYNC_SECRET }}
           STRIPE_SYNC_SECRET: ${{ secrets.STRIPE_SYNC_SECRET }}
       - name: Read back the exact hosted backend revision
         # The restore host is private on EVERY path. Its runtime is read back by
@@ -147,13 +146,13 @@ jobs:
         run: bunx wrangler deploy --env preview --message "$REVISION"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      - name: Bind sandbox Clerk and synthetic webhook secrets to the isolated frontend
+      - name: Bind sandbox Clerk and synthetic Stripe webhook secrets to the isolated frontend
         run: |
           set -euo pipefail
           bun --eval '
             const key = process.env.CLERK_RUNTIME_KEY?.trim();
             if (!key?.startsWith("sk_test_")) throw new Error("The existing repository CLERK_SECRET_KEY is not a sandbox key; do not bind a production key to the synthetic preview");
-            const names = ["CLERK_WEBHOOK_SECRET", "CLERK_SYNC_SECRET", "STRIPE_WEBHOOK_SECRET", "STRIPE_SYNC_SECRET"];
+            const names = ["STRIPE_WEBHOOK_SECRET", "STRIPE_SYNC_SECRET"];
             const hooks = Object.fromEntries(names.map(name => {
               const value = process.env[name];
               if (!value) throw new Error("Missing Preview webhook secret: " + name);
@@ -164,8 +163,6 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLERK_RUNTIME_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          CLERK_WEBHOOK_SECRET: ${{ secrets.CLERK_WEBHOOK_SECRET }}
-          CLERK_SYNC_SECRET: ${{ secrets.CLERK_SYNC_SECRET }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           STRIPE_SYNC_SECRET: ${{ secrets.STRIPE_SYNC_SECRET }}
       - name: Read back the frontend and its real backend connection

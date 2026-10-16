@@ -8,7 +8,7 @@ export {
 } from "./users/queries";
 
 // Re-export mutation functions for backward compatibility
-// Note: createUser is internal-only, called via clerk/webhookAction
+// Account provisioning uses the verified identity in getOrCreateCurrentUser.
 export { getOrCreateCurrentUser, updateUsername } from "./users/mutations";
 
 // Re-export statistics functions for backward compatibility

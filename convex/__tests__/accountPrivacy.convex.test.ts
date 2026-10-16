@@ -136,23 +136,36 @@ describe("account and history ownership (including compatibility exports)", () =
     });
   }
 
-  it("verified webhook gateways retain internal account operations, not public-read bypasses", async () => {
+  it("provisions from a verified identity without Clerk webhook settings and reuses the account", async () => {
+    vi.stubEnv("CLERK_SYNC_SECRET", "");
+    vi.stubEnv("CLERK_WEBHOOK_SECRET", "");
+    const { t } = await fixture();
+    await expect(t.mutation(api.users.getOrCreateCurrentUser, {})).rejects.toThrow(
+      "Not authenticated",
+    );
+    const player = t.withIdentity({ subject: "privacy-new", email: "new@example.invalid" });
+    const first = await player.mutation(api.users.getOrCreateCurrentUser, {});
+    expect(first).toMatchObject({ clerkId: "privacy-new", email: "new@example.invalid" });
+    const returning = await player.mutation(api.users.getOrCreateCurrentUser, {});
+    expect(returning).toEqual(first);
+    expect(await player.query(api.users.getCurrentUser, {})).toEqual(first);
+    expect(await t.query(api.users.getCurrentUser, {})).toBeNull();
+  });
+
+  it("returning verified identities preserve accepted account state without a webhook", async () => {
     const { t, ids } = await fixture();
-    vi.stubEnv("CLERK_SYNC_SECRET", "synthetic-clerk-secret");
+    const player = t.withIdentity({ subject: "privacy-a" });
+    const before = await player.query(api.users.getCurrentUser, {});
+    const returning = await player.mutation(api.users.getOrCreateCurrentUser, {});
+    expect(returning).toEqual(before);
+    expect(returning._id).toBe(ids.a);
+    expect(await player.query(api.users.hasArchiveAccess, {})).toBe(true);
+    expect(await player.query(api.puzzles.getUserCompletedPuzzles, { userId: ids.a })).toHaveLength(1);
+  });
+
+  it("verified billing gateway retains internal account operations, not public-read bypasses", async () => {
+    const { t, ids } = await fixture();
     vi.stubEnv("STRIPE_SYNC_SECRET", "synthetic-stripe-secret");
-    const clerk = {
-      eventType: "user.created",
-      payload: { clerkId: "privacy-hook", email: "hook@example.invalid" },
-    };
-    await expect(
-      t.action(api.clerk.webhookAction.processWebhookEvent, { ...clerk, secret: "wrong" }),
-    ).rejects.toThrow();
-    expect(
-      await t.action(api.clerk.webhookAction.processWebhookEvent, {
-        ...clerk,
-        secret: "synthetic-clerk-secret",
-      }),
-    ).toHaveProperty("userId");
     const stripe = {
       eventType: "checkout.session.completed",
       payload: { clerkId: "privacy-a", stripeCustomerId: "cus_synthetic_privacy" },

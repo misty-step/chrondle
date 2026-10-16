@@ -9,7 +9,7 @@
 Chrondle's frontend already runs on Cloudflare as the `chrondle` Worker (OpenNext). Its backend is Convex Cloud, using the production deployment `fleet-goldfish-183` and the development deployment `handsome-raccoon-955`. The backend does five jobs:
 
 - Browsers subscribe to queries and run mutations over the Convex WebSocket sync protocol.
-- Server code calls the HTTP API through `ConvexHttpClient`: Clerk and Stripe webhooks, checkout, sitemap, health and SSR preloads.
+- Server code calls the HTTP API through `ConvexHttpClient`: Stripe webhooks, checkout, sitemap, health and SSR preloads.
 - Five crons run, including daily puzzle generation and LLM event generation at 02:00 UTC.
 - `ctx.scheduler.runAfter` jobs run, such as historical context and the puzzle judge.
 - It stores all users, plays, puzzles and events.
@@ -50,6 +50,10 @@ Keep the `convex/` functions and every client unchanged. Add `backend/`, a Worke
 ### Auth
 
 - The providers come from `convex/auth.config.ts`: Clerk OIDC discovery and JWKS, with issuer and `applicationID` audience checks.
+- Production has no Clerk webhook or sync-secret binding. Account provisioning
+  remains `users:getOrCreateCurrentUser` using the verified Clerk identity.
+  Delete the unused Clerk webhook route/gateway and its readiness/preview secret
+  requirements; do not introduce a flag or relax JWT/JWKS verification.
 - `customJwt` providers are supported, including data-URI JWKS.
 - `EXTRA_AUTH_PROVIDERS` accepts a schema-validated synthetic issuer only when `ENVIRONMENT` is explicitly `preview` or `development`. Missing, misspelled and production environments ignore it; malformed configuration leaves the normal providers intact and logs no configuration contents.
 - Each provider has one JWKS refresh in flight. Unknown signing keys can trigger at most one refresh per 30 seconds, including failed attempts. OIDC discovery and JWKS `Cache-Control: max-age` and `Age` bound freshness (10 minutes if unspecified, capped at one day). `no-cache` revalidates and `no-store` retains no keys. A failed refresh keeps the last good, already-known keys for at most five minutes after expiry, or a shorter `stale-if-error`; `must-revalidate`, `no-cache` and `no-store` forbid stale use. That grace never extends on failure, and a successful rotation immediately removes old keys. Fetches time out after 10 seconds. HTTP and sync consumer tests cover cold/concurrent refresh, unknown kids, rotation, expiry, outage and recovery.

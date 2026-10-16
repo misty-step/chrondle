@@ -2,6 +2,10 @@
 
 ## Player account privacy
 
+- As a first-time signed-in player, my account is created on demand from my
+  verified Clerk identity. Returning authenticated requests reuse that account
+  and preserve its progress and entitlement. Anonymous requests cannot create an
+  account. Account provisioning does not require a Clerk webhook or sync secret.
 - As a signed-in player, I can read my own profile, account-existence result,
   subscription entitlement, Classic progress and completed puzzles, and Order
   progress and completed plays. Ownership comes from my verified sign-in, never
@@ -19,7 +23,7 @@
 - Verified identity and billing webhooks can continue their existing trusted
   internal account operations without exposing those operations as public
   account/history reads. Ordinary callers cannot invoke internal operations or
-  bypass the webhook's existing verification boundary.
+  bypass billing webhook verification. There is no Clerk webhook endpoint.
 
 ## Event operations
 
@@ -68,6 +72,18 @@ No person profiles, autocapture, session recording, surveys or exception capture
 Respect Do Not Track. The anonymous cookie expires after 30 days. Missing keys,
 failed SDK loads and analytics outages never block gameplay. The official SDK
 owns transport, batching and retries, not a second event collector.
+
+## Browser failure reporting
+
+- As a player, handled application errors, uncaught browser errors and unhandled
+  promise rejections reach the existing remote error service with the build's
+  exact source revision and environment, so an operator can identify the release.
+- Reports redact emails and credentials before leaving the browser. They do not
+  collect account identity, cookies, request headers, page query strings, replay,
+  analytics or interaction breadcrumbs.
+- The existing owned alert intake receives new errors and unhandled failures.
+  An unavailable or rejecting error service never blocks gameplay; later errors
+  can be reported once the service recovers. No persistent retry queue is kept.
 
 The game's remaining observable behavior still needs specification; absence here
 does not establish new gameplay, billing or persistence intent.

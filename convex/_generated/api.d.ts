@@ -23,7 +23,6 @@ import type * as actions_puzzleComposition_optimizePuzzle from "../actions/puzzl
 import type * as actions_puzzleComposition_schemas from "../actions/puzzleComposition/schemas.js";
 import type * as admin_events from "../admin/events.js";
 import type * as admin_puzzles from "../admin/puzzles.js";
-import type * as clerk_webhookAction from "../clerk/webhookAction.js";
 import type * as crons from "../crons.js";
 import type * as duel from "../duel.js";
 import type * as duel_queries from "../duel/queries.js";
@@ -106,7 +105,6 @@ declare const fullApi: ApiFromModules<{
   "actions/puzzleComposition/schemas": typeof actions_puzzleComposition_schemas;
   "admin/events": typeof admin_events;
   "admin/puzzles": typeof admin_puzzles;
-  "clerk/webhookAction": typeof clerk_webhookAction;
   crons: typeof crons;
   duel: typeof duel;
   "duel/queries": typeof duel_queries;
