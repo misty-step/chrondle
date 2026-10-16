@@ -1,0 +1,40 @@
+name: Read-only Stripe migration audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      since:
+        description: "Event window start (Unix seconds, 0 = previous 24 hours)"
+        type: string
+        default: "0"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: Production
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - name: Check GET-only and private-output boundaries without credentials
+        run: node --test scripts/stripe-readonly-audit.test.mjs
+      - name: Read existing live Stripe state without changing it
+        run: node scripts/stripe-readonly-audit.mjs > stripe-audit.json
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PRICE_MONTHLY: ${{ secrets.STRIPE_PRICE_MONTHLY }}
+          STRIPE_PRICE_ANNUAL: ${{ secrets.STRIPE_PRICE_ANNUAL }}
+          AUDIT_SINCE: ${{ inputs.since }}
+      - name: Preserve only the projected counts and identifiers
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stripe-readonly-audit-${{ github.run_id }}
+          path: stripe-audit.json
+          if-no-files-found: ignore
+          retention-days: 7
