@@ -46,6 +46,21 @@ describe("PostHog ingest proxy route", () => {
     expect([...headers.keys()]).toEqual(["content-type"]);
   });
 
+  it("preserves compressed SDK event bytes rather than decoding as UTF-8", async () => {
+    mockFetch.mockResolvedValue(new Response("ok", { status: 200 }));
+    const bytes = new Uint8Array([0x1f, 0x8b, 0x08, 0x00, 0xff, 0x80]);
+    await POST(
+      new NextRequest("https://www.chrondle.app/ingest/e?compression=gzip-js", {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: bytes,
+      }),
+    );
+    const forwarded = mockFetch.mock.calls[0][1]?.body;
+    expect(forwarded).toBeInstanceOf(ArrayBuffer);
+    expect(new Uint8Array(forwarded as ArrayBuffer)).toEqual(bytes);
+  });
+
   it("routes static assets to the PostHog assets host", async () => {
     mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
 

@@ -76,7 +76,9 @@ async function proxyToPostHog(request: NextRequest): Promise<NextResponse> {
       method: request.method,
       headers: cleanHeaders,
       body:
-        request.method !== "GET" && request.method !== "HEAD" ? await request.text() : undefined,
+        request.method !== "GET" && request.method !== "HEAD"
+          ? await request.arrayBuffer()
+          : undefined,
       redirect: "follow",
       signal,
     });
