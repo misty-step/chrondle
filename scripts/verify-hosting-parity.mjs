@@ -7,7 +7,6 @@ import { pathToFileURL } from "node:url";
 const DEFAULT_APP_ORIGIN = "https://chrondle.app";
 const DEFAULT_CLERK_HOST = "clerk.chrondle.app";
 const EXPECTED_CLERK_CNAME = "frontend-api.clerk.services";
-const DEFAULT_CONVEX_URL = "https://fleet-goldfish-183.convex.cloud";
 
 const systemResolveCname = promisify(resolveCnameCallback);
 
@@ -37,7 +36,7 @@ async function defaultQueryConvexCorpus() {
     import("convex/browser"),
     import("../convex/_generated/api.js"),
   ]);
-  const client = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || DEFAULT_CONVEX_URL);
+  const client = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL);
   const [totalResult, archive] = await Promise.all([
     client.query(api.puzzles.getTotalPuzzles, {}),
     client.query(api.puzzles.getArchivePuzzles, { page: 1, pageSize: 1 }),
@@ -92,10 +91,7 @@ export async function verifyHostingParity({
     await capture("app-health", async () => {
       const response = await fetchStatus(fetchImpl, `${appOrigin}/api/health`);
       const body = await response.json();
-      const ok =
-        response.status === 200 &&
-        body.status === "ok" &&
-        body.checks?.convex === "ok";
+      const ok = response.status === 200 && body.status === "ok" && body.checks?.convex === "ok";
       return {
         ok,
         detail: `HTTP ${response.status}; convex=${body.checks?.convex ?? "missing"}`,

@@ -79,7 +79,17 @@ describe("built Worker release route check", () => {
     const check = production.indexOf("bun run test:worker-routes");
     expect(check).toBeGreaterThan(production.indexOf("bun run build:cf"));
     expect(check).toBeLessThan(
-      production.indexOf('bunx wrangler deploy --env production --message "$GITHUB_SHA"'),
+      production.findIndex((command: string | undefined) =>
+        command?.startsWith("bunx wrangler deploy --env production "),
+      ),
+    );
+    expect(
+      production.find((command: string | undefined) =>
+        command?.startsWith("bunx wrangler deploy --env production "),
+      ),
+    ).toContain('--var "NEXT_PUBLIC_CONVEX_URL:$NEXT_PUBLIC_CONVEX_URL"');
+    expect(deploy.jobs.cloudflare.env.NEXT_PUBLIC_CONVEX_URL).toBe(
+      "${{ secrets.NEXT_PUBLIC_CONVEX_URL }}",
     );
     expect(deploy.jobs.cloudflare.needs).toBe("backend");
     expect(production).toContain("node scripts/verify-webhook-redirect.mjs");

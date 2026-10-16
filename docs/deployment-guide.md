@@ -71,10 +71,10 @@ bun run dev
 
 ### 2. Production Web Deployment (Cloudflare)
 
-The web runtime and authoritative DNS move to Cloudflare; hosted Convex,
-Clerk, Stripe and PostHog remain external vendors. No backend rewrite or data
-migration is part of this cutover. In particular, Convex is **not** hosted on
-Cloudflare.
+The web runtime and authoritative DNS are on Cloudflare. The separately prepared
+Cloudflare application backend and its one-writer cutover/recovery are described
+in [ADR0001](adr/0001-cloudflare-backend.md); the serving backend remains Convex
+until that data move. Clerk, Stripe and PostHog remain external integrations.
 
 #### A. Source and release authority
 
@@ -93,8 +93,10 @@ generated OpenNext or dashboard-only config.
 
 Reviewed, green `master` merges run `.github/workflows/deploy.yml`. Exact-SHA
 CI, secret scanning, production configuration and live Stripe price checks
-remain blocking. Compatible Convex deploys and passes `bun run deploy:verify`
-before web activation. Backend changes must remain compatible with the prior
+remain blocking. The existing `Production` environment's `NEXT_PUBLIC_CONVEX_URL`
+chooses the compatible backend: Convex while it names Convex, otherwise the
+prepared Cloudflare backend with its runtime-only integration bindings. Both
+pass `bun run deploy:verify` before web activation. Backend changes must remain compatible with the prior
 web release and a web rollback; an ordinary release never restores or
 destructively migrates data.
 
@@ -104,6 +106,11 @@ Cloudflare deployment token are not compiler inputs. The Production environment
 provides `CLOUDFLARE_API_TOKEN`; existing Worker secrets retain the live
 Clerk/Stripe/sync configuration. `NEXT_PUBLIC_POSTHOG_KEY` must match the
 existing production public setting at build time.
+The backend URL is passed from that same environment setting to both the public
+compiler and `wrangler deploy --var`, not copied into production Wrangler vars.
+`bun run doctor:hosting` likewise requires `NEXT_PUBLIC_CONVEX_URL`; it has no
+fallback to the retired provider. Changing the setting alone does not import or
+resume either data store. Follow ADR0001 before changing it.
 The Open Graph image uses the Node runtime supported by the standard OpenNext
 bundle; changing the runtime does not change its image content.
 
@@ -111,10 +118,17 @@ Normal CD requires the existing Cloudflare zone to be active before Worker
 activation. It saves the previous Worker version, deploys the source-owned
 domains, checks the direct alias's revision, then checks both public apex/www
 revisions, `bun run doctor:hosting` and the canonical Stripe webhook. Health
-reads the real Convex `puzzles` table. A failed activation or check restores the
-saved Worker version; it does not roll back Convex or connected data.
+reads the real backend `puzzles` table through the unchanged Convex client. A
+failed activation or check restores the saved Worker only if its actual runtime
+backend URL matches the candidate. At a backend-origin change, CD fails loudly
+and leaves both stores untouched: use ADR0001 recovery preserving accepted
+writes, never a blind old-frontend restore or backend resume.
 
-#### B. First apex/www cutover
+#### B. Historical first apex/www cutover
+
+This is the completed web-hosting migration baseline, not a current deployment
+runbook. Use the existing CI workflow for releases and ADR0001 for a backend
+cutover; do not repeat registrar delegation or bootstrap from a local login.
 
 An existing Worker at `chrondle.mistystep.io` is **not** evidence that the
 public apex/www moved. The 2026-10-12 baseline is:
@@ -132,12 +146,11 @@ public apex/www moved. The 2026-10-12 baseline is:
 1. Read the current registrar NS, DNS records, Worker version and native release
    before writing. Compare all portable DNS records; do not copy obsolete DO
    origin records into Cloudflare. Keep the DO zone and native release intact.
-2. Before merging, bootstrap the exact independently reviewed, CI-green
-   candidate with production public settings using `bun run build:cf` and
-   project-local `bunx wrangler deploy --env production --message <candidate-sha>`.
-   Check `https://chrondle.mistystep.io/api/health` against that SHA and verify
-   real game/auth paths. This native first deployment precedes DNS delegation;
-   normal CD cannot verify www while it still reaches DO.
+2. The original reviewed bootstrap preceded registrar delegation because normal
+   CD could not verify www while it still reached DO. Bootstrap evidence is
+   historical; current CI explicitly supplies the serving backend URL at both
+   compilation and Worker deployment. A bare local `wrangler deploy` is not a
+   replacement and no longer has a source-owned production backend default.
 3. Preserve Clerk DNS-only routing and SPF. Confirm Cloudflare certificates
    cover apex/www and DNSSEC has no conflicting registrar DS before replacing
    the registrar NS with `elsa.ns.cloudflare.com,miles.ns.cloudflare.com`.
@@ -159,18 +172,21 @@ blocker, not missing cutover permission; do not claim delegation changed.
 
 #### C. Exact rollback and retained native recovery
 
-Before every Worker deployment, capture the currently active 100% version.
-Restore it with project-local
-`bunx wrangler rollback <recorded-version> --env production --yes`.
+The existing CI saves the currently active 100% Worker version and reads its
+actual backend origin. It restores that version only when its origin matches
+the candidate. Do not run a bare manual Worker rollback across backend origins:
+use ADR0001 to pause, preserve and reconcile all accepted writes before restoring
+the old backend/frontend configuration. A version ID alone is not data recovery.
 The pre-migration Worker version is
 `a82172fe-745e-4426-bb34-974b913a07c6`; it is a historical fallback, not proof of
 current source or privacy parity. Worker rollback does not restore DNS or data.
 
-For a DNS rollback, restore the registrar NS to
+The historical web-host rollback restored the registrar NS to
 `ns1.digitalocean.com,ns2.digitalocean.com,ns3.digitalocean.com`. Leave the DO
 zone intact: apex A `129.212.153.182`, www CNAME `chrondle.app`, both TTL 30,
 with the existing Clerk CNAME and SPF. Read delegation and the public game
-back again; recursive NS caches can delay recovery.
+back again; recursive NS caches can delay recovery. This is not a backend
+rollback and is unsafe after a backend transition without ADR0001 recovery.
 
 The retained native rollback runtime is `chrondle.service`, port `3007`,
 Caddy ingress on `public-apps`, release
@@ -266,7 +282,7 @@ CLERK_SECRET_KEY=sk_live_...
 **Causes & Solutions:**
 
 - **Using test keys in production**: Replace all `pk_test_`, `sk_test_` with `pk_live_`, `sk_live_`
-- **Development Convex URL in production**: Verify production uses `fleet-goldfish-183`
+- **Nonproduction backend in production**: Run `bun run verify:env:prod` with the current release configuration; development and synthetic preview are refused.
 - **NODE_ENV mismatch**: Ensure `NODE_ENV=production` for production builds
 
 ### Debugging Commands
@@ -290,37 +306,9 @@ NODE_ENV=production bun run build && bun run start
 
 ### Environment Variable Validation Script
 
-Create a `validate-env.js` script:
-
-```javascript
-const required = [
-  "NODE_ENV",
-  "NEXT_PUBLIC_CONVEX_URL",
-  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
-  "CLERK_SECRET_KEY",
-];
-
-const missing = required.filter((key) => !process.env[key]);
-
-if (missing.length > 0) {
-  console.error("❌ Missing required environment variables:");
-  missing.forEach((key) => console.error(`  - ${key}`));
-  process.exit(1);
-}
-
-// Validate format
-if (process.env.NODE_ENV === "production") {
-  if (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.includes("test")) {
-    console.error("❌ Using test Clerk key in production!");
-    process.exit(1);
-  }
-  if (!process.env.NEXT_PUBLIC_CONVEX_URL?.includes("fleet-goldfish-183")) {
-    console.warn("⚠️  Not using production Convex deployment");
-  }
-}
-
-console.log("✅ Environment variables validated successfully");
-```
+Run `bun run verify:env:prod` with the release environment. It uses the shared
+`src/lib/env.schema.ts` contract and prints only variable names and errors.
+Do not create another validator or print the environment to debug it.
 
 ## Security Best Practices
 

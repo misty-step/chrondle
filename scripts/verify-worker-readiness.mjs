@@ -8,12 +8,14 @@ export async function verifyWorkerReadiness({
   revision,
   timeoutMs = 60_000,
   intervalMs = 2_000,
+  healthPath = "/api/health",
+  isHealthy = (health) => health.status === "ok" && health.checks?.convex === "ok",
 }) {
   if (!/^[a-f0-9]{40}$/.test(revision ?? "")) throw new Error("Missing exact release revision");
   const deadline = performance.now() + timeoutMs;
   let attempt = 0;
   while (performance.now() < deadline) {
-    const url = new URL("/api/health", origin);
+    const url = new URL(healthPath, origin);
     url.searchParams.set("readiness", `${Date.now()}-${attempt++}`);
     const response = await fetch(url, {
       cache: "no-store",
@@ -24,11 +26,7 @@ export async function verifyWorkerReadiness({
     });
     if (!response.ok) throw new Error(`Worker health HTTP ${response.status} on ${origin}`);
     const health = await response.json();
-    if (
-      health.status !== "ok" ||
-      health.checks?.convex !== "ok" ||
-      !/^[a-f0-9]{40}$/.test(health.revision ?? "")
-    ) {
+    if (!isHealthy(health) || !/^[a-f0-9]{40}$/.test(health.revision ?? "")) {
       throw new Error(`Worker health error on ${origin}`);
     }
     if (health.revision === revision) {

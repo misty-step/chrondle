@@ -1,6 +1,6 @@
 # ADR 0001: Run the Convex functions on a Cloudflare Worker and SQLite Durable Object
 
-- Status: Accepted. Isolated synthetic preview and private restore are verified. Production preparation, final data migration and cutover are pending.
+- Status: Accepted. Isolated synthetic preview, private restore, production preparation and private native reverse-import are verified. Final one-writer data migration and cutover are pending.
 - Date: 2026-10-15
 - Scope: the Chrondle application backend (`convex/`), not the frontend Worker or release/CD policy.
 
@@ -222,6 +222,28 @@ preparation run nor an empty database proves final migration or cutover.
 
 ### Move the single writer
 
+The existing `Production` environment's `NEXT_PUBLIC_CONVEX_URL` is the single
+serving-backend setting. Release validation accepts only the existing production
+Convex origin or the production Cloudflare origin, never the development or
+synthetic preview. The same setting chooses the compatible backend deployment,
+feeds the frontend compiler, and is explicitly bound to the frontend Worker.
+There is no independent source default that can silently disagree with a build.
+The hosting doctor requires that setting too. Changing it does not change any
+frontend hostname or the canonical Stripe webhook URL/signing secret.
+
+Ordinary releases still deploy Convex while that setting names Convex. Once it
+names Cloudflare, they deploy the already prepared production backend with its
+existing runtime bindings instead. Preparation remains backend-only. Neither
+path imports data or changes a persisted pause state. A failed web activation
+automatically restores the prior web Worker only when its actual runtime backend
+origin matches the candidate; crossing a backend boundary requires the explicit
+accepted-write-preserving recovery below, never an automatic backend resume.
+
+Source can be independently reviewed and shipped with the setting still on
+Convex. Only after final one-writer reconciliation may an operator change the
+setting and run the existing release workflow at that reviewed, green revision.
+This is not permission to pause the old writer while waiting for a source review.
+
 A production database starts with writes paused: it serves queries but refuses every mutation, action, scheduled job and cron until an operator resumes it. Writes stay paused across restarts. The switch is `POST /_backend/admin/pause` and `POST /_backend/admin/resume`. A pause answers only once the work already running has finished or been cut off, and `import`, `restore` and `export` work only while writes are paused. Together these keep one writer at every step.
 
 `bun backend/scripts/convex-snapshot.ts` converts between a Convex snapshot ZIP (`npx convex export` and `npx convex import`) and the backend's NDJSON, keeping every `_id`, `_creationTime` and table number. It also tells int64 (`3`) from float64 (`3.0`). Each conversion writes a manifest with the same per-table counts and canonical-record SHA-256s the backend reports, and `compare` exits non-zero on any difference.
@@ -234,11 +256,13 @@ A Convex snapshot carries only the application tables. `to-backup --as-of <time>
    - Run `npx convex export`, then `convex-snapshot.ts to-backup --as-of <the pause time>`.
    - Compute SHA-256 over the exact NDJSON bytes and POST them to `/_backend/admin/import` with `X-Backend-Sha256: <that digest>`. Missing, malformed or mismatched checksums return 400 without changing anything.
    - Run `compare` on the conversion manifest and the import response.
-3. Point `NEXT_PUBLIC_CONVEX_URL` at the backend, redeploy the frontend, and resume writes on the backend. These files pin the Convex URL and change in the same commit:
-   - `wrangler.jsonc` (frontend vars)
-   - `scripts/host-cd.py`
-   - `src/lib/env.schema.ts` and `scripts/verify-env-config.mjs`, which require `convex.cloud`
-   - `scripts/verify-hosting-parity.mjs`
+3. Set `Production`'s `NEXT_PUBLIC_CONVEX_URL` to the production backend, redeploy
+   the reviewed frontend through the existing workflow, and resume writes on the
+   backend. The source compatibility slice may ship first while the setting
+   remains on Convex. There is no production Wrangler URL/default to edit or
+   parallel backend selector. `scripts/host-cd.py` remains an inactive native-web
+   recovery path pinned to Convex; it is usable only after the data-preserving
+   reverse migration, not as an automatic Cloudflare-backend rollback.
 4. Keep Convex paused but intact until the new backend has been proven with real user paths.
 
 **Rollback before any write is accepted on Cloudflare:** restore the previous `NEXT_PUBLIC_CONVEX_URL` and resume Convex.

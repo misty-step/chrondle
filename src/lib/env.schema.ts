@@ -8,13 +8,35 @@
  */
 import { z } from "zod";
 
+const productionBackendOrigins = [
+  "https://fleet-goldfish-183.convex.cloud",
+  "https://chrondle-backend.mistystep.io",
+];
+
+function isBackendOrigin(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      url.port === "" &&
+      url.origin === value &&
+      (/^[a-z0-9-]+\.convex\.cloud$/.test(url.hostname) ||
+        /^chrondle-backend(?:-preview)?\.mistystep\.io$/.test(url.hostname))
+    );
+  } catch {
+    return false;
+  }
+}
+
 // =============================================================================
 // VALIDATION SCHEMAS
 // =============================================================================
 
 export const envSchemas = {
   // Core Infrastructure
-  NEXT_PUBLIC_CONVEX_URL: z.string().url().includes("convex.cloud"),
+  NEXT_PUBLIC_CONVEX_URL: z
+    .string()
+    .refine(isBackendOrigin, "Must be a supported HTTPS backend origin"),
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().startsWith("pk_"),
   CLERK_SECRET_KEY: z.string().startsWith("sk_"),
 
@@ -177,6 +199,19 @@ export function validateEnvironment(
     if (!result.valid && result.error) {
       invalid.push({ key, error: result.error });
     }
+  }
+
+  const backend = vars.NEXT_PUBLIC_CONVEX_URL;
+  if (
+    env === "production" &&
+    backend &&
+    isBackendOrigin(backend) &&
+    !productionBackendOrigins.includes(backend)
+  ) {
+    invalid.push({
+      key: "NEXT_PUBLIC_CONVEX_URL",
+      error: "Must name a production backend, not development or preview",
+    });
   }
 
   // Check live mode for production

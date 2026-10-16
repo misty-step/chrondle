@@ -121,3 +121,73 @@ test("production uses the same bounded verifier on all hosts and retains native 
   );
   assert.match(rollback.run, /wrangler rollback/);
 });
+
+const backend = { service: "chrondle-backend", environment: "preview", revision };
+const isBackendHealthy = (identity) =>
+  identity.service === "chrondle-backend" && identity.environment === "preview";
+
+test("backend identity uses the same real HTTP verifier and unique cache-busted requests through old-to-new recovery", async () => {
+  const urls = [];
+  const origin = await serve((request, response) => {
+    urls.push(request.url);
+    if (new URL(request.url, "http://localhost").pathname !== "/_backend/version") {
+      response.writeHead(404);
+      return response.end();
+    }
+    response.end(
+      JSON.stringify({ ...backend, revision: urls.length < 3 ? "b".repeat(40) : revision }),
+    );
+  });
+  const result = await verifyWorkerReadiness({
+    origin,
+    revision,
+    healthPath: "/_backend/version",
+    isHealthy: isBackendHealthy,
+    timeoutMs: 500,
+    intervalMs: 5,
+  });
+  assert.deepEqual(result, backend);
+  assert.equal(urls.length, 3);
+  assert.equal(new Set(urls).size, 3);
+});
+
+for (const [status, body] of [
+  [503, backend],
+  [200, { ...backend, service: "unrelated" }],
+  [200, { ...backend, environment: "production" }],
+  [200, { ...backend, revision: "invalid" }],
+]) {
+  test(`backend refusal is not hidden as propagation: HTTP${status} ${JSON.stringify(body)}`, async () => {
+    let requests = 0;
+    const origin = await serve((_request, response) => {
+      requests++;
+      response.writeHead(status);
+      response.end(JSON.stringify(body));
+    });
+    await assert.rejects(
+      verifyWorkerReadiness({
+        origin,
+        revision,
+        healthPath: "/_backend/version",
+        isHealthy: isBackendHealthy,
+        timeoutMs: 500,
+        intervalMs: 5,
+      }),
+    );
+    assert.equal(requests, 1);
+  });
+}
+
+test("both hosted backend paths reuse bounded healthy-old-only readiness, not a silent catch-and-retry loop", () => {
+  for (const filename of ["deploy.yml", "backend-preview.yml"]) {
+    const workflow = parse(
+      readFileSync(new URL("../.github/workflows/" + filename, import.meta.url), "utf8"),
+    );
+    const job = filename === "deploy.yml" ? workflow.jobs.backend : workflow.jobs.preview;
+    const step = job.steps.find(({ name }) => /Read back the.*backend revision/.test(name));
+    assert.match(step.run, /verifyWorkerReadiness/);
+    assert.match(step.run, /healthPath: "\/_backend\/version"/);
+    assert.match(step.run, /timeoutMs: 300000/);
+    assert.ok(!step.run.includes("catch {}"));
+  }
+});
