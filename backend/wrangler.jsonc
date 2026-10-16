@@ -31,6 +31,19 @@
       "triggers": { "crons": ["17 * * * *"] },
       "vars": { "ENVIRONMENT": "preview", "EXPOSE_ERRORS": "0" },
     },
+    // Private recovery drill only. Access covers the entire host before any import.
+    // Production guards keep this database paused and reject synthetic auth providers.
+    "restore": {
+      "name": "chrondle-backend-restore",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [{ "pattern": "chrondle-backend-restore.mistystep.io", "custom_domain": true }],
+      "durable_objects": { "bindings": [{ "name": "BACKEND", "class_name": "ChrondleBackend" }] },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChrondleBackend"] }],
+      "r2_buckets": [{ "binding": "BACKUPS", "bucket_name": "chrondle-backend-restore-backups" }],
+      "triggers": { "crons": [] },
+      "vars": { "ENVIRONMENT": "production", "EXPOSE_ERRORS": "0" },
+    },
     "production": {
       "name": "chrondle-backend",
       "workers_dev": true,
