@@ -138,9 +138,14 @@ jobs:
         if: inputs.prepare_cloudflare_backend == true || !endsWith(env.NEXT_PUBLIC_CONVEX_URL, '.convex.cloud')
         run: |
           bun --eval '
-            const response = await fetch("https://chrondle-backend.mistystep.io/_backend/version", {cache: "no-store", redirect: "error"});
-            const identity = await response.json();
-            if (!response.ok || identity.service !== "chrondle-backend" || identity.environment !== "production" || identity.revision !== process.env.GITHUB_SHA) throw new Error("Prepared backend identity mismatch: " + JSON.stringify(identity));
+            const { verifyWorkerReadiness } = await import("./scripts/verify-worker-readiness.mjs");
+            const identity = await verifyWorkerReadiness({
+              origin: "https://chrondle-backend.mistystep.io",
+              revision: process.env.GITHUB_SHA,
+              healthPath: "/_backend/version",
+              isHealthy: identity => identity.service === "chrondle-backend" && identity.environment === "production",
+              timeoutMs: 300000
+            });
             console.log(JSON.stringify(identity));
           '
           bun backend/scripts/verify-backend.mjs check --url https://chrondle-backend.mistystep.io

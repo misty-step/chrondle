@@ -91,24 +91,17 @@ jobs:
         if: inputs.private_restore != true
         run: |
           bun --eval '
-            const url = "https://chrondle-backend-preview.mistystep.io/_backend/version";
-            let last = {kind: "no-response"};
-            for (let attempt = 0; attempt < 30; attempt++) {
-              try {
-                const response = await fetch(url, {cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000)});
-                last = {kind: "http", status: response.status, json: response.headers.get("content-type")?.includes("application/json") === true};
-                const identity = await response.json();
-                last = {...last, serviceMatches: identity.service === "chrondle-backend", environmentMatches: identity.environment === "preview", revision: /^[a-f0-9]{40}$/.test(identity.revision) ? identity.revision : "invalid"};
-                if (response.ok && identity.service === "chrondle-backend" && identity.environment === "preview" && identity.revision === process.env.REVISION) {
-                  console.log(JSON.stringify(identity));
-                  process.exit(0);
-                }
-              } catch (error) {
-                last = {...last, failure: ["ENOTFOUND", "ECONNREFUSED", "ETIMEDOUT", "ECONNRESET"].includes(error.code) ? error.code : "fetch-or-json-error"};
-              }
-              await Bun.sleep(2000);
-            }
-            throw new Error("Isolated preview did not serve this revision: " + JSON.stringify(last));
+            const { verifyWorkerReadiness } = await import("./scripts/verify-worker-readiness.mjs");
+            const identity = await verifyWorkerReadiness({
+              origin: "https://chrondle-backend-preview.mistystep.io",
+              revision: process.env.REVISION,
+              healthPath: "/_backend/version",
+              isHealthy: identity => identity.service === "chrondle-backend" && identity.environment === "preview",
+              // Worker and Durable Object rollout is eventually consistent.
+              // Only a healthy old revision may wait; errors still fail at once.
+              timeoutMs: 300000
+            });
+            console.log(JSON.stringify(identity));
           '
 
   frontend:
