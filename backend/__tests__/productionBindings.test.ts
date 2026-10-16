@@ -6,10 +6,10 @@ const script = fileURLToPath(new URL("../scripts/production-bindings.mjs", impor
 const operator = JSON.stringify({
   issuer: "https://synthetic.cloudflareaccess.com",
   audience: "synthetic",
-  identities: [],
+  identities: [{ kind: "machine", clientId: "synthetic-production-machine" }],
 });
 const settings = {
-  STRIPE_SYNC_SECRET: "synthetic-sync",
+  STRIPE_SYNC_SECRET: "synthetic-production-sync-secret",
   OPENROUTER_API_KEY: "synthetic-provider",
   OPENAI_GPT5_ENABLED: "true",
 };
@@ -43,13 +43,57 @@ describe("runtime-only production backend bindings", () => {
     expect(result.stderr).toBe("");
   });
 
-  it.each([undefined, "", "not-json", "null", "[]"])(
-    "rejects invalid operator %s without cross-environment fallback",
-    (value) => {
+  it.each([
+    undefined,
+    "",
+    "not-json",
+    "null",
+    "[]",
+    "{}",
+    JSON.stringify({
+      issuer: "http://synthetic.cloudflareaccess.com",
+      audience: "synthetic",
+      identities: [{ kind: "machine", clientId: "synthetic" }],
+    }),
+    JSON.stringify({
+      issuer: "https://synthetic.invalid",
+      audience: "synthetic",
+      identities: [{ kind: "machine", clientId: "synthetic" }],
+    }),
+    JSON.stringify({
+      issuer: "https://synthetic.cloudflareaccess.com",
+      audience: "",
+      identities: [{ kind: "machine", clientId: "synthetic" }],
+    }),
+    JSON.stringify({
+      issuer: "https://synthetic.cloudflareaccess.com",
+      audience: "synthetic",
+      identities: [],
+    }),
+    JSON.stringify({
+      issuer: "https://synthetic.cloudflareaccess.com",
+      audience: "synthetic",
+      identities: [{ kind: "human", email: "not-an-email" }],
+    }),
+  ])("rejects invalid operator %s without cross-environment fallback", (value) => {
+    const result = run({
+      BACKEND_PRODUCTION_OPERATOR_ACCESS: value,
+      BACKEND_PREVIEW_OPERATOR_ACCESS: operator,
+      BACKEND_RESTORE_OPERATOR_ACCESS: operator,
+    });
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe("Invalid production backend bindings; no payload emitted\n");
+  });
+
+  it.each([{}, { STRIPE_SYNC_SECRET: "" }, { STRIPE_SYNC_SECRET: "short" }])(
+    "refuses incomplete existing backend requirements without disclosing values",
+    (incomplete) => {
       const result = run({
-        BACKEND_PRODUCTION_OPERATOR_ACCESS: value,
-        BACKEND_PREVIEW_OPERATOR_ACCESS: operator,
-        BACKEND_RESTORE_OPERATOR_ACCESS: operator,
+        BACKEND_PRODUCTION_ENV: JSON.stringify({
+          OPENROUTER_API_KEY: "private-canary",
+          ...incomplete,
+        }),
       });
       expect(result.status).not.toBe(0);
       expect(result.stdout).toBe("");

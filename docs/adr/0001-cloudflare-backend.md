@@ -211,7 +211,10 @@ migration, not new provider keys or calls; no test key replaces a live one.
 without printing it during preflight, then emits it only to Wrangler's secret
 bulk stdin after compilation. It refuses malformed maps, non-string values and
 overrides of runtime/control/auth bindings, including synthetic auth or a bearer
-fallback. Installation and compilation receive no provider/operator credentials.
+fallback. Provisioning and hosted authorization share the exact operator schema;
+the existing central backend environment requirements validate mandatory sync
+settings. Neither contract is copied into the provisioning script. Installation
+and compilation receive no provider/operator credentials.
 CI reads back the exact public backend revision and exercises read-only clients.
 Outside CI, prove the named operator allow, anonymous and foreign-machine
 denials, distinct resources and paused state before any import. Neither a green
