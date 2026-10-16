@@ -1,4 +1,15 @@
 import { Doc } from "../_generated/dataModel";
+import type { QueryCtx } from "../_generated/server";
+
+/** Resolve account ownership only from the verified identity. */
+export async function getAuthenticatedUser(ctx: QueryCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return null;
+  return ctx.db
+    .query("users")
+    .withIndex("by_clerk", (q) => q.eq("clerkId", identity.subject))
+    .first();
+}
 
 /**
  * User Helpers - Shared logic for subscription/entitlement checks

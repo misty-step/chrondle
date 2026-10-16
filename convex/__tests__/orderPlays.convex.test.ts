@@ -18,7 +18,7 @@ const orderPlaysQueries = (anyApi as any)["orderPlays/queries"];
 describe("orderPlays/queries", () => {
   describe("getOrderPlay", () => {
     it("returns order play record for user and puzzle", async () => {
-      const t = convexTest(schema, modules);
+      const t = convexTest(schema, modules).withIdentity({ subject: "clerk_order_test_1" });
 
       let userId: Id<"users">;
       let puzzleId: Id<"orderPuzzles">;
@@ -90,7 +90,7 @@ describe("orderPlays/queries", () => {
     });
 
     it("returns null when order play record does not exist", async () => {
-      const t = convexTest(schema, modules);
+      const t = convexTest(schema, modules).withIdentity({ subject: "clerk_order_test_2" });
 
       let userId: Id<"users">;
       let puzzleId: Id<"orderPuzzles">;
@@ -133,7 +133,7 @@ describe("orderPlays/queries", () => {
 
   describe("getUserCompletedOrderPlays", () => {
     it("returns all completed order plays for user", async () => {
-      const t = convexTest(schema, modules);
+      const t = convexTest(schema, modules).withIdentity({ subject: "clerk_order_test_3" });
 
       let userId: Id<"users">;
 
@@ -266,7 +266,7 @@ describe("orderPlays/queries", () => {
     });
 
     it("returns empty array when user has no order plays", async () => {
-      const t = convexTest(schema, modules);
+      const t = convexTest(schema, modules).withIdentity({ subject: "clerk_order_test_4" });
 
       let userId: Id<"users">;
 

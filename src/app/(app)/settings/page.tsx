@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { SubscriptionCard } from "@/components/settings/SubscriptionCard";
 import { api, requireConvexClient } from "@/lib/convexServer";
+import { authenticateConvexClient } from "@/lib/convexAuth";
 import { logger } from "@/lib/logger";
 
 export default async function SettingsPage() {
@@ -21,7 +22,8 @@ export default async function SettingsPage() {
 
   try {
     const convex = requireConvexClient();
-    const user = await convex.query(api.users.getUserByClerkId, { clerkId: userId });
+    await authenticateConvexClient(convex);
+    const user = await convex.query(api.users.getCurrentUser, {});
     hasStripeCustomer = !!user?.stripeCustomerId;
     initialPlan = user?.subscriptionPlan ?? null;
     initialStatus = user?.subscriptionStatus ?? null;

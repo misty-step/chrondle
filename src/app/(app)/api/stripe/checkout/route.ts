@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { currentUser } from "@clerk/nextjs/server";
 import { requireConvexClient, api } from "@/lib/convexServer";
+import { authenticateConvexClient } from "@/lib/convexAuth";
 import { getStripe, getPriceId, PricePlan, getAppOrigin } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
 
@@ -47,9 +48,8 @@ export async function POST(req: NextRequest) {
     let trialEnd: number | undefined;
     try {
       const convex = requireConvexClient();
-      const dbUser = await convex.query(api.users.queries.getUserByClerkId, {
-        clerkId: user.id,
-      });
+      await authenticateConvexClient(convex);
+      const dbUser = await convex.query(api.users.getCurrentUser, {});
       if (dbUser?.trialEndsAt && dbUser.trialEndsAt > Date.now()) {
         // Convert ms to seconds for Stripe (Stripe uses Unix timestamps in seconds)
         trialEnd = Math.floor(dbUser.trialEndsAt / 1000);

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query } from "../_generated/server";
 import { normalizePlayData } from "../lib/migrationHelpers";
 import { isCompletedPlay } from "../lib/playCompletion";
+import { getAuthenticatedUser } from "../users/helpers";
 
 /**
  * Play Progress Queries
@@ -32,6 +33,8 @@ export const getUserPlay = query({
     userId: v.id("users"),
   },
   handler: async (ctx, { puzzleId, userId }) => {
+    const user = await getAuthenticatedUser(ctx);
+    if (!user || user._id !== userId) return null;
     try {
       // Validate input parameters
       if (!puzzleId || !userId) {
@@ -57,7 +60,7 @@ export const getUserPlay = query({
       // Perform the query with defensive programming
       const play = await ctx.db
         .query("plays")
-        .withIndex("by_user_puzzle", (q) => q.eq("userId", userId).eq("puzzleId", puzzleId))
+        .withIndex("by_user_puzzle", (q) => q.eq("userId", user._id).eq("puzzleId", puzzleId))
         .first();
 
       const normalizedPlay = normalizePlayData(play);
@@ -108,9 +111,11 @@ export const getUserCompletedPuzzles = query({
     userId: v.id("users"),
   },
   handler: async (ctx, { userId }) => {
+    const user = await getAuthenticatedUser(ctx);
+    if (!user || user._id !== userId) return [];
     const plays = await ctx.db
       .query("plays")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
     const completedPlays = plays.filter(isCompletedPlay);
 
