@@ -33,8 +33,12 @@ export async function requireAdmin(ctx: AuthCtx) {
     throw new ConvexError("Unauthorized");
   }
 
-  // Clerk uses snake_case (public_metadata), but check all paths for robustness
+  // Convex custom JWT providers flatten nested claims to dotted field names.
+  // Retain the nested Clerk/legacy shapes used by the other supported runtimes.
   const role =
+    identity["public_metadata.role"] ??
+    identity["publicMetadata.role"] ??
+    identity["metadata.role"] ??
     (identity.public_metadata?.role as string | undefined) ??
     (identity.publicMetadata?.role as string | undefined) ??
     (identity.metadata?.role as string | undefined);

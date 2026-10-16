@@ -21,6 +21,19 @@
   account/history reads. Ordinary callers cannot invoke internal operations or
   bypass the webhook's existing verification boundary.
 
-This first contract covers the account-privacy repair only. The existing game's
-complete observable behavior still needs specification; absence here does not
-establish new gameplay, billing or persistence intent.
+## Event operations
+
+- As an operator, I can update event metadata and manually run year-event
+  generation or metadata backfill using my authenticated admin identity.
+- Anonymous callers and signed-in players without the admin role cannot perform
+  these operations. Rejection happens before reading backfill work, changing
+  metadata, or starting a paid generation request. Caller-supplied user IDs or
+  role arguments do not grant access.
+- Operational scripts authenticate with the same operator identity as the admin
+  interface. Missing credentials fail before doing work. Metadata backfill uses
+  the server's shared backfill pipeline, not a separate client-side paid path.
+- Scheduled internal generation and backfill continue without a player identity.
+
+This initial contract covers account privacy and event operations. The existing
+game's complete observable behavior still needs specification; absence here does
+not establish new gameplay, billing or persistence intent.

@@ -68,6 +68,23 @@ server-clock day — see [DST Handling](docs/development/DST_HANDLING_RESEARCH.m
 for the full rationale and the timezone edge cases it resolves. The
 single day-resolution module is [`src/lib/time/dailyDate.ts`](src/lib/time/dailyDate.ts).
 
+### Operator event scripts
+
+`scripts/test-event-generation.ts`, `scripts/test-event-generation-bulk.ts`,
+`scripts/load-test-batch.ts`, and `scripts/backfill-event-metadata.ts` require
+`NEXT_PUBLIC_CONVEX_URL` and `CONVEX_OPERATOR_TOKEN` in the process environment
+or `.env.local` (existing process values win). The token is a short-lived Clerk
+JWT from the `convex` template for an identity with server-managed admin role,
+the same boundary used by the admin interface. Ordinary player tokens are
+rejected by the server. Never commit or print the token.
+
+For example, with those variables already exported, run
+`bunx tsx scripts/backfill-event-metadata.ts`. Backfill uses the authenticated
+server pipeline, stops on errors, and handles at most 1,000 events per run.
+Generation and backfill may incur provider charges; only run them against an
+explicitly approved deployment. The generation scripts' existing `--dry-run`
+option does not prevent provider charges or server-side persistence.
+
 ## User Accounts & Anonymous Play
 
 Chrondle supports both anonymous and authenticated gameplay:

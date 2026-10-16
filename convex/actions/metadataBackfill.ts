@@ -7,6 +7,7 @@ import { action, internalAction, type ActionCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import { createGemini3Client, type Gemini3Client } from "../lib/gemini3Client";
 import { logStageError, logStageSuccess } from "../lib/logging";
+import { requireAdmin } from "../lib/auth";
 
 /**
  * Metadata Backfill Action
@@ -281,7 +282,7 @@ export const backfillEventMetadata = internalAction({
 });
 
 /**
- * Public action for manual backfill trigger
+ * Operator action for authenticated manual backfill
  * Useful for admin scripts and testing
  */
 export const triggerMetadataBackfill = action({
@@ -289,6 +290,7 @@ export const triggerMetadataBackfill = action({
     batchSize: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<BackfillResult> => {
+    await requireAdmin(ctx);
     // Check how many events need backfill
     const eventsMissing = (await ctx.runQuery(internalApi.events.getEventsMissingMetadata, {
       limit: 1,
