@@ -3,14 +3,13 @@ import rust from "./build/worker/shim.mjs";
 import next from "../.open-next/worker.js";
 export * from "../.open-next/worker.js";
 
-const worker = {
-  ...next,
-  async fetch(request, env, ctx) {
-    const response = await rust.fetch(request, env, ctx);
+class ChrondleWorker extends rust {
+  async fetch(request) {
+    const response = await super.fetch(request);
     return response.headers.get("X-Chrondle-Runtime") === "rust"
       ? response
-      : next.fetch(request, env, ctx);
-  },
-};
+      : next.fetch(request, this.env, this.ctx);
+  }
+}
 
-export default worker;
+export default ChrondleWorker;
