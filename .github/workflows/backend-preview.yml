@@ -65,8 +65,11 @@ jobs:
         run: |
           set -euo pipefail
           bun --eval '
-            if (!process.env.OPERATOR_ACCESS) throw new Error("Isolated operator configuration is missing");
-            const bindings = {BACKEND_OPERATOR_ACCESS: process.env.OPERATOR_ACCESS};
+            const operator = process.env.BACKEND_TARGET === "restore"
+              ? process.env.RESTORE_OPERATOR_ACCESS
+              : process.env.PREVIEW_OPERATOR_ACCESS;
+            if (!operator) throw new Error("Isolated operator configuration is missing");
+            const bindings = {BACKEND_OPERATOR_ACCESS: operator};
             if (process.env.BACKEND_TARGET === "preview") {
               for (const [name, value] of Object.entries({EXTRA_AUTH_PROVIDERS: process.env.GAME_PROVIDERS, CLERK_SYNC_SECRET: process.env.CLERK_SYNC_SECRET, STRIPE_SYNC_SECRET: process.env.STRIPE_SYNC_SECRET})) {
                 if (!value) throw new Error("Preview identity or webhook configuration is missing");
@@ -77,7 +80,8 @@ jobs:
           ' | bunx wrangler secret bulk --env "$BACKEND_TARGET"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          OPERATOR_ACCESS: ${{ inputs.private_restore == true && secrets.BACKEND_RESTORE_OPERATOR_ACCESS || secrets.BACKEND_PREVIEW_OPERATOR_ACCESS }}
+          PREVIEW_OPERATOR_ACCESS: ${{ secrets.BACKEND_PREVIEW_OPERATOR_ACCESS }}
+          RESTORE_OPERATOR_ACCESS: ${{ secrets.BACKEND_RESTORE_OPERATOR_ACCESS }}
           GAME_PROVIDERS: ${{ secrets.BACKEND_PREVIEW_AUTH_PROVIDERS }}
           CLERK_SYNC_SECRET: ${{ secrets.CLERK_SYNC_SECRET }}
           STRIPE_SYNC_SECRET: ${{ secrets.STRIPE_SYNC_SECRET }}
