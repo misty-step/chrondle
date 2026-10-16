@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { requireAdmin } from "./lib/auth";
 
 // Import events into the pool (one event per row)
 export const importEvent = internalMutation({
@@ -194,7 +195,7 @@ export const updateEventMetadata = internalMutation({
   },
 });
 
-// Public mutation wrapper for external scripts
+// Operator mutation for authenticated external scripts
 export const updateEventMetadataPublic = mutation({
   args: {
     eventId: v.id("events"),
@@ -207,6 +208,7 @@ export const updateEventMetadataPublic = mutation({
     }),
   },
   handler: async (ctx, { eventId, metadata }) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(eventId, {
       metadata,
       updatedAt: Date.now(),

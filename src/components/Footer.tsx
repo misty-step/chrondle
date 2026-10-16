@@ -24,11 +24,11 @@ export function Footer() {
               Chrondle
             </Link>
             <Link
-              href="/releases"
-              className={cn(footerLinkClasses, "font-mono text-xs")}
-              title="View releases"
+              href="/changelog"
+              className={cn(footerLinkClasses, "text-sm tabular-nums")}
+              title="View changelog"
             >
-              v{process.env.NEXT_PUBLIC_APP_VERSION}
+              Changelog · v{process.env.NEXT_PUBLIC_APP_VERSION}
             </Link>
             <span className="font-body text-xs">© {new Date().getFullYear()}</span>
           </div>

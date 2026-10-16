@@ -68,6 +68,23 @@ server-clock day — see [DST Handling](docs/development/DST_HANDLING_RESEARCH.m
 for the full rationale and the timezone edge cases it resolves. The
 single day-resolution module is [`src/lib/time/dailyDate.ts`](src/lib/time/dailyDate.ts).
 
+### Operator event scripts
+
+`scripts/test-event-generation.ts`, `scripts/test-event-generation-bulk.ts`,
+`scripts/load-test-batch.ts`, and `scripts/backfill-event-metadata.ts` require
+`NEXT_PUBLIC_CONVEX_URL` and `CONVEX_OPERATOR_TOKEN` in the process environment
+or `.env.local` (existing process values win). The token is a short-lived Clerk
+JWT from the `convex` template for an identity with server-managed admin role,
+the same boundary used by the admin interface. Ordinary player tokens are
+rejected by the server. Never commit or print the token.
+
+For example, with those variables already exported, run
+`bunx tsx scripts/backfill-event-metadata.ts`. Backfill uses the authenticated
+server pipeline, stops on errors, and handles at most 1,000 events per run.
+Generation and backfill may incur provider charges; only run them against an
+explicitly approved deployment. The generation scripts' existing `--dry-run`
+option does not prevent provider charges or server-side persistence.
+
 ## User Accounts & Anonymous Play
 
 Chrondle supports both anonymous and authenticated gameplay:
@@ -155,7 +172,7 @@ The repo-local wrapper lives at [`scripts/dagger-local.sh`](./scripts/dagger-loc
 
 Before deploying Chrondle, you'll need accounts for:
 
-- **[DigitalOcean](https://www.digitalocean.com/)** - For hosting the Next.js application
+- **[Cloudflare](https://www.cloudflare.com/)** - For the Next.js Worker and authoritative DNS
 - **[Convex](https://convex.dev)** - For the backend database and real-time sync
 - **[Clerk](https://clerk.com)** - For authentication (optional but recommended)
 
@@ -174,9 +191,9 @@ Chrondle requires several environment variables for production deployment. Copy 
 
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - From Clerk Dashboard → API Keys
 - `CLERK_SECRET_KEY` - From Clerk Dashboard → API Keys (keep secure!)
-- `CLERK_WEBHOOK_SECRET` - Create webhook at Clerk Dashboard → Webhooks
-  - Endpoint URL: `https://your-domain.com/api/webhooks/clerk`
-  - Subscribe to events: `user.created`, `user.updated`
+
+Accounts are provisioned from verified Clerk identities on authenticated requests.
+No Clerk webhook or sync secret is required; see [authentication](docs/AUTHENTICATION.md).
 
 #### Optional Variables
 
@@ -187,33 +204,26 @@ Chrondle requires several environment variables for production deployment. Copy 
 
 Merge a reviewed, green commit to `master`. Every merge ships automatically:
 the [production workflow](.github/workflows/deploy.yml) waits for exact-revision
-CI and secret scanning, deploys the backward-compatible Convex backend, and
-observes the native host build, install, activation, and smoke check.
+CI and secret scanning, deploys the backward-compatible Convex backend,
+builds OpenNext with public settings only, and deploys the source-bound
+Cloudflare Worker and its apex/www/alias custom domains.
 
-The host pulls public GitHub source and deployment metadata through
-`chrondle-cd.timer`; GitHub Actions has no host SSH key or root credential.
-Production secrets stay in root-owned mode-`0600`
-`/etc/public-apps/chrondle.env`. The compiler receives only public configuration.
-The existing unprivileged `chrondle.service`, default-deny firewall, and
-Caddy-only ingress remain unchanged.
+Production server secrets remain Worker secrets; the compiler never receives
+server or deployment keys. `/api/health` reads back the exact Git SHA and
+queries the real Convex database. Every production domain must pass the
+revision and live-backend smoke, and the canonical Stripe webhook must not
+redirect. A failed rollout restores the captured Worker version without
+rolling back Convex or accepted writes. Failed runs reach Kaylee's existing
+agent intake.
 
-`/api/health` reads back the running Git SHA. `/deployment.json` identifies
-the exact Actions run and becomes healthy only after the host smoke passes.
-A failed host smoke automatically restores the previous web release without
-rolling back Convex or accepted writes. Failed deployment runs reach Kaylee's
-agent triage intake, not a human inbox.
-
-See the [deployment guide](docs/deployment-guide.md#2-production-web-deployment-native-host)
-for bootstrap, compatibility, failure diagnosis, and recovery. No ordinary
-release requires a separate build, install, activation, or approval step.
+See the [deployment guide](docs/deployment-guide.md#2-production-web-deployment-cloudflare)
+for the first registrar cutover, exact DNS/Worker rollback, retained native
+recovery, compatibility and verification. Convex/Clerk/Stripe stay external;
+the separate Rust rebuild is not part of the DigitalOcean exit.
 
 ### Post-Deployment
 
-1. **Configure Clerk Webhook (if using authentication):**
-   - In Clerk Dashboard, update the webhook endpoint to your production URL:
-     `https://chrondle.app/api/webhooks/clerk`
-
-2. **Verify Deployment:**
+1. **Verify Deployment:**
    - Visit your deployed URL
    - Check that daily puzzles load correctly
    - Test user authentication (if configured)
@@ -222,11 +232,11 @@ release requires a separate build, install, activation, or approval step.
 ### Deployment Checklist
 
 - [ ] Convex project created and deployed
-- [ ] All environment variables installed in `/etc/public-apps/chrondle.env`
+- [ ] Public build settings, Worker runtime secrets and Production deployment token configured
 - [ ] Clerk authentication configured (optional)
-- [ ] Webhook endpoints use the production URL
-- [ ] Standalone build succeeds without errors
-- [ ] `chrondle.service` and `/api/health` are healthy
+- [ ] Stripe webhook uses the unchanged canonical production URL
+- [ ] `bun run build:cf` succeeds without server/deployment secrets
+- [ ] Apex/www/alias `/api/health` report the exact Worker release SHA
 - [ ] Daily puzzle loads correctly
 - [ ] Archive page displays puzzles
 - [ ] User authentication works (if enabled)
@@ -257,8 +267,8 @@ bun run verify:convex
 **Authentication not working:**
 
 - Verify Clerk keys are correct (use `bun run verify:auth:prod`)
-- Check webhook configuration
-- Ensure `CLERK_WEBHOOK_SECRET` matches the webhook settings
+- Verify the signed-in player's Clerk JWT reaches the configured backend
+- Check first-time account provisioning and returning-account persistence
 
 **Build failures:**
 

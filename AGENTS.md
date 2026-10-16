@@ -170,8 +170,8 @@ bun run dev      # Terminal 2
 
 ## Deployed Surfaces
 
-Verifying the live app (native public host + Convex prod) is a separate concern
-from the code gate above. Three discoverable scripts cover it:
+Verifying the live app (Cloudflare web Worker + hosted Convex prod) is a
+separate concern from the code gate above. Three discoverable scripts cover it:
 
 - `bun run deployment:check` (`scripts/check-deployment-ready.mjs`) — **before
   deploying.** Pre-deploy readiness: generated Convex files present, clean git
@@ -186,10 +186,10 @@ from the code gate above. Three discoverable scripts cover it:
   debugging, independent of deploy timing.
 
 Normal releases are automatic on reviewed, green `master` merges. Read
-`docs/deployment-guide.md` for the backend-first compatibility contract, native
-host pull/controller, revision-bound smoke receipts, agent failure route, and
-rollback. `node scripts/verify-native-release.mjs` checks the shipped host
-receipt and runtime SHA. Host bootstrap is not an ordinary release step.
+`docs/deployment-guide.md` for the backend-first compatibility contract,
+source-bound Worker and apex/www domains, exact-revision smoke, agent failure
+route, and DNS/Worker rollback. `node scripts/verify-native-release.mjs` is
+retained only for the native rollback runtime, not Cloudflare release proof.
 
 ## Coding Style & Naming Conventions
 
@@ -209,10 +209,10 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 
 ### 3. Vigilance in the Cloud
 
-The isolated public application host and Convex ship together through
+The Cloudflare web Worker and hosted Convex ship together through
 `.github/workflows/deploy.yml` after exact-revision CI and secret scanning.
 Keep Convex changes compatible with the prior web release and a web rollback;
-production secrets never reach the unprivileged native compiler.
+server/deployment secrets never reach the web compiler.
 
 ## TODO-Debt Convention
 

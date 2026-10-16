@@ -7,19 +7,13 @@ Chrondle uses **Clerk** for authentication with **Convex** as the backend databa
 - Email magic links
 - Google OAuth
 - User session management
-- Automatic user sync to Convex database via webhooks
+- Account provisioning from the verified Clerk identity on authenticated requests
 
 ## Production Authentication Status
 
-✅ **Production authentication is fully configured and verified**
-
-All production keys and settings have been validated:
-
-- Clerk production keys (pk*live*, sk*live*)
-- Custom domain: clerk.chrondle.app
-- Google OAuth credentials
-- Webhook secret for user sync
-- Convex production deployment
+Production uses Clerk at `clerk.chrondle.app`. Configuration validation is not
+proof of a successful sign-in. Verify first-time and returning-user journeys
+against the exact release before claiming live authentication works.
 
 ## Environment Configuration
 
@@ -29,7 +23,6 @@ All production keys and settings have been validated:
 # Clerk Authentication (Production)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
 CLERK_SECRET_KEY=sk_live_...
-CLERK_WEBHOOK_SECRET=whsec_...
 
 # Google OAuth (Optional but recommended)
 GOOGLE_OAUTH_CLIENT_ID=...apps.googleusercontent.com
@@ -49,10 +42,10 @@ Run the verification script to check your authentication configuration:
 
 ```bash
 # Verify current environment (.env.local)
-pnpm verify:auth
+bun run verify:auth
 
 # Verify production environment (.env.production)
-pnpm verify:auth:prod
+bun run verify:auth:prod
 ```
 
 The script checks:
@@ -77,8 +70,8 @@ The script checks:
 
 - [ ] Deploy the reviewed standalone release to the production host
 - [ ] Test sign-in on production URL
-- [ ] Verify webhook events in Clerk Dashboard → Webhooks
-- [ ] Check user creation in Convex Dashboard → Data
+- [ ] Verify first-time authenticated requests provision an account
+- [ ] Verify returning sign-in preserves that account, progress and entitlement
 
 #### 3. Mobile Testing
 
@@ -92,9 +85,11 @@ The script checks:
 
 1. User enters email or clicks Google OAuth
 2. Clerk handles authentication
-3. On successful auth, webhook fires to `/api/webhooks/clerk`
-4. Webhook handler creates/updates user in Convex database
-5. User session is established
+3. The browser obtains a Clerk JWT for the backend; the backend verifies its
+   issuer, audience, signature and expiry using Clerk discovery and JWKS.
+4. `users:getOrCreateCurrentUser` provisions the account from that verified
+   identity, or returns the existing account unchanged.
+5. Subsequent account and progress requests use the same authenticated owner.
 
 ### Session Management
 
@@ -103,12 +98,11 @@ The script checks:
 - Public routes accessible without authentication
 - User data available via `useUser()` hook
 
-### Webhook Integration
+### Account provisioning
 
-The webhook endpoint at `/api/webhooks/clerk` handles:
-
-- `user.created` - Creates new user in Convex
-- `user.updated` - Updates existing user data
+There is no Clerk webhook endpoint or Clerk sync-secret requirement. Anonymous
+requests cannot provision an account. Existing accounts retain accepted state
+when their verified identity returns; see [SPEC.md](../SPEC.md).
 
 ## Troubleshooting
 
@@ -119,17 +113,11 @@ The webhook endpoint at `/api/webhooks/clerk` handles:
 - Ensure you're using production keys (pk*live*, sk*live*)
 - Check that keys match your Clerk application
 
-#### 2. "Webhook secret not configured"
-
-- Create webhook in Clerk Dashboard
-- Add endpoint: `https://your-domain.com/api/webhooks/clerk`
-- Copy the webhook secret to CLERK_WEBHOOK_SECRET
-
 #### 3. "Users not syncing to Convex"
 
-- Verify webhook endpoint is accessible
-- Check webhook logs in Clerk Dashboard
-- Ensure Convex deployment is correct (fleet-goldfish-183)
+- Verify the browser sends its Clerk JWT to the configured backend
+- Check JWT verification and `users:getOrCreateCurrentUser` failures
+- Ensure browser and server use the same serving backend
 
 #### 4. "Google OAuth not working"
 
@@ -142,11 +130,6 @@ The webhook endpoint at `/api/webhooks/clerk` handles:
 ```bash
 # Check current configuration
 node scripts/verify-auth-production.mjs
-
-# Test webhook endpoint (requires curl)
-curl -X POST https://your-domain.com/api/webhooks/clerk \
-  -H "Content-Type: application/json" \
-  -d '{"type":"user.created"}'
 
 # Check Convex connection
 npx convex run users:count
@@ -169,7 +152,7 @@ npx convex run users:count
 4. **Enable security features**
    - Rate limiting in Clerk Dashboard
    - Domain allowlist for production
-   - Webhook signature verification
+   - Verified JWT issuer, audience, signature and expiry
 
 5. **Monitor authentication events**
    - Set up alerts for unusual activity
@@ -178,15 +161,9 @@ npx convex run users:count
 
 ## Production Deployment Guide
 
-### Native Web Host Deployment
-
-1. Add all Clerk keys, Convex configuration, and OAuth credentials to
-   root-owned mode-`0600` `/etc/public-apps/chrondle.env`.
-2. Merge the reviewed, green change to `master`; CD deploys compatible Convex
-   first, then builds, installs, activates, and verifies the native web release.
-   The build identity receives only public configuration, never Clerk secrets.
-3. Keep the Clerk application and webhook endpoint bound to
-   `https://chrondle.app`.
+Use the existing [Cloudflare deployment path](deployment-guide.md#2-production-web-deployment-cloudflare).
+Server-side Clerk credentials are runtime secrets, never compiler inputs.
+Backend migration preserves the Clerk application and frontend domains.
 
 ### Post-Deployment Verification
 
@@ -202,10 +179,7 @@ npx convex run users:count
    - Test Google OAuth
    - Verify user appears in Convex
 
-3. Monitor webhook events:
-   - Check Clerk Dashboard → Webhooks
-   - Verify successful webhook deliveries
-   - Monitor for any failures
+3. Verify authorization rejection, refresh/reconnect recovery and persistence.
 
 ## Support
 

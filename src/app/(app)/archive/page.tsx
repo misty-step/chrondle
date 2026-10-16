@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { api, getConvexClient } from "@/lib/convexServer";
+import { authenticateConvexClient } from "@/lib/convexAuth";
 import { currentUser } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { AppHeader } from "@/components/AppHeader";
@@ -125,11 +126,10 @@ async function ArchivePageContent({ searchParams }: ArchivePageProps): Promise<R
   if (clerkUser) {
     // Get the Convex user by Clerk ID with defensive error handling
     try {
-      convexUser = await client.query(api.users.getUserByClerkId, {
-        clerkId: clerkUser.id,
-      });
+      await authenticateConvexClient(client);
+      convexUser = await client.query(api.users.getCurrentUser, {});
     } catch (error) {
-      logger.error("[Archive] getUserByClerkId failed:", error);
+      logger.error("[Archive] Account lookup failed:", error);
       // Continue with null user - don't cascade failure
       convexUser = null;
     }

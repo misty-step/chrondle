@@ -26,6 +26,10 @@ describe("PostHog ingest proxy route", () => {
         cookie: "__session=abc",
         "content-type": "application/json",
         "x-client": "chrondle",
+        "cf-connecting-ip": "203.0.113.20",
+        "x-forwarded-for": "203.0.113.20",
+        referer: "https://www.chrondle.app/?private=canary",
+        "user-agent": "private-device-canary",
       },
       body: JSON.stringify({ event: "test" }),
     });
@@ -39,7 +43,22 @@ describe("PostHog ingest proxy route", () => {
     expect(String(url)).toBe("https://us.i.posthog.com/batch?ip=1");
     expect(headers.get("authorization")).toBeNull();
     expect(headers.get("cookie")).toBeNull();
-    expect(headers.get("x-client")).toBe("chrondle");
+    expect([...headers.keys()]).toEqual(["content-type"]);
+  });
+
+  it("preserves compressed SDK event bytes rather than decoding as UTF-8", async () => {
+    mockFetch.mockResolvedValue(new Response("ok", { status: 200 }));
+    const bytes = new Uint8Array([0x1f, 0x8b, 0x08, 0x00, 0xff, 0x80]);
+    await POST(
+      new NextRequest("https://www.chrondle.app/ingest/e?compression=gzip-js", {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: bytes,
+      }),
+    );
+    const forwarded = mockFetch.mock.calls[0][1]?.body;
+    expect(forwarded).toBeInstanceOf(ArrayBuffer);
+    expect(new Uint8Array(forwarded as ArrayBuffer)).toEqual(bytes);
   });
 
   it("routes static assets to the PostHog assets host", async () => {

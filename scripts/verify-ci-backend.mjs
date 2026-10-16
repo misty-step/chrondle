@@ -27,7 +27,8 @@ export function verifyCiBuild(buildDir) {
         // SDK error messages contain example deployment URLs, not client targets.
         // Reject our production host in any protocol while requiring the DEV binding.
         assert.ok(
-          !source.includes("fleet-goldfish-183.convex."),
+          !source.includes("fleet-goldfish-183.convex.") &&
+            !source.includes("chrondle-backend.mistystep.io"),
           `Production Convex URL in CI build: ${path}`,
         );
         if (source.includes(CI_CONVEX_URL)) foundBackend = true;

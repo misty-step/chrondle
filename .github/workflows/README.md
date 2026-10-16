@@ -5,7 +5,7 @@
 | Workflow                   | Trigger                                    | Purpose                                                                                                          |
 | -------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
 | `ci.yml`                   | PR & push to main/master                   | Quality checks, tests, build validation                                                                          |
-| `deploy.yml`               | Every push to master; optional drill/retry | Backend-first production deployment and exact native-host readback                                               |
+| `deploy.yml`               | Every push to master; optional drill/retry | Backend-first Cloudflare deployment and exact Worker/domain readback                                             |
 | `size-limit.yml`           | PR                                         | Bundle size checks                                                                                               |
 | `claude-code-review.yml`   | PR                                         | Automated code review                                                                                            |
 | `webhook-health-check.yml` | Schedule (every 6h) & manual               | Fails if the production Stripe webhook route redirects (see INCIDENT-2026-01-17T.md)                             |
@@ -15,11 +15,17 @@
 
 ### Core Secrets (Required - Deploy will fail without these)
 
-| Secret                              | Description           | How to Get                                                |
-| ----------------------------------- | --------------------- | --------------------------------------------------------- |
-| `NEXT_PUBLIC_CONVEX_URL`            | Convex project URL    | Convex Dashboard                                          |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk auth public key | [Clerk Dashboard](https://dashboard.clerk.com) → API Keys |
-| `CONVEX_DEPLOY_KEY`                 | Convex deployment key | Convex Dashboard → Settings → Deploy Keys                 |
+| Secret                              | Description                       | How to Get                                                |
+| ----------------------------------- | --------------------------------- | --------------------------------------------------------- |
+| `NEXT_PUBLIC_CONVEX_URL`            | Convex project URL                | Convex Dashboard                                          |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk auth public key             | [Clerk Dashboard](https://dashboard.clerk.com) → API Keys |
+| `CONVEX_DEPLOY_KEY`                 | Convex deployment key             | Convex Dashboard → Settings → Deploy Keys                 |
+| `NEXT_PUBLIC_POSTHOG_KEY`           | Existing public analytics setting | Existing production secret broker                         |
+
+The `Production` environment also requires `CLOUDFLARE_API_TOKEN` from the
+existing native/pass broker. It is used only for Worker capture/deploy/rollback,
+never passed to the web compiler. Existing Clerk/Stripe/sync runtime values
+remain secrets on the production Worker.
 
 ### Other Secrets (Used by specific workflows)
 
@@ -89,15 +95,15 @@ Steps:
 2. Install with pinned Bun and validate existing production credentials/configuration
 3. Verify live Stripe prices
 4. Deploy backward-compatible Convex and verify live puzzle/event health
-5. Observe the native host's unprivileged build, immutable install, and activation
-6. Require healthy host smoke receipt and exact runtime SHA, run ID, and attempt
-7. Verify the Stripe webhook route doesn't redirect (`verify:webhook`)
+5. Build exact-revision OpenNext using only public settings; capture the active Worker version
+6. Deploy the Cloudflare Worker and source-owned apex/www/alias custom domains
+7. Check the running SHA, then reuse `doctor:hosting` and the canonical webhook check
+8. Restore the previous Worker version if activation or checks fail
 
-The host polls public metadata/source; Actions holds no host SSH or root key.
-A host failure or stopped timer fails the observer within 20 minutes and the
-existing signed GitHub failure hook alerts Kaylee's agent intake.
-The host bootstrap/recovery procedure lives in
-[the deployment guide](../../docs/deployment-guide.md#2-production-web-deployment-native-host).
+Actions uses the Production environment's Cloudflare token only for deployment
+and rollback, not the compiler. Existing signed GitHub failure hooks still alert
+Kaylee's agent intake. First-cutover readiness and DNS/Worker recovery live in
+[the deployment guide](../../docs/deployment-guide.md#2-production-web-deployment-cloudflare).
 
 ### Webhook Health Check (`webhook-health-check.yml`)
 
@@ -158,7 +164,7 @@ prod:project-name|base64-encoded-key
 ## Deployment Verification and Alert Drill
 
 ```bash
-node scripts/verify-native-release.mjs  # Healthy deployed SHA and Actions run
+bun run doctor:hosting                 # Live game/auth/backend boundaries
 bun run deploy:verify                  # Live backend puzzle/event health
 gh workflow run deploy.yml --ref master -f alert_probe=true
 ```

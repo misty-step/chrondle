@@ -32,14 +32,6 @@ export function requireConvexClient(): ConvexHttpClient {
   return new ConvexHttpClient(url);
 }
 
-export async function fetchUserByClerkId(client: ConvexHttpClient, clerkId: string) {
-  return await client.query(serverApi.users.getUserByClerkId, { clerkId });
-}
-
-export async function fetchHasArchiveAccess(client: ConvexHttpClient, clerkId: string) {
-  return await client.query(serverApi.users.hasArchiveAccess, { clerkId });
-}
-
 export async function fetchOrderPuzzleByNumber(
   client: ConvexHttpClient,
   puzzleNumber: number,

@@ -6,7 +6,7 @@
  * 1. Clerk production keys are valid
  * 2. Domain configuration is correct
  * 3. Google OAuth settings are functional
- * 4. User sync to Convex via webhook is working
+ * Account provisioning uses the verified Clerk JWT, not a webhook.
  *
  * Usage: node scripts/verify-auth-production.mjs [--production]
  */
@@ -115,16 +115,6 @@ async function verifyAuthConfiguration() {
     results.failed.push('Clerk secret key configuration');
   }
 
-  // Check webhook secret
-  const clerkWebhookSecret = process.env.CLERK_WEBHOOK_SECRET;
-  if (isProductionKey(clerkWebhookSecret, 'whsec_')) {
-    log.success(`Clerk webhook secret is configured: ${maskKey(clerkWebhookSecret)}`);
-    results.passed.push('Clerk webhook secret');
-  } else {
-    log.error(`Clerk webhook secret is not configured properly`);
-    results.failed.push('Clerk webhook secret configuration');
-  }
-
   // 3. Check Google OAuth Configuration
   log.section('Google OAuth');
 
@@ -215,10 +205,6 @@ async function verifyAuthConfiguration() {
       check: () => isProductionKey(clerkPublishableKey, 'pk_live_') && isProductionKey(clerkSecretKey, 'sk_live_'),
     },
     {
-      name: 'Webhook secret configured',
-      check: () => isProductionKey(clerkWebhookSecret, 'whsec_'),
-    },
-    {
       name: 'Production Convex deployment',
       check: () => convexUrl?.includes('fleet-goldfish-183'),
     },
@@ -257,8 +243,8 @@ async function verifyAuthConfiguration() {
     console.log('\nNext steps:');
     console.log('1. Deploy to production environment');
     console.log('2. Test authentication flow on production URL');
-    console.log('3. Verify webhook events are received in Clerk dashboard');
-    console.log('4. Check that users are synced to Convex database');
+    console.log('3. Verify first-time sign-in provisions an account from its verified identity');
+    console.log('4. Verify returning sign-in preserves the same account and progress');
   } else {
     log.error('\n❌ Production authentication has configuration issues');
 

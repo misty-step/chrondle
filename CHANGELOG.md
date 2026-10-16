@@ -2,6 +2,124 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.13.0](https://github.com/misty-step/chrondle/compare/v1.12.4...v1.13.0) (2026-10-16)
+
+### Features
+
+- **analytics:** measure anonymous Chrondle story usage ([#346](https://github.com/misty-step/chrondle/issues/346)) ([61d3819](https://github.com/misty-step/chrondle/commit/61d3819adf4016d55373ac778405597f89e7d12e))
+
+## [1.12.4](https://github.com/misty-step/chrondle/compare/v1.12.3...v1.12.4) (2026-10-16)
+
+### Bug Fixes
+
+- **observability:** restore sanitized Sentry browser errors ([#345](https://github.com/misty-step/chrondle/issues/345)) ([7e4ab86](https://github.com/misty-step/chrondle/commit/7e4ab863769e809e02199fff861618bf7f3a43b1))
+
+## [1.12.3](https://github.com/misty-step/chrondle/compare/v1.12.2...v1.12.3) (2026-10-16)
+
+### Bug Fixes
+
+- **auth:** remove unused Clerk webhook path ([1ee78e2](https://github.com/misty-step/chrondle/commit/1ee78e2d56d73e25a269e70fee3d82093c2015a7))
+
+## [1.12.2](https://github.com/misty-step/chrondle/compare/v1.12.1...v1.12.2) (2026-10-16)
+
+### Bug Fixes
+
+- **ops:** audit actual webhook cases and all subscriber IDs ([36001f6](https://github.com/misty-step/chrondle/commit/36001f63aa4103eb1055caa78b53fa80413b9d62))
+
+## [1.12.1](https://github.com/misty-step/chrondle/compare/v1.12.0...v1.12.1) (2026-10-16)
+
+### Bug Fixes
+
+- **auth:** restrict event operations to authenticated admins ([#344](https://github.com/misty-step/chrondle/issues/344)) ([524417c](https://github.com/misty-step/chrondle/commit/524417c90ca8e615e46121beba84767e0c2971af))
+
+# [1.12.0](https://github.com/misty-step/chrondle/compare/v1.11.1...v1.12.0) (2026-10-16)
+
+### Features
+
+- **backend:** make serving backend a single config cutover ([#342](https://github.com/misty-step/chrondle/issues/342)) ([7c8bd3d](https://github.com/misty-step/chrondle/commit/7c8bd3d9b9fdf189a18b5e6c0eeb4503f8478fa3))
+
+## [1.11.1](https://github.com/misty-step/chrondle/compare/v1.11.0...v1.11.1) (2026-10-16)
+
+### Bug Fixes
+
+- **auth:** restrict account and play history reads to owner ([#343](https://github.com/misty-step/chrondle/issues/343)) ([7d7323c](https://github.com/misty-step/chrondle/commit/7d7323c5fb42a4b96b81e07052cf7a3f6d8ce310))
+
+# [1.11.0](https://github.com/misty-step/chrondle/compare/v1.10.0...v1.11.0) (2026-10-16)
+
+### Features
+
+- **backend:** prepare Cloudflare production without cutover ([#341](https://github.com/misty-step/chrondle/issues/341)) ([dc64f09](https://github.com/misty-step/chrondle/commit/dc64f09e100254d4cc39b5690f9b9a8ba562708b))
+
+# [1.10.0](https://github.com/misty-step/chrondle/compare/v1.9.1...v1.10.0) (2026-10-16)
+
+### Features
+
+- **backend:** isolate the private restore rehearsal ([#340](https://github.com/misty-step/chrondle/issues/340)) ([7f85b58](https://github.com/misty-step/chrondle/commit/7f85b58a5f0fa72e5602fa893648eed1c48a6ede))
+
+## [1.9.1](https://github.com/misty-step/chrondle/compare/v1.9.0...v1.9.1) (2026-10-16)
+
+### Bug Fixes
+
+- **backend:** enable synthetic signed webhook verification ([#337](https://github.com/misty-step/chrondle/issues/337)) ([535d0df](https://github.com/misty-step/chrondle/commit/535d0df779be074af1b4706875d3522ccd695ef9))
+
+# [1.9.0](https://github.com/misty-step/chrondle/compare/v1.8.1...v1.9.0) (2026-10-15)
+
+### Features
+
+- **backend:** deploy the isolated migration frontend preview ([#335](https://github.com/misty-step/chrondle/issues/335)) ([b702aba](https://github.com/misty-step/chrondle/commit/b702aba356f95980e9b99f68e267b8442c362db2))
+
+## [1.8.1](https://github.com/misty-step/chrondle/compare/v1.8.0...v1.8.1) (2026-10-15)
+
+### Bug Fixes
+
+- show generated release notes and version in the app ([#334](https://github.com/misty-step/chrondle/issues/334)) ([b63065d](https://github.com/misty-step/chrondle/commit/b63065d86334236930555ee56b45e011d87b768c))
+
+# [1.8.0](https://github.com/misty-step/chrondle/compare/v1.7.3...v1.8.0) (2026-10-15)
+
+### Features
+
+- **backend:** deploy an isolated synthetic Cloudflare preview ([#333](https://github.com/misty-step/chrondle/issues/333)) ([863a686](https://github.com/misty-step/chrondle/commit/863a68662440c82235d2afa3db153fb93dd3d3a2))
+
+## [1.7.3](https://github.com/misty-step/chrondle/compare/v1.7.2...v1.7.3) (2026-10-15)
+
+### Bug Fixes
+
+- **backend:** bind operator access to verified named identities ([#332](https://github.com/misty-step/chrondle/issues/332)) ([f476d41](https://github.com/misty-step/chrondle/commit/f476d417a3cf05def57186f7bcd16d5ec695f10e))
+
+## [1.7.2](https://github.com/misty-step/chrondle/compare/v1.7.1...v1.7.2) (2026-10-15)
+
+### Bug Fixes
+
+- **build:** bundle fonts for deterministic release builds ([#331](https://github.com/misty-step/chrondle/issues/331)) ([3608742](https://github.com/misty-step/chrondle/commit/36087426b7bbc41b7eb243802ff6c883e9b72ea6))
+
+## [1.7.1](https://github.com/misty-step/chrondle/compare/v1.7.0...v1.7.1) (2026-10-15)
+
+### Bug Fixes
+
+- **backend:** bound signing-key refresh and preview auth ([#329](https://github.com/misty-step/chrondle/issues/329)) ([4118ae7](https://github.com/misty-step/chrondle/commit/4118ae752d69994b6390ac3abb6bd9df7a8933c0))
+
+# [1.7.0](https://github.com/misty-step/chrondle/compare/v1.6.0...v1.7.0) (2026-10-15)
+
+### Features
+
+- **backend:** add Cloudflare backend without cutover ([6a4797c](https://github.com/misty-step/chrondle/commit/6a4797c7fa67d663aa4025c08a214e0d9c9f00c8))
+
+## Unreleased
+
+- Remove unused touch/tablet diagnostics and their tests; keep mobile detection and result-sharing behavior unchanged.
+
+# [1.6.0](https://github.com/misty-step/chrondle/compare/v1.5.6...v1.6.0) (2026-10-13)
+
+### Features
+
+- move Chrondle web releases to Cloudflare ([#325](https://github.com/misty-step/chrondle/issues/325)) ([caeae01](https://github.com/misty-step/chrondle/commit/caeae01f2aaee1b51946205ce273ad4897f520ee))
+
+## [1.5.6](https://github.com/misty-step/chrondle/compare/v1.5.5...v1.5.6) (2026-10-04)
+
+### Bug Fixes
+
+- count only finished plays ([#320](https://github.com/misty-step/chrondle/issues/320)) ([405b77f](https://github.com/misty-step/chrondle/commit/405b77fd8765a86416e4fd9ad1ac49e7f96314d4))
+
 ## [1.5.5](https://github.com/misty-step/chrondle/compare/v1.5.4...v1.5.5) (2026-10-01)
 
 ### Bug Fixes

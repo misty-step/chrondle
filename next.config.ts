@@ -1,11 +1,15 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
 import { readFileSync } from "fs";
+import { parseChangelog } from "./src/lib/releases/changelog";
 
-// Read version from package.json at build time
-const packageJson = JSON.parse(readFileSync("./package.json", "utf8"));
-const appVersion = packageJson.version;
+// Embed public notes in the bundle: Workers cannot read repository files at runtime.
+const changelog = readFileSync("CHANGELOG.md", "utf8");
+const appVersion = parseChangelog(changelog)[0].version;
 const artifactBuildOnly = process.env.DAGGER_ARTIFACT_BUILD === "1";
+// Existing project's public ingest address, not an API/deploy credential.
+const sentryDsn =
+  "https://dceed70dd694ac7d6b2ee24323e7c920@o4510313803677696.ingest.us.sentry.io/4510762044751872";
 const convexOrigin = resolveExternalOrigin(process.env.NEXT_PUBLIC_CONVEX_URL, "");
 const convexConnectSrc = convexOrigin
   ? `${convexOrigin} ${convexOrigin.replace(/^https:/, "wss:").replace(/^http:/, "ws:")}`
@@ -21,8 +25,10 @@ const nextConfig: NextConfig = {
   generateBuildId: async () => process.env.CHRONDLE_REVISION || null,
   // Expose version to client
   env: {
+    CHRONDLE_CHANGELOG: changelog,
     NEXT_PUBLIC_APP_VERSION: appVersion,
     CHRONDLE_REVISION: process.env.CHRONDLE_REVISION || "development",
+    NEXT_PUBLIC_SENTRY_DSN: sentryDsn,
   },
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react"],
@@ -91,7 +97,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: blob: https://img.clerk.com https://www.gravatar.com", // Clerk avatar CDN and Gravatar fallback
               "font-src 'self' data: https://fonts.gstatic.com", // Required for Google Fonts
               "worker-src 'self' blob:", // Required for Clerk and canvas-confetti web workers
-              `connect-src 'self' ${convexConnectSrc} https://openrouter.ai https://query.wikidata.org https://api.wikimedia.org https://healthy-doe-23.clerk.accounts.dev https://clerk.chrondle.app https://clerk-telemetry.com`, // Convex and Clerk; PostHog uses the /ingest proxy (self)
+              `connect-src 'self' ${convexConnectSrc} ${new URL(sentryDsn).origin} https://openrouter.ai https://query.wikidata.org https://api.wikimedia.org https://healthy-doe-23.clerk.accounts.dev https://clerk.chrondle.app https://clerk-telemetry.com`, // Exact backend, Sentry and Clerk origins; PostHog uses /ingest (self)
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

@@ -13,6 +13,7 @@ import { UserCreationHandler } from "@/components/UserCreationHandler";
 import { LoadingShell } from "@/components/LoadingShell";
 import { logger } from "@/lib/logger";
 import { api, getConvexClient } from "@/lib/convexServer";
+import { authenticateConvexClient } from "@/lib/convexAuth";
 
 interface PuzzleCardData {
   index: number;
@@ -78,9 +79,10 @@ async function OrderArchivePageContent({
 
   if (clerkUser) {
     try {
-      convexUser = await client.query(api.users.getUserByClerkId, { clerkId: clerkUser.id });
+      await authenticateConvexClient(client);
+      convexUser = await client.query(api.users.getCurrentUser, {});
     } catch (error) {
-      logger.error("[OrderArchive] getUserByClerkId failed:", error);
+      logger.error("[OrderArchive] Account lookup failed:", error);
     }
 
     if (convexUser && convexUser._id) {

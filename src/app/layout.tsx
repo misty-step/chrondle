@@ -1,16 +1,16 @@
-import { Karla, Outfit } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const outfit = Outfit({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const outfit = localFont({
+  src: "./fonts/Outfit.ttf",
+  weight: "400 700",
   variable: "--font-outfit",
   display: "swap",
 });
 
-const karla = Karla({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const karla = localFont({
+  src: "./fonts/Karla.ttf",
+  weight: "400 700",
   variable: "--font-karla",
   display: "swap",
 });

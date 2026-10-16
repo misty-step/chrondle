@@ -19,6 +19,9 @@ const eslintConfig = [
       "**/*.css",
       "convex/_generated/**",
       "coverage/**",
+      ".open-next/**",
+      ".wrangler/**",
+      "backend/.wrangler/**",
       "dagger/sdk/**",
       "check-lab*.mjs",
     ],
@@ -165,6 +168,13 @@ const eslintConfig = [
           destructuredArrayIgnorePattern: "^_",
         },
       ],
+    },
+  },
+  {
+    // Cloudflare backend host: Workers Logs are console output
+    files: ["backend/**/*.ts", "backend/**/*.mjs"],
+    rules: {
+      "no-console": "off",
     },
   },
   {

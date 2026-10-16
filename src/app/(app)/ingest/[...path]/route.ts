@@ -15,8 +15,8 @@ import { createTimeoutSignal } from "@/lib/fetch-utils";
 
 export const dynamic = "force-dynamic";
 
-// Request headers that should never be forwarded to PostHog
-const REQUEST_HEADERS_TO_STRIP = ["cookie", "authorization"];
+// Forward only transport metadata, never cookies, IPs, referrers or user agents.
+const REQUEST_HEADERS_TO_FORWARD = ["content-type", "accept"];
 
 // Response headers that should never be exposed back to the browser
 const RESPONSE_HEADERS_TO_STRIP = ["set-cookie", "content-encoding", "content-length"];
@@ -63,7 +63,11 @@ async function proxyToPostHog(request: NextRequest): Promise<NextResponse> {
   });
 
   // Prepare headers (strip auth-sensitive request headers)
-  const cleanHeaders = stripHeaders(request.headers, REQUEST_HEADERS_TO_STRIP);
+  const cleanHeaders = new Headers();
+  for (const name of REQUEST_HEADERS_TO_FORWARD) {
+    const value = request.headers.get(name);
+    if (value) cleanHeaders.set(name, value);
+  }
   const [signal, cleanup] = createTimeoutSignal(UPSTREAM_TIMEOUT_MS);
 
   try {
@@ -72,7 +76,9 @@ async function proxyToPostHog(request: NextRequest): Promise<NextResponse> {
       method: request.method,
       headers: cleanHeaders,
       body:
-        request.method !== "GET" && request.method !== "HEAD" ? await request.text() : undefined,
+        request.method !== "GET" && request.method !== "HEAD"
+          ? await request.arrayBuffer()
+          : undefined,
       redirect: "follow",
       signal,
     });

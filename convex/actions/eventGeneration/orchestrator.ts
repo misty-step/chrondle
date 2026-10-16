@@ -15,6 +15,7 @@ import { runAlertChecks } from "../../lib/alerts";
 import { RateLimiter } from "../../lib/rateLimiter";
 import { computeQualityScores, type QualityScores } from "../../lib/qualityScores";
 import { withLangfuseTrace, type TraceWrapper } from "../../lib/langfuseTracing";
+import { requireAdmin } from "../../lib/auth";
 
 const MAX_TOTAL_ATTEMPTS = 4;
 const MAX_CRITIC_CYCLES = 2;
@@ -35,14 +36,17 @@ export const generateYearEvents = internalAction({
 });
 
 /**
- * Public wrapper for testing and admin scripts.
+ * Operator wrapper for authenticated testing and admin scripts.
  * Calls the same internal logic as generateYearEvents.
  */
 export const testGenerateYearEvents = action({
   args: {
     year: v.number(),
   },
-  handler: async (ctx, args) => executeYearGeneration(ctx, args.year),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    return executeYearGeneration(ctx, args.year);
+  },
 });
 
 export const generateDailyBatch = internalAction({
