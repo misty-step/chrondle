@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { api, requireConvexClient } from "@/lib/convexServer";
+import { authenticateConvexClient } from "@/lib/convexAuth";
 import { getStripe, getAppOrigin } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
 
@@ -20,9 +21,8 @@ export async function POST(req: NextRequest) {
 
     // Get user's Stripe customer ID from Convex
     const convex = requireConvexClient();
-    const dbUser = await convex.query(api.users.getUserByClerkId, {
-      clerkId: user.id,
-    });
+    await authenticateConvexClient(convex);
+    const dbUser = await convex.query(api.users.getCurrentUser, {});
 
     if (!dbUser?.stripeCustomerId) {
       logger.warn(`[portal] User ${user.id} tried to access portal without Stripe customer ID`);

@@ -36,9 +36,11 @@ describe("users/queries", () => {
         });
       });
 
-      const user = await t.query(usersQueries.getUserByClerkId, {
-        clerkId: "clerk_test_123",
-      });
+      const user = await t
+        .withIdentity({ subject: "clerk_test_123" })
+        .query(usersQueries.getUserByClerkId, {
+          clerkId: "clerk_test_123",
+        });
 
       expect(user).not.toBeNull();
       expect(user?.email).toBe("test@example.com");
@@ -72,9 +74,11 @@ describe("users/queries", () => {
         });
       });
 
-      const result = await t.query(usersQueries.userExists, {
-        clerkId: "clerk_exists_test",
-      });
+      const result = await t
+        .withIdentity({ subject: "clerk_exists_test" })
+        .query(usersQueries.userExists, {
+          clerkId: "clerk_exists_test",
+        });
 
       expect(result.exists).toBe(true);
       expect(result.email).toBe("exists@example.com");
@@ -89,7 +93,7 @@ describe("users/queries", () => {
       });
 
       expect(result.exists).toBe(false);
-      expect(result.clerkId).toBe("nonexistent_clerk");
+      expect(result).toEqual({ exists: false });
     });
   });
 });
@@ -108,9 +112,11 @@ describe("users/mutations", () => {
       expect(userId).toBeDefined();
 
       // Verify user was created with correct initial values
-      const user = await t.query(usersQueries.getUserByClerkId, {
-        clerkId: "new_user_clerk_id",
-      });
+      const user = await t
+        .withIdentity({ subject: "new_user_clerk_id" })
+        .query(usersQueries.getUserByClerkId, {
+          clerkId: "new_user_clerk_id",
+        });
 
       expect(user).not.toBeNull();
       expect(user?.email).toBe("newuser@example.com");
@@ -145,9 +151,11 @@ describe("users/mutations", () => {
       expect(returnedId).toBe(existingUserId!);
 
       // Verify original user data unchanged
-      const user = await t.query(usersQueries.getUserByClerkId, {
-        clerkId: "existing_clerk_id",
-      });
+      const user = await t
+        .withIdentity({ subject: "existing_clerk_id" })
+        .query(usersQueries.getUserByClerkId, {
+          clerkId: "existing_clerk_id",
+        });
 
       expect(user?.email).toBe("existing@example.com"); // Original email preserved
       expect(user?.currentStreak).toBe(10); // Original stats preserved
@@ -385,9 +393,11 @@ describe("users/queries - hasArchiveAccess", () => {
         });
       });
 
-      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
-        clerkId: "clerk_active_sub",
-      });
+      const hasAccess = await t
+        .withIdentity({ subject: "clerk_active_sub" })
+        .query(usersQueries.hasArchiveAccess, {
+          clerkId: "clerk_active_sub",
+        });
 
       expect(hasAccess).toBe(true);
     });
@@ -410,9 +420,11 @@ describe("users/queries - hasArchiveAccess", () => {
         });
       });
 
-      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
-        clerkId: "clerk_no_expiry",
-      });
+      const hasAccess = await t
+        .withIdentity({ subject: "clerk_no_expiry" })
+        .query(usersQueries.hasArchiveAccess, {
+          clerkId: "clerk_no_expiry",
+        });
 
       expect(hasAccess).toBe(true);
     });
@@ -436,9 +448,11 @@ describe("users/queries - hasArchiveAccess", () => {
         });
       });
 
-      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
-        clerkId: "clerk_expired_sub",
-      });
+      const hasAccess = await t
+        .withIdentity({ subject: "clerk_expired_sub" })
+        .query(usersQueries.hasArchiveAccess, {
+          clerkId: "clerk_expired_sub",
+        });
 
       expect(hasAccess).toBe(false);
     });
@@ -462,9 +476,11 @@ describe("users/queries - hasArchiveAccess", () => {
         });
       });
 
-      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
-        clerkId: "clerk_canceled_sub",
-      });
+      const hasAccess = await t
+        .withIdentity({ subject: "clerk_canceled_sub" })
+        .query(usersQueries.hasArchiveAccess, {
+          clerkId: "clerk_canceled_sub",
+        });
 
       expect(hasAccess).toBe(true);
     });
@@ -488,9 +504,11 @@ describe("users/queries - hasArchiveAccess", () => {
         });
       });
 
-      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
-        clerkId: "clerk_canceled_sub_past",
-      });
+      const hasAccess = await t
+        .withIdentity({ subject: "clerk_canceled_sub_past" })
+        .query(usersQueries.hasArchiveAccess, {
+          clerkId: "clerk_canceled_sub_past",
+        });
 
       expect(hasAccess).toBe(false);
     });
@@ -512,9 +530,11 @@ describe("users/queries - hasArchiveAccess", () => {
         });
       });
 
-      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
-        clerkId: "clerk_past_due",
-      });
+      const hasAccess = await t
+        .withIdentity({ subject: "clerk_past_due" })
+        .query(usersQueries.hasArchiveAccess, {
+          clerkId: "clerk_past_due",
+        });
 
       expect(hasAccess).toBe(false);
     });
@@ -535,9 +555,11 @@ describe("users/queries - hasArchiveAccess", () => {
         });
       });
 
-      const hasAccess = await t.query(usersQueries.hasArchiveAccess, {
-        clerkId: "clerk_no_sub",
-      });
+      const hasAccess = await t
+        .withIdentity({ subject: "clerk_no_sub" })
+        .query(usersQueries.hasArchiveAccess, {
+          clerkId: "clerk_no_sub",
+        });
 
       expect(hasAccess).toBe(false);
     });

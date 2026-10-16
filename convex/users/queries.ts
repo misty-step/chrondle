@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
-import { checkArchiveAccess } from "./helpers";
+import { checkArchiveAccess, getAuthenticatedUser } from "./helpers";
 
 /**
  * User Queries - Read-Only User Access
@@ -10,8 +10,8 @@ import { checkArchiveAccess } from "./helpers";
  *
  * Exports:
  * - getCurrentUser: Get authenticated user data
- * - getUserByClerkId: Get user by Clerk ID (for webhooks/internal use)
- * - userExists: Check if user exists by Clerk ID
+ * - getUserByClerkId: Compatibility lookup for the authenticated user's own ID
+ * - userExists: Check the authenticated user's own account
  * - getUserStats: Get user statistics with recent play history
  * - hasArchiveAccess: Check if user has paid archive access
  *
@@ -27,97 +27,40 @@ import { checkArchiveAccess } from "./helpers";
  * Used by frontend to load user data on initial page load.
  */
 export const getCurrentUser = query({
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk", (q) => q.eq("clerkId", identity.subject))
-      .first();
-
-    // Diagnostic logging for auth edge case
-    if (!user && identity.subject) {
-      console.error("[getCurrentUser] Authenticated but user not found", {
-        clerkId: identity.subject,
-        email: identity.email,
-        tokenIssuer: identity.tokenIdentifier,
-        identityKeys: Object.keys(identity),
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    return user;
-  },
+  handler: getAuthenticatedUser,
 });
 
 /**
  * Get user by Clerk ID
  *
- * Used by webhooks and internal operations to find users.
- * Returns null if user not found.
+ * Compatibility endpoint for existing clients. Webhooks use their verified
+ * gateways and internal mutations, not this public account query.
  */
 export const getUserByClerkId = query({
   args: {
     clerkId: v.string(),
   },
   handler: async (ctx, { clerkId }) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk", (q) => q.eq("clerkId", clerkId))
-      .first();
-
-    return user;
+    const user = await getAuthenticatedUser(ctx);
+    return user?.clerkId === clerkId ? user : null;
   },
 });
 
 /**
  * Check if user exists
  *
- * Returns existence status with optional error details.
- * If no clerkId provided, checks current authenticated user.
+ * Legacy clerkId is accepted only when it matches the authenticated owner.
  */
 export const userExists = query({
   args: {
     clerkId: v.optional(v.string()),
   },
   handler: async (ctx, { clerkId }) => {
-    let targetClerkId = clerkId;
-
-    // If no clerkId provided, use current authenticated user's ID
-    if (!targetClerkId) {
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) {
-        return {
-          exists: false,
-          error: "No clerkId provided and no authenticated user",
-        };
-      }
-      targetClerkId = identity.subject;
+    const user = await getAuthenticatedUser(ctx);
+    if (!user || (clerkId !== undefined && clerkId !== user.clerkId)) {
+      return { exists: false };
     }
-
-    try {
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerk", (q) => q.eq("clerkId", targetClerkId))
-        .first();
-
-      return {
-        exists: !!user,
-        userId: user?._id,
-        clerkId: targetClerkId,
-        email: user?.email,
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      return {
-        exists: false,
-        error: errorMessage,
-        clerkId: targetClerkId,
-      };
-    }
+    return { exists: true, userId: user._id, clerkId: user.clerkId, email: user.email };
   },
 });
 
@@ -133,15 +76,7 @@ export const userExists = query({
  */
 export const getUserStats = query({
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk", (q) => q.eq("clerkId", identity.subject))
-      .first();
+    const user = await getAuthenticatedUser(ctx);
 
     if (!user) {
       return null;
@@ -180,22 +115,8 @@ export const hasArchiveAccess = query({
     clerkId: v.optional(v.string()),
   },
   handler: async (ctx, { clerkId }) => {
-    // Determine target clerkId
-    let targetClerkId = clerkId;
-    if (!targetClerkId) {
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) {
-        return false;
-      }
-      targetClerkId = identity.subject;
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk", (q) => q.eq("clerkId", targetClerkId))
-      .first();
-
-    if (!user) {
+    const user = await getAuthenticatedUser(ctx);
+    if (!user || (clerkId !== undefined && clerkId !== user.clerkId)) {
       return false;
     }
 

@@ -476,8 +476,11 @@ async function fullChecks(issuerDir) {
     const client = connect();
     await signIn(client, sign, { sub: `user_after_backup_${nonce}` });
     await client.mutation(api.users.getOrCreateCurrentUser, {});
-    const exists = async () =>
-      (await run("users:userExists", { clerkId: `user_after_backup_${nonce}` })).exists;
+    // Probe the owner's account through real auth, including after restore
+    // removes its row. Operator invocation is not a public-query auth bypass.
+    const reader = new ConvexHttpClient(url);
+    reader.setAuth(sign({ sub: `user_after_backup_${nonce}` }));
+    const exists = async () => (await reader.query(api.users.userExists, {})).exists;
     assert(await exists(), "post-backup user missing before restore");
     const live = await raw("POST", "/restore", JSON.stringify({ key: backup.key }));
     assert(live.status === 409, `restore with writes live got ${live.status}, want 409`);
