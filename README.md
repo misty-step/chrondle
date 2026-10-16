@@ -82,8 +82,8 @@ For example, with those variables already exported, run
 `bunx tsx scripts/backfill-event-metadata.ts`. Backfill uses the authenticated
 server pipeline, stops on errors, and handles at most 1,000 events per run.
 Generation and backfill may incur provider charges; only run them against an
-explicitly approved deployment. The generation scripts' existing `--dry-run`
-option does not prevent provider charges or server-side persistence.
+explicitly approved deployment. Single-year and bulk generation do not support
+`--dry-run`; the removed option is rejected before any network request.
 
 ## User Accounts & Anonymous Play
 

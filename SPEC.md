@@ -37,6 +37,9 @@
   interface. Missing credentials fail before doing work. Metadata backfill uses
   the server's shared backfill pipeline, not a separate client-side paid path.
 - Scheduled internal generation and backfill continue without a player identity.
+- Manual single-year and bulk generation have no dry-run mode. Supplying
+  `--dry-run` is rejected before any network request, provider charge or server
+  write; ordinary authorized invocations retain their generation behavior.
 
 ## Classic player journey
 

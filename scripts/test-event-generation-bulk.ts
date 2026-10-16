@@ -12,7 +12,6 @@ program
   .description("Generate events for multiple years in parallel and summarize results")
   .option("--years <list>", "Comma-separated list of years (e.g. 1969,1914,-44)")
   .option("--count <count>", "Number of years to select via selector", "3")
-  .option("--dry-run", "Skip persistence when calling orchestrator", false)
   .option("--verbose", "Print full event lists for each year", false);
 
 program.action(async (options) => {

@@ -13,7 +13,6 @@ program
   .description("Manual testing tool for the event generation pipeline")
   .option("-y, --year <year>", "Target year (defaults to random missing year)")
   .option("--count <count>", "Number of years to generate", "1")
-  .option("--dry-run", "Do not persist events to the database")
   .option("--verbose", "Print detailed LLM usage and prompts");
 
 program.action(async (options) => {
@@ -54,10 +53,6 @@ program.action(async (options) => {
       }
     } else {
       console.log("❌ Generation failed:", result.reason);
-    }
-
-    if (options.dryRun) {
-      console.log("(dry-run) Skipping persistence for this year");
     }
   }
 
