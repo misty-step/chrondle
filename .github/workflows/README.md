@@ -7,7 +7,6 @@
 | `ci.yml`                   | PR & push to main/master                   | Quality checks, tests, build validation                                                                          |
 | `deploy.yml`               | Every push to master; optional drill/retry | Backend-first Cloudflare deployment and exact Worker/domain readback                                             |
 | `size-limit.yml`           | PR                                         | Bundle size checks                                                                                               |
-| `claude-code-review.yml`   | PR                                         | Automated code review                                                                                            |
 | `webhook-health-check.yml` | Schedule (every 6h) & manual               | Fails if the production Stripe webhook route redirects (see INCIDENT-2026-01-17T.md)                             |
 | `dependency-updates.yml`   | PR & push to main/master; daily & manual   | Checks Bun lockfile/updater ownership; daily/manual runs also detect failed or stale updater execution (MIS-178) |
 
@@ -32,7 +31,7 @@ remain secrets on the production Worker.
 | Secret                    | Used By     | Description                           |
 | ------------------------- | ----------- | ------------------------------------- |
 | `CLERK_SECRET_KEY`        | E2E tests   | Clerk secret key for server-side auth |
-| `CLAUDE_CODE_OAUTH_TOKEN` | Code review | Claude Code integration               |
+| `CLAUDE_CODE_OAUTH_TOKEN` | `claude.yml` | On-demand Claude integration         |
 
 Coverage badges are published by the `coverage-badges` job to the `badges`
 branch with the built-in `GITHUB_TOKEN`; they require no personal token or
