@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.11.1](https://github.com/misty-step/chrondle/compare/v1.11.0...v1.11.1) (2026-10-16)
+
+### Bug Fixes
+
+- **auth:** restrict account and play history reads to owner ([#343](https://github.com/misty-step/chrondle/issues/343)) ([7d7323c](https://github.com/misty-step/chrondle/commit/7d7323c5fb42a4b96b81e07052cf7a3f6d8ce310))
+
 # [1.11.0](https://github.com/misty-step/chrondle/compare/v1.10.0...v1.11.0) (2026-10-16)
 
 ### Features
