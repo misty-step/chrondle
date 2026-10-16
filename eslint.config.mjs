@@ -20,6 +20,8 @@ const eslintConfig = [
       "convex/_generated/**",
       "coverage/**",
       ".open-next/**",
+      "web/build/**",
+      "web/target/**",
       ".wrangler/**",
       "backend/.wrangler/**",
       "dagger/sdk/**",

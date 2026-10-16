@@ -38,6 +38,8 @@ generation and maintenance — see [chrondle.app/pricing](https://chrondle.app/p
 
 This project is built with:
 
+- **Rust / workers-rs:** public discovery and legacy redirects on Cloudflare;
+  the remaining routes still use the stack below.
 - **Next.js 16:** React framework for production.
 - **React 19:** for building interactive user interfaces.
 - **Convex:** real-time backend and database.
@@ -153,6 +155,32 @@ Chrondle supports both anonymous and authenticated gameplay:
 Open [http://localhost:3000](http://localhost:3000) in your browser to play.
 
 ### Local CI
+
+Install the Rust `wasm32-unknown-unknown` target and `worker-build` 0.8.5
+(`cargo install worker-build --version 0.8.5 --locked`), plus the pinned Bun
+version in `.bun-version` and Node 24. Then run the native entry on Mirrodin:
+
+```bash
+bun run check --mode fast
+NEXT_PUBLIC_CONVEX_URL=https://handsome-raccoon-955.convex.cloud \
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_aGVhbHRoeS1kb2UtMjMuY2xlcmsuYWNjb3VudHMuZGV2JA \
+bun run check --mode full
+```
+
+Fast runs Rust formatting/tests plus the retained lint/type/test commands. Full
+also runs backend tests, coverage, builds the combined Cloudflare artifact once,
+and exercises its routes in local workerd with outbound traffic denied. No
+production credential or `.env` copy is needed. To additionally exercise the
+built Rust artifact against a chosen public backend's anonymous count queries:
+
+```bash
+CHRONDLE_DISCOVERY_BACKEND=https://chrondle-backend.mistystep.io bun run test:discovery
+```
+
+That explicit read-only check verifies success, injected outage and real recovery;
+it does not generate puzzles or write player state. Use `bun run preview:cf` for
+the whole local web runtime, including Rust discovery/redirect routes. `bun dev`
+still runs only the retained Next/Convex development surfaces.
 
 Local Dagger runs are wrapped through Colima:
 

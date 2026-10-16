@@ -1,5 +1,24 @@
 # Chrondle behavior
 
+## Public discovery and legacy links
+
+- Crawlers can read `/robots.txt` without an account. It names the canonical
+  `https://chrondle.app/sitemap.xml` and disallows sign-in, sign-up, admin and
+  API paths; the published directives remain unchanged.
+- `/sitemap.xml` lists the home, Classic, Order, both archive indexes and both
+  legal pages, with the existing change frequencies and priorities. Successful
+  anonymous backend reads append Classic and Order archive puzzle-number URLs
+  from 1 through their respective counts. It exposes URLs, never puzzle answers
+  or player state. Missing or unavailable backend data leaves the seven static
+  entries usable; recovery restores archive URLs without a redeploy.
+- Bookmarked `/groups` links permanently redirect (308) to `/`, and
+  `/archive/groups` plus its descendants permanently redirect to `/archive`,
+  preserving the query string. `/releases` permanently redirects to
+  `/changelog`, without carrying its query. Release-detail URLs remain distinct.
+- These discovery/redirect responses do not create accounts, read player
+  progress, change game preferences or emit browser gameplay events. Other
+  routes retain their existing authorization and browser measurement behavior.
+
 ## Player account privacy
 
 - As a first-time signed-in player, my account is created on demand from my

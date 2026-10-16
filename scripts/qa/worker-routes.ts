@@ -34,7 +34,10 @@ async function main() {
       config: configPath,
       // Clerk requires a syntactically present key even for anonymous public SSR.
       // This inert local-only fixture is not a credential; every outbound fetch is denied.
-      bindings: { CLERK_SECRET_KEY: { type: "plain_text", value: "sk_test_worker-route-gate" } },
+      bindings: {
+        CLERK_SECRET_KEY: { type: "plain_text", value: "sk_test_worker-route-gate" },
+        STRIPE_SYNC_SECRET: { type: "plain_text", value: "inert-local-webhook-check" },
+      },
       dev: {
         remote: false,
         persist: false,
@@ -98,6 +101,43 @@ async function main() {
         console.error(`FAIL ${failures.at(-1)}`);
       }
     }
+    const robots = await worker.fetch(new URL("/robots.txt", origin));
+    assert.equal(robots.status, 200);
+    assert.equal(robots.headers.get("x-chrondle-runtime"), "rust");
+    assert.equal(await robots.text(), readFileSync("web/robots.txt", "utf8"));
+    const sitemap = await worker.fetch(new URL("/sitemap.xml", origin));
+    assert.equal(sitemap.status, 200);
+    assert.equal(sitemap.headers.get("x-chrondle-runtime"), "rust");
+    assert.equal((await sitemap.text()).match(/<url>/g)?.length, 7);
+    for (const [path, location] of [
+      ["/groups?x=1", "/?x=1"],
+      ["/archive/groups/42?x=1", "/archive?x=1"],
+    ]) {
+      const response = await worker.fetch(new URL(path, origin), { redirect: "manual" });
+      assert.equal(response.status, 308);
+      assert.equal(response.headers.get("location"), location);
+      assert.equal(response.headers.get("x-chrondle-runtime"), "rust");
+    }
+    const beforePost = blockedRequests;
+    const checkout = await worker.fetch(new URL("/api/stripe/checkout", origin), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: '{"plan":"monthly"}',
+    });
+    assert.equal(checkout.status, 401, "Retained checkout must still require identity");
+    const webhook = await worker.fetch(new URL("/api/webhooks/stripe", origin), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: '{"probe":"raw-body"}',
+    });
+    assert.equal(
+      webhook.status,
+      400,
+      "Retained webhook must read the body and reject missing signature",
+    );
+    assert.equal((await webhook.json()).error, "Missing signature");
+    assert.equal(blockedRequests, beforePost, "Rejected billing requests must not reach providers");
+    console.log("PASS Rust discovery/redirect integration and unchanged billing POST rejection");
     const blockedBefore = blockedRequests;
     const health = await worker.fetch(new URL("/api/health", origin), {
       redirect: "manual",

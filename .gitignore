@@ -148,6 +148,10 @@ test-results/
 .dev.vars
 .dev.vars.*
 
+# workers-rs generated runtime and native build cache
+/web/build/
+/web/target/
+
 # Cloudflare backend: generated Convex module map (backend/scripts/generate-modules.mjs), local workerd state
 backend/src/convexModules.gen.ts
 backend/.wrangler/
