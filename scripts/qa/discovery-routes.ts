@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { unstable_startWorker } from "wrangler";
+import { assertRuntimeLogs } from "./worker-route-contracts";
 
 const backend = process.env.CHRONDLE_DISCOVERY_BACKEND;
 const artifact = process.env.CHRONDLE_ARTIFACT;
@@ -23,9 +24,12 @@ try {
     JSON.stringify({
       name: "chrondle-discovery-check",
       main: packaged ? resolve(artifact!, packaged.main) : resolve("web/build/worker/shim.mjs"),
-      compatibility_date: "2026-09-17",
+      compatibility_date: packaged?.compatibility_date ?? "2026-09-17",
       ...(packaged ? {
         compatibility_flags: packaged.compatibility_flags,
+        no_bundle: packaged.no_bundle,
+        find_additional_modules: packaged.find_additional_modules,
+        rules: packaged.rules,
         assets: { ...packaged.assets, directory: resolve(artifact!, packaged.assets.directory) },
       } : {}),
       send_metrics: false,
@@ -40,7 +44,10 @@ try {
       watch: false,
       server: { hostname: "127.0.0.1", port: 0 },
       logLevel: "error",
-      structuredLogsHandler: (log: { message: string }) => logs.push(log.message),
+      structuredLogsHandler: (log: { level: string; message: string }) => {
+        assertRuntimeLogs([log]);
+        logs.push(log.message);
+      },
       outboundService: async (request: Request) => {
         try {
           queries++;

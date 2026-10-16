@@ -1,11 +1,63 @@
 // Ported from Linejam PR577 (449f9eb6): exercise the built bytes, never rebuild.
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+  appendFileSync,
+  cpSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { unstable_readConfig, unstable_startWorker } from "wrangler";
 import { parseChangelog } from "../../src/lib/releases/changelog";
 import { assertHtml, assertRuntimeLogs } from "./worker-route-contracts";
+
+function assertPackagedModuleRejection(artifact: string) {
+  const directory = mkdtempSync(join(tmpdir(), "chrondle-module-canary-"));
+  try {
+    const copy = join(directory, "artifact");
+    cpSync(artifact, copy, { recursive: true });
+    // Give a mistaken rebundle the checkout dependencies that hid this defect.
+    symlinkSync(resolve("node_modules"), join(directory, "node_modules"), "dir");
+    const config = JSON.parse(readFileSync(join(copy, "wrangler.json"), "utf8"));
+    appendFileSync(
+      resolve(copy, config.main),
+      '\nimport ReactCanary from "react"; globalThis.__chrondleModuleCanary = ReactCanary.version;\n',
+    );
+    // Separate processes also contain Wrangler's unhandled startup rejection.
+    const results = ["worker-routes", "discovery-routes"].map((suite) => {
+      const child = spawnSync(
+        process.execPath,
+        ["--unhandled-rejections=strict", "--import", "tsx", resolve(`scripts/qa/${suite}.ts`)],
+        {
+          env: { ...process.env, CHRONDLE_ARTIFACT: copy, CHRONDLE_MODULE_CANARY: "1" },
+          encoding: "utf8",
+          timeout: 60_000,
+        },
+      );
+      console.log(`Module canary ${suite}: exit ${child.status}`);
+      if (child.error || child.signal) console.error(child.stdout, child.stderr);
+      return { suite, child };
+    });
+    for (const { suite, child } of results) {
+      assert.ifError(child.error);
+      assert.equal(child.signal, null, `${suite}: canary must fail, not time out`);
+      assert.notEqual(child.status, 0, `${suite}: unresolved packaged import was repaired by bundling`);
+      assert.match(
+        `${child.stdout}\n${child.stderr}`.replaceAll('\\"', '"'),
+        /No such module ["']react["']/,
+        `${suite}: must reject the unresolved packaged import`,
+      );
+    }
+    console.log("PASS both packaged suites reject an unresolved import without rebundling");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
 
 async function main() {
   const configRoot = process.env.CHRONDLE_ARTIFACT ?? ".";
@@ -29,6 +81,9 @@ async function main() {
         main: resolve(config.main),
         compatibility_date: config.compatibility_date,
         compatibility_flags: config.compatibility_flags,
+        no_bundle: config.no_bundle,
+        find_additional_modules: config.find_additional_modules,
+        rules: config.rules,
         assets: { ...config.assets, directory: resolve(configRoot, config.assets.directory) },
         send_metrics: false,
       }),
@@ -51,7 +106,10 @@ async function main() {
           blockedRequests++;
           return new Response("Worker route check: egress disabled", { status: 503 });
         },
-        structuredLogsHandler: (log: { level: string; message: string }) => logs.push(log),
+        structuredLogsHandler: (log: { level: string; message: string }) => {
+          assertRuntimeLogs([log]);
+          logs.push(log);
+        },
       },
     });
     worker.raw.on("runtimeError", (error: { text: string }) => {
@@ -166,6 +224,9 @@ async function main() {
   console.log(
     `Built Worker routes passed: ${releases.length} release details, changelog, alias, unknown 404 and privacy control; ${blockedRequests} outbound requests denied.`,
   );
+  if (process.env.CHRONDLE_ARTIFACT && !process.env.CHRONDLE_MODULE_CANARY) {
+    assertPackagedModuleRejection(process.env.CHRONDLE_ARTIFACT);
+  }
 }
 
 main().catch((error) => {

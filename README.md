@@ -156,8 +156,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to play.
 
 ### Local CI
 
-Install the Rust `wasm32-unknown-unknown` target and `worker-build` 0.8.5
-(`cargo install worker-build --version 0.8.5 --locked`), plus the pinned Bun
+Install the Rust `wasm32-unknown-unknown` target and `worker-build` 0.8.7
+(`cargo install worker-build --version 0.8.7 --locked`), plus the pinned Bun
 version in `.bun-version` and Node 24. Then run the native entry on Mirrodin:
 
 ```bash

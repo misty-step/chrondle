@@ -14,6 +14,11 @@ regular deploy files, and records SHA256s in append-only `events.jsonl`.
 Promotion uses `no_bundle` and a separately provisioned lockfile-matching
 Wrangler outside all writable build mounts. It does not rebuild the candidate.
 
+Packaged route checks retain the artifact's module-loading options. The existing
+Worker suite also copies the artifact, adds an unresolved `react` import and
+requires both route suites to reject it, even with checkout dependencies present.
+The canary never modifies the staged artifact.
+
 `web/production.json` contains only settings already public in the live browser
 bundle/Worker. Server keys remain existing Worker secrets. The narrow shared CD
 token is resolved in memory from its canonical password-store entry only after
