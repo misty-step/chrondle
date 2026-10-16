@@ -1,5 +1,7 @@
 # AGENTS.md — chrondle
 
+New code follows the [Misty Step Stack standard](https://foundations.mistystep.io/way-of-working); existing-stack guidance below applies only to retained code.
+
 Read `VISION.md` before changing puzzle direction, habit-loop scope, generation
 quality, or product priority.
 
