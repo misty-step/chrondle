@@ -1,5 +1,13 @@
 # Chrondle behavior
 
+## What it does
+
+Chrondle is a daily history puzzle: players use historical clues to guess a year range in Classic or put events in chronological order in Order.
+
+## What it enables
+
+Curious players can enjoy a short, fair daily challenge that builds their sense of history, with answers earned through play rather than leaked by the interface.
+
 ## Public discovery and legacy links
 
 - Crawlers can read `/robots.txt` without an account. It names the canonical
