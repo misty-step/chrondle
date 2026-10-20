@@ -1,0 +1,67 @@
+{
+  "feature": "daily-puzzle",
+  "base": "https://www.chrondle.app",
+  "started_at": "2026-10-20T22:51:21.160Z",
+  "steps": [
+    {
+      "at": "2026-10-20T22:51:22.990Z",
+      "action": "open gallery /?all=1",
+      "result": "Classic card shows Puzzle #434"
+    },
+    {
+      "at": "2026-10-20T22:51:24.164Z",
+      "action": "choose Classic card",
+      "result": "/classic header shows #434"
+    },
+    {
+      "at": "2026-10-20T22:51:24.164Z",
+      "action": "puzzle resolved by local date",
+      "result": "2026-10-20 -> #434, 6 events"
+    },
+    {
+      "at": "2026-10-20T22:51:24.685Z",
+      "action": "capture pre-guess board",
+      "result": "screenshot",
+      "files": ["daily-before.png", "daily-before.aria.txt"]
+    },
+    {
+      "at": "2026-10-20T22:51:24.710Z",
+      "action": "type invalid end year 1949x",
+      "result": "Lock in range disabled"
+    },
+    {
+      "at": "2026-10-20T22:51:24.758Z",
+      "action": "type range 1900-1949",
+      "result": "live width '50 years wide' shown"
+    },
+    {
+      "at": "2026-10-20T22:51:25.471Z",
+      "action": "lock in a one-year range containing the answer",
+      "result": "results panel focused"
+    },
+    {
+      "at": "2026-10-20T22:51:25.730Z",
+      "action": "read completion",
+      "result": "'Come back tomorrow' return hook with countdown visible"
+    },
+    {
+      "at": "2026-10-20T22:51:25.883Z",
+      "action": "read streak",
+      "result": "anonymous streak shows 1 day"
+    },
+    {
+      "at": "2026-10-20T22:51:26.336Z",
+      "action": "capture completed board",
+      "result": "screenshot",
+      "files": ["daily-after.png", "daily-after.aria.txt"]
+    },
+    {
+      "at": "2026-10-20T22:51:26.337Z",
+      "action": "check backend writes",
+      "result": "only allowed (none)",
+      "mutations_sent": []
+    }
+  ],
+  "result": "passed",
+  "finished_at": "2026-10-20T22:51:26.337Z"
+}

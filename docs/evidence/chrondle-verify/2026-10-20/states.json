@@ -1,0 +1,97 @@
+{
+  "feature": "states",
+  "base": "https://www.chrondle.app",
+  "started_at": "2026-10-20T22:51:45.496Z",
+  "steps": [
+    {
+      "at": "2026-10-20T22:51:48.099Z",
+      "action": "signed out, open /settings",
+      "result": "redirected to /sign-in?redirect_url=/settings; sign-in form shown"
+    },
+    {
+      "at": "2026-10-20T22:51:48.686Z",
+      "action": "signed out, open /admin/dashboard",
+      "result": "redirected to /sign-in?redirect_url=/admin/dashboard; sign-in form shown"
+    },
+    {
+      "at": "2026-10-20T22:51:48.741Z",
+      "action": "capture signed-out redirect",
+      "result": "screenshot",
+      "files": ["states-signed-out.png", "states-signed-out.aria.txt"]
+    },
+    {
+      "at": "2026-10-20T22:51:48.741Z",
+      "action": "check backend writes",
+      "result": "only allowed (none)",
+      "mutations_sent": []
+    },
+    {
+      "at": "2026-10-20T22:51:50.161Z",
+      "action": "390x844 phone, open /classic",
+      "result": "puzzle and range inputs visible; horizontal overflow 0px"
+    },
+    {
+      "at": "2026-10-20T22:51:50.883Z",
+      "action": "capture mobile",
+      "result": "screenshot",
+      "files": ["states-mobile.png", "states-mobile.aria.txt"]
+    },
+    {
+      "at": "2026-10-20T22:51:50.883Z",
+      "action": "check backend writes",
+      "result": "only allowed (none)",
+      "mutations_sent": []
+    },
+    {
+      "at": "2026-10-20T22:52:14.119Z",
+      "action": "400 kbps / 400 ms RTT, open /classic",
+      "result": "puzzle #434 playable after 23s"
+    },
+    {
+      "at": "2026-10-20T22:52:14.119Z",
+      "action": "check backend writes",
+      "result": "only allowed (none)",
+      "mutations_sent": []
+    },
+    {
+      "at": "2026-10-20T22:52:30.459Z",
+      "action": "backend socket refused, open /classic, wait 15s",
+      "result": "page alive (345 chars of text); puzzle number shown: false"
+    },
+    {
+      "at": "2026-10-20T22:52:30.503Z",
+      "action": "capture backend-down",
+      "result": "screenshot",
+      "files": ["states-backend-down.png", "states-backend-down.aria.txt"]
+    },
+    {
+      "at": "2026-10-20T22:52:30.503Z",
+      "action": "look for a visible problem message",
+      "result": "none: dead form with no clue and no explanation"
+    },
+    {
+      "at": "2026-10-20T22:52:30.504Z",
+      "action": "backend down",
+      "result": "FAIL: backend down: no visible message, only an inert form"
+    },
+    {
+      "at": "2026-10-20T22:52:51.324Z",
+      "action": "open archive puzzle #999999 (does not exist), wait 20s",
+      "result": "Loading puzzle…"
+    },
+    {
+      "at": "2026-10-20T22:52:51.352Z",
+      "action": "capture missing puzzle",
+      "result": "screenshot",
+      "files": ["states-missing-puzzle.png", "states-missing-puzzle.aria.txt"]
+    },
+    {
+      "at": "2026-10-20T22:52:51.352Z",
+      "action": "empty data",
+      "result": "FAIL: missing puzzle still shows 'Loading puzzle…' after 20s"
+    }
+  ],
+  "result": "failed",
+  "error": "one or more states failed; see steps",
+  "finished_at": "2026-10-20T22:52:51.355Z"
+}
