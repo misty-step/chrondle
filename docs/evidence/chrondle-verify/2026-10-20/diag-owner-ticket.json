@@ -1,0 +1,13 @@
+{
+  "what": "One-off diagnostic, not the owner sign-in proof: a Clerk sign-in ticket (Backend API, live secret read from the operator's local env) for the owner identity, then read-only browsing. It bypasses email delivery, so it proves owner configuration only.",
+  "at": "2026-10-20T23:40Z",
+  "owner_users_with_email": 1,
+  "owner_public_metadata_role": "admin",
+  "owner_linked_providers": ["oauth_google"],
+  "owner_last_sign_in": "2026-04-19T23:49:03Z",
+  "session_email_is_owner": true,
+  "admin_dashboard_path_kept": "/admin/dashboard",
+  "admin_dashboard_heading_visible": true,
+  "mutations_sent": ["users:getOrCreateCurrentUser"],
+  "screenshot": "diag-owner-ticket-admin-dashboard.png"
+}

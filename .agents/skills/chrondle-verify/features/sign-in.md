@@ -65,6 +65,14 @@ Run `pass-env run -e FASTMAIL_API_TOKEN=workstation/FASTMAIL_API_TOKEN -- node $
   `clk2._domainkey`), so Clerk said a code was sent and none arrived. Compare
   the zone against Clerk's `dns_targets` (Clerk Backend API `GET /v1/domains`)
   before suspecting the helper.
+- The four records were restored at 22:47Z on 2026-10-20. Codes still did not
+  arrive at 23:25Z, so Clerk also needs its domain email configuration
+  re-verified (Clerk Dashboard → chrondle production → Domains → Email).
+  Until that happens, this journey fails at "read the code" and owner sign-in
+  stays unproven.
+- phaedrus normally signs in with Google: the owner user's only linked
+  provider is `oauth_google`. Email code is the agent's route to the same
+  identity, so it matters even when Google works.
 - Each run sends phaedrus two code emails and a new-device notice. Run once
   per proof, not in a loop.
 - Expired code (Clerk codes last 10 minutes) is not driven: waiting it out
