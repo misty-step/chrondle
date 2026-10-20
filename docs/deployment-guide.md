@@ -134,19 +134,19 @@ cutover; do not repeat registrar delegation or bootstrap from a local login.
 An existing Worker at `chrondle.mistystep.io` is **not** evidence that the
 public apex/www moved. The 2026-10-12 baseline is:
 
-| Boundary         | Before                                                                 | Target                                                      |
-| ---------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Registrar        | Namecheap                                                              | Same registrar                                              |
-| Authoritative NS | `ns1.digitalocean.com`, `ns2.digitalocean.com`, `ns3.digitalocean.com` | `elsa.ns.cloudflare.com`, `miles.ns.cloudflare.com`         |
-| Cloudflare zone  | `168e4a43b922ad6e8230f8aee76fce33`, pending delegation                 | Same zone, active                                           |
-| Apex             | DO A `129.212.153.182`, TTL 30                                         | Existing Worker custom domain, proxied managed AAAA `100::` |
-| www              | DO CNAME `chrondle.app`, TTL 30                                        | Existing Worker custom domain, proxied managed AAAA `100::` |
-| Clerk frontend   | DNS-only CNAME `clerk` → `frontend-api.clerk.services`, TTL 300        | Unchanged                                                   |
-| Clerk accounts   | DNS-only CNAME `accounts` → `accounts.clerk.services`                  | Unchanged                                                   |
-| Clerk mail       | DNS-only CNAME `clkmail` → `mail.h8zn0um1i4rl.clerk.services`          | Unchanged                                                   |
-| Clerk DKIM 1     | DNS-only CNAME `clk._domainkey` → `dkim1.h8zn0um1i4rl.clerk.services`  | Unchanged                                                   |
-| Clerk DKIM 2     | DNS-only CNAME `clk2._domainkey` → `dkim2.h8zn0um1i4rl.clerk.services` | Unchanged                                                   |
-| SPF              | TXT `v=spf1 include:spf.efwd.registrar-servers.com ~all`, TTL 1800     | Unchanged                                                   |
+| Boundary         | Before                                                                          | Target                                                      |
+| ---------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Registrar        | Namecheap                                                                       | Same registrar                                              |
+| Authoritative NS | `ns1.digitalocean.com`, `ns2.digitalocean.com`, `ns3.digitalocean.com`          | `elsa.ns.cloudflare.com`, `miles.ns.cloudflare.com`         |
+| Cloudflare zone  | `168e4a43b922ad6e8230f8aee76fce33`, pending delegation                          | Same zone, active                                           |
+| Apex             | DO A `129.212.153.182`, TTL 30                                                  | Existing Worker custom domain, proxied managed AAAA `100::` |
+| www              | DO CNAME `chrondle.app`, TTL 30                                                 | Existing Worker custom domain, proxied managed AAAA `100::` |
+| Clerk frontend   | DNS-only CNAME `clerk` → `frontend-api.clerk.services`, TTL 300                 | Unchanged                                                   |
+| Clerk accounts   | DNS-only CNAME `accounts` → `accounts.clerk.services`, TTL 300                  | Unchanged (missing 2026-10-13 to 2026-10-20)                |
+| Clerk mail       | DNS-only CNAME `clkmail` → `mail.h8zn0um1i4rl.clerk.services`, TTL 300          | Unchanged (missing 2026-10-13 to 2026-10-20)                |
+| Clerk DKIM 1     | DNS-only CNAME `clk._domainkey` → `dkim1.h8zn0um1i4rl.clerk.services`, TTL 300  | Unchanged (missing 2026-10-13 to 2026-10-20)                |
+| Clerk DKIM 2     | DNS-only CNAME `clk2._domainkey` → `dkim2.h8zn0um1i4rl.clerk.services`, TTL 300 | Unchanged (missing 2026-10-13 to 2026-10-20)                |
+| SPF              | TXT `v=spf1 include:spf.efwd.registrar-servers.com ~all`, TTL 1800              | Unchanged                                                   |
 
 The cutover on 2026-10-13 copied only the Clerk frontend CNAME; the other four
 Clerk records were missing until 2026-10-20, so Clerk sign-in emails never
@@ -371,7 +371,8 @@ Do not create another validator or print the environment to debug it.
 - [ ] Monitoring configured
 
 `bun run doctor:hosting` is the provider-independent production probe. It fails
-if the Clerk custom-domain CNAME disappears, Clerk's client edge or sign-in
+if any of the five Clerk CNAMEs (frontend, accounts, mail, two DKIM) is
+missing or wrong, Clerk's client edge or sign-in
 route stops loading, the production Convex corpus is unavailable, application
 health degrades, or signed-out Stripe requests reach provider actions.
 
