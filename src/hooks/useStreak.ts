@@ -5,7 +5,13 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { anonymousStreakStorage } from "@/lib/secureStorage";
 import { anyPublicApi } from "@/lib/convexAnyApi";
-import { calculateStreakUpdate, applyStreakUpdate } from "../../convex/lib/streakCalculation";
+import {
+  calculateStreakUpdate,
+  applyStreakUpdate,
+  dayDifference,
+  getActiveStreak,
+  type StreakUpdate,
+} from "../../convex/lib/streakCalculation";
 import { getLocalDateString } from "@/lib/time/dailyDate";
 import { STREAK_CONFIG } from "@/lib/constants";
 import { logger } from "@/lib/logger";
@@ -28,10 +34,32 @@ export interface StreakData {
  */
 interface UseStreakReturn {
   streakData: StreakData;
-  updateStreak: (hasWon: boolean) => StreakData;
+  /**
+   * Record a completion. Pass the completed puzzle's date: it is the streak
+   * day marker (as on the server), so a completion handled after the local
+   * day rolls over still counts for the puzzle's day. Defaults to today.
+   */
+  updateStreak: (hasWon: boolean, puzzleDate?: string) => StreakData;
   hasNewAchievement: boolean;
   newAchievement: string | null;
   clearNewAchievement: () => void;
+}
+
+/**
+ * Plan the streak update for a completion dated by its puzzle. A puzzle older
+ * than the last completion never moves the streak (mirrors the server's
+ * shouldUpdateStreakForPuzzle).
+ */
+function planStreakUpdate(
+  lastCompletedDate: string | null,
+  currentStreak: number,
+  hasWon: boolean,
+  puzzleDate: string,
+): StreakUpdate {
+  if (lastCompletedDate && dayDifference(puzzleDate, lastCompletedDate) > 0) {
+    return { type: "no-change", reason: "older-than-last" };
+  }
+  return calculateStreakUpdate(lastCompletedDate, currentStreak, puzzleDate, hasWon);
 }
 
 /**
@@ -71,12 +99,20 @@ export function useStreak(): UseStreakReturn {
   // Convex mutation for merging anonymous streaks
   const mergeStreakMutation = useMutation(anyPublicApi.users.mergeAnonymousStreak);
 
+  // Stored streaks only change on the next completion, so a missed day must
+  // be applied on read against the player's local day.
+  const today = getLocalDateString();
+
   // Derive streak data based on auth state
   const streakData = useMemo((): StreakData => {
     if (isSignedIn && convexUser) {
       // Authenticated: use Convex data
       return {
-        currentStreak: convexUser.currentStreak,
+        currentStreak: getActiveStreak(
+          convexUser.currentStreak,
+          convexUser.lastCompletedDate || null,
+          today,
+        ),
         longestStreak: convexUser.longestStreak,
         totalGamesPlayed: convexUser.totalPlays,
         lastPlayedDate: convexUser.lastCompletedDate || "",
@@ -85,35 +121,37 @@ export function useStreak(): UseStreakReturn {
       };
     } else {
       // Browser storage has no server snapshot; expose it only after hydration.
-      const currentStreak = isHydrated ? anonymousStreak.currentStreak : 0;
+      const storedStreak = isHydrated ? anonymousStreak.currentStreak : 0;
       return {
-        currentStreak,
-        longestStreak: currentStreak, // No history for anonymous
+        currentStreak: isHydrated
+          ? getActiveStreak(storedStreak, anonymousStreak.lastCompletedDate || null, today)
+          : 0,
+        longestStreak: storedStreak, // No history for anonymous
         totalGamesPlayed: 0, // Not tracked for anonymous
         lastPlayedDate: isHydrated ? anonymousStreak.lastCompletedDate : "",
         playedDates: [], // Not used
         achievements: [], // Not tracked for anonymous
       };
     }
-  }, [isSignedIn, convexUser, anonymousStreak, isHydrated]);
+  }, [isSignedIn, convexUser, anonymousStreak, isHydrated, today]);
 
   // Update streak function - routes to correct persistence layer
   const updateStreak = useCallback(
-    (hasWon: boolean): StreakData => {
+    (hasWon: boolean, puzzleDate?: string): StreakData => {
+      // Canonical day semantics: the completed puzzle's date is the streak
+      // day marker, matching the server's puzzle-date-based streak update.
+      // Without one, fall back to the player's LOCAL calendar day (game pages
+      // resolve the daily puzzle by local date).
+      const completionDate = puzzleDate ?? getLocalDateString();
+
       if (isSignedIn && convexUser) {
         // Authenticated: Calculate optimistic update while backend processes
         // submitGuess mutation handles actual persistence, but we provide immediate feedback.
-        // Canonical day semantics: the player's LOCAL calendar day — this
-        // matches the date of the daily puzzle being completed (game pages
-        // resolve puzzles by local date) and the server's puzzle-date-based
-        // streak update.
-        const today = getLocalDateString();
-
-        const update = calculateStreakUpdate(
+        const update = planStreakUpdate(
           convexUser.lastCompletedDate || null,
           convexUser.currentStreak,
-          today,
           hasWon,
+          completionDate,
         );
 
         // Apply optimistic update for immediate UI feedback
@@ -144,15 +182,12 @@ export function useStreak(): UseStreakReturn {
         let resultData: StreakData | null = null;
 
         setAnonymousStreak((prev) => {
-          // Local calendar day: same day marker the daily puzzle carries.
-          const today = getLocalDateString();
-
           // Calculate what should happen (explicit command pattern)
-          const update = calculateStreakUpdate(
+          const update = planStreakUpdate(
             prev.lastCompletedDate || null,
             prev.currentStreak,
-            today,
             hasWon,
+            completionDate,
           );
 
           // Log the update for visibility
@@ -165,9 +200,10 @@ export function useStreak(): UseStreakReturn {
           // Apply the update to get new state
           const newState = applyStreakUpdate(prev, update);
 
-          // Log same-day replays explicitly (this was the bug!)
+          // Log preserved streaks explicitly (same-day replay was a past bug)
           if (update.type === "no-change") {
-            logger.debug("[useStreak] Same-day replay detected - preserving streak:", {
+            logger.debug("[useStreak] Preserving streak:", {
+              reason: update.reason,
               preservedStreak: newState.currentStreak,
               date: newState.lastCompletedDate,
             });

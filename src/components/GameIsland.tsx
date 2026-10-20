@@ -118,9 +118,9 @@ export function GameIsland() {
       // Update streak (dual-mode):
       // - Authenticated: no-op (backend submitGuess mutation already updated)
       // - Anonymous: calculate and persist to localStorage
-      updateStreak(won);
+      updateStreak(won, puzzleDate);
     },
-    [updateStreak],
+    [updateStreak, puzzleDate],
   );
 
   // Watch for game completion

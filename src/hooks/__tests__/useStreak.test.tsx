@@ -30,6 +30,11 @@ describe("useStreak", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    // Pin the local day to the day after the fixtures' 2025-01-15 completion:
+    // a displayed streak is only live while its last win is today or yesterday.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2025, 0, 16, 12, 0, 0));
+
     // Default mock implementations
     vi.mocked(clerk.useUser).mockReturnValue({
       isSignedIn: false,
@@ -47,6 +52,7 @@ describe("useStreak", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -230,6 +236,122 @@ describe("useStreak", () => {
       const { result: result2 } = renderHook(() => useStreak());
       expect(result2.current.streakData.currentStreak).toBe(7);
       expect(result2.current.streakData.longestStreak).toBe(10);
+    });
+  });
+
+  describe("Missed days (display derivation)", () => {
+    // Local noon on 2026-10-20: the player's local calendar day.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date(2026, 9, 20, 12, 0, 0));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("shows no streak once the last anonymous win is older than yesterday", () => {
+      vi.mocked(anonymousStreakStorage.get).mockReturnValue({
+        currentStreak: 2,
+        lastCompletedDate: "2026-10-18",
+      });
+
+      const { result } = renderHook(() => useStreak());
+
+      expect(result.current.streakData.currentStreak).toBe(0);
+      expect(result.current.streakData.lastPlayedDate).toBe("2026-10-18");
+      expect(result.current.hasNewAchievement).toBe(false);
+    });
+
+    it.each(["2026-10-19", "2026-10-20"])(
+      "keeps an anonymous streak whose last win was %s",
+      (lastCompletedDate) => {
+        vi.mocked(anonymousStreakStorage.get).mockReturnValue({
+          currentStreak: 2,
+          lastCompletedDate,
+        });
+
+        const { result } = renderHook(() => useStreak());
+
+        expect(result.current.streakData.currentStreak).toBe(2);
+      },
+    );
+
+    it("restarts at 1, not 3, when the player wins after a missed day", () => {
+      vi.mocked(anonymousStreakStorage.get).mockReturnValue({
+        currentStreak: 2,
+        lastCompletedDate: "2026-10-18",
+      });
+
+      const { result } = renderHook(() => useStreak());
+      act(() => {
+        result.current.updateStreak(true, "2026-10-20");
+      });
+
+      expect(anonymousStreakStorage.set).toHaveBeenCalledWith({
+        currentStreak: 1,
+        lastCompletedDate: "2026-10-20",
+      });
+      expect(result.current.streakData.currentStreak).toBe(1);
+    });
+
+    it("dates a completion by its puzzle, not by the clock when the effect runs", () => {
+      // A completed 10-18 puzzle whose completion effect fires after the
+      // local day has rolled over must be a same-day replay, not a fresh
+      // 10-20 win that restarts the streak at 1.
+      vi.mocked(anonymousStreakStorage.get).mockReturnValue({
+        currentStreak: 2,
+        lastCompletedDate: "2026-10-18",
+      });
+
+      const { result } = renderHook(() => useStreak());
+      act(() => {
+        result.current.updateStreak(true, "2026-10-18");
+      });
+
+      expect(anonymousStreakStorage.set).toHaveBeenCalledWith({
+        currentStreak: 2,
+        lastCompletedDate: "2026-10-18",
+      });
+    });
+
+    it("never rewinds a streak for a puzzle older than the last completion", () => {
+      vi.mocked(anonymousStreakStorage.get).mockReturnValue({
+        currentStreak: 3,
+        lastCompletedDate: "2026-10-20",
+      });
+
+      const { result } = renderHook(() => useStreak());
+      act(() => {
+        result.current.updateStreak(true, "2026-10-18");
+      });
+
+      expect(anonymousStreakStorage.set).toHaveBeenCalledWith({
+        currentStreak: 3,
+        lastCompletedDate: "2026-10-20",
+      });
+      expect(result.current.streakData.currentStreak).toBe(3);
+    });
+
+    it("shows no streak for a signed-in player whose last win is older than yesterday", () => {
+      vi.mocked(clerk.useUser).mockReturnValue({
+        isSignedIn: true,
+        user: { id: "user_123" } as any,
+        isLoaded: true,
+      } as any);
+      vi.mocked(convex.useQuery).mockReturnValue({
+        _id: "convex_user_123",
+        currentStreak: 7,
+        longestStreak: 10,
+        lastCompletedDate: "2026-10-18",
+        totalPlays: 20,
+      } as any);
+
+      const { result } = renderHook(() => useStreak());
+
+      expect(result.current.streakData.currentStreak).toBe(0);
+      expect(result.current.streakData.longestStreak).toBe(10);
+      expect(result.current.hasNewAchievement).toBe(false);
     });
   });
 

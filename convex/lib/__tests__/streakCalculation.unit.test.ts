@@ -3,6 +3,7 @@ import {
   calculateStreak,
   calculateStreakUpdate,
   applyStreakUpdate,
+  getActiveStreak,
   getUTCDateString,
   isConsecutiveDay,
 } from "../streakCalculation";
@@ -83,6 +84,34 @@ describe("Streak Calculation Utilities", () => {
 
     it("should throw error for empty string", () => {
       expect(() => isConsecutiveDay("", "2025-10-08")).toThrow("Invalid first date");
+    });
+  });
+
+  describe("getActiveStreak", () => {
+    it("keeps the stored streak when the last win was today or yesterday", () => {
+      expect(getActiveStreak(2, "2026-10-20", "2026-10-20")).toBe(2);
+      expect(getActiveStreak(2, "2026-10-19", "2026-10-20")).toBe(2);
+    });
+
+    it("reads 0 once a day has been missed", () => {
+      expect(getActiveStreak(2, "2026-10-18", "2026-10-20")).toBe(0);
+      expect(getActiveStreak(30, "2026-09-30", "2026-10-20")).toBe(0);
+    });
+
+    it("keeps a streak dated ahead of the reader's day (another timezone)", () => {
+      expect(getActiveStreak(4, "2026-10-21", "2026-10-20")).toBe(4);
+    });
+
+    it("crosses month and year boundaries", () => {
+      expect(getActiveStreak(3, "2026-12-31", "2027-01-01")).toBe(3);
+      expect(getActiveStreak(3, "2026-12-30", "2027-01-01")).toBe(0);
+    });
+
+    it("reads 0 for missing or invalid dates instead of throwing", () => {
+      expect(getActiveStreak(5, null, "2026-10-20")).toBe(0);
+      expect(getActiveStreak(5, "", "2026-10-20")).toBe(0);
+      expect(getActiveStreak(5, "2026-13-45", "2026-10-20")).toBe(0);
+      expect(getActiveStreak(5, "2026-10-19", "0000-00-00")).toBe(0);
     });
   });
 
