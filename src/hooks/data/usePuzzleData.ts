@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { Id } from "convex/_generated/dataModel";
 import { anyPublicApi } from "@/lib/convexAnyApi";
+import { BACKEND_UNREACHABLE_ERROR, BACKEND_UNREACHABLE_TIMEOUT_MS } from "@/lib/errorRecovery";
+import { useLoadTimeout } from "@/hooks/useLoadTimeout";
 import { PuzzleWithContext } from "@/types/puzzle";
 import { useTodaysPuzzle } from "@/hooks/useTodaysPuzzle";
 
@@ -66,7 +68,7 @@ export function usePuzzleData(puzzleNumber?: number): UsePuzzleDataReturn {
   ) as ConvexPuzzle | null | undefined;
 
   // Memoize the return value to ensure stable references
-  return useMemo<UsePuzzleDataReturn>(() => {
+  const data = useMemo<UsePuzzleDataReturn>(() => {
     // === DAILY PUZZLE MODE ===
     if (isDaily) {
       if (todaysPuzzle.isLoading) {
@@ -146,4 +148,16 @@ export function usePuzzleData(puzzleNumber?: number): UsePuzzleDataReturn {
       error: null,
     };
   }, [isDaily, todaysPuzzle, archivePuzzle, puzzleNumber]);
+
+  // A load that never resolves means the backend is unreachable (socket refused,
+  // offline). Surface it as an error so the player sees why nothing is happening.
+  const timedOut = useLoadTimeout(data.isLoading, BACKEND_UNREACHABLE_TIMEOUT_MS);
+
+  return useMemo<UsePuzzleDataReturn>(
+    () =>
+      timedOut
+        ? { puzzle: null, isLoading: false, error: new Error(BACKEND_UNREACHABLE_ERROR) }
+        : data,
+    [timedOut, data],
+  );
 }

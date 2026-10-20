@@ -4,12 +4,15 @@
 
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { BACKEND_UNREACHABLE_ERROR } from "@/lib/errorRecovery";
 import { GameIsland } from "../GameIsland";
+
+let mockLoadError = "Network timeout while loading puzzle";
 
 vi.mock("@/hooks/useRangeGame", () => ({
   useRangeGame: () => ({
-    gameState: { status: "error", error: "Network timeout while loading puzzle" },
+    gameState: { status: "error", error: mockLoadError },
     submitRange: vi.fn(),
     resetGame: vi.fn(),
   }),
@@ -61,8 +64,21 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 describe("GameIsland error recovery", () => {
+  beforeEach(() => {
+    mockLoadError = "Network timeout while loading puzzle";
+  });
+
   it("shows retry action on recoverable load error", () => {
     render(<GameIsland />);
     expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it("tells the player the server is unreachable and offers a reload", () => {
+    mockLoadError = BACKEND_UNREACHABLE_ERROR;
+
+    render(<GameIsland />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(/can.t reach the Chrondle server/i);
+    expect(screen.getByRole("button", { name: /reload|retry/i })).toBeInTheDocument();
   });
 });
