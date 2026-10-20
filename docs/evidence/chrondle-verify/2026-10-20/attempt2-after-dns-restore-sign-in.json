@@ -1,0 +1,26 @@
+{
+  "feature": "sign-in",
+  "base": "https://www.chrondle.app",
+  "started_at": "2026-10-20T23:25:03.654Z",
+  "steps": [
+    {
+      "at": "2026-10-20T23:25:06.326Z",
+      "action": "open /sign-in, enter owner email, Continue",
+      "result": "Clerk asks for an email code"
+    },
+    {
+      "at": "2026-10-20T23:25:07.005Z",
+      "action": "wrong code 000000",
+      "result": "Clerk rejects it and stays on the code step"
+    },
+    {
+      "at": "2026-10-20T23:25:07.040Z",
+      "action": "capture wrong code",
+      "result": "screenshot",
+      "files_not_kept": "same code step as attempt1-sign-in-wrong-code.png"
+    }
+  ],
+  "result": "failed",
+  "error": "no Clerk code for phraznikov@gmail.com reached the owner inbox within 180s",
+  "finished_at": "2026-10-20T23:28:08.418Z"
+}

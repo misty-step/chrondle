@@ -1,0 +1,26 @@
+- heading "Sign in to Chrondle" [level=1]
+- paragraph: Welcome back! Please sign in to continue
+- button "Sign in with Google Continue with Google":
+  - img "Sign in with Google"
+  - text: Continue with Google
+- paragraph: or
+- text: Email address
+- textbox "Email address":
+  - /placeholder: Enter your email address
+- text: Password
+- textbox "Password":
+  - /placeholder: Enter your password
+- button "Show password":
+  - img
+- button "Continue":
+  - text: Continue
+  - img
+- text: Don’t have an account?
+- link "Sign up":
+  - /url: https://www.chrondle.app/sign-up#/?redirect_url=https%3A%2F%2Fwww.chrondle.app%2Fadmin%2Fdashboard
+- paragraph: Secured by
+- link "Clerk logo":
+  - /url: https://go.clerk.com/components
+  - img
+- alert
+- region "Notifications"
