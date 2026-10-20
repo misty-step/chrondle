@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { ArchiveOrderPuzzleClient } from "../ArchiveOrderPuzzleClient";
 import type { OrderPuzzle } from "@/types/orderGameState";
 
@@ -17,14 +17,17 @@ const mockPuzzle: OrderPuzzle = {
   ],
 };
 
+const readyState = {
+  status: "ready",
+  puzzle: mockPuzzle,
+  currentOrder: mockPuzzle.events.map((e) => e.id),
+  hints: [],
+};
+let mockGameState: Record<string, unknown> = readyState;
+
 vi.mock("@/hooks/useOrderGame", () => ({
   useOrderGame: () => ({
-    gameState: {
-      status: "ready",
-      puzzle: mockPuzzle,
-      currentOrder: mockPuzzle.events.map((e) => e.id),
-      hints: [],
-    },
+    gameState: mockGameState,
     reorderEvents: vi.fn(),
     takeHint: vi.fn(),
     commitOrdering: vi.fn(),
@@ -60,11 +63,30 @@ vi.mock("@/components/ArchiveErrorBoundary", () => ({
 }));
 
 describe("ArchiveOrderPuzzleClient", () => {
+  beforeEach(() => {
+    mockGameState = readyState;
+  });
+
   it("renders archive puzzle without not-found/loading flash", () => {
     render(<ArchiveOrderPuzzleClient puzzleNumber={12} initialPuzzle={mockPuzzle} />);
 
     expect(screen.queryByText(/Loading Order puzzle/i)).not.toBeInTheDocument();
     expect(screen.getByTestId("doc-header")).toBeInTheDocument();
     expect(screen.getByTestId("event-list")).toBeInTheDocument();
+  });
+
+  it("shows a not-found state instead of a loading screen when the puzzle is missing", () => {
+    mockGameState = { status: "error", error: "Order puzzle #999999 not found" };
+
+    render(<ArchiveOrderPuzzleClient puzzleNumber={999999} initialPuzzle={mockPuzzle} />);
+
+    expect(screen.queryByTestId("loading")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Puzzle #999999 doesn.t exist/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /archive/i })).toHaveAttribute(
+      "href",
+      "/archive/order",
+    );
   });
 });

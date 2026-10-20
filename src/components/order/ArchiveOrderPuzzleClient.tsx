@@ -11,6 +11,7 @@ import { OrderGameBoard } from "@/components/order/OrderGameBoard";
 import { AppHeader } from "@/components/AppHeader";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { ArchivePuzzleUnavailable } from "@/components/ArchivePuzzleUnavailable";
 import { Footer } from "@/components/Footer";
 import { generateOrderShareText } from "@/lib/sharing";
 import { ArchiveErrorBoundary } from "@/components/ArchiveErrorBoundary";
@@ -57,11 +58,10 @@ export function ArchiveOrderPuzzleClient({
 
   if (gameState.status === "error") {
     return (
-      <LoadingScreen
-        intent="order"
-        stage="readying"
-        message="Something went wrong"
-        subMessage={gameState.error}
+      <ArchivePuzzleUnavailable
+        puzzleNumber={puzzleNumber}
+        error={gameState.error}
+        archiveHref="/archive/order"
       />
     );
   }

@@ -13,7 +13,7 @@ import { useScreenReaderAnnouncements } from "@/hooks/useScreenReaderAnnouncemen
 import { formatYear } from "@/lib/displayFormatting";
 import { ConfettiRef } from "@/components/magicui/confetti";
 import { fetchTotalPuzzles } from "@/lib/puzzleData";
-import { useToast } from "@/hooks/use-toast";
+import { ArchivePuzzleUnavailable } from "@/components/ArchivePuzzleUnavailable";
 import { logger } from "@/lib/logger";
 
 interface ClassicArchivePuzzleClientProps {
@@ -24,8 +24,6 @@ export function ClassicArchivePuzzleClient({ puzzleNumber }: ClassicArchivePuzzl
   const router = useRouter();
   const confettiRef = useRef<ConfettiRef>(null);
   const [totalPuzzles, setTotalPuzzles] = useState<number | null>(null);
-  const { addToast } = useToast();
-  const toast = addToast;
 
   // Preload total count (used for prev/next bounds)
   useEffect(() => {
@@ -42,7 +40,6 @@ export function ClassicArchivePuzzleClient({ puzzleNumber }: ClassicArchivePuzzl
     gameState.status === "loading-puzzle" ||
     gameState.status === "loading-auth" ||
     gameState.status === "loading-progress";
-  const hasError = gameState.status === "error";
   const targetYear = gameState.status === "ready" ? gameState.puzzle.targetYear : 0;
 
   useVictoryConfetti(confettiRef, {
@@ -60,17 +57,6 @@ export function ClassicArchivePuzzleClient({ puzzleNumber }: ClassicArchivePuzzl
     setLastRangeCount: setScreenReaderLastRangeCount,
   });
 
-  // Show error toast in effect to avoid calling during render
-  useEffect(() => {
-    if (hasError && gameState.status === "error") {
-      toast({
-        title: "Failed to load puzzle",
-        description: gameState.error,
-        variant: "destructive",
-      });
-    }
-  }, [hasError, gameState, toast]);
-
   const handleNavigate = useCallback(
     (direction: "prev" | "next") => {
       if (!totalPuzzles) return;
@@ -80,6 +66,16 @@ export function ClassicArchivePuzzleClient({ puzzleNumber }: ClassicArchivePuzzl
     },
     [puzzleNumber, totalPuzzles, router],
   );
+
+  if (gameState.status === "error") {
+    return (
+      <ArchivePuzzleUnavailable
+        puzzleNumber={puzzleNumber}
+        error={gameState.error}
+        archiveHref="/archive"
+      />
+    );
+  }
 
   if (isLoading || gameState.status !== "ready") {
     return (
