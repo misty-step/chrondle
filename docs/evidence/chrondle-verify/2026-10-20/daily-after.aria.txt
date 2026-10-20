@@ -1,0 +1,58 @@
+- alert
+- region "Notifications"
+- banner:
+  - link "Chrondle":
+    - /url: /?all=1
+  - button "Sound effects"
+  - button "Switch to dark theme"
+  - button "Sign in to your account":
+    - img
+  - navigation "Game navigation":
+    - combobox "Select game mode": Classic
+    - link "Browse puzzle archive":
+      - /url: /archive
+  - text: "#434 1 day streak"
+- main:
+  - paragraph: The year was
+  - heading "[answer] BC" [level=1]
+  - heading "Range contained the answer" [level=3]
+  - paragraph: [answer] BC fell within your 1-year range.
+  - paragraph: Total score
+  - paragraph: 100 pts
+  - button "Share"
+  - text: [answer] BC [answer] BC Hints taken
+  - img "Hint unused"
+  - img "Hint unused"
+  - img "Hint unused"
+  - img "Hint unused"
+  - img "Hint unused"
+  - text: "-0 pts"
+  - button "Show score breakdown"
+  - region "Come back tomorrow":
+    - paragraph: 1-day streak
+    - paragraph: Win tomorrow's puzzle to make it 2.
+    - paragraph:
+      - text: New puzzle in
+      - timer "Time until the next puzzle": 05:59:40
+    - button "Get a daily reminder"
+  - region "Play another mode":
+    - paragraph: Keep playing — today
+    - link "Order Sort today's timeline Not played today":
+      - /url: /order
+    - 'link "Duel Endless: which came first? Endless"':
+      - /url: /duel
+- contentinfo:
+  - link "Chrondle":
+    - /url: /
+  - link "Changelog · v1.13.1":
+    - /url: /changelog
+  - text: © 2026
+  - navigation "Footer navigation":
+    - link "A Misty Step project":
+      - /url: https://mistystep.io
+    - button "Copy support email address": Feedback
+    - link "Privacy":
+      - /url: /legal/privacy
+    - link "Terms":
+      - /url: /legal/terms
+- status

@@ -1,0 +1,36 @@
+{
+  "feature": "order-puzzle",
+  "base": "https://www.chrondle.app",
+  "started_at": "2026-10-20T22:51:29.029Z",
+  "steps": [
+    {
+      "at": "2026-10-20T22:51:31.546Z",
+      "action": "open gallery /?all=1",
+      "result": "Order card shows Puzzle #345"
+    },
+    {
+      "at": "2026-10-20T22:51:33.754Z",
+      "action": "choose Order card",
+      "result": "/order header shows #345"
+    },
+    {
+      "at": "2026-10-20T22:51:33.787Z",
+      "action": "move first of 6 events down with the keyboard stepper",
+      "result": "event now at position 2; live region announced it"
+    },
+    {
+      "at": "2026-10-20T22:51:34.521Z",
+      "action": "capture board",
+      "result": "screenshot",
+      "files": ["order.png", "order.aria.txt"]
+    },
+    {
+      "at": "2026-10-20T22:51:34.521Z",
+      "action": "check backend writes",
+      "result": "only allowed (none)",
+      "mutations_sent": []
+    }
+  ],
+  "result": "passed",
+  "finished_at": "2026-10-20T22:51:34.521Z"
+}

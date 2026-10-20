@@ -1,0 +1,23 @@
+- heading "Check your email" [level=1]
+- paragraph: to continue to Chrondle
+- paragraph: phraznikov@gmail.com
+- button "Edit":
+  - img
+- group
+- textbox "Enter verification code"
+- text: Incorrect code
+- paragraph:
+  - img
+  - text: Incorrect code
+- button "Didn't receive a code? Resend (29)" [disabled]
+- button "Continue":
+  - text: Continue
+  - img
+- link "Use another method":
+  - /url: https://www.chrondle.app/sign-in/factor-one
+- paragraph: Secured by
+- link "Clerk logo":
+  - /url: https://go.clerk.com/components
+  - img
+- alert
+- region "Notifications"
