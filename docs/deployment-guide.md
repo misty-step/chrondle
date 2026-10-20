@@ -32,10 +32,10 @@ Both deployments contain the same data structure:
 
 ### Authentication (Clerk)
 
-| Variable                            | Required | Description                  | Example                        |
-| ----------------------------------- | -------- | ---------------------------- | ------------------------------ |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | ✅       | Clerk public key             | `pk_live_...` or `pk_test_...` |
-| `CLERK_SECRET_KEY`                  | ✅       | Clerk secret key             | `sk_live_...` or `sk_test_...` |
+| Variable                            | Required | Description      | Example                        |
+| ----------------------------------- | -------- | ---------------- | ------------------------------ |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | ✅       | Clerk public key | `pk_live_...` or `pk_test_...` |
+| `CLERK_SECRET_KEY`                  | ✅       | Clerk secret key | `sk_live_...` or `sk_test_...` |
 
 Account provisioning uses verified Clerk JWTs on authenticated requests, not a
 Clerk webhook. See [authentication](AUTHENTICATION.md).
@@ -141,8 +141,16 @@ public apex/www moved. The 2026-10-12 baseline is:
 | Cloudflare zone  | `168e4a43b922ad6e8230f8aee76fce33`, pending delegation                 | Same zone, active                                           |
 | Apex             | DO A `129.212.153.182`, TTL 30                                         | Existing Worker custom domain, proxied managed AAAA `100::` |
 | www              | DO CNAME `chrondle.app`, TTL 30                                        | Existing Worker custom domain, proxied managed AAAA `100::` |
-| Clerk            | DNS-only CNAME `frontend-api.clerk.services`, TTL 300                  | Unchanged                                                   |
+| Clerk frontend   | DNS-only CNAME `clerk` → `frontend-api.clerk.services`, TTL 300        | Unchanged                                                   |
+| Clerk accounts   | DNS-only CNAME `accounts` → `accounts.clerk.services`                  | Unchanged                                                   |
+| Clerk mail       | DNS-only CNAME `clkmail` → `mail.h8zn0um1i4rl.clerk.services`          | Unchanged                                                   |
+| Clerk DKIM 1     | DNS-only CNAME `clk._domainkey` → `dkim1.h8zn0um1i4rl.clerk.services`  | Unchanged                                                   |
+| Clerk DKIM 2     | DNS-only CNAME `clk2._domainkey` → `dkim2.h8zn0um1i4rl.clerk.services` | Unchanged                                                   |
 | SPF              | TXT `v=spf1 include:spf.efwd.registrar-servers.com ~all`, TTL 1800     | Unchanged                                                   |
+
+The cutover on 2026-10-13 copied only the Clerk frontend CNAME; the other four
+Clerk records were missing until 2026-10-20, so Clerk sign-in emails never
+arrived. `bun run doctor:hosting` now checks all five.
 
 1. Read the current registrar NS, DNS records, Worker version and native release
    before writing. Compare all portable DNS records; do not copy obsolete DO
