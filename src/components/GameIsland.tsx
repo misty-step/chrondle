@@ -107,42 +107,19 @@ export function GameIsland() {
   // UI state
   const [, setValidationError] = useState("");
 
-  // Guard to prevent multiple game over handling
-  const hasHandledGameOverRef = useRef(false);
-
-  // Handle game over with streak updates
-  const handleGameOver = useCallback(
-    (won: boolean, attemptCount: number) => {
-      logger.info(`Game complete: ${won ? "Won" : "Lost"} in ${attemptCount} range attempts`);
-
-      // Update streak (dual-mode):
-      // - Authenticated: no-op (backend submitGuess mutation already updated)
-      // - Anonymous: calculate and persist to localStorage
-      updateStreak(won);
+  // Award only an accepted submission made here. Restores and other tabs are reads.
+  const submitAcceptedRange = useCallback(
+    async (input: { start: number; end: number; hintsUsed: number }) => {
+      const accepted = await submitRange(input);
+      if (accepted && puzzle) {
+        const won = puzzle.targetYear >= input.start && puzzle.targetYear <= input.end;
+        logger.info(`Game complete: ${won ? "Won" : "Lost"} in 1 range attempt`);
+        updateStreak(won);
+      }
+      return accepted;
     },
-    [updateStreak],
+    [submitRange, puzzle, updateStreak],
   );
-
-  // Watch for game completion
-  useEffect(() => {
-    // Only handle game over once per completion
-    if (gameLogic.isGameComplete && !gameLogic.isLoading && !hasHandledGameOverRef.current) {
-      hasHandledGameOverRef.current = true;
-      const attemptCount = gameLogic.gameState.ranges.length;
-      handleGameOver(gameLogic.hasWon, attemptCount);
-    }
-
-    // Reset guard when game resets (for debug mode or archive navigation)
-    if (!gameLogic.isGameComplete) {
-      hasHandledGameOverRef.current = false;
-    }
-  }, [
-    gameLogic.isGameComplete,
-    gameLogic.hasWon,
-    gameLogic.isLoading,
-    gameLogic.gameState.ranges.length,
-    handleGameOver,
-  ]);
 
   const isMounted = useHydrated();
 
@@ -216,7 +193,7 @@ export function GameIsland() {
           hasWon={gameLogic.hasWon}
           isLoading={gameLogic.isLoading}
           error={gameLogic.error}
-          onRangeCommit={gameLogic.submitRange}
+          onRangeCommit={submitAcceptedRange}
           countdown={countdown}
           confettiRef={confettiRef}
           onValidationError={setValidationError}

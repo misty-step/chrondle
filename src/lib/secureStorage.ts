@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { withClassicSaveLock } from "@/lib/classicSaveLock";
 import { logger } from "@/lib/logger";
 
 /**
@@ -39,7 +40,10 @@ function validateKey(key: string): boolean {
     return false;
   }
 
-  if (key.length > SECURITY_CONFIG.MAX_KEY_LENGTH) {
+  if (
+    key.length >
+    (key.startsWith("chrondle-game-state-puzzle-") ? 500 : SECURITY_CONFIG.MAX_KEY_LENGTH)
+  ) {
     return false;
   }
 
@@ -372,7 +376,78 @@ const anonymousStreakSchema = z.object({
 /**
  * Export pre-configured typed storage instances
  */
-export const gameStateStorage = createTypedStorage("chrondle-game-state", anonymousGameStateSchema);
+export const CLASSIC_SAVE_KEY = "chrondle-game-state";
+export const CLASSIC_SAVE_PREFIX = `${CLASSIC_SAVE_KEY}-puzzle-`;
+type StoredGameState = z.infer<typeof anonymousGameStateSchema>;
+const legacyGameStateStorage = createTypedStorage(CLASSIC_SAVE_KEY, anonymousGameStateSchema);
+
+function puzzleStorage(puzzleId: string) {
+  // Hex encodes arbitrary legacy IDs without exceeding the secure key contract.
+  const encoded = Array.from(puzzleId, (c) => c.charCodeAt(0).toString(16).padStart(4, "0")).join(
+    "",
+  );
+  return createTypedStorage(`${CLASSIC_SAVE_PREFIX}${encoded}`, anonymousGameStateSchema);
+}
+
+function allGameStates(): StoredGameState[] {
+  if (typeof window === "undefined") return [];
+  const states = new Map<string, StoredGameState>();
+  const legacy = legacyGameStateStorage.get();
+  if (legacy) states.set(legacy.puzzleId, legacy);
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith(CLASSIC_SAVE_PREFIX)) continue;
+      const state = secureGetItem(key, anonymousGameStateSchema);
+      if (state) states.set(state.puzzleId, state);
+    }
+  } catch (error) {
+    logger.warn("[SecureStorage] Could not enumerate Classic saves", error);
+  }
+  return [...states.values()];
+}
+
+export const gameStateStorage = {
+  get(puzzleId?: string): StoredGameState | null {
+    if (!puzzleId) return allGameStates().sort((a, b) => b.timestamp - a.timestamp)[0] ?? null;
+    const stored = puzzleStorage(puzzleId).get();
+    if (stored) return stored;
+    const legacy = legacyGameStateStorage.get();
+    if (legacy?.puzzleId !== puzzleId) return null;
+    return legacy;
+  },
+  all: allGameStates,
+  async migrateLegacy(): Promise<void> {
+    const legacy = legacyGameStateStorage.get();
+    if (!legacy) return;
+    await withClassicSaveLock(legacy.puzzleId, () => {
+      // Recheck under the submission lock; reads themselves never rewrite saves.
+      const currentLegacy = legacyGameStateStorage.get();
+      if (JSON.stringify(currentLegacy) !== JSON.stringify(legacy)) return;
+      if (puzzleStorage(legacy.puzzleId).get()) return;
+      // Copy before removing. Full/unavailable storage keeps the original save.
+      if (puzzleStorage(legacy.puzzleId).set(legacy)) legacyGameStateStorage.remove();
+    });
+  },
+  set(state: StoredGameState): boolean {
+    const success = puzzleStorage(state.puzzleId).set(state);
+    if (success && legacyGameStateStorage.get()?.puzzleId === state.puzzleId) {
+      legacyGameStateStorage.remove();
+    }
+    return success;
+  },
+  remove(puzzleId?: string): boolean {
+    if (!puzzleId) return allGameStates().every((state) => gameStateStorage.remove(state.puzzleId));
+    const success = puzzleStorage(puzzleId).remove();
+    if (success && legacyGameStateStorage.get()?.puzzleId === puzzleId) {
+      return legacyGameStateStorage.remove();
+    }
+    return success;
+  },
+  exists(): boolean {
+    return allGameStates().length > 0;
+  },
+};
 
 export const themeStorage = createTypedStorage("chrondle-theme", themePreferencesSchema);
 

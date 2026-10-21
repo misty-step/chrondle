@@ -162,6 +162,18 @@ describe("GameLayout", () => {
       },
     );
 
+    it("does not emit completion analytics when a completed game is restored", () => {
+      const props = createDefaultProps();
+      props.isGameComplete = true;
+      const view = render(<GameLayout {...props} />);
+      view.rerender(<GameLayout {...props} />);
+      view.unmount();
+      render(<GameLayout {...props} />);
+      expect(
+        vi.mocked(analytics.track).mock.calls.filter(([event]) => event === "game_completed"),
+      ).toEqual([]);
+    });
+
     it("hides range input when game complete", () => {
       const props = createDefaultProps();
       props.isGameComplete = true;

@@ -11,6 +11,7 @@
  */
 
 import { gameStateStorage, rangeGuessSchema } from "@/lib/secureStorage";
+import { withClassicSaveLock } from "@/lib/classicSaveLock";
 import { logger } from "@/lib/logger";
 import type { RangeGuess } from "@/types/range";
 import { z } from "zod";
@@ -51,7 +52,7 @@ export function readLocalGameState(puzzleId?: string): LocalGameState | null {
     return null;
   }
 
-  const stored = gameStateStorage.get();
+  const stored = gameStateStorage.get(puzzleId);
   if (!stored) {
     return null;
   }
@@ -118,6 +119,7 @@ export function addRangeToLocalState(
   hasWon: boolean,
 ): boolean {
   const current = readLocalGameState(puzzleId);
+  if (current?.isComplete) return false;
 
   const newState: LocalGameState = {
     puzzleId,
@@ -177,12 +179,12 @@ export function removeLastRangeFromLocalState(puzzleId: string): boolean {
  * Clear local game state
  * Used after successful migration to server
  */
-export function clearLocalGameState(): boolean {
+export function clearLocalGameState(puzzleId?: string): boolean {
   if (typeof window === "undefined") {
     return false;
   }
 
-  const success = gameStateStorage.remove();
+  const success = gameStateStorage.remove(puzzleId);
 
   if (success) {
     window.dispatchEvent(new Event("chrondle-storage-change"));
@@ -257,5 +259,34 @@ export function validateRanges(ranges: unknown): RangeGuess[] {
   } catch {
     logger.warn("[gameDataStore] Invalid ranges data, returning empty array");
     return [];
+  }
+}
+
+/** Reconcile every buffered puzzle. Never discard failed or changed snapshots. */
+export async function reconcileLocalGameStates(
+  merge: (state: MigrationData) => Promise<{ success: boolean }>,
+): Promise<void> {
+  for (const snapshot of gameStateStorage.all()) {
+    if (!snapshot.guesses.length && !snapshot.ranges?.length) continue;
+    const state: MigrationData = {
+      puzzleId: snapshot.puzzleId,
+      guesses: snapshot.guesses,
+      ranges: validateRanges(snapshot.ranges ?? []),
+      isComplete: snapshot.isComplete,
+      hasWon: snapshot.hasWon,
+    };
+    try {
+      const result = await merge(state);
+      if (result.success) {
+        await withClassicSaveLock(snapshot.puzzleId, () => {
+          const current = gameStateStorage.get(snapshot.puzzleId);
+          if (JSON.stringify(current) === JSON.stringify(snapshot)) {
+            clearLocalGameState(snapshot.puzzleId);
+          }
+        });
+      }
+    } catch (error) {
+      logger.warn("[gameDataStore] Reconciliation deferred", { error: String(error) });
+    }
   }
 }
