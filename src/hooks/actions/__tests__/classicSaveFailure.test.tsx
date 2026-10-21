@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useGameActions } from "../useGameActions";
 import { useLocalSession } from "@/hooks/data/useLocalSession";
 import { assertConvexId } from "@/lib/validation";
+import { logger } from "@/lib/logger";
 import { readLocalGameState } from "@/lib/gameDataStore";
 
 const mutation = vi.hoisted(() => vi.fn());
@@ -22,18 +23,23 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
-function renderGame() {
+function renderGame(authenticated = true) {
   return renderHook(() => {
-    const session = useLocalSession(puzzleId, true, 2000);
+    const session = useLocalSession(puzzleId, authenticated, 2000);
     const actions = useGameActions({
       puzzle: {
         puzzle: { id: puzzleId, targetYear: 2000, events: [], puzzleNumber: 42 },
         isLoading: false,
         error: null,
       },
-      auth: { isAuthenticated: true, userId: "b".repeat(32), isLoading: false },
+      auth: {
+        isAuthenticated: authenticated,
+        userId: authenticated ? "b".repeat(32) : null,
+        isLoading: false,
+      },
       progress: { progress: null, isLoading: false },
       session,
     });
@@ -105,4 +111,27 @@ it("still returns the failed outcome if error reporting throws", async () => {
   const { result } = renderGame();
   expect(await submit(result)).toBe(false);
   expect(result.current.session.sessionRanges).toEqual([]);
+});
+
+it("retains a durably accepted anonymous range when submission logging throws", async () => {
+  vi.spyOn(console, "info").mockImplementation(() => {
+    throw new Error("logging failed");
+  });
+  const { result } = renderGame(false);
+  expect(await submit(result)).toBe(true);
+  expect(readLocalGameState(puzzleId)?.ranges).toHaveLength(1);
+  expect(result.current.session.sessionRanges).toHaveLength(1);
+  expect(mutation).not.toHaveBeenCalled();
+});
+
+it("never retries a successful retry because development success logging throws", async () => {
+  vi.stubEnv("NODE_ENV", "development");
+  vi.spyOn(logger, "info").mockImplementation(() => {
+    throw new Error("network logging failed");
+  });
+  mutation.mockRejectedValueOnce(new Error("network")).mockResolvedValue({});
+  const { result } = renderGame();
+  expect(await submit(result)).toBe(true);
+  expect(result.current.session.sessionRanges).toHaveLength(1);
+  expect(mutation).toHaveBeenCalledTimes(2);
 });

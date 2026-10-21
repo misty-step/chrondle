@@ -7,7 +7,10 @@ import { render, screen, fireEvent, act } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { GameIsland } from "../GameIsland";
 import type { GameState, ReadyState } from "@/types/gameState";
+import { logger } from "@/lib/logger";
 import { assertConvexId } from "@/lib/validation";
+const commits = vi.hoisted(() => ({ latest: Promise.resolve(false) }));
+vi.mock("@/observability/reporter", () => ({ captureClientException: vi.fn() }));
 let state: GameState = { status: "loading-puzzle" };
 const updateStreak = vi.fn();
 const submit = vi.fn(async () => true);
@@ -70,7 +73,11 @@ vi.mock("@/components/LazyComponents", () => ({
   }: {
     onRangeCommit: (input: { start: number; end: number; hintsUsed: number }) => Promise<boolean>;
   }) => (
-    <button onClick={() => void onRangeCommit({ start: 1990, end: 2010, hintsUsed: 1 })}>
+    <button
+      onClick={() => {
+        commits.latest = onRangeCommit({ start: 1990, end: 2010, hintsUsed: 1 });
+      }}
+    >
       Submit fixture range
     </button>
   ),
@@ -115,5 +122,18 @@ describe("GameIsland restored completion", () => {
       fireEvent.click(screen.getByRole("button", { name: "Submit fixture range" }));
     });
     expect(updateStreak).not.toHaveBeenCalled();
+  });
+  it("returns accepted and awards once when completion logging throws", async () => {
+    state = { ...ready, isComplete: false, hasWon: false, ranges: [] };
+    vi.mocked(logger.info).mockImplementationOnce(() => {
+      throw new Error("logging failed");
+    });
+    render(<GameIsland />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Submit fixture range" }));
+      await expect(commits.latest).resolves.toBe(true);
+    });
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(updateStreak).toHaveBeenCalledExactlyOnceWith(true);
   });
 });

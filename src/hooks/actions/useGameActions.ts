@@ -314,7 +314,11 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
 
       // Anonymous users: local-only gameplay, no server persistence
       if (authCheck.isAnonymous) {
-        logSubmissionAttempt("classic", "submitRange", authCheck, "success");
+        try {
+          logSubmissionAttempt("classic", "submitRange", authCheck, "success");
+        } catch {
+          reportClassicSubmissionError("after_save");
+        }
         return true;
       }
 

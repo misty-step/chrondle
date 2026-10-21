@@ -19,6 +19,7 @@ import { useCountdown } from "@/hooks/useCountdown";
 import { useVictoryConfetti } from "@/hooks/useVictoryConfetti";
 import { useScreenReaderAnnouncements } from "@/hooks/useScreenReaderAnnouncements";
 import { useLoadErrorRecovery } from "@/hooks/useLoadErrorRecovery";
+import { reportClassicSubmissionError } from "@/lib/classicSubmissionReporting";
 import { logger } from "@/lib/logger";
 import { AchievementModal, LazyModalWrapper } from "@/components/LazyModals";
 import { GameLayout, LiveAnnouncer } from "@/components/LazyComponents";
@@ -113,7 +114,11 @@ export function GameIsland() {
       const accepted = await submitRange(input);
       if (accepted && puzzle) {
         const won = puzzle.targetYear >= input.start && puzzle.targetYear <= input.end;
-        logger.info(`Game complete: ${won ? "Won" : "Lost"} in 1 range attempt`);
+        try {
+          logger.info(`Game complete: ${won ? "Won" : "Lost"} in 1 range attempt`);
+        } catch {
+          reportClassicSubmissionError("after_save");
+        }
         updateStreak(won);
       }
       return accepted;
