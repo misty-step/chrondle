@@ -2,14 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { usePuzzleData } from "../usePuzzleData";
 import { useOrderPuzzleData } from "../useOrderPuzzleData";
-import { BACKEND_UNREACHABLE_ERROR, BACKEND_UNREACHABLE_TIMEOUT_MS } from "@/lib/errorRecovery";
+import {
+  BACKEND_UNREACHABLE_ERROR,
+  BACKEND_UNREACHABLE_TIMEOUT_MS,
+  PUZZLE_UNAVAILABLE_ERROR,
+} from "@/lib/errorRecovery";
 
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
   useMutation: vi.fn(() => vi.fn(() => Promise.resolve())),
 }));
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 
 const classicPuzzle = {
   _id: "puzzle-1",
@@ -30,6 +34,9 @@ describe("backend unreachable", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.mocked(useQuery).mockReturnValue(undefined);
+    vi.mocked(useMutation).mockReturnValue(
+      vi.fn(() => Promise.resolve()) as unknown as ReturnType<typeof useMutation>,
+    );
   });
 
   afterEach(() => {
@@ -106,5 +113,39 @@ describe("backend unreachable", () => {
 
     expect(result.current.error).toBeNull();
     expect(result.current.puzzle?.puzzleNumber).toBe(1);
+  });
+
+  describe("when the server answers but cannot create today's puzzle", () => {
+    beforeEach(() => {
+      // The query reaches the server and reports no puzzle; the ensure mutation rejects
+      // (e.g. device clock outside the allowed window).
+      vi.mocked(useQuery).mockReturnValue(null);
+      const rejectingEnsure = vi.fn(() => Promise.reject(new Error("Date out of allowed window")));
+      vi.mocked(useMutation).mockReturnValue(
+        rejectingEnsure as unknown as ReturnType<typeof useMutation>,
+      );
+    });
+
+    it("reports the classic puzzle as unavailable instead of blaming the connection", async () => {
+      const { result } = renderHook(() => usePuzzleData());
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(BACKEND_UNREACHABLE_TIMEOUT_MS);
+      });
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.error?.message).toBe(PUZZLE_UNAVAILABLE_ERROR);
+    });
+
+    it("reports the Order puzzle as unavailable instead of blaming the connection", async () => {
+      const { result } = renderHook(() => useOrderPuzzleData());
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(BACKEND_UNREACHABLE_TIMEOUT_MS);
+      });
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.error?.message).toBe(PUZZLE_UNAVAILABLE_ERROR);
+    });
   });
 });

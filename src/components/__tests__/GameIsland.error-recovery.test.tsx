@@ -78,7 +78,7 @@ describe("GameIsland error recovery", () => {
 
     render(<GameIsland />);
 
-    expect(screen.getByRole("status")).toHaveTextContent(/can.t reach the Chrondle server/i);
-    expect(screen.getByRole("button", { name: /reload|retry/i })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(/can.t reach the Chrondle server/i);
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
   });
 });

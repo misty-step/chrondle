@@ -139,8 +139,8 @@ export function useOrderPuzzleData(
     };
   }, [isDaily, todaysPuzzle, archiveData, puzzleNumber]);
 
-  // A load that never resolves means the backend is unreachable (socket refused,
-  // offline). Surface it as an error so the player sees why nothing is happening.
+  // A load still pending after the timeout means the backend is unreachable (socket
+  // refused, offline): server-side failures arrive as errors and never reach the timer.
   const timedOut = useLoadTimeout(data.isLoading, BACKEND_UNREACHABLE_TIMEOUT_MS);
 
   return useMemo<UseOrderPuzzleDataReturn>(
