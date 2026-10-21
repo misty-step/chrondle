@@ -10,6 +10,7 @@ import {
   applyStreakUpdate,
   dayDifference,
   getActiveStreak,
+  isValidDateString,
   type StreakUpdate,
 } from "../../convex/lib/streakCalculation";
 import { getLocalDateString } from "@/lib/time/dailyDate";
@@ -48,14 +49,19 @@ interface UseStreakReturn {
 /**
  * Plan the streak update for a completion dated by its puzzle. A puzzle older
  * than the last completion never moves the streak (mirrors the server's
- * shouldUpdateStreakForPuzzle).
+ * shouldUpdateStreakForPuzzle). A corrupt stored date counts as no prior
+ * completion, so the streak restarts instead of throwing.
  */
 function planStreakUpdate(
-  lastCompletedDate: string | null,
+  storedLastCompletedDate: string | null,
   currentStreak: number,
   hasWon: boolean,
   puzzleDate: string,
 ): StreakUpdate {
+  const lastCompletedDate =
+    storedLastCompletedDate && isValidDateString(storedLastCompletedDate)
+      ? storedLastCompletedDate
+      : null;
   if (lastCompletedDate && dayDifference(puzzleDate, lastCompletedDate) > 0) {
     return { type: "no-change", reason: "older-than-last" };
   }
@@ -265,19 +271,25 @@ export function useStreak(): UseStreakReturn {
       return;
     }
 
-    // Only migrate if there's an anonymous streak to merge
-    if (anonymousStreak.currentStreak === 0 || !anonymousStreak.lastCompletedDate) {
+    // Only migrate a streak that is still alive: the server merge keeps the
+    // longer streak, so a stale anonymous count would overwrite a live one.
+    const liveAnonymousStreak = getActiveStreak(
+      anonymousStreak.currentStreak,
+      anonymousStreak.lastCompletedDate || null,
+      today,
+    );
+    if (liveAnonymousStreak === 0) {
       return;
     }
 
     // Trigger migration (mark as complete only AFTER success)
     logger.debug("[useStreak] Attempting anonymous streak migration:", {
-      anonymousStreak: anonymousStreak.currentStreak,
+      anonymousStreak: liveAnonymousStreak,
       anonymousDate: anonymousStreak.lastCompletedDate,
     });
 
     mergeStreakMutation({
-      anonymousStreak: anonymousStreak.currentStreak,
+      anonymousStreak: liveAnonymousStreak,
       anonymousLastCompletedDate: anonymousStreak.lastCompletedDate,
     })
       .then((result) => {
@@ -300,7 +312,7 @@ export function useStreak(): UseStreakReturn {
           logger.error("[useStreak] Non-recoverable migration error - will not retry");
         }
       });
-  }, [isSignedIn, clerkUser, convexUser, anonymousStreak, mergeStreakMutation]);
+  }, [isSignedIn, clerkUser, convexUser, anonymousStreak, mergeStreakMutation, today]);
 
   const currentAchievement = useMemo(() => {
     if (streakData.currentStreak <= 0) {

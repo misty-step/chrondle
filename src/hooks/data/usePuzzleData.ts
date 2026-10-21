@@ -101,6 +101,9 @@ export function usePuzzleData(puzzleNumber?: number): UsePuzzleDataReturn {
         targetYear: todaysPuzzle.puzzle.targetYear,
         events: todaysPuzzle.puzzle.events,
         puzzleNumber: todaysPuzzle.puzzle.puzzleNumber,
+        // The streak day marker: a completion counts for the puzzle's day,
+        // even when it is recorded after local midnight.
+        date: todaysPuzzle.puzzle.date,
         historicalContext: todaysPuzzle.puzzle.historicalContext,
       };
 
@@ -137,6 +140,7 @@ export function usePuzzleData(puzzleNumber?: number): UsePuzzleDataReturn {
       targetYear: archivePuzzle.targetYear,
       events: archivePuzzle.events,
       puzzleNumber: archivePuzzle.puzzleNumber,
+      date: archivePuzzle.date,
       historicalContext: archivePuzzle.historicalContext,
     };
 

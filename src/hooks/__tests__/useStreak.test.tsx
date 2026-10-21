@@ -353,6 +353,90 @@ describe("useStreak", () => {
       expect(result.current.streakData.longestStreak).toBe(10);
       expect(result.current.hasNewAchievement).toBe(false);
     });
+
+    it("does not merge a dead anonymous streak over a live server streak on sign-in", async () => {
+      const mockMergeMutation = vi.fn(() => Promise.resolve({ mergedStreak: 5 }));
+      vi.mocked(convex.useMutation).mockReturnValue(mockMergeMutation as any);
+      vi.mocked(anonymousStreakStorage.get).mockReturnValue({
+        currentStreak: 5,
+        lastCompletedDate: "2026-10-15",
+      });
+
+      const { rerender } = renderHook(() => useStreak());
+
+      vi.mocked(clerk.useUser).mockReturnValue({
+        isSignedIn: true,
+        user: { id: "user_123" } as any,
+        isLoaded: true,
+      } as any);
+      vi.mocked(convex.useQuery).mockReturnValue({
+        _id: "convex_user_123",
+        currentStreak: 3,
+        longestStreak: 3,
+        lastCompletedDate: "2026-10-19",
+      } as any);
+
+      rerender();
+      await act(async () => {});
+
+      expect(mockMergeMutation).not.toHaveBeenCalled();
+    });
+
+    it("merges an anonymous streak that is still alive on sign-in", async () => {
+      const mockMergeMutation = vi.fn(() => Promise.resolve({ mergedStreak: 5 }));
+      vi.mocked(convex.useMutation).mockReturnValue(mockMergeMutation as any);
+      vi.mocked(anonymousStreakStorage.get).mockReturnValue({
+        currentStreak: 5,
+        lastCompletedDate: "2026-10-19",
+      });
+
+      const { rerender } = renderHook(() => useStreak());
+
+      vi.mocked(clerk.useUser).mockReturnValue({
+        isSignedIn: true,
+        user: { id: "user_123" } as any,
+        isLoaded: true,
+      } as any);
+      vi.mocked(convex.useQuery).mockReturnValue({
+        _id: "convex_user_123",
+        currentStreak: 3,
+        longestStreak: 3,
+        lastCompletedDate: "2026-10-19",
+      } as any);
+
+      rerender();
+
+      await waitFor(() => {
+        expect(mockMergeMutation).toHaveBeenCalledWith({
+          anonymousStreak: 5,
+          anonymousLastCompletedDate: "2026-10-19",
+        });
+      });
+    });
+
+    it.each([
+      [false, 0],
+      [true, 1],
+    ])(
+      "restarts instead of throwing when the stored date is corrupt (won=%s)",
+      (hasWon, expected) => {
+        vi.mocked(anonymousStreakStorage.get).mockReturnValue({
+          currentStreak: 4,
+          lastCompletedDate: "2026-13-45",
+        });
+
+        const { result } = renderHook(() => useStreak());
+        act(() => {
+          result.current.updateStreak(hasWon, "2026-10-20");
+        });
+
+        expect(anonymousStreakStorage.set).toHaveBeenCalledWith({
+          currentStreak: expected,
+          lastCompletedDate: "2026-10-20",
+        });
+        expect(result.current.streakData.currentStreak).toBe(expected);
+      },
+    );
   });
 
   describe("Authentication Transition (Migration)", () => {

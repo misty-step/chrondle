@@ -111,7 +111,7 @@ export function getUTCDateString(date: Date = new Date()): string {
  * @param dateString - Date string to validate
  * @returns true if valid ISO format (YYYY-MM-DD)
  */
-function isValidDateString(dateString: string): boolean {
+export function isValidDateString(dateString: string): boolean {
   if (!dateString || typeof dateString !== "string") {
     return false;
   }

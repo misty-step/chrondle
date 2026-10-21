@@ -22,6 +22,7 @@ describe("usePuzzleData Integration Tests", () => {
         targetYear: 1969,
         events: ["Event 1", "Event 2", "Event 3", "Event 4", "Event 5", "Event 6"],
         puzzleNumber: 1,
+        date: "2026-10-18",
         createdAt: Date.now(),
       };
 
@@ -29,11 +30,13 @@ describe("usePuzzleData Integration Tests", () => {
 
       const { result } = renderHook(() => usePuzzleData());
 
+      // The puzzle's own date (the streak day marker), not the local day.
       expect(result.current.puzzle).toEqual({
         id: "puzzle-1",
         targetYear: 1969,
         events: ["Event 1", "Event 2", "Event 3", "Event 4", "Event 5", "Event 6"],
         puzzleNumber: 1,
+        date: "2026-10-18",
       });
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBe(null);
