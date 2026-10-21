@@ -32,7 +32,7 @@ export type StreakUpdate =
   | {
       /** No state change needed - preserves existing streak */
       type: "no-change";
-      reason: "same-day-replay";
+      reason: "same-day-replay" | "older-than-last";
     }
   | {
       /** Increment streak - consecutive day win */
@@ -111,7 +111,7 @@ export function getUTCDateString(date: Date = new Date()): string {
  * @param dateString - Date string to validate
  * @returns true if valid ISO format (YYYY-MM-DD)
  */
-function isValidDateString(dateString: string): boolean {
+export function isValidDateString(dateString: string): boolean {
   if (!dateString || typeof dateString !== "string") {
     return false;
   }
@@ -152,6 +152,37 @@ export function dayDifference(a: string, b: string): number {
   const first = new Date(a + "T00:00:00.000Z").getTime();
   const second = new Date(b + "T00:00:00.000Z").getTime();
   return Math.round((second - first) / 86_400_000);
+}
+
+/**
+ * Streak still alive on a given day
+ *
+ * Stored streaks are only rewritten on the next completion, so a streak
+ * broken by a missed day still reads as its old count until the player plays
+ * again. Readers use this to show what the streak is worth today: the stored
+ * count while the last completion is today or yesterday, otherwise 0.
+ *
+ * @param currentStreak - Stored streak count
+ * @param lastCompletedDate - Stored last completion date (ISO YYYY-MM-DD) or null
+ * @param todayDate - The reader's day (ISO YYYY-MM-DD)
+ * @returns The live streak count; 0 for missing or invalid dates
+ *
+ * @example
+ * getActiveStreak(2, "2026-10-19", "2026-10-20") // 2 (played yesterday)
+ * getActiveStreak(2, "2026-10-18", "2026-10-20") // 0 (missed 10-19)
+ */
+export function getActiveStreak(
+  currentStreak: number,
+  lastCompletedDate: string | null,
+  todayDate: string,
+): number {
+  if (currentStreak <= 0 || !lastCompletedDate) {
+    return 0;
+  }
+  if (!isValidDateString(lastCompletedDate) || !isValidDateString(todayDate)) {
+    return 0;
+  }
+  return dayDifference(lastCompletedDate, todayDate) <= 1 ? currentStreak : 0;
 }
 
 /**
