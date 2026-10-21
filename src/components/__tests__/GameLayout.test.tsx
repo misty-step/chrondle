@@ -4,6 +4,10 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { GameLayout, type GameLayoutProps } from "../GameLayout";
 import { analytics } from "@/lib/analytics";
 
+const commits = vi.hoisted(() => ({ latest: Promise.resolve<boolean | void>(false) }));
+const report = vi.hoisted(() => vi.fn());
+vi.mock("@/observability/reporter", () => ({ captureClientException: report }));
+
 vi.mock("@/lib/analytics", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/analytics")>();
   return { ...original, analytics: { track: vi.fn() } };
@@ -21,7 +25,7 @@ vi.mock("@/components/game/RangeInput", () => ({
     onChange,
   }: {
     disabled: boolean;
-    onCommit: (payload: { start: number; end: number; hintsUsed: number }) => void;
+    onCommit: (payload: { start: number; end: number; hintsUsed: number }) => Promise<boolean>;
     value?: [number, number];
     onChange?: (range: [number, number]) => void;
     minYear?: number;
@@ -56,7 +60,9 @@ vi.mock("@/components/game/RangeInput", () => ({
       <button
         data-testid="range-input"
         data-disabled={String(disabled)}
-        onClick={() => onCommit({ start: 1900, end: 1950, hintsUsed: 0 })}
+        onClick={() => {
+          commits.latest = onCommit({ start: 1900, end: 1950, hintsUsed: 0 });
+        }}
       >
         Range Input
       </button>
@@ -159,6 +165,27 @@ describe("GameLayout", () => {
         } else {
           expect(analytics.track).not.toHaveBeenCalled();
         }
+      },
+    );
+
+    it.each(["guess_submitted", "game_completed"])(
+      "preserves accepted outcome when %s analytics throws",
+      async (eventToFail) => {
+        mockOnRangeCommit.mockResolvedValueOnce(true);
+        vi.mocked(analytics.track).mockImplementation((event) => {
+          if (event === eventToFail) throw new Error("private analytics payload");
+        });
+        report.mockImplementationOnce(() => {
+          throw new Error("reporting unavailable");
+        });
+        render(<GameLayout {...createDefaultProps()} />);
+        fireEvent.click(await screen.findByTestId("range-input"));
+        await expect(commits.latest).resolves.toBe(true);
+        expect(mockOnRangeCommit).toHaveBeenCalledTimes(1);
+        expect(report).toHaveBeenCalledWith(expect.any(Error), {
+          tags: { source: "classic_submission", action: "submitRange", stage: "analytics" },
+        });
+        vi.mocked(analytics.track).mockReset();
       },
     );
 

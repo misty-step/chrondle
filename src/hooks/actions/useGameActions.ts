@@ -11,6 +11,7 @@ import {
   normalizeHintCount,
 } from "@/lib/validation/rangeValidation";
 import { useMutationWithRetry } from "@/hooks/useMutationWithRetry";
+import { reportClassicSubmissionError } from "@/lib/classicSubmissionReporting";
 import { withClassicSaveLock } from "@/lib/classicSaveLock";
 import { logger } from "@/lib/logger";
 import { scoreRange } from "@/lib/scoring";
@@ -73,8 +74,8 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
   const submitRangeMutation = useMutationWithRetry(anyPublicApi.puzzles.submitRange, {
     maxRetries: 3,
     baseDelayMs: 1000,
-    onRetry: (attempt, error) => {
-      logger.error(`[useGameActions] Retrying submitRange (attempt ${attempt}/3):`, error.message);
+    onRetry: (attempt) => {
+      logger.error(`[useGameActions] Retrying submitRange (attempt ${attempt}/3)`);
       if (attempt === 3 && "addToast" in toastContext) {
         toastContext.addToast({
           title: "Connection issues",
@@ -327,6 +328,7 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
 
       setIsSubmitting(true);
 
+      let persisted = false;
       try {
         const validPuzzleId = assertConvexId(puzzle.puzzle.id, "puzzles");
 
@@ -338,6 +340,7 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
           hintsUsed: hintLevel,
         });
 
+        persisted = true;
         if (result?.range) {
           session.replaceLastRange?.({
             ...optimisticRange,
@@ -349,11 +352,15 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
         logSubmissionAttempt("classic", "submitRange", authCheck, "success");
         return true;
       } catch (error) {
+        if (persisted) {
+          reportClassicSubmissionError("after_save");
+          return true;
+        }
+        reportClassicSubmissionError("save");
         session.removeLastRange?.();
         logSubmissionAttempt("classic", "submitRange", authCheck, "failure");
 
         if (isConvexIdValidationError(error)) {
-          logger.error("Invalid ID format detected:", error.id, "for type:", error.type);
           if ("addToast" in toastContext) {
             toastContext.addToast({
               title: "Authentication Error",
@@ -364,11 +371,11 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
           return false;
         }
 
-        logger.error("Failed to persist range to server:", error);
         if ("addToast" in toastContext) {
           toastContext.addToast({
             title: "Connection Issue",
-            description: "Your range was saved locally but couldn't sync to the server",
+            description:
+              "We couldn’t confirm your range was saved. Check your connection and try again.",
             variant: "destructive",
           });
         }

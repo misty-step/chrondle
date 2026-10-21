@@ -87,7 +87,7 @@ describe("RangeInput", () => {
     expect(screen.getByText("4")).toBeInTheDocument();
     fireEvent.change(endInput(), { target: { value: "1950" } });
     expect(submit()).toBeDisabled();
-    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Narrow your range to 250 years or fewer.");
   });
 
   it("updates potential points for hints without changing the range", () => {
@@ -151,6 +151,23 @@ describe("RangeInput", () => {
     expect(startInput()).toHaveValue("1900");
     expect(endInput()).toHaveValue("1949");
     expect(submit()).toBeEnabled();
-    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "We couldn’t confirm your guess was saved. Try again.",
+    );
+  });
+  it("preserves entered years and describes uncertainty when submission rejects", async () => {
+    const onCommit = vi.fn().mockRejectedValue(new Error("network failure"));
+    render(<RangeInput onCommit={onCommit} />);
+    enterRange("1900", "1949");
+    fireEvent.click(submit());
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "We couldn’t confirm your guess was saved. Try again.",
+      ),
+    );
+    expect(startInput()).toHaveValue("1900");
+    expect(endInput()).toHaveValue("1949");
+    expect(submit()).toBeEnabled();
+    expect(onCommit).toHaveBeenCalledTimes(1);
   });
 });

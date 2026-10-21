@@ -12,6 +12,7 @@ import type { RangeGuess } from "@/types/range";
 import { playSound } from "@/lib/sound/soundEngine";
 import { ReturnTomorrowCard } from "@/components/game/ReturnTomorrowCard";
 import { HistoricalContextCard } from "@/components/HistoricalContextCard";
+import { reportClassicSubmissionError } from "@/lib/classicSubmissionReporting";
 import { analytics, AnalyticsEvent } from "@/lib/analytics";
 
 // The classic range input is rendered by three routes (home, /classic,
@@ -143,12 +144,16 @@ export function GameLayout(props: GameLayoutProps) {
     submittedHere.current = true;
     const accepted = await onRangeCommit(range);
     if (accepted === true) {
-      analytics.track(AnalyticsEvent.GUESS_SUBMITTED, { mode: "classic" });
-      analytics.track(AnalyticsEvent.GAME_COMPLETED, {
-        mode: "classic",
-        guessCount: 1,
-        won: targetYear >= range.start && targetYear <= range.end,
-      });
+      try {
+        analytics.track(AnalyticsEvent.GUESS_SUBMITTED, { mode: "classic" });
+        analytics.track(AnalyticsEvent.GAME_COMPLETED, {
+          mode: "classic",
+          guessCount: 1,
+          won: targetYear >= range.start && targetYear <= range.end,
+        });
+      } catch {
+        reportClassicSubmissionError("analytics");
+      }
     }
     return accepted === true;
   };

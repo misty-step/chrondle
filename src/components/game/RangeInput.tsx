@@ -115,13 +115,13 @@ export function RangeInput({
     try {
       const committed = await onCommit({ start: rangeStart, end: rangeEnd, hintsUsed: hints });
       if (committed === false) {
-        setSubmissionError("Your guess wasn’t saved. Try again.");
+        setSubmissionError("We couldn’t confirm your guess was saved. Try again.");
         return;
       }
       if (controlled) onChange([0, 0]);
       setDraft(createDraft(`${minYear}:${maxYear}:${controlled ? "0:0" : "internal"}`));
     } catch {
-      setSubmissionError("Your guess wasn’t saved. Try again.");
+      setSubmissionError("We couldn’t confirm your guess was saved. Try again.");
     } finally {
       submittingRef.current = false;
       setIsSubmitting(false);
