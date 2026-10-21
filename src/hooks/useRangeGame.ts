@@ -102,6 +102,12 @@ export function useRangeGame(puzzleNumber?: number): UseRangeGameReturn {
     puzzle.puzzle?.id || null,
     auth.isAuthenticated,
     puzzle.puzzle?.targetYear,
+    Boolean(
+      progress.progress &&
+      (progress.progress.ranges.length > 0 ||
+        progress.progress.guesses.length > 0 ||
+        progress.progress.completedAt !== null),
+    ),
   );
 
   // No need to load anonymous state anymore - useLocalSession handles it directly

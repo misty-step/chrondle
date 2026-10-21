@@ -31,7 +31,7 @@ export interface DataSources {
     sessionRanges?: RangeGuess[];
     addGuess: (n: number) => void;
     clearGuesses: () => void;
-    addRange?: (range: RangeGuess) => void;
+    addRange?: (range: RangeGuess) => boolean | void;
     replaceLastRange?: (range: RangeGuess) => void;
     removeLastRange?: () => void;
     clearRanges?: () => void;
@@ -175,7 +175,17 @@ export function deriveGameState(sources: DataSources): GameState {
 
     let mergedRanges: RangeGuess[];
     if ((serverRanges?.length || 0) > 0 || sessionRanges.length > 0) {
-      mergedRanges = [...(serverRanges ?? []), ...sessionRanges];
+      mergedRanges = [...(serverRanges ?? []), ...sessionRanges].filter(
+        (range, index, all) =>
+          all.findIndex(
+            (other) =>
+              other.start === range.start &&
+              other.end === range.end &&
+              other.hintsUsed === range.hintsUsed &&
+              other.score === range.score &&
+              other.timestamp === range.timestamp,
+          ) === index,
+      );
     } else {
       mergedRanges = guessesToLegacyRanges(allGuesses);
     }

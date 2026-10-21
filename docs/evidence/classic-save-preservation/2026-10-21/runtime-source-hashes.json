@@ -1,0 +1,17 @@
+{
+  "proof": "Runtime sources used in isolated Next build; synthetic auth and loopback backend only",
+  "sha256": {
+    "src/lib/secureStorage.ts": "0a0bf489d28181e5e1637ae28749749cd81b8483f7a66b695223e986ee06e78a",
+    "src/lib/gameDataStore.ts": "69ed11201c61d82d1443436e1e1bc1e811592d8edef54861f842e2c2f8b4d335",
+    "src/lib/localStorageSync.ts": "ebd1b1a1be131dcf82316a5cc02be5831862c47658b95c478a714cff50b0ef80",
+    "src/lib/deriveGameState.ts": "a162ba0374a8d26244824d00d0d8def64d970951e147d332c9901af1ce3ae0ff",
+    "src/hooks/data/useLocalSession.ts": "a1bb7613c419975e4d0a94b4954828c380457a92fbcd02404fe3a924a42804b8",
+    "src/hooks/data/useAnonymousSession.ts": "8cd10fa1a746379b0d87574cdd61dfa2cf6ab61c7b532c1549ad9a6088992407",
+    "src/hooks/data/sessionTypes.ts": "ffe0dbdf208420a09b358c68d262c25dfa5347cd755ce549fe8a96cbfd141ea4",
+    "src/hooks/actions/useGameActions.ts": "122ad670ee9988af2ea531fdf0b0796f850f98751457df48a7513944cc713014",
+    "src/components/GameIsland.tsx": "bd832b2b18af17af2b503e92df4271fa512fac6e407fb6347582245e55567e64",
+    "src/components/UserCreationProvider.tsx": "f9f4a8bd75b4863c606aa8944f8a0c07113c70f01100354e3996716076988d30",
+    "src/lib/classicSaveLock.ts": "b43e51a741109864c4dfaa3f2b2febee62b71afcaa9f22e4e4277e7e546ef97e",
+    "src/hooks/useRangeGame.ts": "32028de0ade7cc3a71d5538743a6be60e104c0c6da64e6df0ba6a3ef5a00b361"
+  }
+}

@@ -16,6 +16,8 @@ import {
 
 // Mock the secureStorage module
 vi.mock("../secureStorage", () => ({
+  CLASSIC_SAVE_KEY: "chrondle-game-state",
+  CLASSIC_SAVE_PREFIX: "chrondle-game-state-puzzle-",
   gameStateStorage: {
     get: vi.fn(),
     set: vi.fn(() => true),
@@ -87,7 +89,7 @@ describe("localStorageSync", () => {
       subscribeToStorage(callback);
 
       // Simulate storage event with correct key
-      const event = { key: "chrondle_game_state" } as StorageEvent;
+      const event = { key: "chrondle-game-state" } as StorageEvent;
       capturedHandler?.(event);
 
       expect(callback).toHaveBeenCalledTimes(1);

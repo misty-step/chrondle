@@ -11,6 +11,7 @@ import {
   normalizeHintCount,
 } from "@/lib/validation/rangeValidation";
 import { useMutationWithRetry } from "@/hooks/useMutationWithRetry";
+import { withClassicSaveLock } from "@/lib/classicSaveLock";
 import { logger } from "@/lib/logger";
 import { scoreRange } from "@/lib/scoring";
 import type { HintCount, RangeGuess } from "@/types/range";
@@ -276,7 +277,11 @@ export function useGameActions(sources: DataSources): UseGameActionsReturn {
         timestamp: Date.now(),
       };
 
-      session.addRange?.(optimisticRange);
+      const acceptRange = () => session.addRange?.(optimisticRange);
+      const locallyAccepted = !auth.isAuthenticated
+        ? await withClassicSaveLock(puzzle.puzzle.id, acceptRange)
+        : acceptRange();
+      if (locallyAccepted === false) return false;
 
       // Check authentication state and determine if we can persist
       const authCheck = checkSubmissionAuth(

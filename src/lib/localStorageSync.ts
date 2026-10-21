@@ -3,14 +3,12 @@
  * This provides a single source of truth for anonymous game state
  */
 
-import { gameStateStorage } from "@/lib/secureStorage";
-import type { AnonymousGameState } from "@/hooks/useAnonymousGameState";
+import { gameStateStorage, CLASSIC_SAVE_KEY, CLASSIC_SAVE_PREFIX } from "@/lib/secureStorage";
 import type { RangeGuess } from "@/types/range";
 
 /**
  * Storage key for session guesses
  */
-const STORAGE_KEY = "chrondle_game_state";
 
 /**
  * Subscribe to storage events for cross-tab synchronization
@@ -19,7 +17,7 @@ const STORAGE_KEY = "chrondle_game_state";
 export function subscribeToStorage(callback: () => void): () => void {
   // Listen for storage events from other tabs
   const handleStorageChange = (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY) {
+    if (e.key === null || e.key === CLASSIC_SAVE_KEY || e.key.startsWith(CLASSIC_SAVE_PREFIX)) {
       callback();
     }
   };
@@ -63,7 +61,7 @@ export function getStorageSnapshot(puzzleId: string | null): number[] {
       return EMPTY_ARRAY as number[];
     }
 
-    const state = gameStateStorage.get();
+    const state = gameStateStorage.get(puzzleId);
     if (state && state.puzzleId === puzzleId) {
       const guesses = state.guesses || [];
       if (arraysEqual(lastSnapshot.guesses, guesses)) {
@@ -85,7 +83,7 @@ export function getStorageSnapshot(puzzleId: string | null): number[] {
     return EMPTY_ARRAY as number[];
   }
 
-  const state = gameStateStorage.get();
+  const state = gameStateStorage.get(puzzleId);
 
   // Only return guesses if they're for the current puzzle
   if (state && state.puzzleId === puzzleId) {
@@ -129,7 +127,8 @@ function rangesEqual(a: RangeGuess[], b: RangeGuess[]): boolean {
       a[i].start !== b[i].start ||
       a[i].end !== b[i].end ||
       a[i].hintsUsed !== b[i].hintsUsed ||
-      a[i].score !== b[i].score
+      a[i].score !== b[i].score ||
+      a[i].timestamp !== b[i].timestamp
     ) {
       return false;
     }
@@ -154,7 +153,7 @@ export function getRangesSnapshot(puzzleId: string | null): RangeGuess[] {
       return EMPTY_RANGES_ARRAY as RangeGuess[];
     }
 
-    const state = gameStateStorage.get();
+    const state = gameStateStorage.get(puzzleId);
     if (state && state.puzzleId === puzzleId) {
       const ranges = (state.ranges as RangeGuess[]) || [];
       if (rangesEqual(lastRangesSnapshot.ranges, ranges)) {
@@ -176,7 +175,7 @@ export function getRangesSnapshot(puzzleId: string | null): RangeGuess[] {
     return EMPTY_RANGES_ARRAY as RangeGuess[];
   }
 
-  const state = gameStateStorage.get();
+  const state = gameStateStorage.get(puzzleId);
 
   // Only return ranges if they're for the current puzzle
   if (state && state.puzzleId === puzzleId) {
@@ -201,7 +200,9 @@ export function updateStorage(
   isComplete: boolean = false,
   hasWon: boolean = false,
 ): void {
-  const state: AnonymousGameState = {
+  const current = gameStateStorage.get(puzzleId);
+  const state = {
+    ...current,
     puzzleId,
     guesses,
     isComplete,
@@ -221,11 +222,11 @@ export function updateStorage(
  * Clear storage for a puzzle
  */
 export function clearStorage(puzzleId: string): void {
-  const state = gameStateStorage.get();
+  const state = gameStateStorage.get(puzzleId);
 
   // Only clear if it's for the current puzzle
   if (state && state.puzzleId === puzzleId) {
-    gameStateStorage.remove();
+    gameStateStorage.remove(puzzleId);
     // Dispatch custom event for same-tab updates
     window.dispatchEvent(new Event("chrondle-storage-change"));
   }

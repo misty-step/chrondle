@@ -46,11 +46,29 @@ export function useLocalSession(
   puzzleId: string | null,
   isAuthenticated: boolean = false,
   targetYear?: number,
+  hasServerProgress = false,
 ): UseLocalSessionReturn {
   const anonymousSession = useAnonymousSession(puzzleId, targetYear);
   const authenticatedSession = useAuthenticatedSession(puzzleId);
 
-  const selected = isAuthenticated ? authenticatedSession : anonymousSession;
+  const pendingAuthenticatedSession = useMemo(
+    () => ({
+      ...authenticatedSession,
+      sessionGuesses: hasServerProgress
+        ? authenticatedSession.sessionGuesses
+        : [...anonymousSession.sessionGuesses, ...authenticatedSession.sessionGuesses],
+      sessionRanges: hasServerProgress
+        ? authenticatedSession.sessionRanges
+        : [...anonymousSession.sessionRanges, ...authenticatedSession.sessionRanges],
+    }),
+    [
+      authenticatedSession,
+      anonymousSession.sessionGuesses,
+      anonymousSession.sessionRanges,
+      hasServerProgress,
+    ],
+  );
+  const selected = isAuthenticated ? pendingAuthenticatedSession : anonymousSession;
 
   // Memoize so consumers keying off referential identity (e.g. effect deps)
   // don't see a new object every render.

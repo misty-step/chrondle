@@ -1,0 +1,78 @@
+{
+  "profile": "/tmp/chrondle-361-profile-tZJo9F",
+  "steps": [
+    "A accepted with one hint; second tab observes completion through native storage event",
+    "B accepted with two hints; A remains intact in second tab; B reload retains score and hint cost",
+    "Browser process restarted with same synthetic profile; A/B restored exactly; next-day C retained both; restoring A did not change streak storage",
+    "Legacy singleton restored, archive B accepted, legacy A restored without loss"
+  ],
+  "pageErrors": [],
+  "blocked": [
+    "healthy-doe-23.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js",
+    "healthy-doe-23.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js",
+    "healthy-doe-23.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js",
+    "healthy-doe-23.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js",
+    "healthy-doe-23.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js",
+    "healthy-doe-23.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js",
+    "healthy-doe-23.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js",
+    "healthy-doe-23.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js",
+    "healthy-doe-23.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js",
+    "healthy-doe-23.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js",
+    "healthy-doe-23.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+  ],
+  "saves": [
+    {
+      "puzzleId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "guesses": [],
+      "ranges": [
+        {
+          "start": 1990,
+          "end": 2010,
+          "hintsUsed": 1,
+          "score": 84,
+          "timestamp": 1792584000000
+        }
+      ],
+      "isComplete": true,
+      "hasWon": true,
+      "timestamp": 1792584000000
+    },
+    {
+      "puzzleId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "guesses": [],
+      "ranges": [
+        {
+          "start": 1990,
+          "end": 2010,
+          "hintsUsed": 2,
+          "score": 69,
+          "timestamp": 1792584000000
+        }
+      ],
+      "isComplete": true,
+      "hasWon": true,
+      "timestamp": 1792584000000
+    },
+    {
+      "puzzleId": "cccccccccccccccccccccccccccccccc",
+      "guesses": [],
+      "ranges": [
+        {
+          "start": 1990,
+          "end": 2010,
+          "hintsUsed": 0,
+          "score": 99,
+          "timestamp": 1792670400000
+        }
+      ],
+      "isComplete": true,
+      "hasWon": true,
+      "timestamp": 1792670400000
+    }
+  ],
+  "streak": {
+    "before": "{\"currentStreak\":1,\"lastCompletedDate\":\"2026-10-21\"}",
+    "afterC": "{\"currentStreak\":2,\"lastCompletedDate\":\"2026-10-22\"}"
+  },
+  "result": "PASS"
+}

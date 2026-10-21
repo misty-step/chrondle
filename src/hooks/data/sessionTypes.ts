@@ -8,7 +8,7 @@ export interface UseLocalSessionReturn {
   sessionGuesses: number[];
   sessionRanges: RangeGuess[];
   addGuess: (n: number) => void;
-  addRange: (range: RangeGuess) => void;
+  addRange: (range: RangeGuess) => boolean | void;
   replaceLastRange: (range: RangeGuess) => void;
   removeLastRange: () => void;
   clearGuesses: () => void;

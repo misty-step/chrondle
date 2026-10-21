@@ -47,7 +47,9 @@ const createDataSources = (): DataSources => {
       sessionRanges: ranges,
       addGuess: vi.fn(),
       clearGuesses: vi.fn(),
-      addRange: vi.fn((range: RangeGuess) => ranges.push(range)),
+      addRange: vi.fn((range: RangeGuess) => {
+        ranges.push(range);
+      }),
       replaceLastRange: vi.fn(),
       removeLastRange: vi.fn(),
       clearRanges: vi.fn(() => ranges.splice(0, ranges.length)),

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useSyncExternalStore, useRef, useEffect } from "react";
+import { useCallback, useSyncExternalStore, useEffect } from "react";
+import { gameStateStorage } from "@/lib/secureStorage";
 import { GAME_CONFIG } from "@/lib/constants";
 import {
   subscribeToStorage,
@@ -35,22 +36,17 @@ export function useAnonymousSession(
   puzzleId: string | null,
   targetYear?: number,
 ): UseLocalSessionReturn {
-  // Create a stable ref so the snapshot callbacks don't need to change
-  // identity every render (useSyncExternalStore requires stable getSnapshot).
-  const stateRef = useRef({ puzzleId });
   useEffect(() => {
-    stateRef.current = { puzzleId };
+    void gameStateStorage.migrateLegacy();
   }, [puzzleId]);
 
   const getSnapshot = useCallback(() => {
-    const { puzzleId: pid } = stateRef.current;
-    return pid ? getStorageSnapshot(pid) : (EMPTY_ARRAY as number[]);
-  }, []);
+    return puzzleId ? getStorageSnapshot(puzzleId) : (EMPTY_ARRAY as number[]);
+  }, [puzzleId]);
 
   const getRangesSnapshotCallback = useCallback(() => {
-    const { puzzleId: pid } = stateRef.current;
-    return pid ? getRangesSnapshot(pid) : (EMPTY_RANGES_ARRAY as RangeGuess[]);
-  }, []);
+    return puzzleId ? getRangesSnapshot(puzzleId) : (EMPTY_RANGES_ARRAY as RangeGuess[]);
+  }, [puzzleId]);
 
   const sessionGuesses = useSyncExternalStore(subscribeToStorage, getSnapshot, getServerSnapshot);
   const sessionRanges = useSyncExternalStore(
@@ -82,15 +78,15 @@ export function useAnonymousSession(
 
   const addRange = useCallback(
     (range: RangeGuess) => {
-      if (!puzzleId) return;
+      if (!puzzleId) return false;
 
       const currentRanges = getRangesSnapshot(puzzleId);
-      if (currentRanges.length >= GAME_CONFIG.MAX_GUESSES) return;
+      if (currentRanges.length > 0) return false;
 
       const hasWon = targetYear !== undefined && range.score > 0;
-      const isComplete = hasWon || currentRanges.length + 1 >= GAME_CONFIG.MAX_GUESSES;
+      const isComplete = true;
 
-      addRangeToLocalState(puzzleId, range, isComplete, hasWon);
+      return addRangeToLocalState(puzzleId, range, isComplete, hasWon);
     },
     [puzzleId, targetYear],
   );
