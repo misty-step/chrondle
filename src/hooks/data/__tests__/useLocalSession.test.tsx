@@ -195,6 +195,16 @@ describe("useLocalSession", () => {
     });
   });
 
+  it("uses established server progress without discarding a conflicting pending local save", () => {
+    const pending = [{ start: 1990, end: 2010, hintsUsed: 1, score: 84, timestamp: 1000 }] as const;
+    vi.mocked(localStorageSync.getRangesSnapshot).mockReturnValue([...pending]);
+    vi.mocked(localStorageSync.getStorageSnapshot).mockReturnValue([2000]);
+    const { result } = renderHook(() => useLocalSession("puzzle-123", true, 2000, true));
+    expect(result.current.sessionRanges).toEqual([]);
+    expect(result.current.sessionGuesses).toEqual([]);
+    expect(localStorageSync.clearStorage).not.toHaveBeenCalled();
+  });
+
   describe("Edge Cases", () => {
     it("should handle null puzzleId gracefully", () => {
       const { result } = renderHook(() => useLocalSession(null, false));

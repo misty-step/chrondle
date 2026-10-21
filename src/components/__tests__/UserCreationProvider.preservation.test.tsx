@@ -28,9 +28,13 @@ vi.mock("@/hooks/useMutationWithRetry", () => ({
     getFunctionName(ref).includes("mergeAnonymousState") ? mergeState : createUser,
 }));
 
-it.each([false, true])(
-  "reconciles all puzzles at sign-in (new account=%s) and retains failed readback",
-  async (newAccount) => {
+it.each([
+  { newAccount: false, conflict: false },
+  { newAccount: true, conflict: false },
+  { newAccount: false, conflict: true },
+])(
+  "reconciles at sign-in (new=$newAccount, conflict=$conflict) without discarding unacknowledged attempts",
+  async ({ newAccount, conflict }) => {
     const t = convexTest(schema, modules).withIdentity({ subject: "synthetic-existing-account" });
     const seed = await t.run(async (ctx) => {
       const userId = await ctx.db.insert("users", {
@@ -57,6 +61,17 @@ it.each([false, true])(
         );
       return { userId, puzzleIds, user: await ctx.db.get(userId) };
     });
+    const serverRange = { start: 1900, end: 1910, hintsUsed: 0, score: 0, timestamp: 500 };
+    if (conflict)
+      await t.run((ctx) =>
+        ctx.db.insert("plays", {
+          userId: seed.userId,
+          puzzleId: seed.puzzleIds[0],
+          ranges: [serverRange],
+          totalScore: 0,
+          updatedAt: 500,
+        }),
+      );
     const localIds = ["a".repeat(32), "b".repeat(32)];
     const payload = z
       .object({
@@ -80,7 +95,9 @@ it.each([false, true])(
       });
     };
     let failReadback = true;
+    let readbacks = 0;
     queryPlay = async (args) => {
+      readbacks += 1;
       const parsed = z.object({ puzzleId: z.string() }).passthrough().parse(args);
       if (failReadback && parsed.puzzleId === localIds[0]) throw new Error("readback unavailable");
       return t.query(api.puzzles.getUserPlay, {
@@ -107,12 +124,14 @@ it.each([false, true])(
     signedIn = true;
     user = seed.user;
     view.rerender(<UserCreationProvider>fixture</UserCreationProvider>);
-    await waitFor(() => expect(readLocalGameState(localIds[0])).toBeNull());
+    await waitFor(() => expect(readbacks).toBe(3));
+    if (conflict) expect(readLocalGameState(localIds[0])?.ranges).toEqual([range]);
+    else await waitFor(() => expect(readLocalGameState(localIds[0])).toBeNull());
     const stats = await t.run((ctx) => ctx.db.get(seed.userId));
-    expect(stats?.totalPlays).toBe(2);
+    expect(stats?.totalPlays).toBe(conflict ? 1 : 2);
     for (const puzzleId of seed.puzzleIds)
       expect(
         (await t.query(api.puzzles.getUserPlay, { userId: seed.userId, puzzleId }))?.ranges,
-      ).toEqual([range]);
+      ).toEqual(conflict && puzzleId === seed.puzzleIds[0] ? [serverRange] : [range]);
   },
 );

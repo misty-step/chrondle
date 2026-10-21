@@ -46,6 +46,7 @@ export function useLocalSession(
   puzzleId: string | null,
   isAuthenticated: boolean = false,
   targetYear?: number,
+  hasServerProgress = false,
 ): UseLocalSessionReturn {
   const anonymousSession = useAnonymousSession(puzzleId, targetYear);
   const authenticatedSession = useAuthenticatedSession(puzzleId);
@@ -53,10 +54,19 @@ export function useLocalSession(
   const pendingAuthenticatedSession = useMemo(
     () => ({
       ...authenticatedSession,
-      sessionGuesses: [...anonymousSession.sessionGuesses, ...authenticatedSession.sessionGuesses],
-      sessionRanges: [...anonymousSession.sessionRanges, ...authenticatedSession.sessionRanges],
+      sessionGuesses: hasServerProgress
+        ? authenticatedSession.sessionGuesses
+        : [...anonymousSession.sessionGuesses, ...authenticatedSession.sessionGuesses],
+      sessionRanges: hasServerProgress
+        ? authenticatedSession.sessionRanges
+        : [...anonymousSession.sessionRanges, ...authenticatedSession.sessionRanges],
     }),
-    [authenticatedSession, anonymousSession.sessionGuesses, anonymousSession.sessionRanges],
+    [
+      authenticatedSession,
+      anonymousSession.sessionGuesses,
+      anonymousSession.sessionRanges,
+      hasServerProgress,
+    ],
   );
   const selected = isAuthenticated ? pendingAuthenticatedSession : anonymousSession;
 
