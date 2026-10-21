@@ -6,7 +6,17 @@ import { pathToFileURL } from "node:url";
 
 const DEFAULT_APP_ORIGIN = "https://chrondle.app";
 const DEFAULT_CLERK_HOST = "clerk.chrondle.app";
-const EXPECTED_CLERK_CNAME = "frontend-api.clerk.services";
+// Clerk's production domain requires every one of these DNS-only CNAMEs
+// (Clerk Backend API GET /v1/domains, field dns_targets). The 2026-10-13
+// Cloudflare cutover kept only the first and broke Clerk email until 2026-10-20.
+const EXPECTED_CLERK_CNAMES = [
+  ["clerk.chrondle.app", "frontend-api.clerk.services"],
+  ["accounts.chrondle.app", "accounts.clerk.services"],
+  ["clkmail.chrondle.app", "mail.h8zn0um1i4rl.clerk.services"],
+  ["clk._domainkey.chrondle.app", "dkim1.h8zn0um1i4rl.clerk.services"],
+  ["clk2._domainkey.chrondle.app", "dkim2.h8zn0um1i4rl.clerk.services"],
+];
+const MISSING_RECORD_CODES = new Set(["ENOTFOUND", "ENODATA"]);
 
 const systemResolveCname = promisify(resolveCnameCallback);
 
@@ -19,6 +29,15 @@ async function capture(name, check) {
     return { name, ...(await check()) };
   } catch (error) {
     return { name, ok: false, detail: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+async function resolveCnameRecords(resolveCname, host) {
+  try {
+    return { records: (await resolveCname(host)).map(normalizedHost) };
+  } catch (error) {
+    if (MISSING_RECORD_CODES.has(error?.code)) return { records: [], missingCode: error.code };
+    throw error;
   }
 }
 
@@ -56,18 +75,23 @@ export async function verifyHostingParity({
 } = {}) {
   const checks = [];
 
-  checks.push(
-    await capture("clerk-cname", async () => {
-      const records = (await resolveCname(clerkHost)).map(normalizedHost);
-      const ok = records.includes(EXPECTED_CLERK_CNAME);
-      return {
-        ok,
-        detail: ok
-          ? `resolved to ${EXPECTED_CLERK_CNAME}`
-          : `expected ${EXPECTED_CLERK_CNAME}; got ${records.length ? records.join(", ") : "no CNAME"}`,
-      };
-    }),
-  );
+  for (const [host, target] of EXPECTED_CLERK_CNAMES) {
+    checks.push(
+      await capture(`clerk-cname:${host}`, async () => {
+        const { records, missingCode } = await resolveCnameRecords(resolveCname, host);
+        const ok = records.includes(target);
+        const got = records.length
+          ? records.join(", ")
+          : `no CNAME${missingCode ? ` (${missingCode})` : ""}`;
+        return {
+          ok,
+          detail: ok
+            ? `${host} resolved to ${target}`
+            : `${host}: expected CNAME ${target}; got ${got}`,
+        };
+      }),
+    );
+  }
 
   checks.push(
     await capture("clerk-client", async () => {
