@@ -348,3 +348,7 @@ stripe events retrieve evt_xxx | jq '.pending_webhooks'
 - **Backlog:** `BACKLOG.md` (prioritized issues + estimates)
 - **README:** Deployment, setup, architecture overview
 - **Archive:** `CLAUDE.archive.md` (full 1,091-line original guide)
+
+## No fallbacks
+
+No fallbacks, backup paths or masking safety nets. Write the one best solution: direct, clean, simple, elegant. If it fails, it must fail loudly and visibly so we can fix it. Security checks (auth, signatures, schema validation) stay, but fail loudly, never silently.
