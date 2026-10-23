@@ -25,6 +25,7 @@ import { anyPublicApi } from "@/lib/convexAnyApi";
 import { getLocalDateString } from "@/lib/time/dailyDate";
 import { useOnTabFocus } from "@/hooks/useVisibilityChange";
 import { logger } from "@/lib/logger";
+import { PUZZLE_UNAVAILABLE_ERROR } from "@/lib/errorRecovery";
 import type { OrderEvent } from "@/types/orderGameState";
 
 /**
@@ -97,6 +98,9 @@ export function useTodaysOrderPuzzle(
   // Track which date we've already triggered generation for (prevents duplicate calls)
   const generationTriggeredForRef = useRef<string | null>(null);
 
+  // Local date whose ensure call was rejected by the server
+  const [ensureFailedFor, setEnsureFailedFor] = useState<string | null>(null);
+
   // === TRIGGER ON-DEMAND GENERATION ===
   useEffect(() => {
     // Also check ref to prevent duplicate mutation calls before query updates
@@ -114,6 +118,7 @@ export function useTodaysOrderPuzzle(
         logger.error("[useTodaysOrderPuzzle] Failed to ensure puzzle:", error);
         // Reset so retry is possible on next effect run
         generationTriggeredForRef.current = null;
+        setEnsureFailedFor(localDate);
       });
     }
   }, [puzzleByDate, shouldQueryByDate, localDate, ensurePuzzleForDate]);
@@ -188,10 +193,12 @@ export function useTodaysOrderPuzzle(
     }
 
     if (puzzleByDate === null) {
+      // The server answered but could not create the puzzle; waiting longer won't help
+      const ensureFailed = ensureFailedFor === localDate;
       return {
         puzzle: null,
-        isLoading: true,
-        error: null,
+        isLoading: !ensureFailed,
+        error: ensureFailed ? PUZZLE_UNAVAILABLE_ERROR : null,
         localDate,
         usedPreload: false,
         revalidate,
@@ -214,7 +221,14 @@ export function useTodaysOrderPuzzle(
       usedPreload: false,
       revalidate,
     };
-  }, [preloadMatchesLocalDate, preloadedPuzzle, puzzleByDate, localDate, revalidate]);
+  }, [
+    preloadMatchesLocalDate,
+    preloadedPuzzle,
+    puzzleByDate,
+    ensureFailedFor,
+    localDate,
+    revalidate,
+  ]);
 
   useEffect(() => {
     if (preloadedPuzzle?.date && !preloadMatchesLocalDate) {
