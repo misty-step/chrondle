@@ -1,0 +1,6 @@
+version = 1
+
+[cloudflare]
+zones = ["chrondle.app", "mistystep.io"]
+capabilities = ["workers", "d1", "r2"]
+environments = ["", "Production"]
