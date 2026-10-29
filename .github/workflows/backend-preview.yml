@@ -31,7 +31,7 @@ jobs:
   preview:
     # Forks never receive the scoped deployment credential or operator configuration.
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, hetzner-ci, chrondle-ci]
     environment:
       name: ${{ inputs.private_restore == true && 'Restore' || 'Preview' }}
       url: ${{ inputs.private_restore == true && 'https://chrondle-backend-restore.mistystep.io' || 'https://chrondle-backend-preview.mistystep.io' }}
@@ -107,7 +107,7 @@ jobs:
     name: Deploy isolated frontend preview
     if: inputs.private_restore != true
     needs: preview
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, hetzner-ci, chrondle-ci]
     environment:
       name: Preview
       url: https://chrondle-preview.mistystep.io

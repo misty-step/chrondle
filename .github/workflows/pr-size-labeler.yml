@@ -6,7 +6,7 @@ on:
 
 jobs:
   size-label:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, hetzner-ci, chrondle-ci]
     permissions:
       pull-requests: write
     steps:

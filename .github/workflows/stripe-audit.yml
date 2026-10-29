@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   audit:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, hetzner-ci, chrondle-ci]
     timeout-minutes: 5
     environment: Production
     steps:

@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   size:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, hetzner-ci, chrondle-ci]
     env:
       CI_JOB_NUMBER: 1
       NEXT_PUBLIC_CONVEX_URL: https://handsome-raccoon-955.convex.cloud
