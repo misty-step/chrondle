@@ -2,6 +2,20 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.14.0](https://github.com/misty-step/chrondle/compare/v1.13.1...v1.14.0) (2026-10-29)
+
+### Bug Fixes
+
+- **archive:** show not-found state for missing archive puzzles ([#358](https://github.com/misty-step/chrondle/issues/358)) ([441a7fc](https://github.com/misty-step/chrondle/commit/441a7fc7b50c301aecbc6622ce5d44fe8a627d76)), closes [#N](https://github.com/misty-step/chrondle/issues/N)
+- **deps:** patch Next.js for October 14 2026 security advisories ([#365](https://github.com/misty-step/chrondle/issues/365)) ([ce4bf7c](https://github.com/misty-step/chrondle/commit/ce4bf7cebfacd71622a06d8d4fb0a95254bfccf3))
+- **ops:** guard all five Clerk DNS records in hosting doctor ([#357](https://github.com/misty-step/chrondle/issues/357)) ([66bbbe7](https://github.com/misty-step/chrondle/commit/66bbbe7030f0a99c9e584132528df82cabc0c705))
+- preserve accepted Classic saves per puzzle ([#362](https://github.com/misty-step/chrondle/issues/362)) ([3bed8e0](https://github.com/misty-step/chrondle/commit/3bed8e0e6e8216bd0342439dd42bf50def8daa5b)), closes [#361](https://github.com/misty-step/chrondle/issues/361) [#361](https://github.com/misty-step/chrondle/issues/361)
+- preserve Classic save outcomes across reporting failures ([#364](https://github.com/misty-step/chrondle/issues/364)) ([3f45a8f](https://github.com/misty-step/chrondle/commit/3f45a8f20bdb52d90aa2ee2f7ae026c7a84a48d3))
+
+### Features
+
+- start Rust discovery routes on the native release train ([#351](https://github.com/misty-step/chrondle/issues/351)) ([df2808f](https://github.com/misty-step/chrondle/commit/df2808fd2c3a7eb69b5af8217454656ce94d0543))
+
 ## [1.13.1](https://github.com/misty-step/chrondle/compare/v1.13.0...v1.13.1) (2026-10-16)
 
 ### Bug Fixes
