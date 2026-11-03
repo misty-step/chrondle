@@ -1,0 +1,55 @@
+{
+  "feature": "streak",
+  "base": "https://www.chrondle.app",
+  "started_at": "2026-10-20T23:50:00.937Z",
+  "steps": [
+    {
+      "at": "2026-10-20T23:50:06.824Z",
+      "action": "browser clock at 2026-10-17 noon; win that day's puzzle #431",
+      "result": "streak shows 1 day"
+    },
+    {
+      "at": "2026-10-20T23:50:29.956Z",
+      "action": "clock to 2026-10-18 noon (next day); win puzzle #432",
+      "result": "streak shows 2 days"
+    },
+    {
+      "at": "2026-10-20T23:50:29.978Z",
+      "action": "read return hook",
+      "result": "stake reads 'make it 3'"
+    },
+    {
+      "at": "2026-10-20T23:50:30.459Z",
+      "action": "capture",
+      "result": "screenshot",
+      "files": ["streak-day2.png", "streak-day2.aria.txt"]
+    },
+    {
+      "at": "2026-10-20T23:50:32.306Z",
+      "action": "reload /classic",
+      "result": "header still shows 2-day streak"
+    },
+    {
+      "at": "2026-10-20T23:50:42.785Z",
+      "action": "clock to 2026-10-20 (2026-10-19 missed); open /classic before playing",
+      "result": "header shows: Current streak: 2 day streak"
+    },
+    {
+      "at": "2026-10-20T23:50:43.941Z",
+      "action": "capture missed day",
+      "result": "screenshot",
+      "files": ["streak-missed-day.png", "streak-missed-day.aria.txt"]
+    },
+    {
+      "at": "2026-10-20T23:50:43.941Z",
+      "action": "check backend writes",
+      "result": "only allowed (none)",
+      "backend_sockets": 4,
+      "mutations_sent": [],
+      "mutations_blocked": []
+    }
+  ],
+  "result": "failed",
+  "error": "streak broken by a missed day, but header shows \"Current streak: 2 day streak\"",
+  "finished_at": "2026-10-20T23:50:43.941Z"
+}
