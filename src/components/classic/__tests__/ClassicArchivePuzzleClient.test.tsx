@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GameState } from "@/types/gameState";
+import { BACKEND_UNREACHABLE_ERROR } from "@/lib/errorRecovery";
 import { ClassicArchivePuzzleClient } from "../ClassicArchivePuzzleClient";
 
 let mockGameState: GameState = { status: "loading-puzzle" };
@@ -83,5 +84,14 @@ describe("ClassicArchivePuzzleClient", () => {
     expect(screen.getByRole("heading", { name: /couldn.t load puzzle #12/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /archive/i })).toHaveAttribute("href", "/archive");
+  });
+
+  it("says the server is unreachable when that is why the puzzle failed to load", () => {
+    mockGameState = { status: "error", error: BACKEND_UNREACHABLE_ERROR };
+
+    render(<ClassicArchivePuzzleClient puzzleNumber={12} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/can.t reach the Chrondle server/i);
+    expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
   });
 });

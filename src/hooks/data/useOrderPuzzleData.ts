@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import type { Id } from "convex/_generated/dataModel";
 import { anyPublicApi } from "@/lib/convexAnyApi";
+import { BACKEND_UNREACHABLE_ERROR, BACKEND_UNREACHABLE_TIMEOUT_MS } from "@/lib/errorRecovery";
+import { useLoadTimeout } from "@/hooks/useLoadTimeout";
 import type { OrderPuzzle } from "@/types/orderGameState";
 import { useTodaysOrderPuzzle } from "@/hooks/useTodaysOrderPuzzle";
 
@@ -70,7 +72,7 @@ export function useOrderPuzzleData(
   // Use initial data if it matches, otherwise use query result
   const archiveData = archiveInitialMatchesPuzzle ? archiveInitialData : archivePuzzle;
 
-  return useMemo<UseOrderPuzzleDataReturn>(() => {
+  const data = useMemo<UseOrderPuzzleDataReturn>(() => {
     // === DAILY PUZZLE MODE ===
     if (isDaily) {
       if (todaysPuzzle.isLoading) {
@@ -136,6 +138,18 @@ export function useOrderPuzzleData(
       error: null,
     };
   }, [isDaily, todaysPuzzle, archiveData, puzzleNumber]);
+
+  // A load still pending after the timeout means the backend is unreachable (socket
+  // refused, offline): server-side failures arrive as errors and never reach the timer.
+  const timedOut = useLoadTimeout(data.isLoading, BACKEND_UNREACHABLE_TIMEOUT_MS);
+
+  return useMemo<UseOrderPuzzleDataReturn>(
+    () =>
+      timedOut
+        ? { puzzle: null, isLoading: false, error: new Error(BACKEND_UNREACHABLE_ERROR) }
+        : data,
+    [timedOut, data],
+  );
 }
 
 function normalizePuzzle(convexPuzzle: ConvexOrderPuzzle): OrderPuzzle {

@@ -10,7 +10,10 @@ interface LoadErrorStateProps {
 export function LoadErrorState({ title, message, recoverability, onRetry }: LoadErrorStateProps) {
   return (
     <div className="flex flex-1 items-center justify-center p-4">
-      <div className="bg-destructive/10 text-destructive max-w-md rounded p-6 text-center">
+      <div
+        role="alert"
+        className="bg-destructive/10 text-destructive max-w-md rounded p-6 text-center"
+      >
         <h2 className="mb-2 text-xl font-bold">{title}</h2>
         <p className="mb-4">{message}</p>
         <button

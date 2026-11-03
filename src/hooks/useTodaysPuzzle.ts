@@ -29,6 +29,7 @@ import { anyPublicApi } from "@/lib/convexAnyApi";
 import { getLocalDateString } from "@/lib/time/dailyDate";
 import { useOnTabFocus } from "@/hooks/useVisibilityChange";
 import { logger } from "@/lib/logger";
+import { PUZZLE_UNAVAILABLE_ERROR } from "@/lib/errorRecovery";
 
 /**
  * Normalized puzzle structure for consumers
@@ -85,6 +86,9 @@ export function useTodaysPuzzle(): UseTodaysPuzzleReturn {
   // Track which date we've already triggered generation for (prevents duplicate calls)
   const generationTriggeredForRef = useRef<string | null>(null);
 
+  // Local date whose ensure call was rejected by the server
+  const [ensureFailedFor, setEnsureFailedFor] = useState<string | null>(null);
+
   // === TRIGGER ON-DEMAND GENERATION ===
 
   useEffect(() => {
@@ -97,6 +101,7 @@ export function useTodaysPuzzle(): UseTodaysPuzzleReturn {
         logger.error("[useTodaysPuzzle] Failed to ensure puzzle:", error);
         // Reset so retry is possible on next effect run
         generationTriggeredForRef.current = null;
+        setEnsureFailedFor(localDate);
       });
     }
   }, [puzzleByDate, localDate, ensurePuzzleForDate]);
@@ -158,10 +163,12 @@ export function useTodaysPuzzle(): UseTodaysPuzzleReturn {
 
     // Puzzle doesn't exist (yet) - ensurePuzzleForDate was triggered
     if (puzzleByDate === null) {
+      // The server answered but could not create the puzzle; waiting longer won't help
+      const ensureFailed = ensureFailedFor === localDate;
       return {
         puzzle: null,
-        isLoading: true, // Still waiting for generation
-        error: null,
+        isLoading: !ensureFailed,
+        error: ensureFailed ? PUZZLE_UNAVAILABLE_ERROR : null,
         localDate,
         revalidate,
       };
@@ -184,7 +191,7 @@ export function useTodaysPuzzle(): UseTodaysPuzzleReturn {
       localDate,
       revalidate,
     };
-  }, [puzzleByDate, localDate, revalidate]);
+  }, [puzzleByDate, ensureFailedFor, localDate, revalidate]);
 
   return result;
 }

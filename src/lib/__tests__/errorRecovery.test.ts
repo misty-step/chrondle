@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { classifyLoadError, getAutoRetryDelayMs } from "@/lib/errorRecovery";
+import {
+  BACKEND_UNREACHABLE_ERROR,
+  classifyLoadError,
+  getAutoRetryDelayMs,
+} from "@/lib/errorRecovery";
 
 describe("errorRecovery", () => {
   it("marks transient network failures as recoverable", () => {
@@ -12,6 +16,12 @@ describe("errorRecovery", () => {
     const plan = classifyLoadError("Order puzzle #42 not found");
     expect(plan.recoverability).toBe("unrecoverable");
     expect(plan.canAutoRetry).toBe(false);
+  });
+
+  it("marks an unreachable backend as recoverable", () => {
+    const plan = classifyLoadError(BACKEND_UNREACHABLE_ERROR);
+    expect(plan.recoverability).toBe("recoverable");
+    expect(plan.canAutoRetry).toBe(true);
   });
 
   it("returns bounded exponential backoff values", () => {

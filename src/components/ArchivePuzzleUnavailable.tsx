@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BACKEND_UNREACHABLE_ERROR } from "@/lib/errorRecovery";
 
 interface ArchivePuzzleUnavailableProps {
   puzzleNumber: number;
@@ -20,10 +21,14 @@ export function ArchivePuzzleUnavailable({
   archiveHref,
 }: ArchivePuzzleUnavailableProps) {
   const isNotFound = /not found/i.test(error);
+  const isUnreachable = error === BACKEND_UNREACHABLE_ERROR;
 
   return (
     <div className="bg-background flex min-h-screen items-center justify-center p-4">
-      <div className="bg-card w-full max-w-md rounded border p-6 text-center shadow-lg">
+      <div
+        role="alert"
+        className="bg-card w-full max-w-md rounded border p-6 text-center shadow-lg"
+      >
         <h1 className="text-foreground mb-2 text-xl font-bold">
           {isNotFound
             ? `Puzzle #${puzzleNumber} doesn't exist`
@@ -32,7 +37,9 @@ export function ArchivePuzzleUnavailable({
         <p className="text-muted-foreground mb-6">
           {isNotFound
             ? "There's no puzzle with that number. Pick one from the archive."
-            : "Something went wrong while loading this puzzle. Please try again."}
+            : isUnreachable
+              ? BACKEND_UNREACHABLE_ERROR
+              : "Something went wrong while loading this puzzle. Please try again."}
         </p>
         <div className="flex flex-col gap-3">
           {!isNotFound && (
