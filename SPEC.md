@@ -1,5 +1,8 @@
 # Chrondle behavior
 
+This file records what the running game does today. The accepted target is
+`PRODUCT.md`; each build slice reconciles this file with it.
+
 ## What it does
 
 Chrondle is a daily history puzzle: players use historical clues to guess a year range in Classic or put events in chronological order in Order.
