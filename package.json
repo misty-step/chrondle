@@ -138,6 +138,7 @@
     "@grpc/grpc-js": "^1.14.4",
     "yaml": "^2.9.0",
     "@opentelemetry/core": "^2.9.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.220.0",
     "tar-fs": ">=3.1.1",
     "nanoid": "^5.0.9",
     "fast-xml-parser": ">=5.3.6",
