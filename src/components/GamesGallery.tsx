@@ -26,10 +26,6 @@ const MODE_CARDS: ModeCardConfig[] = [
     key: "order",
     description: "Arrange six events in chronological order.",
   },
-  {
-    key: "duel",
-    description: "Two events. Tap the one that happened first. How long can you last?",
-  },
 ];
 
 export function GamesGallery() {
@@ -47,10 +43,6 @@ export function GamesGallery() {
   );
 
   const getPuzzleLabel = (modeKey: ModeKey) => {
-    if (modeKey === "duel") {
-      return "Endless";
-    }
-
     const puzzle = modeKey === "classic" ? classicPuzzle : orderPuzzle;
     return puzzle?.puzzleNumber ? `Puzzle #${puzzle.puzzleNumber}` : null;
   };

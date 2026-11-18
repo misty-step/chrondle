@@ -26,7 +26,6 @@ describe("KeepPlaying (today's checklist)", () => {
     vi.mocked(useTodayModeStatus).mockReturnValue({
       classic: "done",
       order: "todo",
-      duel: "endless",
     });
   });
 
@@ -39,29 +38,25 @@ describe("KeepPlaying (today's checklist)", () => {
 
     expect(screen.queryByRole("link", { name: /classic/i })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /order/i })).toHaveAttribute("href", "/order");
-    expect(screen.getByRole("link", { name: /duel/i })).toHaveAttribute("href", "/duel");
+    expect(screen.getByRole("link", { name: /order/i })).toHaveTextContent("Not played today");
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.queryByRole("link", { name: /duel/i })).not.toBeInTheDocument();
   });
 
   it("carries per-mode today-state so the strip reads as a checklist", () => {
-    render(<KeepPlaying currentMode="duel" />);
+    render(<KeepPlaying currentMode="order" />);
 
     expect(screen.getByRole("link", { name: /classic/i })).toHaveTextContent("Done today");
-    expect(screen.getByRole("link", { name: /order/i })).toHaveTextContent("Not played today");
-  });
-
-  it("labels Duel as endless rather than a daily checkbox", () => {
-    render(<KeepPlaying currentMode="classic" />);
-
-    expect(screen.getByRole("link", { name: /duel/i })).toHaveTextContent("Endless");
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.queryByRole("link", { name: /duel/i })).not.toBeInTheDocument();
   });
 
   it("shows no badge while a mode's today-state is unresolved", () => {
     vi.mocked(useTodayModeStatus).mockReturnValue({
       classic: "unknown",
       order: "unknown",
-      duel: "endless",
     });
-    render(<KeepPlaying currentMode="duel" />);
+    render(<KeepPlaying currentMode="order" />);
 
     const classicChip = screen.getByRole("link", { name: /classic/i });
     expect(classicChip).not.toHaveTextContent("Done today");

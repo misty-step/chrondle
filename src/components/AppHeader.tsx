@@ -21,7 +21,7 @@ interface AppHeaderProps {
   puzzleNumber?: number;
   puzzleDate?: string;
   isArchive?: boolean;
-  mode?: "classic" | "order" | "duel";
+  mode?: "classic" | "order";
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({

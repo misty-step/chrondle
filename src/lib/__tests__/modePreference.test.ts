@@ -80,7 +80,7 @@ describe("modePreference", () => {
     it("returns the preferred mode route for a returning visitor", () => {
       expect(resolveHomeRedirect("classic", false)).toBe("/classic");
       expect(resolveHomeRedirect("order", false)).toBe("/order");
-      expect(resolveHomeRedirect("duel", false)).toBe("/duel");
+      expect(resolveHomeRedirect("duel", false)).toBeNull();
     });
 
     it("returns null for a first-time visitor (no cookie)", () => {

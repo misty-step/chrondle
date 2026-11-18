@@ -1,5 +1,5 @@
 /**
- * Shared spoiler-safety invariant across all three share modes.
+ * Shared spoiler-safety invariant across both share modes.
  *
  * Chrondle's prime directive (AGENTS.md "Puzzle Integrity") is that the
  * answer is never revealed outside the hint system. A share artifact is
@@ -7,10 +7,8 @@
  * in-game UI: no absolute calendar year, and nothing that lets a
  * not-yet-played reader derive the target year or era.
  *
- * Order and Duel are structurally safe: their adapters' input types never
- * accept an absolute year at all (Order takes only correct/incorrect
- * feedback; Duel takes only a relative gap), so there is nothing to leak
- * by construction. Classic is the one adapter that touches real calendar
+ * Order is structurally safe: its adapter accepts only correct/incorrect
+ * feedback, never absolute years, so there is nothing to leak by construction. Classic is the one adapter that touches real calendar
  * years (RangeGuess.start/end, and formerly a targetYear option) — these
  * tests are the regression guard for that surface, run across win and loss
  * outcome classes.
@@ -18,7 +16,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { generateClassicShareText } from "../classic";
 import { generateOrderShareText } from "../order";
-import { generateDuelShareText } from "../duel";
 import { SHARE_PITCH } from "../format";
 import type { RangeGuess } from "@/types/range";
 import type { OrderAttempt } from "@/types/orderGameState";
@@ -132,41 +129,6 @@ describe("share text spoiler-safety (no year/era/derivable-hint leakage)", () =>
           orderAttempt(["incorrect", "correct", "incorrect", "correct", "incorrect", "incorrect"]),
           orderAttempt(["correct", "correct", "correct", "correct", "correct", "correct"]),
         ],
-      });
-      assertNoForbiddenYears(text);
-      assertNoCalendarYearShapedNumber(text);
-    });
-  });
-
-  describe("duel", () => {
-    it("run ended by a miss carries only a relative gap, never absolute years", () => {
-      const text = generateDuelShareText({
-        streak: 12,
-        bestStreak: 20,
-        tierLabel: "Historian",
-        finalGap: 6,
-      });
-      assertNoForbiddenYears(text);
-      assertNoCalendarYearShapedNumber(text);
-    });
-
-    it("exhausted run (no miss) carries no year information", () => {
-      const text = generateDuelShareText({
-        streak: 30,
-        bestStreak: 30,
-        tierLabel: "Legend",
-        finalGap: null,
-      });
-      assertNoForbiddenYears(text);
-      assertNoCalendarYearShapedNumber(text);
-    });
-
-    it("new-personal-best run carries no year information", () => {
-      const text = generateDuelShareText({
-        streak: 21,
-        bestStreak: 21,
-        tierLabel: "Legend",
-        finalGap: 2,
       });
       assertNoForbiddenYears(text);
       assertNoCalendarYearShapedNumber(text);

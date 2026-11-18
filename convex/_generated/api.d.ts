@@ -24,9 +24,6 @@ import type * as actions_puzzleComposition_schemas from "../actions/puzzleCompos
 import type * as admin_events from "../admin/events.js";
 import type * as admin_puzzles from "../admin/puzzles.js";
 import type * as crons from "../crons.js";
-import type * as duel from "../duel.js";
-import type * as duel_queries from "../duel/queries.js";
-import type * as duel_selection from "../duel/selection.js";
 import type * as events from "../events.js";
 import type * as generationLogs from "../generationLogs.js";
 import type * as health from "../health.js";
@@ -106,9 +103,6 @@ declare const fullApi: ApiFromModules<{
   "admin/events": typeof admin_events;
   "admin/puzzles": typeof admin_puzzles;
   crons: typeof crons;
-  duel: typeof duel;
-  "duel/queries": typeof duel_queries;
-  "duel/selection": typeof duel_selection;
   events: typeof events;
   generationLogs: typeof generationLogs;
   health: typeof health;

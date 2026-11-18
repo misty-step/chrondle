@@ -12,16 +12,9 @@ const anonymousId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 
 export function analyticsRoute(path: string): string {
   if (/^\/archive\/puzzle\/[^/]+\/?$/.test(path)) return "/archive/puzzle/:id";
-  return [
-    "/",
-    "/classic",
-    "/order",
-    "/duel",
-    "/archive",
-    "/settings",
-    "/pricing",
-    "/changelog",
-  ].includes(path)
+  return ["/", "/classic", "/order", "/archive", "/settings", "/pricing", "/changelog"].includes(
+    path,
+  )
     ? path
     : "/other";
 }
@@ -58,7 +51,7 @@ export const sanitizeAnalyticsEvent: BeforeSendFn = (event) => {
     }
   }
   if (typeof input.won === "boolean") properties.won = input.won;
-  if (["classic", "order", "duel"].includes(input.mode)) properties.mode = input.mode;
+  if (["classic", "order"].includes(input.mode)) properties.mode = input.mode;
   return { uuid: event.uuid, event: event.event, timestamp: event.timestamp, properties };
 };
 

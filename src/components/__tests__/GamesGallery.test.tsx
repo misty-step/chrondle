@@ -127,12 +127,11 @@ describe("GamesGallery", () => {
       expect(mockPush).toHaveBeenCalledWith("/order");
     });
 
-    it("navigates to /duel when Duel card is clicked", () => {
+    it("does not offer the retired Duel mode", () => {
       render(<GamesGallery />);
 
-      fireEvent.click(screen.getByRole("button", { name: /duel/i }));
-
-      expect(mockPush).toHaveBeenCalledWith("/duel");
+      expect(screen.queryByRole("button", { name: /duel/i })).not.toBeInTheDocument();
+      expect(screen.getAllByRole("button")).toHaveLength(2);
     });
   });
 });

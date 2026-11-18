@@ -1,9 +1,9 @@
-export type ModeKey = "classic" | "order" | "duel";
+export type ModeKey = "classic" | "order";
 
 export const MODE_COOKIE = "chrondle_mode";
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
-const MODE_KEYS: readonly ModeKey[] = ["classic", "order", "duel"];
+const MODE_KEYS: readonly ModeKey[] = ["classic", "order"];
 
 /**
  * Parse a raw cookie value into a ModeKey, rejecting anything else.

@@ -19,7 +19,6 @@ Play today's puzzle at **[chrondle.app](https://chrondle.app)**.
 ## Features
 
 - **Classic Mode:** the core daily range-guess puzzle described above, free for everyone.
-- **Duel Mode:** two historical events, tap the one that happened first, and see how long your streak lasts. Free for everyone.
 - **Order Mode:** arrange a set of events from earliest to latest, with limited misses. Free for everyone.
 - **Archive:** browse and replay past puzzles. Recent puzzles are free; deeper archive access is part of the paid subscription (see below).
 - **Progressive Hints:** choose how many of the six clues to read before locking in your range.
@@ -30,7 +29,7 @@ Play today's puzzle at **[chrondle.app](https://chrondle.app)**.
 
 ### Free / Paid Boundary
 
-Classic, Duel, and Order are free to play, full stop. A $0.99/mo (or $9.99/yr)
+Classic and Order are free to play, full stop. A $0.99/mo (or $9.99/yr)
 subscription via Stripe unlocks the full puzzle archive and funds daily event
 generation and maintenance — see [chrondle.app/pricing](https://chrondle.app/pricing).
 
