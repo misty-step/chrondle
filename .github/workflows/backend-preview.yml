@@ -136,6 +136,32 @@ jobs:
         env:
           ONNXRUNTIME_NODE_INSTALL_CUDA: "skip"
         run: bun install --frozen-lockfile
+      - name: Inspect existing Rust tools and cache
+        run: |
+          for tool in cargo rustup worker-build; do
+            if command -v "$tool"; then "$tool" --version; fi
+          done
+          for directory in "${CARGO_HOME:-$HOME/.cargo}" "$HOME/.cache/chrondle-worker-build"; do
+            if [ -d "$directory" ]; then ls -ld "$directory"; fi
+          done
+      - name: Setup Rust for the web Worker
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Cache pinned worker-build
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/chrondle-worker-build
+          key: ${{ runner.os }}-${{ runner.arch }}-worker-build-0.8.7
+      - name: Install pinned worker-build if needed
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cache/chrondle-worker-build/bin:$PATH"
+          if ! command -v worker-build >/dev/null || [ "$(worker-build --version)" != "0.8.7" ]; then
+            cargo install worker-build --version 0.8.7 --locked --root "$HOME/.cache/chrondle-worker-build"
+          fi
+          test "$(worker-build --version)" = "0.8.7"
+          echo "$HOME/.cache/chrondle-worker-build/bin" >> "$GITHUB_PATH"
       - name: Build the frontend with its source-owned preview bindings
         run: |
           # Wrangler vars are also the build inputs: browser, SSR and CSP agree.
