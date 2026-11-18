@@ -2,6 +2,34 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // Internal-only, append-only editor audit; never returned by player queries.
+  puzzleEditorReviews: defineTable({
+    draft: v.object({
+      mode: v.union(v.literal("classic"), v.literal("order")),
+      clues: v.array(v.object({ text: v.string(), year: v.number(), sourceUrl: v.string() })),
+    }),
+    rubricVersion: v.string(),
+    passed: v.boolean(),
+    failures: v.array(v.string()),
+    scores: v.object({
+      clues: v.array(
+        v.object({
+          story: v.number(),
+          sourceSupport: v.number(),
+          noLeakage: v.number(),
+          wayIn: v.number(),
+          reasoning: v.string(),
+        }),
+      ),
+      predictedSolveRate: v.number(),
+      difficultyReasoning: v.string(),
+      revisionInstructions: v.array(v.string()),
+    }),
+    model: v.string(),
+    costUsd: v.number(),
+    totalTokens: v.number(),
+    reviewedAt: v.number(),
+  }).index("by_passed", ["passed", "reviewedAt"]),
   // Pool of all historical events (one event per row for maximum reusability)
   events: defineTable({
     year: v.number(), // e.g., 1969

@@ -1,0 +1,21 @@
+{
+  "version": "puzzle-editor-v1",
+  "clueCount": 6,
+  "minimumScore": 0.8,
+  "maxAttempts": 3,
+  "criteria": {
+    "story": "Each clue is a short story with a surprising or human detail, not a dry chronicle line.",
+    "source": "Each clue has an HTTP(S) source URL supporting its specific claim. A plausible URL alone is not evidence.",
+    "wayIn": "At least one clue gives a typical daily-puzzle player a recognizable way in.",
+    "noLeakage": "No clue gives the year away through numerals, spelled years, era words or anachronisms.",
+    "difficulty": "Assess the whole puzzle, in reveal order, against the mode target. Predictions are editorial estimates, not measured solve rates."
+  },
+  "solveRateTargets": {
+    "classic": { "minimum": 0.35, "maximum": 0.55, "metric": "submitted bets containing the year" },
+    "order": {
+      "minimum": 0.85,
+      "maximum": 1,
+      "metric": "starters placing no more than one card wrong"
+    }
+  }
+}

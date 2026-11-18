@@ -86,6 +86,22 @@ Curious players can enjoy a short, fair daily challenge that builds their sense 
   `--dry-run` is rejected before any network request, provider charge or server
   write; ordinary authorized invocations retain their generation behavior.
 
+### Editor gate rollout (MIS-1281, not yet enabled)
+
+- The versioned P-41 rubric is `docs/rubrics/puzzle-editor-v1.json`.
+  A separate OpenRouter editor adapter and bounded revision/recheck contract
+  exist, with deterministic leakage rejection and per-clue source requirements.
+  The internal review entry point appends exact drafts, decisions and accounting
+  to a private audit table; it does not create or change scheduled puzzles.
+- These primitives are not connected to publication yet. The existing event
+  Generate → Critic → Reviser pipeline and daily puzzle scheduling still run
+  as before. No 14-day passed buffer or scheduled-puzzle source backfill
+  is claimed by this change. P-40–P-42 remain unfulfilled until that rollout.
+- Enabling a fail-closed publication gate before populating its passed buffer
+  would risk empty days. Activation and buffer validation require an authorized
+  non-production backend; neither production data nor credentials are migrated
+  by this draft.
+
 ## Classic player journey
 
 - US-001: As a player, I can open today's classic puzzle without signing in,
