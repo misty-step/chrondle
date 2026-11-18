@@ -46,3 +46,33 @@ Commands use Bun 1.3.9 from `.bun-version`. Full logs remain in the sandbox at:
 `/home/user/.factory/9d072c6bc94e86b1ecad4ff2be401184fe408f2a508ba8f852f8c9069eaab681/logs/`.
 
 Results and the draft PR link are recorded below after execution.
+
+Draft PR: https://github.com/misty-step/chrondle/pull/391
+
+| Command                                                                                                                                                                 | Result                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `bun run lint`                                                                                                                                                          | Exit 0                                                                                    |
+| `bun run type-check`                                                                                                                                                    | Exit 0, including backend                                                                 |
+| `bun run test -- convex/lib/__tests__/puzzleEditor.test.ts convex/actions/eventGeneration/__tests__/editor.test.ts convex/__tests__/puzzleEditorReviews.convex.test.ts` | Exit 0; 25 test executions across 4 test-project files                                    |
+| `bun run build`                                                                                                                                                         | Exit 0 on retry; first invocation stopped at the existing Next security advisory reminder |
+| `TEST_SKIP_SERVER=1 bun run test:e2e e2e/classic-range-entry.spec.ts e2e/order-mode-reorder.spec.ts --workers=2`                                                        | Exit 1; all 6 journeys hit the configuration-error screen                                 |
+
+The browser configuration-error screen explicitly reports missing
+`NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`. Screenshots,
+videos and error contexts are preserved under the factory run's `test-results/`.
+No credentials were fetched or fabricated. The first browser attempt also failed
+because the dev server stopped at the Next security advisory reminder; a retry
+started the server without modifying dependencies/settings. No security upgrade
+or deployment was performed in this issue branch.
+
+The initial full suite passed 2,435 tests. After adding record/adapter tests, a
+full run had 2,436 passes and 8 failures in the unchanged
+`useVictoryConfetti.test.tsx` (timer ordering and cleanup timeouts). That run was
+concurrent with the build/browser work; the raw failure log is retained as
+`logs/test-retry-needed.log`. A final full rerun without those competing jobs is
+recorded below.
+
+Final isolated `bun run test`: **exit 0; 212 files passed, 2,444 tests passed**.
+The earlier failures and all retry logs remain preserved, not replaced as evidence
+of an uninterrupted green run. Browser verification remains blocked; the editor
+publication gate and 14-day buffer acceptance criteria remain incomplete.
