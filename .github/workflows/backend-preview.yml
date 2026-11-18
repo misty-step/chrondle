@@ -54,6 +54,9 @@ jobs:
         with:
           bun-version: "1.4.2"
       - name: Install with the repository lockfile and no deployment credentials
+        # CPU binaries ship in the package; the optional CUDA download is not needed here.
+        env:
+          ONNXRUNTIME_NODE_INSTALL_CUDA: "skip"
         run: bun install --frozen-lockfile
       - name: Deploy only the selected isolated script and resources
         working-directory: backend
@@ -129,6 +132,9 @@ jobs:
         with:
           bun-version: "1.4.2"
       - name: Install without deployment or integration credentials
+        # CPU binaries ship in the package; the optional CUDA download is not needed here.
+        env:
+          ONNXRUNTIME_NODE_INSTALL_CUDA: "skip"
         run: bun install --frozen-lockfile
       - name: Build the frontend with its source-owned preview bindings
         run: |
