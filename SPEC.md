@@ -59,8 +59,12 @@ Curious players can enjoy a short, fair daily challenge that builds their sense 
   failed step rolls the backend and the web back to their prior versions
   automatically and reports failure to the owned intake; recovery never restores
   data, and the pre-deploy backup is the data recovery point.
-- The train runs from cron on drydock, the build and CI host, with no GitHub
-  Actions in the release path.
+- The train runs in a fresh Boat sandbox per release, started on a schedule
+  from outside the repo, with no GitHub Actions and no standing build host in
+  the release path. Production's serving version annotation, not local state,
+  says what was last promoted. Credentials reach the sandbox only after the
+  credential-free build and checks pass, and the sandbox is deleted after the
+  run's evidence is collected.
 
 ## Player account privacy
 
