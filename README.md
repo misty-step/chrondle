@@ -157,7 +157,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to play.
 
 Install the Rust `wasm32-unknown-unknown` target and `worker-build` 0.8.7
 (`cargo install worker-build --version 0.8.7 --locked`), plus the pinned Bun
-version in `.bun-version` and Node 24. Then run the native entry on Mirrodin:
+version in `.bun-version` and Node 24. Then run the native entry on drydock:
 
 ```bash
 bun run check --mode fast
@@ -229,7 +229,7 @@ No Clerk webhook or sync secret is required; see [authentication](docs/AUTHENTIC
 
 ### Deploying the web service
 
-Merge a reviewed commit after `bun run check --mode fast` passes on Mirrodin.
+Merge a reviewed commit after `bun run check --mode fast` passes on drydock.
 The no-agent native train runs `scripts/train.py` every 30 minutes for moved
 `master`, using slim checks plus build/artifact verification. A separate full
 check runs twice daily, including unchanged trunk, without gating later releases.
