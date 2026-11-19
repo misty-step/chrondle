@@ -2,8 +2,10 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // Internal-only, append-only editor audit; never returned by player queries.
+  // Internal-only editor audit. Decisions are immutable; scheduling consumes a pass.
+  // Never returned by player queries.
   puzzleEditorReviews: defineTable({
+    scheduledDate: v.optional(v.string()),
     draft: v.object({
       mode: v.union(v.literal("classic"), v.literal("order")),
       clues: v.array(v.object({ text: v.string(), year: v.number(), sourceUrl: v.string() })),
@@ -90,6 +92,7 @@ export default defineSchema({
 
   // Daily puzzles (starts empty, populated by cron job)
   puzzles: defineTable({
+    editorReviewId: v.optional(v.id("puzzleEditorReviews")),
     puzzleNumber: v.number(), // Human-readable: #1, #2, etc.
     date: v.string(), // "2024-07-16"
     targetYear: v.number(), // Year to guess
@@ -123,6 +126,7 @@ export default defineSchema({
 
   // Order mode daily puzzles
   orderPuzzles: defineTable({
+    editorReviewId: v.optional(v.id("puzzleEditorReviews")),
     puzzleNumber: v.number(), // Sequential, mirrors Classic numbering scheme
     date: v.string(), // ISO date (YYYY-MM-DD)
     events: v.array(

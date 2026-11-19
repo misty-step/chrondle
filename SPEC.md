@@ -93,9 +93,16 @@ Curious players can enjoy a short, fair daily challenge that builds their sense 
   exist, with deterministic leakage rejection and per-clue source requirements.
   The internal review entry point appends exact drafts, decisions and accounting
   to a private audit table; it does not create or change scheduled puzzles.
-- These primitives are not connected to publication yet. The existing event
-  Generate → Critic → Reviser pipeline and daily puzzle scheduling still run
-  as before. No 14-day passed buffer or scheduled-puzzle source backfill
+- A private atomic scheduling entry point accepts 14–31 consecutive days of
+  current-rubric passes in both modes. It recomputes decisions, rejects reused
+  passes and existing unreviewed dates, and stores exact approved clue order
+  with a review link. Supporting URLs remain in the private review, not in
+  player-facing puzzle documents. A failure commits no partial calendar.
+  Retrying the same horizon is idempotent; altered linked clues are rejected.
+  The asynchronous composition optimizer cannot change editor-approved clues.
+- This scheduling entry point is not connected to production generation yet.
+  The existing event Generate → Critic → Reviser pipeline and daily puzzle
+  scheduling still run as before. No 14-day passed buffer or scheduled-puzzle source backfill
   is claimed by this change. P-40–P-42 remain unfulfilled until that rollout.
 - Enabling a fail-closed publication gate before populating its passed buffer
   would risk empty days. Activation and buffer validation require an authorized
