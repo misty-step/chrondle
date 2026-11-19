@@ -2,6 +2,13 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.15.0](https://github.com/misty-step/chrondle/compare/v1.14.1...v1.15.0) (2026-11-19)
+
+### Features
+
+- retire Duel mode (MIS-1280 continuation) ([#393](https://github.com/misty-step/chrondle/issues/393)) ([0d7fc6b](https://github.com/misty-step/chrondle/commit/0d7fc6bafa03a50976a9281225df6b1aecc8cd44)), closes [#390](https://github.com/misty-step/chrondle/issues/390) [#392](https://github.com/misty-step/chrondle/issues/392) [#390](https://github.com/misty-step/chrondle/issues/390)
+- stage editor-approved puzzle horizons (MIS-1281, blocked) ([#394](https://github.com/misty-step/chrondle/issues/394)) ([9178e24](https://github.com/misty-step/chrondle/commit/9178e24a90f21af87e53c87254f7f2cd3bfc61e4)), closes [#391](https://github.com/misty-step/chrondle/issues/391)
+
 ## [1.14.1](https://github.com/misty-step/chrondle/compare/v1.14.0...v1.14.1) (2026-11-19)
 
 ### Bug Fixes
