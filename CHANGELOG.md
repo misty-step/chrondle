@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+## [1.14.1](https://github.com/misty-step/chrondle/compare/v1.14.0...v1.14.1) (2026-11-19)
+
+### Bug Fixes
+
+- **ci:** skip optional CUDA download in isolated previews ([#392](https://github.com/misty-step/chrondle/issues/392)) ([d873eea](https://github.com/misty-step/chrondle/commit/d873eea56218882b1c5c50b76d70db35c94c9753))
+
 # [1.14.0](https://github.com/misty-step/chrondle/compare/v1.13.1...v1.14.0) (2026-10-29)
 
 ### Bug Fixes
