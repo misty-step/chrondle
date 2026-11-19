@@ -1,6 +1,6 @@
-"""Native web train. Adapted from Overmind scripts/train.py at 49d98c2.
+"""Native release train. Adapted from Overmind scripts/train.py at 49d98c2.
 
-No backend deployment or accepted-data writes. Credentials are read only after
+No automatic data restoration. Credentials are read only after
 credential-free build/verification exits. Invoke from a trusted source checkout.
 """
 import argparse
@@ -23,6 +23,7 @@ import urllib.request
 
 PROVIDER = "https://api.cloudflare.com/client/v4"
 HOSTS = ("https://chrondle.mistystep.io", "https://chrondle.app", "https://www.chrondle.app")
+BACKEND = "https://chrondle-backend.mistystep.io"
 PUBLIC_KEYS = {"NEXT_PUBLIC_CONVEX_URL", "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
                "NEXT_PUBLIC_POSTHOG_KEY", "NEXT_PUBLIC_POSTHOG_HOST", "NEXT_PUBLIC_POSTHOG_ENVIRONMENT"}
 
@@ -30,6 +31,9 @@ PUBLIC_KEYS = {"NEXT_PUBLIC_CONVEX_URL", "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
 class State(Enum):
     SELECTED = auto()
     VERIFIED = auto()
+    BACKING_UP = auto()
+    BACKEND_DEPLOYING = auto()
+    BACKEND_VERIFIED = auto()
     PROMOTING = auto()
     RECOVERING = auto()
     DONE = auto()
@@ -40,6 +44,9 @@ class Event(Enum):
     BUILD_OK = auto()
     VERIFY_ONLY = auto()
     RELEASE = auto()
+    BACKEND_RELEASE = auto()
+    BACKUP_OK = auto()
+    BACKEND_OK = auto()
     SMOKE_OK = auto()
     SMOKE_FAILED = auto()
     RECOVERED = auto()
@@ -51,11 +58,17 @@ def step(state, event):
     table = {
         (State.SELECTED, Event.BUILD_OK): (State.VERIFIED, None),
         (State.VERIFIED, Event.VERIFY_ONLY): (State.DONE, None),
+        (State.VERIFIED, Event.BACKEND_RELEASE): (State.BACKING_UP, "backup"),
+        (State.BACKING_UP, Event.BACKUP_OK): (State.BACKEND_DEPLOYING, "deploy_backend"),
+        (State.BACKEND_DEPLOYING, Event.BACKEND_OK): (State.BACKEND_VERIFIED, None),
+        (State.BACKEND_VERIFIED, Event.RELEASE): (State.PROMOTING, "promote"),
         (State.VERIFIED, Event.RELEASE): (State.PROMOTING, "promote"),
         (State.PROMOTING, Event.SMOKE_OK): (State.DONE, None),
         (State.PROMOTING, Event.SMOKE_FAILED): (State.RECOVERING, "rollback"),
         (State.RECOVERING, Event.RECOVERED): (State.FAILED, None),
     }
+    if state in (State.BACKEND_DEPLOYING, State.BACKEND_VERIFIED, State.PROMOTING) and event in (Event.ERROR, Event.SMOKE_FAILED):
+        return State.RECOVERING, "rollback"
     if state not in (State.DONE, State.FAILED) and event == Event.ERROR:
         return State.FAILED, None
     return table.get((state, event), (state, None))
@@ -66,8 +79,8 @@ def command(*args, cwd=None):
                                    stderr=subprocess.STDOUT).strip()
 
 
-def config_at(repo, sha):
-    raw = command("git", "show", sha + ":wrangler.jsonc", cwd=repo)
+def config_at(repo, sha, path="wrangler.jsonc"):
+    raw = command("git", "show", sha + ":" + path, cwd=repo)
     raw = re.sub(r"(?m)^\s*//.*$", "", raw)
     raw = re.sub(r",(\s*[}\]])", r"\1", raw)
     config = json.loads(raw)
@@ -126,8 +139,8 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def request(url, token=None, data=None):
-    headers = {"User-Agent": "Mozilla/5.0 ChrondleNativeTrain/1"}
+def request(url, token=None, data=None, headers=None):
+    headers = {"User-Agent": "Mozilla/5.0 ChrondleNativeTrain/1", **(headers or {})}
     if token:
         headers["Authorization"] = "Bearer " + token
     if data is not None:
@@ -168,10 +181,6 @@ def preflight(repo, sha, config, public, token):
     previous = deployed(config, token)
     prior_sha = serving_source(config, token, previous)
     subprocess.run(["git", "merge-base", "--is-ancestor", prior_sha, sha], cwd=repo, check=True)
-    # This first train owns only web. Fail visibly rather than silently skip a
-    # compatible backend release, accept a migration, or restore a different writer.
-    if command("git", "diff", "--name-only", prior_sha, sha, "--", "backend", "convex", cwd=repo):
-        raise RuntimeError("Backend source changed: implement its native release before promotion")
     bindings = provider(config, token, "settings")["bindings"]
     origin = next((b.get("text") for b in bindings if b["name"] == "NEXT_PUBLIC_CONVEX_URL"), None)
     if origin != public["NEXT_PUBLIC_CONVEX_URL"]:
@@ -231,31 +240,149 @@ def run_wrangler(args, artifact, token, *action, log):
                    cwd=artifact, env=env, stdout=log, stderr=log, check=True)
 
 
-def activate(args, artifact, sha, config, token, previous, prior_sha, log, origins=HOSTS):
-    """Same promotion/recovery implementation for production and isolated rehearsal."""
+def credentials(path):
+    # Open without following links, then check the descriptor to avoid a mode-check race.
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    with os.fdopen(fd) as source:
+        info = os.fstat(source.fileno())
+        if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600:
+            raise RuntimeError("Credentials must be a regular 0600 file")
+        values = {}
+        for line in source:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            key, separator, value = line.partition("=")
+            if not separator or key not in ("CLOUDFLARE_API_TOKEN", "CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_SECRET") or not value or key in values:
+                raise RuntimeError("Invalid credentials file contract")
+            values[key] = value
+    if len(values) != 3:
+        raise RuntimeError("Missing required credentials")
+    return values
+
+
+def backend_smoke(sha):
+    deadline = time.monotonic() + 60
+    while True:
+        status, _, body = request(BACKEND + "/_backend/version?native_readback=" + str(time.time_ns()))
+        identity = json.loads(body)
+        if status != 200 or identity.get("service") != "chrondle-backend" or identity.get("environment") != "production":
+            raise RuntimeError("Backend health failed")
+        if identity.get("revision") == sha:
+            return
+        if not re.fullmatch(r"[a-f0-9]{40}", identity.get("revision", "")) or time.monotonic() >= deadline:
+            raise RuntimeError("Backend revision mismatch")
+        time.sleep(2)
+
+
+def restore(config, token, version):
+    payload = json.dumps({"strategy": "percentage", "versions": [{"version_id": version, "percentage": 100}]}).encode()
+    status, _, body = request(f"{PROVIDER}/accounts/{config['account_id']}/workers/scripts/{config['name']}/deployments", token, payload)
+    if status not in (200, 201) or not json.loads(body).get("success"):
+        raise RuntimeError("Provider rollback failed")
+    if deployed(config, token) != version:
+        raise RuntimeError("Rollback pointer mismatch")
+
+
+def activate(args, artifact, sha, config, token, previous, prior_sha, log, origins=HOSTS,
+             backend_config=None, secrets=None, events=None):
+    """One state machine owns both families; all failures after deploy recover both."""
     manifest = hashes(artifact)
-    state, effect = step(State.VERIFIED, Event.RELEASE)
-    assert effect == "promote"
+    backend_artifact = args.home / "backend" if backend_config else None
+    backend_manifest = hashes(backend_artifact) if backend_config else None
+    backend_previous = backend_prior_sha = None
+    backup_key = None
+    state = State.VERIFIED
+
+    def advance(event):
+        nonlocal state
+        next_state, effect = step(state, event)
+        if events:
+            receipt(events, sha=sha, state=next_state.name, backup_key=backup_key)
+        state = next_state
+        return effect
+
     try:
+        if backend_config:
+            advance(Event.BACKEND_RELEASE)
+            status, _, body = request(BACKEND + "/_backend/admin/backup", data=b"{}", headers={
+                "CF-Access-Client-Id": secrets["CF_ACCESS_CLIENT_ID"],
+                "CF-Access-Client-Secret": secrets["CF_ACCESS_CLIENT_SECRET"]})
+            if status != 200:
+                raise RuntimeError("Backend backup failed")
+            backup_key = json.loads(body).get("key")
+            if not isinstance(backup_key, str) or not backup_key:
+                raise RuntimeError("Backend backup key missing")
+            # Persist the recovery point before any further fallible operation.
+            if events:
+                receipt(events, sha=sha, state=state.name, backup_key=backup_key)
+            backend_previous = deployed(backend_config, token)
+            backend_prior_sha = serving_source(backend_config, token, backend_previous)
+            advance(Event.BACKUP_OK)
+            run_wrangler(args, backend_artifact, token, "deploy", "--env", "production",
+                         "--var", "REVISION:" + sha, "--message", "git:" + sha, log=log)
+            current = deployed(backend_config, token)
+            if current == backend_previous or serving_source(backend_config, token, current) != sha:
+                raise RuntimeError("Backend provider identity mismatch")
+            backend_smoke(sha)
+            if hashes(backend_artifact) != backend_manifest:
+                raise RuntimeError("Backend promotion changed tested bytes")
+            advance(Event.BACKEND_OK)
+        advance(Event.RELEASE)
         run_wrangler(args, artifact, token, "deploy", "--message", "git:" + sha, log=log)
         current = deployed(config, token)
         if current == previous or serving_source(config, token, current) != sha:
             raise RuntimeError("Provider promotion identity mismatch")
         settled_smoke(sha, origins=origins)
+        if backend_config:
+            backend_smoke(sha)
         if hashes(artifact) != manifest:
             raise RuntimeError("Promotion changed tested bytes")
-        state, _ = step(state, Event.SMOKE_OK)
+        advance(Event.SMOKE_OK)
         return state
     except Exception:
-        state, effect = step(state, Event.SMOKE_FAILED)
-        assert effect == "rollback"
-        run_wrangler(args, artifact, token, "rollback", previous, "--yes", log=log)
-        if deployed(config, token) != previous:
-            raise RuntimeError("ROLLBACK INCOMPLETE; preserve accepted data")
-        settled_smoke(prior_sha, rust=False, origins=origins)
-        state, _ = step(state, Event.RECOVERED)
-        assert state == State.FAILED
-        raise RuntimeError("Release failed; previous compatible version and journey recovered")
+        failed_state = state.name
+        state, effect = step(state, Event.ERROR)
+        if effect == "rollback":
+            failures = []
+            # Independent attempts: a broken family must not prevent the other's recovery.
+            for family, version in ((backend_config, backend_previous), (config, previous)):
+                if family and version:
+                    try:
+                        try:
+                            current = deployed(family, token)
+                        except Exception:
+                            current = None  # An unreadable pointer must not skip restoration.
+                        if current != version:
+                            restore(family, token, version)
+                    except Exception:
+                        failures.append("provider recovery")
+            for readback in ([lambda: backend_smoke(backend_prior_sha)] if backend_config else []) + [lambda: settled_smoke(prior_sha, rust=False, origins=origins)]:
+                try:
+                    readback()
+                except Exception:
+                    failures.append("serving readback")
+            state, _ = step(state, Event.RECOVERED)
+            result = "ROLLBACK INCOMPLETE" if failures else "prior versions recovered"
+        else:
+            result = "no deployment attempted"
+        raise RuntimeError(f"Release failed in {failed_state}; {result}; backup_key={backup_key}; no data restored") from None
+
+
+def stage_backend(source, target, config):
+    files = hashes(source)
+    mains = [name for name in files if re.fullmatch(r"[\w.-]+\.m?js", name)]
+    if len(mains) != 1 or set(files) - {mains[0] if mains else "", (mains[0] + ".map") if mains else "", "README.md"}:
+        raise RuntimeError("Expected one bundled backend entrypoint")
+    if target.exists():
+        shutil.rmtree(target)
+    shutil.copytree(source, target)
+    # Only trusted source config, no build hooks or candidate dependency discovery.
+    production = {k: v for k, v in config.items() if k not in ("build", "main", "send_metrics")}
+    production.update(main=mains[0], no_bundle=True)
+    (target / "wrangler.json").write_text(json.dumps({"main": mains[0], "no_bundle": True,
+        "account_id": config["account_id"], "send_metrics": False, "env": {"production": production}}))
+    return hashes(target)
 
 
 def build(args, source, public, sha, log):
@@ -264,9 +391,11 @@ def build(args, source, public, sha, log):
         (cache / name).mkdir(parents=True, exist_ok=True)
     name = "chrondle-train-" + str(os.getpid())
     docker = ["docker", "run", "--rm", "--init", "--name", name, "--label", "hermes.task=t_7034d1ef",
-              "--cgroup-parent=gha-runners.slice", "--cpus=4", "--memory=8g", "--pids-limit=1024",
+              "--cpus=4", "--memory=8g", "--pids-limit=1024",
               "--cap-drop=ALL", "--security-opt=no-new-privileges", "--read-only",
               "--tmpfs", "/tmp:rw,size=1g", "--user", f"{os.getuid()}:{os.getgid()}", "--entrypoint", "/bin/bash"]
+    if args.cgroup_parent:
+        docker += ["--cgroup-parent", args.cgroup_parent]
     for key in ("network", "dns"):
         if getattr(args, key):
             docker += ["--" + key, getattr(args, key)]
@@ -286,6 +415,7 @@ def build(args, source, public, sha, log):
         checks += " && bun run build:cf && bun run test:worker-routes && bun run test:discovery"
     checks += " && bun scripts/package-worker.mjs && CHRONDLE_ARTIFACT=.release bun run test:worker-routes"
     checks += " && CHRONDLE_ARTIFACT=.release CHRONDLE_DISCOVERY_BACKEND=$NEXT_PUBLIC_CONVEX_URL bun run test:discovery"
+    checks += " && cd backend && ../node_modules/.bin/wrangler deploy --env production --var REVISION:" + sha + " --dry-run --outdir ../.backend-release"
     docker += ["--workdir", "/workspace", args.image, "-c", checks]
     try:
         subprocess.run(docker, stdout=log, stderr=log, check=True)
@@ -316,6 +446,8 @@ def main():
         parser.add_argument("--" + key, type=lambda p: Path(p).resolve(), required=True)
     parser.add_argument("--wrangler", type=lambda p: Path(p).resolve())
     parser.add_argument("--image", required=True)
+    parser.add_argument("--credentials", type=lambda p: Path(p).absolute())
+    parser.add_argument("--cgroup-parent")
     parser.add_argument("--network")
     parser.add_argument("--dns")
     parser.add_argument("--mode", choices=("fast", "full"), default="fast")
@@ -324,13 +456,16 @@ def main():
     args = parser.parse_args()
     if args.candidate and (args.promote or not re.fullmatch(r"[a-f0-9]{40}", args.candidate)):
         parser.error("Diagnostic candidate must be an exact SHA and cannot promote")
-    if args.promote and (not args.wrangler or args.mode != "fast"):
+    if args.promote and (not args.credentials or not args.wrangler or args.mode != "fast"):
         parser.error("Only slim releases promote, using a trusted external Wrangler")
     if not re.fullmatch(r"sha256:[a-f0-9]{64}", args.image):
         parser.error("Pin the existing build image digest")
     for path in (args.repo, args.node, args.bun, args.rustup, args.cargo_bin, args.worker_bin, args.wrangler):
         if path and path.is_relative_to(args.home):
             parser.error("Trusted source/tools must be outside writable train state")
+    if args.credentials and any(args.credentials.is_relative_to(path) for path in
+            (args.home, args.repo, args.node, args.bun, args.rustup, args.cargo_bin, args.worker_bin)):
+        parser.error("Credentials must be outside all build mounts and source")
     args.home.mkdir(parents=True, exist_ok=True)
     with (args.home / "tick.lock").open("a") as lock:
         try:
@@ -346,6 +481,7 @@ def main():
                 sha = args.candidate or command("git", "rev-parse", "FETCH_HEAD", cwd=args.repo)
                 if args.promote and last_promoted(events) == sha:
                     return 0
+                backend_config = config_at(args.repo, sha, "backend/wrangler.jsonc")
                 config, public = config_at(args.repo, sha), public_at(args.repo, sha)
                 with tempfile.TemporaryDirectory(prefix="candidate-", dir=args.home) as directory:
                     source = Path(directory)
@@ -354,13 +490,17 @@ def main():
                     build(args, source, public, sha, log)
                     artifact = args.home / "artifact"
                     manifest = stage(source / ".release", artifact, config, public)
+                    backend_manifest = stage_backend(source / ".backend-release", args.home / "backend", backend_config)
                 state, _ = step(state, Event.BUILD_OK)
-                receipt(events, sha=sha, state=state.name, mode=args.mode, hashes=manifest)
+                receipt(events, sha=sha, state=state.name, mode=args.mode, hashes=manifest, backend_hashes=backend_manifest)
                 if args.promote:
                     deployment_tool(args.repo, sha, args.wrangler)
-                    token = command("pass", "show", "workstation/MISTY_STEP_CD_CLOUDFLARE_TOKEN").splitlines()[0]
+                    secrets = credentials(args.credentials)
+                    token = secrets["CLOUDFLARE_API_TOKEN"]
                     previous, prior_sha = preflight(args.repo, sha, config, public, token)
-                    state = activate(args, artifact, sha, config, token, previous, prior_sha, log)
+                    changed = command("git", "diff", "--name-only", prior_sha, sha, "--", "backend", "convex", cwd=args.repo)
+                    state = activate(args, artifact, sha, config, token, previous, prior_sha, log,
+                                     backend_config=backend_config if changed else None, secrets=secrets, events=events)
                 else:
                     state, _ = step(state, Event.VERIFY_ONLY)
                 receipt(events, sha=sha, state=state.name, mode=args.mode, promoted=args.promote,
@@ -368,12 +508,15 @@ def main():
                 return 0
             except Exception as error:
                 state, _ = step(state, Event.ERROR)
-                receipt(events, sha=sha, state=state.name, mode=args.mode, promoted=False,
-                        error_type=type(error).__name__)
-                print(f"{type(error).__name__}: {error}", file=log, flush=True)
+                try:
+                    receipt(events, sha=sha, state=state.name, mode=args.mode, promoted=False,
+                            error_type=type(error).__name__)
+                    print(f"{type(error).__name__}: {error}", file=log, flush=True)
+                except OSError:
+                    pass  # Evidence storage failure must not suppress stderr delivery.
                 print(f"Chrondle native failure; repository=misty-step/chrondle; candidate={sha}; mode={args.mode}; "
-                      f"failure_id=misty-step/chrondle:{sha}:{args.mode}; evidence=mirrodin-hq:{args.home}/train.log. "
-                      "Kaylee owns idempotent repair/readback. No backend restore was performed.", file=sys.stderr)
+                      f"failure_id=misty-step/chrondle:{sha}:{args.mode}; evidence=drydock:{args.home}/train.log. "
+                      f"{error}. No data restore was performed.", file=sys.stderr)
                 return 1
 
 
