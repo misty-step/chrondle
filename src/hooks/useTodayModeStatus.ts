@@ -5,8 +5,7 @@
  *
  * Powers the KEEP PLAYING today-checklist (design-lab winner C3): each daily
  * mode reads as done/todo for the player's local "today", so the cross-sell
- * strip behaves like a daily checklist instead of ads. Duel has no daily
- * puzzle and is reported as "endless".
+ * strip behaves like a daily checklist instead of ads.
  *
  * Data sources are exactly the ones each game page trusts for restore
  * (server plays when signed-in, the anonymous local session otherwise);
@@ -92,6 +91,5 @@ export function useTodayModeStatus(): TodayModeStatuses {
       serverCompleted: serverOrderCompleted,
       localCompleted: localOrderCompleted,
     }),
-    duel: "endless",
   };
 }

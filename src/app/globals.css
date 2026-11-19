@@ -66,12 +66,6 @@
   --mode-order-accent: #b45309;
   --mode-order-glow: rgba(180, 83, 9, 0.15);
 
-  /* Mode: Duel - Wax-seal crimson */
-  --mode-duel-bg: #fdf2f2;
-  --mode-duel-text: #1c1917;
-  --mode-duel-accent: #991b1b;
-  --mode-duel-glow: rgba(153, 27, 27, 0.15);
-
   --font-display: var(--font-outfit), "Outfit", sans-serif;
   --font-body: var(--font-karla), "Karla", sans-serif;
   --font-mono: ui-monospace, "SF Mono", monospace;
@@ -134,12 +128,6 @@ html.dark {
   --mode-order-text: #f3f4f8;
   --mode-order-accent: #fbbf24;
   --mode-order-glow: rgba(251, 191, 36, 0.2);
-
-  /* Mode: Duel - Dark crimson */
-  --mode-duel-bg: #271417;
-  --mode-duel-text: #f3f4f8;
-  --mode-duel-accent: #f87171;
-  --mode-duel-glow: rgba(248, 113, 113, 0.2);
 
   --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.2);
   --elevation-2: 0 8px 24px -8px rgba(0, 0, 0, 0.45);
@@ -209,9 +197,6 @@ html.dark {
   --color-mode-order-bg: var(--mode-order-bg);
   --color-mode-order-text: var(--mode-order-text);
   --color-mode-order-accent: var(--mode-order-accent);
-  --color-mode-duel-bg: var(--mode-duel-bg);
-  --color-mode-duel-text: var(--mode-duel-text);
-  --color-mode-duel-accent: var(--mode-duel-accent);
 
   --shadow-elevation-1: var(--elevation-1);
   --shadow-elevation-2: var(--elevation-2);

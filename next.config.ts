@@ -22,6 +22,9 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  async redirects() {
+    return [{ source: "/duel/:path*", destination: "/", permanent: true }];
+  },
   generateBuildId: async () => process.env.CHRONDLE_REVISION || null,
   // Expose version to client
   env: {

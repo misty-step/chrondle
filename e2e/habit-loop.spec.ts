@@ -145,7 +145,7 @@ test.describe("Completion return hook @habit-loop", () => {
     await expect(keepPlaying.getByRole("link", { name: /order/i })).toContainText(
       /not played today/i,
     );
-    await expect(keepPlaying.getByRole("link", { name: /duel/i })).toContainText(/endless/i);
+    await expect(keepPlaying.getByRole("link", { name: /duel/i })).toHaveCount(0);
   });
 });
 

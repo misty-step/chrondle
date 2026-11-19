@@ -1,5 +1,5 @@
 import type { ElementType } from "react";
-import { Crosshair, Shuffle, Sword } from "@/components/kit/icons";
+import { Crosshair, Shuffle } from "@/components/kit/icons";
 import type { ModeKey } from "@/lib/modePreference";
 
 /**
@@ -42,16 +42,7 @@ export const MODES: Record<ModeKey, ModeInfo> = {
     cardClass: "bg-mode-order-bg text-mode-order-text border-mode-order-accent/30",
     accentClass: "text-mode-order-accent",
   },
-  duel: {
-    key: "duel",
-    label: "Duel",
-    route: "/duel",
-    icon: Sword,
-    tagline: "Endless: which came first?",
-    cardClass: "bg-mode-duel-bg text-mode-duel-text border-mode-duel-accent/30",
-    accentClass: "text-mode-duel-accent",
-  },
 };
 
 /** Display order across surfaces. */
-export const MODE_ORDER: readonly ModeKey[] = ["classic", "order", "duel"];
+export const MODE_ORDER: readonly ModeKey[] = ["classic", "order"];

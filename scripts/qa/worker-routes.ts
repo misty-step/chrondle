@@ -46,7 +46,11 @@ function assertPackagedModuleRejection(artifact: string) {
     for (const { suite, child } of results) {
       assert.ifError(child.error);
       assert.equal(child.signal, null, `${suite}: canary must fail, not time out`);
-      assert.notEqual(child.status, 0, `${suite}: unresolved packaged import was repaired by bundling`);
+      assert.notEqual(
+        child.status,
+        0,
+        `${suite}: unresolved packaged import was repaired by bundling`,
+      );
       assert.match(
         `${child.stdout}\n${child.stderr}`.replaceAll('\\"', '"'),
         /No such module ["']react["']/,
@@ -61,9 +65,11 @@ function assertPackagedModuleRejection(artifact: string) {
 
 async function main() {
   const configRoot = process.env.CHRONDLE_ARTIFACT ?? ".";
-  const config = unstable_readConfig(process.env.CHRONDLE_ARTIFACT
-    ? { config: resolve(process.env.CHRONDLE_ARTIFACT, "wrangler.json") }
-    : { config: "wrangler.jsonc", env: "production" });
+  const config = unstable_readConfig(
+    process.env.CHRONDLE_ARTIFACT
+      ? { config: resolve(process.env.CHRONDLE_ARTIFACT, "wrangler.json") }
+      : { config: "wrangler.jsonc", env: "production" },
+  );
   assert(config.main && config.assets?.directory, "Build the configured OpenNext artifact first");
   const releases = parseChangelog(readFileSync("CHANGELOG.md", "utf8"));
   const directory = mkdtempSync(join(tmpdir(), "chrondle-worker-routes-"));
@@ -174,6 +180,8 @@ async function main() {
     assert.equal(sitemap.headers.get("x-chrondle-runtime"), "rust");
     assert.equal((await sitemap.text()).match(/<url>/g)?.length, 7);
     for (const [path, location] of [
+      ["/duel", "/"],
+      ["/duel/old-run?from=legacy", "/?from=legacy"],
       ["/groups?x=1", "/?x=1"],
       ["/archive/groups/42?x=1", "/archive?x=1"],
     ]) {

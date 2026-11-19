@@ -30,11 +30,7 @@ function StatusBadge({ status }: { status: ModeTodayStatus }) {
     );
   }
 
-  return (
-    <span className="shrink-0 text-xs font-semibold opacity-80">
-      {status === "endless" ? "Endless" : "Not played today"}
-    </span>
-  );
+  return <span className="shrink-0 text-xs font-semibold opacity-80">Not played today</span>;
 }
 
 /**
@@ -55,7 +51,7 @@ export function KeepPlaying({ currentMode, className }: KeepPlayingProps) {
       <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
         Keep playing — today
       </p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2">
         {suggestions.map((mode) => {
           const Icon = mode.icon;
           const status = statuses[mode.key];

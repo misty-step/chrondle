@@ -48,6 +48,8 @@ pub fn step(state: State, event: Event) -> (State, Option<Effect>) {
 pub fn redirect(path: &str, query: Option<&str>) -> Option<String> {
     let target = match path {
         "/releases" => return Some("/changelog".into()),
+        "/duel" => "/",
+        p if p.starts_with("/duel/") => "/",
         "/groups" => "/",
         "/archive/groups" => "/archive",
         p if p.starts_with("/archive/groups/") => "/archive",
@@ -284,11 +286,15 @@ mod tests {
             Some("/archive?x=%2F".into())
         );
         assert_eq!(redirect("/archive/groups", None), Some("/archive".into()));
+        for path in ["/duel", "/duel/", "/duel/old-run"] {
+            assert_eq!(redirect(path, Some("from=old")), Some("/?from=old".into()));
+        }
         assert_eq!(
             redirect("/releases", Some("from=legacy")),
             Some("/changelog".into())
         );
         for path in [
+            "/duel-other",
             "/groups-other",
             "/archive/groups-other",
             "/releases/1.13.1",

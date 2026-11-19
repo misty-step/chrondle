@@ -11,6 +11,15 @@ Chrondle is a daily history puzzle: players use historical clues to guess a year
 
 Curious players can enjoy a short, fair daily challenge that builds their sense of history, with answers earned through play rather than leaked by the interface.
 
+## Retired Duel mode
+
+- Duel is not part of Chrondle. Home, navigation and both completion screens
+  offer only Classic and Order. A saved Duel preference no longer redirects
+  the home page. Duel gameplay, sharing, backend functions and round selection
+  are removed; no stored data is deleted or migrated.
+- Former `/duel` URLs and their descendants permanently redirect (308) to
+  `/`, preserving query strings. Classic, Order, billing and archives retain their behavior.
+
 ## Public discovery and legacy links
 
 - Crawlers can read `/robots.txt` without an account. It names the canonical

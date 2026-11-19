@@ -8,7 +8,9 @@ import { assertRuntimeLogs } from "./worker-route-contracts";
 
 const backend = process.env.CHRONDLE_DISCOVERY_BACKEND;
 const artifact = process.env.CHRONDLE_ARTIFACT;
-const packaged = artifact ? JSON.parse(readFileSync(join(artifact, "wrangler.json"), "utf8")) : undefined;
+const packaged = artifact
+  ? JSON.parse(readFileSync(join(artifact, "wrangler.json"), "utf8"))
+  : undefined;
 const directory = mkdtempSync(join(tmpdir(), "chrondle-discovery-"));
 let mode: "refuse" | "live" = "refuse";
 let queries = 0;
@@ -25,13 +27,18 @@ try {
       name: "chrondle-discovery-check",
       main: packaged ? resolve(artifact!, packaged.main) : resolve("web/build/worker/shim.mjs"),
       compatibility_date: packaged?.compatibility_date ?? "2026-09-17",
-      ...(packaged ? {
-        compatibility_flags: packaged.compatibility_flags,
-        no_bundle: packaged.no_bundle,
-        find_additional_modules: packaged.find_additional_modules,
-        rules: packaged.rules,
-        assets: { ...packaged.assets, directory: resolve(artifact!, packaged.assets.directory) },
-      } : {}),
+      ...(packaged
+        ? {
+            compatibility_flags: packaged.compatibility_flags,
+            no_bundle: packaged.no_bundle,
+            find_additional_modules: packaged.find_additional_modules,
+            rules: packaged.rules,
+            assets: {
+              ...packaged.assets,
+              directory: resolve(artifact!, packaged.assets.directory),
+            },
+          }
+        : {}),
       send_metrics: false,
       vars: { NEXT_PUBLIC_CONVEX_URL: backend ?? "https://unavailable.invalid" },
     }),
@@ -106,6 +113,8 @@ try {
     assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   };
   for (const [path, location] of [
+    ["/duel", "/"],
+    ["/duel/old-run?from=legacy", "/?from=legacy"],
     ["/groups?x=%2F&x=2", "/?x=%2F&x=2"],
     ["/archive/groups", "/archive"],
     ["/archive/groups/42?x=1", "/archive?x=1"],
@@ -116,12 +125,9 @@ try {
     assert.equal(response.headers.get("location"), location);
     results.push({ name: path, status: response.status });
   }
-  for (const path of artifact ? [] : [
-    "/classic",
-    "/api/stripe/checkout",
-    "/releases/1.13.1",
-    "/archive/groups-other",
-  ]) {
+  for (const path of artifact
+    ? []
+    : ["/classic", "/api/stripe/checkout", "/releases/1.13.1", "/archive/groups-other"]) {
     const response = await request(path);
     assert.equal(response.status, 404);
     assert.equal(

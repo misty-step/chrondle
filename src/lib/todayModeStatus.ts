@@ -7,7 +7,7 @@
  * wiring lives in src/hooks/useTodayModeStatus.ts.
  */
 
-export type ModeTodayStatus = "done" | "todo" | "endless" | "unknown";
+export type ModeTodayStatus = "done" | "todo" | "unknown";
 
 export interface DailyModeStatusInput {
   /** Today's puzzle id for the mode, or null while loading/unavailable */
