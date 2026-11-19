@@ -37,6 +37,8 @@ jobs:
             ${{ runner.os }}-bun-
 
       - name: Install dependencies
+        env:
+          ONNXRUNTIME_NODE_INSTALL_CUDA: "skip"
         run: bun install --frozen-lockfile
 
       - name: Build
