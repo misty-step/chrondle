@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""Scheduled adapter only: select, verify, deliver credentials, promote, collect, delete."""
+import argparse
+import fcntl
+import json
+from pathlib import Path
+import re
+import shlex
+import signal
+import subprocess
+import sys
+import tempfile
+
+import train
+
+REPO = "misty-step/chrondle"
+REMOTE = "https://github.com/" + REPO + ".git"
+ROOT = "/home/user/chrondle-candidate"
+STATE = "/home/user/chrondle-release"
+KEY = "/home/user/chrondle-release.env"
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--credentials", type=Path, required=True)
+    parser.add_argument("--evidence", type=Path, required=True)
+    parser.add_argument("--mode", choices=("fast", "full"), default="fast")
+    args = parser.parse_args()
+    args.evidence.mkdir(parents=True, exist_ok=True)
+    lock = (args.evidence / ".release.lock").open("a")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        return 0
+    evidence = Path(tempfile.mkdtemp(prefix="release-", dir=args.evidence)).resolve()
+    sha, phase, sandbox, failed = "unselected", "select", None, False
+    local_repo = Path(__file__).resolve().parent.parent
+    log = (evidence / "launcher.log").open("ab")
+
+    def run(argv, capture=False, data=None):
+        result = subprocess.run(argv, input=data, stdout=subprocess.PIPE if capture else log,
+                                stderr=log, check=True)
+        return result.stdout.decode().strip() if capture else None
+
+    def boat(*argv, **kwargs):
+        return run(["boat", "--no-update", *argv], **kwargs)
+
+    def remote(script, **kwargs):
+        return boat("ssh", sandbox, "bash -lc " + shlex.quote(script), **kwargs)
+
+    def interrupt(signum, frame):
+        raise RuntimeError("Interrupted")
+
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(sig, interrupt)
+    try:
+        sha = run(["git", "ls-remote", REMOTE, "refs/heads/master"], capture=True).split()[0]
+        if not re.fullmatch(r"[a-f0-9]{40}", sha):
+            raise RuntimeError("Invalid master SHA")
+        run(["git", "-C", str(local_repo), "fetch", "origin", "master"], capture=True)
+        phase = "status"
+        serving = run([sys.executable, str(local_repo / "scripts/train.py"), "--phase", "status",
+                       "--repo", str(local_repo), "--sha", sha,
+                       "--credentials", str(args.credentials)], capture=True)
+        if not re.fullmatch(r"[a-f0-9]{40}", serving):
+            raise RuntimeError("Invalid serving source")
+        if serving == sha and args.mode == "fast":
+            return 0
+        phase = "create"
+        created = json.loads(boat("new", "--environment", "mis-factory-worker", "--json", capture=True))
+        sandbox = created.get("sandbox", created)["id"]
+        if not re.fullmatch(r"bx_[A-Za-z0-9_-]+", sandbox):
+            raise RuntimeError("Invalid sandbox ID")
+        (evidence / "sandbox-id").write_text(sandbox + "\n")
+        phase = "clone"
+        remote(f"git clone --no-checkout {REMOTE} {ROOT} && cd {ROOT} && git fetch origin {sha} && git checkout --detach {sha}")
+        invocation = f"python3 {ROOT}/scripts/train.py --repo {ROOT} --home {STATE} --sha {sha} --mode {args.mode}"
+        phase = "verify"
+        remote(invocation + " --phase verify")
+        if args.mode == "fast":
+            phase = "credentials"
+            # Read again only after successful verification; no values in argv or logs.
+            values = train.credentials(args.credentials)
+            payload = "".join(f"{key}={value}\n" for key, value in values.items()).encode()
+            remote(f"umask 077; set -C; cat > {KEY}", data=payload)
+            phase = "promote"
+            remote(invocation + f" --phase promote --credentials {KEY}")
+    except Exception:
+        failed = True
+    finally:
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            signal.signal(sig, signal.SIG_IGN)
+        # Collect independently, then always delete, including clone/verify/key failures.
+        if sandbox:
+            for name in ("events.jsonl", "train.log"):
+                try:
+                    boat("scp", f"{sandbox}:{STATE}/{name}", str(evidence / name))
+                except Exception:
+                    if not failed:
+                        phase = "collect"
+                    failed = True
+            try:
+                boat("delete", sandbox, "--yes")
+            except Exception:
+                if not failed:
+                    phase = "delete"
+                failed = True
+        log.close()
+    if failed:
+        backup = None
+        try:
+            for line in (evidence / "events.jsonl").read_text().splitlines():
+                backup = json.loads(line).get("backup_key") or backup
+        except (OSError, ValueError):
+            pass
+        # JSON encoding bounds and escapes even unexpected remote keys/paths.
+        report = {"repo": REPO, "sha": sha[:40], "phase": phase,
+                  "evidence": str(evidence)[:400], "backup_key": str(backup)[:240] if backup else None}
+        print("Release failed: " + json.dumps(report), file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

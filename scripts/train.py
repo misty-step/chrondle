@@ -1,7 +1,8 @@
 """Native release train. Adapted from Overmind scripts/train.py at 49d98c2.
 
-No automatic data restoration. Credentials are read only after
-credential-free build/verification exits. Invoke from a trusted source checkout.
+No automatic data restoration. Verify is credential-free; promote reads credentials
+only after checking its verification receipt. Status is a read-only scheduler query.
+Invoke from a trusted source checkout.
 """
 import argparse
 
@@ -16,7 +17,6 @@ import shutil
 import stat
 import subprocess
 import sys
-import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -42,7 +42,6 @@ class State(Enum):
 
 class Event(Enum):
     BUILD_OK = auto()
-    VERIFY_ONLY = auto()
     RELEASE = auto()
     BACKEND_RELEASE = auto()
     BACKUP_OK = auto()
@@ -57,7 +56,6 @@ def step(state, event):
     """Pure transition; returned effects are data, executed by the outer tick."""
     table = {
         (State.SELECTED, Event.BUILD_OK): (State.VERIFIED, None),
-        (State.VERIFIED, Event.VERIFY_ONLY): (State.DONE, None),
         (State.VERIFIED, Event.BACKEND_RELEASE): (State.BACKING_UP, "backup"),
         (State.BACKING_UP, Event.BACKUP_OK): (State.BACKEND_DEPLOYING, "deploy_backend"),
         (State.BACKEND_DEPLOYING, Event.BACKEND_OK): (State.BACKEND_VERIFIED, None),
@@ -236,7 +234,7 @@ def settled_smoke(sha, rust=True, origins=HOSTS):
 def run_wrangler(args, artifact, token, *action, log):
     env = {k: os.environ[k] for k in ("PATH", "HOME", "SSL_CERT_FILE") if k in os.environ}
     env.update(CLOUDFLARE_API_TOKEN=token, WRANGLER_SEND_METRICS="false", CI="true")
-    subprocess.run([str(args.node / "bin/node"), str(args.wrangler), *action, "--config", str(artifact / "wrangler.json")],
+    subprocess.run(["node", str(args.wrangler), *action, "--config", str(artifact / "wrangler.json")],
                    cwd=artifact, env=env, stdout=log, stderr=log, check=True)
 
 
@@ -376,7 +374,7 @@ def stage_backend(source, target, config):
         raise RuntimeError("Expected one bundled backend entrypoint")
     if target.exists():
         shutil.rmtree(target)
-    shutil.copytree(source, target)
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns(".wrangler"))
     # Only trusted source config, no build hooks or candidate dependency discovery.
     production = {k: v for k, v in config.items() if k not in ("build", "main", "send_metrics")}
     production.update(main=mains[0], no_bundle=True)
@@ -386,41 +384,17 @@ def stage_backend(source, target, config):
 
 
 def build(args, source, public, sha, log):
-    cache = args.home / "cache"
-    for name in ("home", "tmp", "cargo", "target", "node_modules"):
-        (cache / name).mkdir(parents=True, exist_ok=True)
-    name = "chrondle-train-" + str(os.getpid())
-    docker = ["docker", "run", "--rm", "--init", "--name", name, "--label", "hermes.task=t_7034d1ef",
-              "--cpus=4", "--memory=8g", "--pids-limit=1024",
-              "--cap-drop=ALL", "--security-opt=no-new-privileges", "--read-only",
-              "--tmpfs", "/tmp:rw,size=1g", "--user", f"{os.getuid()}:{os.getgid()}", "--entrypoint", "/bin/bash"]
-    if args.cgroup_parent:
-        docker += ["--cgroup-parent", args.cgroup_parent]
-    for key in ("network", "dns"):
-        if getattr(args, key):
-            docker += ["--" + key, getattr(args, key)]
-    for host, target, mode in ((source, "/workspace", "rw"), (cache, "/cache", "rw"),
-            (args.node, "/node", "ro"), (args.bun, "/bun", "ro"), (args.rustup, "/rustup", "ro"),
-            (args.cargo_bin, "/rust-bin", "ro"), (args.worker_bin, "/worker-bin", "ro"),
-            (cache / "node_modules", "/workspace/node_modules", "rw")):
-        docker += ["--volume", f"{host}:{target}:{mode}"]
-    env = {**public, "CHRONDLE_REVISION": sha, "NEXT_TELEMETRY_DISABLED": "1", "WRANGLER_SEND_METRICS": "false",
-           "HOME": "/cache/home", "TMPDIR": "/cache/tmp", "CARGO_HOME": "/cache/cargo",
-           "CARGO_TARGET_DIR": "/cache/target", "RUSTUP_HOME": "/rustup",
-           "PATH": "/node/bin:/bun/bin:/rust-bin:/worker-bin:/usr/local/bin:/usr/bin:/bin"}
-    for key, value in env.items():
-        docker += ["--env", key + "=" + value]
+    # The fresh Boat sandbox is the isolation boundary. Never forward its secrets.
+    env = {k: os.environ[k] for k in ("PATH", "HOME", "RUSTUP_HOME", "CARGO_HOME", "SSL_CERT_FILE") if k in os.environ}
+    env.update(public, CHRONDLE_REVISION=sha, NEXT_TELEMETRY_DISABLED="1",
+               WRANGLER_SEND_METRICS="false", ONNXRUNTIME_NODE_INSTALL_CUDA="skip", CI="true")
     checks = "bun install --frozen-lockfile && bun run check --mode " + args.mode
     if args.mode == "fast":
         checks += " && bun run build:cf && bun run test:worker-routes && bun run test:discovery"
     checks += " && bun scripts/package-worker.mjs && CHRONDLE_ARTIFACT=.release bun run test:worker-routes"
     checks += " && CHRONDLE_ARTIFACT=.release CHRONDLE_DISCOVERY_BACKEND=$NEXT_PUBLIC_CONVEX_URL bun run test:discovery"
     checks += " && cd backend && ../node_modules/.bin/wrangler deploy --env production --var REVISION:" + sha + " --dry-run --outdir ../.backend-release"
-    docker += ["--workdir", "/workspace", args.image, "-c", checks]
-    try:
-        subprocess.run(docker, stdout=log, stderr=log, check=True)
-    finally:
-        subprocess.run(["docker", "rm", "-f", name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["bash", "-c", checks], cwd=source, env=env, stdout=log, stderr=log, check=True)
 
 
 def receipt(path, **event):
@@ -430,80 +404,90 @@ def receipt(path, **event):
         os.fsync(output.fileno())
 
 
-def last_promoted(path):
-    latest = None
-    if path.exists():
-        for line in path.read_text().splitlines():
-            event = json.loads(line)
-            if event.get("promoted") and event["state"] == "DONE":
-                latest = event["sha"]
-    return latest
+def verified(events, sha, mode, home):
+    records = [json.loads(line) for line in events.read_text().splitlines()]
+    latest = records[-1]
+    if latest.get("state") != "VERIFIED" or latest.get("sha") != sha or latest.get("mode") != mode or mode != "fast":
+        raise RuntimeError("Promotion requires an unused fast verification receipt for this SHA")
+    if latest["hashes"] != hashes(home / "artifact") or latest["backend_hashes"] != hashes(home / "backend"):
+        raise RuntimeError("Staged bytes differ from verified receipt")
+
+
+def trusted_wrangler(repo, sha, home):
+    executable = shutil.which("wrangler")
+    if not executable:
+        raise RuntimeError("Provision lockfile-matching Wrangler on the sandbox PATH")
+    wrangler = Path(executable).resolve()
+    if wrangler.is_relative_to(repo) or wrangler.is_relative_to(home):
+        raise RuntimeError("Deployment tool must be outside candidate checkout and staged state")
+    deployment_tool(repo, sha, wrangler)
+    return wrangler
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for key in ("repo", "home", "node", "bun", "rustup", "cargo-bin", "worker-bin"):
-        parser.add_argument("--" + key, type=lambda p: Path(p).resolve(), required=True)
-    parser.add_argument("--wrangler", type=lambda p: Path(p).resolve())
-    parser.add_argument("--image", required=True)
+    parser.add_argument("--phase", choices=("verify", "promote", "status"), required=True)
+    parser.add_argument("--repo", type=lambda p: Path(p).resolve(), required=True)
+    parser.add_argument("--home", type=lambda p: Path(p).resolve())
+    parser.add_argument("--sha", required=True)
     parser.add_argument("--credentials", type=lambda p: Path(p).absolute())
-    parser.add_argument("--cgroup-parent")
-    parser.add_argument("--network")
-    parser.add_argument("--dns")
     parser.add_argument("--mode", choices=("fast", "full"), default="fast")
-    parser.add_argument("--candidate", help="exact diagnostic SHA; never promotable")
-    parser.add_argument("--promote", action="store_true")
     args = parser.parse_args()
-    if args.candidate and (args.promote or not re.fullmatch(r"[a-f0-9]{40}", args.candidate)):
-        parser.error("Diagnostic candidate must be an exact SHA and cannot promote")
-    if args.promote and (not args.credentials or not args.wrangler or args.mode != "fast"):
-        parser.error("Only slim releases promote, using a trusted external Wrangler")
-    if not re.fullmatch(r"sha256:[a-f0-9]{64}", args.image):
-        parser.error("Pin the existing build image digest")
-    for path in (args.repo, args.node, args.bun, args.rustup, args.cargo_bin, args.worker_bin, args.wrangler):
-        if path and path.is_relative_to(args.home):
-            parser.error("Trusted source/tools must be outside writable train state")
-    if args.credentials and any(args.credentials.is_relative_to(path) for path in
-            (args.home, args.repo, args.node, args.bun, args.rustup, args.cargo_bin, args.worker_bin)):
-        parser.error("Credentials must be outside all build mounts and source")
+    if not re.fullmatch(r"[a-f0-9]{40}", args.sha):
+        parser.error("Select one exact source SHA")
+    if args.phase == "verify" and args.credentials:
+        parser.error("Verify must not receive credentials")
+    if args.phase != "verify" and not args.credentials:
+        parser.error("Status/promote require a 0600 credentials file")
+    if args.phase == "status":
+        try:
+            config = config_at(args.repo, args.sha)
+            token = credentials(args.credentials)["CLOUDFLARE_API_TOKEN"]
+            print(serving_source(config, token, deployed(config, token)))
+            return 0
+        except Exception:
+            print("Production serving annotation read failed", file=sys.stderr)
+            return 1
+    if not args.home or args.home.is_relative_to(args.repo) or args.repo.is_relative_to(args.home):
+        parser.error("Source and staged state must be separate directories")
+    if args.credentials and (args.credentials.is_relative_to(args.repo) or args.credentials.is_relative_to(args.home)):
+        parser.error("Credentials must be outside source and staged state")
     args.home.mkdir(parents=True, exist_ok=True)
     with (args.home / "tick.lock").open("a") as lock:
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            return 0
-        sha, state = "unselected", State.SELECTED
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        sha, state = args.sha, State.SELECTED
         events = args.home / "events.jsonl"
         started = time.time()
         with (args.home / "train.log").open("a") as log:
             try:
-                command("git", "fetch", "origin", "master", cwd=args.repo)
-                sha = args.candidate or command("git", "rev-parse", "FETCH_HEAD", cwd=args.repo)
-                if args.promote and last_promoted(events) == sha:
-                    return 0
-                backend_config = config_at(args.repo, sha, "backend/wrangler.jsonc")
+                if command("git", "rev-parse", "HEAD", cwd=args.repo) != sha:
+                    raise RuntimeError("Checkout does not match selected SHA")
                 config, public = config_at(args.repo, sha), public_at(args.repo, sha)
-                with tempfile.TemporaryDirectory(prefix="candidate-", dir=args.home) as directory:
-                    source = Path(directory)
-                    command("git", "clone", "--no-hardlinks", "--no-checkout", args.repo, source)
-                    command("git", "checkout", "--detach", sha, cwd=source)
-                    build(args, source, public, sha, log)
-                    artifact = args.home / "artifact"
-                    manifest = stage(source / ".release", artifact, config, public)
-                    backend_manifest = stage_backend(source / ".backend-release", args.home / "backend", backend_config)
-                state, _ = step(state, Event.BUILD_OK)
-                receipt(events, sha=sha, state=state.name, mode=args.mode, hashes=manifest, backend_hashes=backend_manifest)
-                if args.promote:
-                    deployment_tool(args.repo, sha, args.wrangler)
-                    secrets = credentials(args.credentials)
-                    token = secrets["CLOUDFLARE_API_TOKEN"]
-                    previous, prior_sha = preflight(args.repo, sha, config, public, token)
-                    changed = command("git", "diff", "--name-only", prior_sha, sha, "--", "backend", "convex", cwd=args.repo)
-                    state = activate(args, artifact, sha, config, token, previous, prior_sha, log,
-                                     backend_config=backend_config if changed else None, secrets=secrets, events=events)
-                else:
-                    state, _ = step(state, Event.VERIFY_ONLY)
-                receipt(events, sha=sha, state=state.name, mode=args.mode, promoted=args.promote,
+                backend_config = config_at(args.repo, sha, "backend/wrangler.jsonc")
+                if args.phase == "verify":
+                    if events.exists():
+                        raise RuntimeError("Verify requires fresh per-run state")
+                    command("git", "diff", "--exit-code", "HEAD", cwd=args.repo)
+                    build(args, args.repo, public, sha, log)
+                    manifest = stage(args.repo / ".release", args.home / "artifact", config, public)
+                    backend_manifest = stage_backend(args.repo / ".backend-release", args.home / "backend", backend_config)
+                    state, _ = step(state, Event.BUILD_OK)
+                    receipt(events, sha=sha, state=state.name, mode=args.mode, hashes=manifest, backend_hashes=backend_manifest)
+                    return 0
+                # No compiler or candidate hook can run in this invocation.
+                verified(events, sha, args.mode, args.home)
+                state = State.VERIFIED
+                command("git", "merge-base", "--is-ancestor", sha, "origin/master", cwd=args.repo)
+                args.wrangler = trusted_wrangler(args.repo, sha, args.home)
+                secrets = credentials(args.credentials)
+                token = secrets["CLOUDFLARE_API_TOKEN"]
+                previous, prior_sha = preflight(args.repo, sha, config, public, token)
+                if prior_sha == sha:
+                    return 0  # Another release already served this immutable candidate.
+                changed = command("git", "diff", "--name-only", prior_sha, sha, "--", "backend", "convex", cwd=args.repo)
+                state = activate(args, args.home / "artifact", sha, config, token, previous, prior_sha, log,
+                                 backend_config=backend_config if changed else None, secrets=secrets, events=events)
+                receipt(events, sha=sha, state=state.name, mode=args.mode, promoted=True,
                         elapsed_seconds=round(time.time() - started, 3))
                 return 0
             except Exception as error:
@@ -513,10 +497,9 @@ def main():
                             error_type=type(error).__name__)
                     print(f"{type(error).__name__}: {error}", file=log, flush=True)
                 except OSError:
-                    pass  # Evidence storage failure must not suppress stderr delivery.
-                print(f"Chrondle native failure; repository=misty-step/chrondle; candidate={sha}; mode={args.mode}; "
-                      f"failure_id=misty-step/chrondle:{sha}:{args.mode}; evidence=drydock:{args.home}/train.log. "
-                      f"{error}. No data restore was performed.", file=sys.stderr)
+                    pass
+                print(f"Train failed; repo=misty-step/chrondle; sha={sha}; phase={args.phase}; evidence={args.home}/train.log", file=sys.stderr)
+                # Launcher captures this diagnostic and delivers one external report.
                 return 1
 
 
