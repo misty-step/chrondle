@@ -134,3 +134,5 @@ Continuation checks (Bun 1.3.9):
   Classic/Order cannot load: the configuration-error screen reports missing
   `NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`.
   The first attempt's connection failures and screenshots are preserved too.
+
+Continuation draft PR: https://github.com/misty-step/chrondle/pull/394
