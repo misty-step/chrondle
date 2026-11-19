@@ -51,8 +51,16 @@ Curious players can enjoy a short, fair daily challenge that builds their sense 
   smoke restores the prior Worker only when its actual backend origin matches;
   recovery is checked and the release still reports failure to the owned intake.
 - A web-only release never deploys, migrates or restores the accepted backend.
-  Backend-source changes require their own compatible deployment implementation,
-  not silent omission by the web train.
+- A release whose candidate changes `backend/` or `convex/` ships the backend in
+  the same train run, before the web: it takes an R2 backup through the
+  backend's operator backup route, deploys the backend's production
+  environment, and reads `/_backend/version` back as the candidate revision.
+  Only then does it deploy the web artifact and read back all three hosts. Any
+  failed step rolls the backend and the web back to their prior versions
+  automatically and reports failure to the owned intake; recovery never restores
+  data, and the pre-deploy backup is the data recovery point.
+- The train runs from cron on drydock, the build and CI host, with no GitHub
+  Actions in the release path.
 
 ## Player account privacy
 
