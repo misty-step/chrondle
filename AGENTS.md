@@ -146,7 +146,7 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 - `bun test`, `bun lint`, `bun type-check` — To verify the integrity of the scroll.
 - `bun quality` — The high-level audit of our dependencies and cache.
 - `bun run check --mode fast` is the one native branch check; `--mode full`
-  adds coverage, backend and built-workerd verification. Run on Mirrodin.
+  adds coverage, backend and built-workerd verification. Run in a fresh Boat sandbox.
   [Native release](docs/native-release.md) owns the release invocation.
 
 Retained standalone commands (not a second merge gate):
@@ -209,8 +209,8 @@ Never reveal the answer outside the hint system. No "smart" era selection. No "t
 
 ### 3. Vigilance in the Cloud
 
-The native train deploys the Cloudflare web artifact; backend changes require
-their own compatible native release before promotion. Server/deployment secrets
+The native train deploys changed backend source before the Cloudflare web artifact,
+with a backup and version-pointer recovery for both families. Server/deployment secrets
 never reach the web compiler. See `docs/native-release.md`.
 
 ## TODO-Debt Convention

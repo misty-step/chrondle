@@ -157,7 +157,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to play.
 
 Install the Rust `wasm32-unknown-unknown` target and `worker-build` 0.8.7
 (`cargo install worker-build --version 0.8.7 --locked`), plus the pinned Bun
-version in `.bun-version` and Node 24. Then run the native entry on Mirrodin:
+version in `.bun-version` and Node 24. Then run the native entry in a fresh Boat sandbox:
 
 ```bash
 bun run check --mode fast
@@ -229,27 +229,26 @@ No Clerk webhook or sync secret is required; see [authentication](docs/AUTHENTIC
 
 ### Deploying the web service
 
-Merge a reviewed commit after `bun run check --mode fast` passes on Mirrodin.
-The no-agent native train runs `scripts/train.py` every 30 minutes for moved
-`master`, using slim checks plus build/artifact verification. A separate full
-check runs twice daily, including unchanged trunk, without gating later releases.
-Both use the existing `gha-runners.slice`; neither runs on GitHub Actions.
+Merge a reviewed commit after `bun run check --mode fast` passes in a fresh Boat sandbox.
+A cron on Hopper's machine invokes `scripts/release-on-boat` every 30 minutes.
+It compares master to production's serving source annotation, creates a fresh
+Boat sandbox only for a moved head, and runs the train's credential-free verify
+phase before delivering a 0600 credentials file and invoking promote. A separate
+full check runs twice daily even on unchanged trunk, without gating later fast
+releases. Evidence is copied out before the sandbox is deleted. No Actions or
+standing build host participates.
 
 Production server secrets remain Worker secrets; the compiler never receives
-server or deployment keys. `/api/health` reads back the exact Git SHA and
-queries the real Convex database. Every production domain must pass the
-revision and live-backend smoke, and the canonical Stripe webhook must not
-redirect. A failed rollout restores the captured Worker version without
-rolling back Convex or accepted writes. Failed runs reach Kaylee's existing
-agent intake through the cron's `failure_deliver=bot-chat:kaylee`.
+server or deployment keys. Changed backend source is backed up, deployed and
+verified before web. All three public domains must pass exact-revision, discovery,
+Classic and denied-billing checks, followed by backend readback. Failed deployment
+restores both prior version pointers independently and stays red, never restoring
+data. The backup key is the manual data recovery point. The external cron wrapper
+delivers the launcher's bounded stderr report.
 
-`web/production.json` is the public compiler configuration, observed from the
-existing live browser bundle and Worker bindings. It contains no server keys.
-The first train is deliberately web-only: a changed backend tree or actual
-backend origin fails before activation, rather than omitting a backend deploy or
-changing the accepted-data writer. Add the compatible backend native release
-when that rewrite family is reached. See [native release](docs/native-release.md)
-for the exact invocation, cutover and recovery contract.
+`web/production.json` contains public compiler settings only. See
+[native release](docs/native-release.md) for the launcher, exact cron line,
+credential custody, environment requirements and recovery contract.
 
 See the [deployment guide](docs/deployment-guide.md#2-production-web-deployment-cloudflare)
 for the first registrar cutover, exact DNS/Worker rollback, retained native

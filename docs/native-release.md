@@ -1,81 +1,137 @@
-# Native web release
+# Native releases in fresh Boat sandboxes
 
-The release train is adapted from Overmind `scripts/train.py` at
-`49d98c2f78643c5247fb112fa4ebd02af44a7ec2`, not a new controller or service.
-The source diff replaces the GitHub CI/deployment workflows; operational cutover
-is complete only after a reviewed native promotion and its readback.
+Implements SPEC.md's Native release behavior (31d2ce8; D-188,
+chat:phaedrus/t3624u). One `scripts/train.py` state table owns verification,
+backend-first promotion and version-pointer recovery. The small
+`scripts/release-on-boat` adapter is not another release controller: it only
+selects, creates, invokes, collects and deletes. No Actions or standing build
+host participates.
 
-## Checks and custody
+## Scheduler and environment
 
-Run `bun run check --mode fast` before merge. `--mode full` adds coverage,
-backend parity and real workerd checks. The train additionally bundles with
-Wrangler's credential-free dry run, exercises the packaged bytes, copies only
-regular deploy files, and records SHA256s in append-only `events.jsonl`.
-Promotion uses `no_bundle` and a separately provisioned lockfile-matching
-Wrangler outside all writable build mounts. It does not rebuild the candidate.
+Run the launcher from Hopper's machine, in a trusted checkout with GitHub read
+access and Boat CLI authentication. Its local Python 3 uses only the standard
+library. The configured `mis-factory-worker` environment must have Python 3,
+Git, Node 24, Bun, Rust with wasm32-unknown-unknown, worker-build, and a trusted
+Wrangler installation on PATH matching this repository's `bun.lock`. Wrangler
+must be outside the candidate checkout. Provision that environment separately;
+the launcher does not list environments or provision credentials. It must contain
+**no production credentials**. There is no Docker build, image, cgroup or host
+mount/tool-path configuration. The fresh sandbox itself is the isolation boundary.
 
-Packaged route checks retain the artifact's module-loading options. The existing
-Worker suite also copies the artifact, adds an unresolved `react` import and
-requires both route suites to reject it, even with checkout dependencies present.
-The canary never modifies the staged artifact.
+Install the reviewed repo at `/home/hopper/chrondle` and provide an existing local
+0600 regular file at `/home/hopper/.config/chrondle/release.env`. Do not put it in
+the repository or evidence directory. Its literal `KEY=value` format has exactly
+these names (no quotes, shell expansion or multiline values):
 
-`web/production.json` contains only settings already public in the live browser
-bundle/Worker. Server keys remain existing Worker secrets. The narrow shared CD
-token is resolved in memory from its canonical password-store entry only after
-the build container and checkout are gone. No `.env`, password store, SSH agent,
-Docker socket or production credential is mounted into the build.
+- `CLOUDFLARE_API_TOKEN`
+- `CF_ACCESS_CLIENT_ID`
+- `CF_ACCESS_CLIENT_SECRET`
 
-The build uses the existing `gha-runners.slice` with a 4 CPU/8 GiB unprivileged,
-read-only-root container. Pass exact installed Node24/Bun1.4.2, Rust with the
-Wasm target and worker-build paths; image IDs must be immutable SHA256s.
+Group/other access, symlinks, missing or duplicate fields are refused. No values
+are printed or put in command arguments. The local scheduler reads this file for
+the read-only serving annotation query; it is transferred to the sandbox via SSH
+stdin, with umask 077, **only after verification succeeds**. Promotion opens it
+only after validating the verified receipt and staged hashes. No compiler or
+candidate build hook runs during promotion. The file is outside source/state;
+only the API token reaches trusted Wrangler, and Access fields reach only backup.
 
-    python3 scripts/train.py --repo <trusted-checkout> --home <separate-state> \
-      --node <node24-install> --bun <bun1.4.2-install> --rustup <rustup-home> \
-      --cargo-bin <cargo-bin> --worker-bin <worker-build-bin> \
-      --image sha256:<existing-image-id> --network <existing-network> \
-      --dns <executor-dns> --mode fast --wrangler <trusted-wrangler.js> --promote
+Exact launcher invocation:
 
-`--candidate <exact SHA>` selects an unmerged diagnostic and forbids promotion.
-`--mode full` never promotes and runs on unchanged trunk too. Successful slim
-receipts coalesce unchanged trunk; failed candidates are never recorded as
-promoted. Selection never requires equality with a newer trunk head. One native
-file lock serializes all candidate verification/promotion/recovery.
+```sh
+/home/hopper/chrondle/scripts/release-on-boat \
+  --credentials /home/hopper/.config/chrondle/release.env \
+  --evidence /home/hopper/chrondle-release-evidence
+```
 
-## Cutover
+Exact crontab on Hopper's machine (UTC; cron's wrapper delivers stderr):
 
-1. Verify a diagnostic artifact on Mirrodin and independently review the source.
-2. Provision the trusted Wrangler from this repo's frozen Bun lockfile in a
-   separate directory, not the build's mutable dependency cache.
-3. Confirm the old Actions deploy is idle and disable it before publishing or
-   merging. Disable retained GitHub workflows too rather than spending hosted
-   minutes; their unported audits are explicit follow-ups, not a release path.
-4. Use one no-agent engineer-profile cron every30m, running a shell SSH adapter
-   to the trusted native invocation above. Configure `deliver=local` and
-   `failure_deliver=bot-chat:kaylee`. Use the same entrypoint without `--promote`
-   and with `--mode full` at06:00/18:00 America/Chicago for the full battery.
-   Create paused; enable only after the first verified native promotion.
-5. Read the exact cron records/executions, provider version and all three public
-   hosts back. Exercise failure delivery and compatible rollback, then observe
-   an ordinary scheduled moved-trunk release. Do not equate an enabled cron or a
-   passing unit test with this operational proof.
+```cron
+*/30 * * * * /home/hopper/chrondle/scripts/release-on-boat --credentials /home/hopper/.config/chrondle/release.env --evidence /home/hopper/chrondle-release-evidence
+0 0,12 * * * /home/hopper/chrondle/scripts/release-on-boat --mode full --credentials /home/hopper/.config/chrondle/release.env --evidence /home/hopper/chrondle-release-evidence
+```
 
-This slice does not change backend source, data, integration secrets or billing.
-Its preflight reads the actual previous runtime backend origin and rejects a
-changed writer. It also rejects changed `backend/` or `convex/` source rather
-than silently skipping deployment. Add that family's compatible native deploy
-when the rewrite reaches it; never bypass preflight or restore an old store.
+Full ticks verify even unchanged trunk; they never transfer credentials or promote
+and do not hold later fast releases. A local advisory lock serializes launcher
+ticks. Keep cron disabled until reviewed operational cutover.
+
+## Two invocations, one train
+
+The launcher reads one immutable master SHA, then asks `train.py --phase status`
+for the source annotation of the current 100% production web version. If equal,
+a fast tick exits 0 quietly without creating a sandbox. **Production's serving
+annotation is the last-promoted authority**, never local receipts.
+
+For a moved head it creates a sandbox with:
+
+```sh
+boat --no-update new --environment mis-factory-worker --json
+```
+
+It clones the repo, checks out that exact SHA (not a later moving head), then runs:
+
+```sh
+python3 /home/user/chrondle-candidate/scripts/train.py --phase verify \
+  --repo /home/user/chrondle-candidate --home /home/user/chrondle-release \
+  --sha <selected-40-character-sha> --mode fast
+```
+
+This invocation is credential-free. Build commands get an explicit environment
+allowlist plus public `web/production.json` compiler values. They run directly in
+the sandbox: checks, web build, route/discovery tests, package verification, and
+backend module generation plus Wrangler's production dry-run. Both bundles are
+staged as regular files with trusted config and SHA256 manifests in the per-run
+`events.jsonl`. Verification ends in `VERIFIED`, not promoted or DONE.
+
+Only after exit 0, the launcher writes `/home/user/chrondle-release.env`, then runs:
+
+```sh
+python3 /home/user/chrondle-candidate/scripts/train.py --phase promote \
+  --repo /home/user/chrondle-candidate --home /home/user/chrondle-release \
+  --sha <same-selected-sha> --mode fast \
+  --credentials /home/user/chrondle-release.env
+```
+
+Promotion requires an unused fast VERIFIED receipt for that SHA and matching
+staged hashes before reading credentials; it never rebuilds. Its preflight reads
+production again (including ancestry and the actual backend-origin contract), so
+the scheduler's earlier status query is not the release baseline. Source changes
+under `backend/` or `convex/` relative to the serving source trigger:
+
+1. `BACKING_UP`: POST `https://chrondle-backend.mistystep.io/_backend/admin/backup`
+   with Cloudflare Access service-token headers; fsync the returned key to events.
+2. Record the backend's current 100% provider version/source, then
+   `BACKEND_DEPLOYING`: deploy the staged frozen bundle with trusted Wrangler from
+   `backend/`, `deploy --env production --var REVISION:<sha>`.
+3. Verify provider identity and `/_backend/version`, reaching `BACKEND_VERIFIED`.
+4. `PROMOTING`: deploy the verified web bundle; read back all three hosts,
+   discovery, Classic, denied billing requests, and the backend revision again.
+
+Web-only releases do not deploy or restore the backend. Backend deployment runs
+no build hook and performs no dependency discovery with credentials.
 
 ## Recovery and evidence
 
-Promotion saves the current100% provider version and its source annotation.
-Failure restores that version, reads the pointer back and requires healthy
-previous-revision responses plus Classic entry and unsigned billing rejection.
-Recovery never restores data. The invocation remains red after recovery and
-emits a bounded candidate/mode/evidence reference to Kaylee's native intake.
+Any failure from backend deployment onward, including ambiguous deploy failures,
+attempts both prior provider version pointers independently. Unchanged pointers
+need no write; an unreadable pointer cannot suppress a restore attempt. Both
+pointers and serving revisions are read back. A release remains red even after
+successful recovery. **Data is never restored automatically**: the pre-deploy
+backup key is the manual data recovery point.
 
-`events.jsonl` is the append-only verification/release record; `last_promoted`
-is its projection, not a separately synchronized status file. `train.log` owns
-command diagnostics. Rotate/archive those task-owned files through the normal
-evidence retention process; do not copy raw production response bodies into
-notifications. The exact source, command, container parent, staged-file hashes,
-provider/readback, screenshots and elapsed time belong in the task handoff.
+The launcher collects `events.jsonl` and `train.log` independently into a private
+per-run directory under the local evidence root, then deletes the sandbox in a
+`finally` cleanup on success, failure or handled signal. Collection failure still
+attempts deletion; deletion failure is red. Local `launcher.log` records command
+diagnostics, and `sandbox-id` identifies cleanup failures for operator repair.
+There is no surviving local release status file, only evidence.
+
+The launcher emits one bounded failure line containing repo, SHA, phase, evidence
+path and backup key if collected. No raw production bodies or credentials enter
+that report. Preserve evidence through the operator's retention policy. SIGKILL,
+platform outages, failed deletion or lost create responses still require operator
+cleanup; CLI creation has a finite platform TTL as a final resource bound.
+
+Do not equate mock tests or dry-runs with operational proof. Real creation/SSH,
+provisioned environment tool versions, credential transfer, promotion, rollback,
+cron execution and failure delivery must be verified during reviewed cutover.
