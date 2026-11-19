@@ -2,6 +2,12 @@
 
 All notable changes to Chrondle will be documented in this file.
 
+# [1.16.0](https://github.com/misty-step/chrondle/compare/v1.15.0...v1.16.0) (2026-11-19)
+
+### Features
+
+- release backend and web in fresh Boat sandboxes ([#395](https://github.com/misty-step/chrondle/issues/395)) ([4fb0448](https://github.com/misty-step/chrondle/commit/4fb0448893def52cc850e18e14eac78ee8f80177))
+
 # [1.15.0](https://github.com/misty-step/chrondle/compare/v1.14.1...v1.15.0) (2026-11-19)
 
 ### Features
