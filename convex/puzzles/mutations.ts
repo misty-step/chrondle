@@ -343,6 +343,10 @@ export const updatePuzzleEvents = internalMutation({
       throw new Error(`Puzzle ${puzzleId} not found`);
     }
 
+    if (puzzle.editorReviewId) {
+      throw new Error("Editor-approved clues cannot change without a new editor pass");
+    }
+
     // Check if puzzle has been played - don't update mid-game
     const existingPlay = await ctx.db
       .query("plays")

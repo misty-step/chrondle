@@ -2,6 +2,36 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // Internal-only editor audit. Decisions are immutable; scheduling consumes a pass.
+  // Never returned by player queries.
+  puzzleEditorReviews: defineTable({
+    scheduledDate: v.optional(v.string()),
+    draft: v.object({
+      mode: v.union(v.literal("classic"), v.literal("order")),
+      clues: v.array(v.object({ text: v.string(), year: v.number(), sourceUrl: v.string() })),
+    }),
+    rubricVersion: v.string(),
+    passed: v.boolean(),
+    failures: v.array(v.string()),
+    scores: v.object({
+      clues: v.array(
+        v.object({
+          story: v.number(),
+          sourceSupport: v.number(),
+          noLeakage: v.number(),
+          wayIn: v.number(),
+          reasoning: v.string(),
+        }),
+      ),
+      predictedSolveRate: v.number(),
+      difficultyReasoning: v.string(),
+      revisionInstructions: v.array(v.string()),
+    }),
+    model: v.string(),
+    costUsd: v.number(),
+    totalTokens: v.number(),
+    reviewedAt: v.number(),
+  }).index("by_passed", ["passed", "reviewedAt"]),
   // Pool of all historical events (one event per row for maximum reusability)
   events: defineTable({
     year: v.number(), // e.g., 1969
@@ -62,6 +92,7 @@ export default defineSchema({
 
   // Daily puzzles (starts empty, populated by cron job)
   puzzles: defineTable({
+    editorReviewId: v.optional(v.id("puzzleEditorReviews")),
     puzzleNumber: v.number(), // Human-readable: #1, #2, etc.
     date: v.string(), // "2024-07-16"
     targetYear: v.number(), // Year to guess
@@ -95,6 +126,7 @@ export default defineSchema({
 
   // Order mode daily puzzles
   orderPuzzles: defineTable({
+    editorReviewId: v.optional(v.id("puzzleEditorReviews")),
     puzzleNumber: v.number(), // Sequential, mirrors Classic numbering scheme
     date: v.string(), // ISO date (YYYY-MM-DD)
     events: v.array(
