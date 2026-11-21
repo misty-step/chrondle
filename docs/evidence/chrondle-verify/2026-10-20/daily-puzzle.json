@@ -1,0 +1,69 @@
+{
+  "feature": "daily-puzzle",
+  "base": "https://www.chrondle.app",
+  "started_at": "2026-10-20T23:49:47.614Z",
+  "steps": [
+    {
+      "at": "2026-10-20T23:49:51.093Z",
+      "action": "open gallery /?all=1",
+      "result": "Classic card shows Puzzle #434"
+    },
+    {
+      "at": "2026-10-20T23:49:52.300Z",
+      "action": "choose Classic card",
+      "result": "/classic header shows #434"
+    },
+    {
+      "at": "2026-10-20T23:49:52.300Z",
+      "action": "puzzle resolved by local date",
+      "result": "2026-10-20 -> #434, 6 events"
+    },
+    {
+      "at": "2026-10-20T23:49:52.512Z",
+      "action": "capture pre-guess board",
+      "result": "screenshot",
+      "files": ["daily-before.png", "daily-before.aria.txt"]
+    },
+    {
+      "at": "2026-10-20T23:49:52.567Z",
+      "action": "type invalid end year 1949x",
+      "result": "Lock in range disabled"
+    },
+    {
+      "at": "2026-10-20T23:49:52.634Z",
+      "action": "type range 1900-1949",
+      "result": "live width '50 years wide' shown; Lock in range enabled"
+    },
+    {
+      "at": "2026-10-20T23:49:53.685Z",
+      "action": "lock in a one-year range containing the answer",
+      "result": "results panel focused"
+    },
+    {
+      "at": "2026-10-20T23:49:53.794Z",
+      "action": "read completion",
+      "result": "'Come back tomorrow' return hook with countdown visible"
+    },
+    {
+      "at": "2026-10-20T23:49:53.806Z",
+      "action": "read streak",
+      "result": "anonymous streak shows 1 day"
+    },
+    {
+      "at": "2026-10-20T23:49:54.007Z",
+      "action": "capture completed board",
+      "result": "screenshot",
+      "files": ["daily-after.png", "daily-after.aria.txt"]
+    },
+    {
+      "at": "2026-10-20T23:49:54.007Z",
+      "action": "check backend writes",
+      "result": "only allowed (none)",
+      "backend_sockets": 1,
+      "mutations_sent": [],
+      "mutations_blocked": []
+    }
+  ],
+  "result": "passed",
+  "finished_at": "2026-10-20T23:49:54.008Z"
+}

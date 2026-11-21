@@ -1,0 +1,49 @@
+{
+  "feature": "doctor",
+  "base": "https://www.chrondle.app",
+  "started_at": "2026-10-20T23:49:41.512Z",
+  "steps": [
+    {
+      "at": "2026-10-20T23:49:41.648Z",
+      "action": "app origin answers",
+      "result": "ok: GET https://www.chrondle.app/ 200"
+    },
+    {
+      "at": "2026-10-20T23:49:41.728Z",
+      "action": "health endpoint",
+      "result": "ok: GET /api/health 200"
+    },
+    {
+      "at": "2026-10-20T23:49:41.841Z",
+      "action": "owner-only routes gated",
+      "result": "ok: /settings and /admin/dashboard redirect signed-out visitors to /sign-in"
+    },
+    {
+      "at": "2026-10-20T23:49:42.007Z",
+      "action": "Clerk DNS records (sign-in and code email delivery)",
+      "result": "ok: all 5 Clerk CNAMEs resolve to their targets"
+    },
+    {
+      "at": "2026-10-20T23:49:42.136Z",
+      "action": "Clerk production instance accepts owner email-code sign-in",
+      "result": "ok: production instance; email first factors email_code"
+    },
+    {
+      "at": "2026-10-20T23:49:46.584Z",
+      "action": "browser launches and app reaches its backend",
+      "result": "ok: /classic shows today's puzzle #434 (2026-10-20) from the live backend"
+    },
+    {
+      "at": "2026-10-20T23:49:46.903Z",
+      "action": "owner identity configured (Clerk)",
+      "result": "ok: phraznikov@gmail.com is the single Clerk user with that email and has role admin"
+    },
+    {
+      "at": "2026-10-20T23:49:47.085Z",
+      "action": "owner inbox reachable (sign-in)",
+      "result": "ok: JMAP session ok for the Fastmail account that receives phraznikov@gmail.com"
+    }
+  ],
+  "result": "passed",
+  "finished_at": "2026-10-20T23:49:47.087Z"
+}

@@ -1,0 +1,79 @@
+- alert
+- region "Notifications"
+- banner:
+  - link "Chrondle":
+    - /url: /?all=1
+  - button "Sound effects"
+  - button "Switch to dark theme"
+  - button "Sign in to your account":
+    - img
+  - navigation "Game navigation":
+    - combobox "Select game mode": Order
+    - link "Browse puzzle archive":
+      - /url: /archive/order
+  - text: "#345"
+- main:
+  - paragraph: Daily puzzle · №345
+  - heading "Order Mode" [level=2]
+  - paragraph: Arrange events from earliest to latest
+  - text: 762 BC → 1846 AD · 2.6k years
+  - list:
+    - listitem:
+      - button "Reorder “King Conrad IV of Germany invades Italy”. Currently position 1 of 6."
+      - text: "1"
+      - button "King Conrad IV of Germany invades Italy":
+        - paragraph: King Conrad IV of Germany invades Italy
+      - button "Move “King Conrad IV of Germany invades Italy” up" [disabled]
+      - button "Move “King Conrad IV of Germany invades Italy” down"
+    - listitem:
+      - button "Reorder “Diplomat Wang Xuance leads Nepalese and Tibetan troops to defeat the usurper Arunaspwa in northern India.”. Currently position 2 of 6."
+      - text: "2"
+      - button "Diplomat Wang Xuance leads Nepalese and Tibetan troops to defeat the usurper Arunaspwa in northern India.":
+        - paragraph: Diplomat Wang Xuance leads Nepalese and Tibetan troops to defeat the usurper Arunaspwa in northern India.
+      - button "Move “Diplomat Wang Xuance leads Nepalese and Tibetan troops to defeat the usurper Arunaspwa in northern India.” up"
+      - button "Move “Diplomat Wang Xuance leads Nepalese and Tibetan troops to defeat the usurper Arunaspwa in northern India.” down"
+    - listitem:
+      - button "Reorder “The United States declares war on Mexico, beginning the Mexican-American War.”. Currently position 3 of 6."
+      - text: "3"
+      - button "The United States declares war on Mexico, beginning the Mexican-American War.":
+        - paragraph: The United States declares war on Mexico, beginning the Mexican-American War.
+      - button "Move “The United States declares war on Mexico, beginning the Mexican-American War.” up"
+      - button "Move “The United States declares war on Mexico, beginning the Mexican-American War.” down"
+    - listitem:
+      - button "Reorder “King Agis IV ascends the Spartan throne and immediately plans radical reforms to cancel debts.”. Currently position 4 of 6."
+      - text: "4"
+      - button "King Agis IV ascends the Spartan throne and immediately plans radical reforms to cancel debts.":
+        - paragraph: King Agis IV ascends the Spartan throne and immediately plans radical reforms to cancel debts.
+      - button "Move “King Agis IV ascends the Spartan throne and immediately plans radical reforms to cancel debts.” up"
+      - button "Move “King Agis IV ascends the Spartan throne and immediately plans radical reforms to cancel debts.” down"
+    - listitem:
+      - button "Reorder “Chieftain Ida captures the fortress of Bamburgh and establishes the Anglian kingdom of Bernicia.”. Currently position 5 of 6."
+      - text: "5"
+      - button "Chieftain Ida captures the fortress of Bamburgh and establishes the Anglian kingdom of Bernicia.":
+        - paragraph: Chieftain Ida captures the fortress of Bamburgh and establishes the Anglian kingdom of Bernicia.
+      - button "Move “Chieftain Ida captures the fortress of Bamburgh and establishes the Anglian kingdom of Bernicia.” up"
+      - button "Move “Chieftain Ida captures the fortress of Bamburgh and establishes the Anglian kingdom of Bernicia.” down"
+    - listitem:
+      - button "Reorder “Archon Aeschylus administers the laws of Athens during his lifelong tenure.”. Currently position 6 of 6."
+      - text: "6"
+      - button "Archon Aeschylus administers the laws of Athens during his lifelong tenure.":
+        - paragraph: Archon Aeschylus administers the laws of Athens during his lifelong tenure.
+      - button "Move “Archon Aeschylus administers the laws of Athens during his lifelong tenure.” up"
+      - button "Move “Archon Aeschylus administers the laws of Athens during his lifelong tenure.” down" [disabled]
+  - status
+  - paragraph: Diplomat Wang Xuance leads Nepalese and Tibetan troops to defeat the usurper Arunaspwa in northern India. moved to position 2 of 6.
+  - button "Check Order"
+- contentinfo:
+  - link "Chrondle":
+    - /url: /
+  - link "Changelog · v1.13.1":
+    - /url: /changelog
+  - text: © 2026
+  - navigation "Footer navigation":
+    - link "A Misty Step project":
+      - /url: https://mistystep.io
+    - button "Copy support email address": Feedback
+    - link "Privacy":
+      - /url: /legal/privacy
+    - link "Terms":
+      - /url: /legal/terms

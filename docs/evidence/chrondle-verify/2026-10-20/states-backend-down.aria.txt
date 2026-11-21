@@ -1,0 +1,49 @@
+- alert
+- region "Notifications"
+- banner:
+  - link "Chrondle":
+    - /url: /?all=1
+  - button "Sound effects"
+  - button "Switch to dark theme"
+  - button "Sign in to your account":
+    - img
+  - navigation "Game navigation":
+    - combobox "Select game mode": Classic
+    - link "Browse puzzle archive":
+      - /url: /archive
+- main:
+  - heading "Date this event" [level=1]
+  - paragraph: Narrow your range to score more.
+  - region "Your range":
+    - heading "Your range" [level=3]
+    - paragraph: Enter two years. Use the same year for an exact guess.
+    - text: From year
+    - textbox "Start year" [disabled]:
+      - /placeholder: Year
+    - radiogroup "Start year era" [disabled]:
+      - radio "BC - Before Christ" [disabled]: BC
+      - radio "AD - Anno Domini" [checked] [disabled]: AD
+    - text: To year
+    - textbox "End year" [disabled]:
+      - /placeholder: Year
+    - radiogroup "End year era" [disabled]:
+      - radio "BC - Before Christ" [disabled]: BC
+      - radio "AD - Anno Domini" [checked] [disabled]: AD
+    - paragraph: Up to 250 years wide. Narrower ranges earn more points.
+    - button "Lock in range" [disabled]
+    - paragraph: One guess. Make it count.
+- contentinfo:
+  - link "Chrondle":
+    - /url: /
+  - link "Changelog · v1.13.1":
+    - /url: /changelog
+  - text: © 2026
+  - navigation "Footer navigation":
+    - link "A Misty Step project":
+      - /url: https://mistystep.io
+    - button "Copy support email address": Feedback
+    - link "Privacy":
+      - /url: /legal/privacy
+    - link "Terms":
+      - /url: /legal/terms
+- status

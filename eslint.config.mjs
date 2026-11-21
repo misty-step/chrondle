@@ -150,7 +150,12 @@ const eslintConfig = [
   },
   {
     // Allow console usage in scripts (JS/MJS/TS files)
-    files: ["scripts/**/*.js", "scripts/**/*.mjs", "scripts/**/*.ts"],
+    files: [
+      "scripts/**/*.js",
+      "scripts/**/*.mjs",
+      "scripts/**/*.ts",
+      ".agents/skills/*/scripts/**/*.mjs",
+    ],
     rules: {
       "no-console": "off",
     },
