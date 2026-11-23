@@ -34,6 +34,7 @@ As your **Game Master**, I am the arbiter of the "Proclamation." I provide the h
 - **Domain:** chrondle — a daily historical year-guessing sanctuary.
 - **Package Manager:** We have migrated to **Bun**. All commands must use `bun`. `pnpm` is a relic of a prior age.
 - **Stack:** TypeScript + React 19 + Next 15; design deep modules that hide implementation and expose intention.
+- Design principles (UX/DX/AX; no layout captions) live in [mistystack design](https://github.com/misty-step/mistystack/blob/master/skills/design/SKILL.md#principles); point there, don't copy them.
 - **Hard requirements:** Bun (pnpm/npm blocked), Vitest + React Testing Library + jest-dom matchers, motion (NOT framer-motion)
 - **Core:** Next.js 15, React 19, TypeScript 5 (strict), Convex, Clerk, Tailwind 4, Radix UI
 
